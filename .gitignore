@@ -40,6 +40,9 @@ build-sim/
 CLAUDE.md
 GEMINI.md
 
+# Internal version history
+CHANGELOG.md
+
 # Internal dev tooling — not part of the app bundle
 komplettes_getraenkesortiment_exakt.csv
 
