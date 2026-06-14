@@ -185,8 +185,9 @@ private struct RouletteWheel: View {
                     ctx.fill(hub, with: .color(Color.appBackground))
                     ctx.stroke(hub, with: .color(Color.appAccent), lineWidth: 2)
                 }
-
-                // Names, one per segment, oriented radially.
+            }
+            // Names, one per segment, oriented radially.
+            .overlay(alignment: .center) {
                 ForEach(Array(names.enumerated()), id: \.offset) { i, name in
                     let angleDeg = Double(i) * seg
                     let angleRad = angleDeg * .pi / 180

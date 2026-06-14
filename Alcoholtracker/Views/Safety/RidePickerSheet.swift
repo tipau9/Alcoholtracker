@@ -153,7 +153,7 @@ struct RidePickerSheet: View {
             let request = MKLocalSearch.Request()
             request.naturalLanguageQuery = trimmed
             let results = try? await MKLocalSearch(request: request).start()
-            if let coord = results?.mapItems.first?.location.coordinate {
+            if let coord = results?.mapItems.first?.placemark.coordinate {
                 if let url = RideService.uberURL(dropoffCoordinate: coord, dropoffName: trimmed) {
                     openURL(url)
                     dismiss()
