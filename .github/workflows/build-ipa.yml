@@ -1,0 +1,51 @@
+name: Build unsigned IPA
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Build (unsigned)
+        run: |
+          xcodebuild \
+            -project Alcoholtracker.xcodeproj \
+            -scheme Alcoholtracker \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/Alcoholtracker.app Payload/
+          zip -qr Alcoholtracker.ipa Payload
+          rm -rf Payload
+
+      - name: Upload IPA as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Alcoholtracker-unsigned
+          path: Alcoholtracker.ipa
+          retention-days: 30
+
+      - name: Attach IPA to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Alcoholtracker.ipa
