@@ -185,30 +185,50 @@ private struct RouletteWheel: View {
                     ctx.fill(hub, with: .color(Color.appBackground))
                     ctx.stroke(hub, with: .color(Color.appAccent), lineWidth: 2)
                 }
-            }
-            // Names, one per segment, oriented radially.
-            .overlay(alignment: .center) {
-                ForEach(Array(names.enumerated()), id: \.offset) { i, name in
-                    let angleDeg = Double(i) * seg
-                    let angleRad = angleDeg * .pi / 180
-                    let labelR = r * 0.62
-                    Text(name)
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(i % 2 == 0 ? .white : .black)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                        .frame(width: r * 0.7)
-                        .rotationEffect(.degrees(angleDeg))
-                        .position(
-                            x: r + labelR * sin(angleRad),
-                            y: r - labelR * cos(angleRad)
-                        )
-                }
+                RouletteWheelLabels(names: names, segmentAngle: seg, radius: r)
             }
             .frame(width: size, height: size)
             .rotationEffect(.degrees(rotation))
             .shadow(color: .black.opacity(0.35), radius: 10, y: 4)
         }
+    }
+}
+
+private struct RouletteWheelLabels: View {
+    let names: [String]
+    let segmentAngle: Double
+    let radius: Double
+
+    var body: some View {
+        ZStack {
+            ForEach(Array(names.enumerated()), id: \.offset) { i, name in
+                RouletteLabel(name: name, index: i, segmentAngle: segmentAngle, radius: radius)
+            }
+        }
+    }
+}
+
+private struct RouletteLabel: View {
+    let name: String
+    let index: Int
+    let segmentAngle: Double
+    let radius: Double
+
+    var body: some View {
+        let angleDeg = Double(index) * segmentAngle
+        let angleRad = angleDeg * .pi / 180
+        let labelR = radius * 0.62
+        Text(name)
+            .font(.system(size: 11, weight: .bold))
+            .foregroundStyle(index % 2 == 0 ? .white : .black)
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .frame(width: radius * 0.7)
+            .rotationEffect(.degrees(angleDeg))
+            .position(
+                x: radius + labelR * sin(angleRad),
+                y: radius - labelR * cos(angleRad)
+            )
     }
 }
 
