@@ -36,6 +36,10 @@ build-sim/
 # Claude Code — machine-specific settings and local skills
 .claude/
 
+# AI assistant guidance files — not relevant for contributors
+CLAUDE.md
+GEMINI.md
+
 # Internal dev tooling — not part of the app bundle
 komplettes_getraenkesortiment_exakt.csv
 
