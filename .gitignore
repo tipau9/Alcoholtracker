@@ -1,0 +1,43 @@
+# Xcode
+*.xcuserstate
+*.xccheckout
+xcuserdata/
+*.moved-aside
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# Build products
+build/
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Secrets — never commit credentials
+Alcoholtracker/Services/SupabaseConfig.swift
+Secrets.xcconfig
+
+# CocoaPods (if used)
+Pods/
+Podfile.lock
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# macOS
+.DS_Store
+
+# Simulator build (run-alcoholtracker driver)
+build-sim/
+
+# Claude Code — machine-specific settings and local skills
+.claude/
+
+# Internal dev tooling — not part of the app bundle
+komplettes_getraenkesortiment_exakt.csv
+
+# Stray duplicate (superseded by Alcoholtracker/Services/CalendarLogicalDay.swift)
+Calendar+LogicalDay.swift

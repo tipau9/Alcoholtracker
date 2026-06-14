@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>de.tipau.Promille.supabaseSync</string>
+		<string>de.tipau.Promille.widgetRefresh</string>
+	</array>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_promille-jam._tcp</string>
+	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Die Kamera wird zum Scannen von Barcodes und fuer Erinnerungsfotos benoetigt.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Fotos werden als Erinnerungen an deine Abende gespeichert.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Fotos werden als Erinnerungen an deine Abende gespeichert.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Das lokale Netzwerk wird fuer den Jam-Modus benoetigt, um Freunde in der Naehe zu finden.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Der Standort wird fuer die Heimfahrt-Funktion benoetigt, um ein Taxi oder Ridesharing zu buchen.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>promille. liest Gesundheitsdaten, um dir relevante Informationen anzuzeigen.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>promille. speichert deine Getranke in Apple Health, damit du deine Alkoholeinheiten im Blick behältst.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>processing</string>
+	</array>
+</dict>
+</plist>

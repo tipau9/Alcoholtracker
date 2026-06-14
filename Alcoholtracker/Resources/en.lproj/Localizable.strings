@@ -1,0 +1,116 @@
+/* App name */
+"app.name" = "promille.";
+
+/* Disclaimer */
+"disclaimer.short" = "Estimates only, not a breathalyser. When in doubt, don't drive.";
+"disclaimer.long" = "This app provides estimates based on the Widmark formula. The calculated values do not replace a certified breath or blood alcohol test and do not constitute a legal assessment of fitness to drive. When in doubt: do not drive.";
+
+/* Onboarding */
+"onboarding.welcome.title" = "promille.";
+"onboarding.welcome.subtitle" = "Your personal BAC tracker.";
+"onboarding.profile.title" = "Your Profile";
+"onboarding.profile.subtitle" = "So the calculation is accurate.";
+"onboarding.profile.weight" = "Weight (kg)";
+"onboarding.profile.height" = "Height (cm)";
+"onboarding.profile.age" = "Age";
+"onboarding.profile.gender" = "Gender";
+"onboarding.crew.title" = "Your Crew";
+"onboarding.crew.subtitle" = "Optional: emergency contact and sober buddy.";
+"onboarding.continue" = "Continue";
+"onboarding.skip" = "Skip";
+"onboarding.finish" = "Get Started";
+
+/* Gender */
+"gender.male" = "Male";
+"gender.female" = "Female";
+"gender.diverse" = "Non-binary";
+
+/* BAC Status */
+"status.sober" = "Sober";
+"status.tipsy" = "Tipsy";
+"status.careful" = "Be careful";
+"status.danger" = "Do not drive";
+
+/* Home screen */
+"home.timeToZero" = "Sober in %@";
+"home.timeToLimit" = "Legal to drive in %@";
+"home.addDrink" = "Add drink";
+"home.editMode" = "Edit";
+"home.done" = "Done";
+"home.style.minimal" = "Minimal";
+"home.style.detailed" = "Detailed";
+
+/* Quick Add */
+"quickadd.title" = "Add drink";
+"quickadd.favourites" = "Favourites";
+"quickadd.search" = "Search...";
+"quickadd.createMix" = "Create mix";
+"quickadd.customBrand" = "Custom brand";
+"quickadd.bacContribution" = "+%@ BAC";
+
+/* Drink categories */
+"category.beer" = "Beer";
+"category.wine" = "Wine";
+"category.spirits" = "Spirits";
+"category.cocktail" = "Cocktail";
+"category.other" = "Other";
+
+/* Mix Creator */
+"mix.title" = "Create mix";
+"mix.name" = "Mix name";
+"mix.addIngredient" = "Add ingredient";
+"mix.ingredient.name" = "Ingredient";
+"mix.ingredient.abv" = "ABV %";
+"mix.ingredient.volume" = "Amount (ml)";
+"mix.totalVolume" = "Total volume";
+"mix.totalABV" = "Total alcohol";
+"mix.save" = "Save mix";
+
+/* Crew */
+"crew.title" = "Crew";
+"crew.needsAttention" = "May need attention";
+"crew.soberBuddy" = "Sober Buddy";
+"crew.safeAtHome" = "Safe at home";
+"crew.action.checkIn" = "Check in";
+"crew.action.taxi" = "Taxi";
+"crew.action.escort" = "Escort";
+"crew.sos" = "SOS to crew";
+"crew.iAmHome" = "I'm home";
+"crew.pacingHint" = "You're drinking a little faster than your crew right now.";
+
+/* Safety */
+"safety.title" = "Stay Safe";
+"safety.thresholdZero" = "until 0.0 BAC (probationary)";
+"safety.thresholdHalf" = "until 0.5 BAC";
+"safety.thresholdThree" = "until 0.3 BAC";
+"safety.callTaxi" = "Call a taxi";
+"safety.callEmergency" = "Call emergency contact";
+"safety.pauseMode" = "Pause (1 hour)";
+"safety.hydration" = "Drink some water!";
+"safety.helpline" = "Help: contact your local addiction helpline";
+
+/* Settings */
+"settings.title" = "Settings";
+"settings.profile" = "Profile";
+"settings.accessibility" = "Accessibility";
+"settings.largeText" = "Large text";
+"settings.highContrast" = "High contrast";
+"settings.reduceAnimations" = "Reduce animations";
+"settings.homeStyle" = "Home style";
+"settings.warningThreshold" = "Warning threshold (BAC)";
+"settings.emergencyContact" = "Emergency contact";
+"settings.toleranceMode" = "Tolerance mode";
+"settings.toleranceMode.hint" = "Raises assumed elimination rate to 0.20 BAC/h.";
+"settings.eliminationRate" = "Elimination rate";
+"settings.disclaimer" = "Legal notice";
+
+/* Units */
+"unit.ml" = "ml";
+"unit.kg" = "kg";
+"unit.cm" = "cm";
+"unit.percent" = "%";
+"unit.hours" = "h";
+"unit.minutes" = "min";
+"unit.kcal" = "kcal";
+"unit.euro" = "€";
+"unit.promille" = "BAC";

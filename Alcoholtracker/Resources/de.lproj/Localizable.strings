@@ -1,0 +1,124 @@
+/* App name */
+"app.name" = "promille.";
+
+/* Disclaimer */
+"disclaimer.short" = "Schätzwerte, kein Atemtest. Im Zweifel nicht fahren.";
+"disclaimer.long" = "Diese App liefert Schätzwerte auf Basis der Widmark-Formel. Die berechneten Werte ersetzen keinen zertifizierten Atem- oder Blutalkoholtest und sind keine rechtliche Beurteilung der Fahrtauglichkeit. Im Zweifel gilt: nicht fahren. Hilfe bei Alkoholproblemen: Sucht- und Drogen-Hotline 0800 111 0 550 (kostenlos, 24h).";
+
+/* Onboarding */
+"onboarding.welcome.title" = "promille.";
+"onboarding.welcome.subtitle" = "Dein persönlicher Promillerechner.";
+"onboarding.profile.title" = "Dein Profil";
+"onboarding.profile.subtitle" = "Damit die Berechnung stimmt.";
+"onboarding.profile.weight" = "Gewicht (kg)";
+"onboarding.profile.height" = "Größe (cm)";
+"onboarding.profile.age" = "Alter";
+"onboarding.profile.gender" = "Geschlecht";
+"onboarding.crew.title" = "Deine Crew";
+"onboarding.crew.subtitle" = "Optional: Notfallkontakt und Sober Buddy.";
+"onboarding.continue" = "Weiter";
+"onboarding.skip" = "Überspringen";
+"onboarding.finish" = "Los geht's";
+
+/* Gender */
+"gender.male" = "Männlich";
+"gender.female" = "Weiblich";
+"gender.diverse" = "Divers";
+
+/* BAC Status */
+"status.sober" = "Nüchtern";
+"status.tipsy" = "Beschwipst";
+"status.careful" = "Aufpassen";
+"status.danger" = "Fahruntauglich";
+
+/* Home screen */
+"home.timeToZero" = "Nüchtern in %@";
+"home.timeToLimit" = "Fahrtauglich in %@";
+"home.addDrink" = "Getränk hinzufügen";
+"home.editMode" = "Bearbeiten";
+"home.done" = "Fertig";
+"home.style.minimal" = "Minimal";
+"home.style.detailed" = "Detailliert";
+
+/* Quick Add */
+"quickadd.title" = "Getränk hinzufügen";
+"quickadd.favourites" = "Favoriten";
+"quickadd.search" = "Suche...";
+"quickadd.createMix" = "Mix erstellen";
+"quickadd.customBrand" = "Eigene Marke";
+"quickadd.bacContribution" = "+%@ Promille";
+
+/* Drink categories */
+"category.beer" = "Bier";
+"category.wine" = "Wein";
+"category.spirits" = "Spirituose";
+"category.cocktail" = "Cocktail";
+"category.other" = "Sonstiges";
+
+/* Mix Creator */
+"mix.title" = "Mix erstellen";
+"mix.name" = "Name der Mischung";
+"mix.addIngredient" = "Zutat hinzufügen";
+"mix.ingredient.name" = "Zutat";
+"mix.ingredient.abv" = "Vol. %";
+"mix.ingredient.volume" = "Menge (ml)";
+"mix.totalVolume" = "Gesamtmenge";
+"mix.totalABV" = "Gesamt-Alkohol";
+"mix.save" = "Mischung speichern";
+
+/* Crew */
+"crew.title" = "Crew";
+"crew.needsAttention" = "Braucht vielleicht Aufmerksamkeit";
+"crew.soberBuddy" = "Sober Buddy";
+"crew.safeAtHome" = "Sicher zu Hause";
+"crew.action.checkIn" = "Check-in";
+"crew.action.taxi" = "Taxi";
+"crew.action.escort" = "Begleiten";
+"crew.sos" = "SOS an Crew";
+"crew.iAmHome" = "Ich bin daheim";
+"crew.pacingHint" = "Du trinkst gerade etwas schneller als deine Crew.";
+
+/* Safety */
+"safety.title" = "Sicher";
+"safety.thresholdZero" = "bis 0,0 Promille (Probezeit)";
+"safety.thresholdHalf" = "bis 0,5 Promille";
+"safety.thresholdThree" = "bis 0,3 Promille";
+"safety.callTaxi" = "Taxi rufen";
+"safety.callEmergency" = "Notfallkontakt anrufen";
+"safety.pauseMode" = "Pause (1 Stunde)";
+"safety.hydration" = "Trink zwischendurch Wasser!";
+"safety.helpline" = "Hilfe: 0800 111 0 550";
+
+/* Settings */
+"settings.title" = "Einstellungen";
+"settings.profile" = "Profil";
+"settings.accessibility" = "Barrierefreiheit";
+"settings.largeText" = "Großer Text";
+"settings.highContrast" = "Hoher Kontrast";
+"settings.reduceAnimations" = "Animationen reduzieren";
+"settings.homeStyle" = "Home-Stil";
+"settings.warningThreshold" = "Warnschwelle (Promille)";
+"settings.emergencyContact" = "Notfallkontakt";
+"settings.toleranceMode" = "Toleranz-Modus";
+"settings.toleranceMode.hint" = "Erhöht die angenommene Abbaurate auf 0,20 Promille/h.";
+"settings.eliminationRate" = "Abbaurate";
+"settings.disclaimer" = "Rechtlicher Hinweis";
+
+/* Widgets */
+"widget.timeToLimit" = "Zeit bis fahrtauglich";
+"widget.water" = "Wasser";
+"widget.calories" = "Kalorien";
+"widget.cost" = "Kosten";
+"widget.streak" = "Streak";
+"widget.crewStatus" = "Crew-Status";
+
+/* Units */
+"unit.ml" = "ml";
+"unit.kg" = "kg";
+"unit.cm" = "cm";
+"unit.percent" = "%";
+"unit.hours" = "h";
+"unit.minutes" = "min";
+"unit.kcal" = "kcal";
+"unit.euro" = "€";
+"unit.promille" = "Promille";
