@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Setup
 //
-// 1. Kopiere diese Datei: cp SupabaseConfig.example.swift SupabaseConfig.swift
+// 1. Kopiere diese Datei: cp SupabaseConfig.swift.example SupabaseConfig.swift
 // 2. Erstelle ein Supabase-Projekt: https://supabase.com/dashboard
 // 3. Trage deine Werte ein:
 //    Project Settings -> API -> Project URL  -> projectURL
