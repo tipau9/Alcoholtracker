@@ -17,6 +17,22 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app
 
+      - name: Create SupabaseConfig
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          cat > Alcoholtracker/Services/SupabaseConfig.swift <<EOF
+          import Foundation
+          enum SupabaseConfig {
+              static let projectURL = "$SUPABASE_URL"
+              static let anonKey    = "$SUPABASE_ANON_KEY"
+              static var isReady: Bool {
+                  !projectURL.contains("YOUR_PROJECT") && !anonKey.contains("YOUR_ANON")
+              }
+          }
+          EOF
+
       - name: Build (unsigned)
         run: |
           xcodebuild \
