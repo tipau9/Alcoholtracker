@@ -230,12 +230,12 @@ final class HistorySyncService {
         let templates = ((try? modelContext.fetch(FetchDescriptor<DrinkTemplate>())) ?? [])
             .filter(\.isCustom)
         return AccountBackup(
-            profile: profile.map(ProfileBackup.init),
+            profile: profile.map { ProfileBackup($0) },
             waterLog: WaterLog.allEntries,
             customMixes: mixes.map {
                 MixBackup(id: $0.id, name: $0.name, ingredients: $0.ingredients, createdAt: $0.createdAt)
             },
-            customDrinks: templates.map(TemplateBackup.init)
+            customDrinks: templates.map { TemplateBackup($0) }
         )
     }
 
