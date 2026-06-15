@@ -785,6 +785,35 @@ private struct BACCurveChartView: View {
         max(1.0, (displayPoints.map(\.bac).max() ?? 0) + 0.2)
     }
 
+    // Extracted so the ForEach resolves unambiguously as ChartContent. Inline in
+    // a Chart {} the type-checker can otherwise (non-deterministically) try to
+    // treat ForEach as MapContent and fail with a MapContentBuilder error.
+    @ChartContentBuilder
+    private func curveMarks(_ points: [BACCalculator.BACPoint]) -> some ChartContent {
+        ForEach(points) { p in
+            AreaMark(
+                x: .value("Zeit", p.date),
+                y: .value("BAC", p.bac)
+            )
+            .foregroundStyle(
+                LinearGradient(
+                    colors: [Color.appAccent.opacity(0.22), Color.clear],
+                    startPoint: UnitPoint.top,
+                    endPoint: UnitPoint.bottom
+                )
+            )
+            .interpolationMethod(.catmullRom)
+
+            LineMark(
+                x: .value("Zeit", p.date),
+                y: .value("BAC", p.bac)
+            )
+            .foregroundStyle(Color.appAccent)
+            .lineStyle(StrokeStyle(lineWidth: 1.5))
+            .interpolationMethod(.catmullRom)
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center) {
@@ -803,28 +832,7 @@ private struct BACCurveChartView: View {
             }
 
             Chart {
-                ForEach(displayPoints) { p in
-                    AreaMark(
-                        x: .value("Zeit", p.date),
-                        y: .value("BAC", p.bac)
-                    )
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color.appAccent.opacity(0.22), Color.clear],
-                            startPoint: UnitPoint.top,
-                            endPoint: UnitPoint.bottom
-                        )
-                    )
-                    .interpolationMethod(.catmullRom)
-
-                    LineMark(
-                        x: .value("Zeit", p.date),
-                        y: .value("BAC", p.bac)
-                    )
-                    .foregroundStyle(Color.appAccent)
-                    .lineStyle(StrokeStyle(lineWidth: 1.5))
-                    .interpolationMethod(.catmullRom)
-                }
+                curveMarks(displayPoints)
 
                 RuleMark(y: .value("Grenzwert", warningThreshold))
                     .foregroundStyle(Color.statusOrange.opacity(0.55))

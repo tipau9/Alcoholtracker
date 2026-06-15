@@ -67,15 +67,13 @@ struct TrendsView: View {
                 .font(.appHeadline)
                 .foregroundStyle(Color.appText)
             
-            Chart {
-                ForEach(viewModel.weeklyDrinkCounts(drinks: drinks, weeksBack: 4), id: \.weekStart) { item in
-                    BarMark(
-                        x: .value("Woche", item.weekStart, unit: .weekOfYear),
-                        y: .value("Drinks", item.count)
-                    )
-                    .foregroundStyle(Color.appAccent.gradient)
-                    .cornerRadius(4)
-                }
+            Chart(viewModel.weeklyDrinkCounts(drinks: drinks, weeksBack: 4), id: \.weekStart) { item in
+                BarMark(
+                    x: .value("Woche", item.weekStart, unit: .weekOfYear),
+                    y: .value("Drinks", item.count)
+                )
+                .foregroundStyle(Color.appAccent.gradient)
+                .cornerRadius(4)
             }
             .frame(height: 180)
             .chartXAxis {
@@ -99,18 +97,16 @@ struct TrendsView: View {
                 .font(.appHeadline)
                 .foregroundStyle(Color.appText)
             
-            Chart {
-                ForEach(viewModel.categoryTrends(drinks: drinks, days: 30)) { trend in
-                    BarMark(
-                        x: .value("Anzahl", trend.count),
-                        y: .value("Kategorie", trend.category)
-                    )
-                    .foregroundStyle(Color.statusOrange.gradient)
-                    .annotation(position: .trailing) {
-                        Text("\(trend.count)")
-                            .font(.appMicro)
-                            .foregroundStyle(Color.appTextDim)
-                    }
+            Chart(viewModel.categoryTrends(drinks: drinks, days: 30)) { trend in
+                BarMark(
+                    x: .value("Anzahl", trend.count),
+                    y: .value("Kategorie", trend.category)
+                )
+                .foregroundStyle(Color.statusOrange.gradient)
+                .annotation(position: .trailing) {
+                    Text("\(trend.count)")
+                        .font(.appMicro)
+                        .foregroundStyle(Color.appTextDim)
                 }
             }
             .frame(height: 200)
@@ -136,15 +132,13 @@ struct TrendsView: View {
                     .font(.appCaption)
                     .foregroundStyle(Color.appTextMuted)
             } else {
-                Chart {
-                    ForEach(correlations) { corr in
-                        PointMark(
-                            x: .value("Stimmung", DayMood(rawValue: corr.moodScore)?.emoji ?? ""),
-                            y: .value("Ø Peak BAC", corr.averagePeakBAC)
-                        )
-                        .symbolSize(400)
-                        .foregroundStyle(Color.statusRed.opacity(0.8))
-                    }
+                Chart(correlations) { corr in
+                    PointMark(
+                        x: .value("Stimmung", DayMood(rawValue: corr.moodScore)?.emoji ?? ""),
+                        y: .value("Ø Peak BAC", corr.averagePeakBAC)
+                    )
+                    .symbolSize(400)
+                    .foregroundStyle(Color.statusRed.opacity(0.8))
                 }
                 .frame(height: 180)
                 .chartYAxis {

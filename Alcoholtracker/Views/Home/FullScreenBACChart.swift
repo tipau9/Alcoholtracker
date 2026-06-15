@@ -89,28 +89,35 @@ struct FullScreenBACChart: View {
         }
     }
 
+    // Extracted so the ForEach resolves unambiguously as ChartContent (inline in
+    // a Chart {} the type-checker can otherwise pick MapContentBuilder and fail).
+    @ChartContentBuilder
+    private func curveMarks(_ points: [BACCalculator.BACPoint]) -> some ChartContent {
+        ForEach(points) { pt in
+            AreaMark(
+                x: .value("Zeit", pt.date),
+                y: .value("BAC", pt.bac)
+            )
+            .foregroundStyle(
+                LinearGradient(
+                    colors: [Color.appAccent.opacity(0.35), Color.appAccent.opacity(0)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+
+            LineMark(
+                x: .value("Zeit", pt.date),
+                y: .value("BAC", pt.bac)
+            )
+            .foregroundStyle(Color.appAccent)
+            .lineStyle(StrokeStyle(lineWidth: 2.5))
+        }
+    }
+
     private var chart: some View {
         Chart {
-            ForEach(curveData) { pt in
-                AreaMark(
-                    x: .value("Zeit", pt.date),
-                    y: .value("BAC", pt.bac)
-                )
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [Color.appAccent.opacity(0.35), Color.appAccent.opacity(0)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-
-                LineMark(
-                    x: .value("Zeit", pt.date),
-                    y: .value("BAC", pt.bac)
-                )
-                .foregroundStyle(Color.appAccent)
-                .lineStyle(StrokeStyle(lineWidth: 2.5))
-            }
+            curveMarks(curveData)
 
             // In der Probezeit liegt die Grenze bei 0,0 ‰ (auf der Achse), eine
             // Linie dort wäre nutzlos, deshalb nur bei einer echten Grenze zeigen.
