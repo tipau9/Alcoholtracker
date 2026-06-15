@@ -94,25 +94,33 @@ struct FullScreenBACChart: View {
     @ChartContentBuilder
     private func curveMarks(_ points: [BACCalculator.BACPoint]) -> some ChartContent {
         ForEach(points) { pt in
-            AreaMark(
-                x: .value("Zeit", pt.date),
-                y: .value("BAC", pt.bac)
-            )
-            .foregroundStyle(
-                LinearGradient(
-                    colors: [Color.appAccent.opacity(0.35), Color.appAccent.opacity(0)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-
-            LineMark(
-                x: .value("Zeit", pt.date),
-                y: .value("BAC", pt.bac)
-            )
-            .foregroundStyle(Color.appAccent)
-            .lineStyle(StrokeStyle(lineWidth: 2.5))
+            pointMarks(pt)
         }
+    }
+
+    // Per-point marks isolated in their own @ChartContentBuilder function so the
+    // ForEach closure is a single, explicitly-ChartContent expression (a bare
+    // multi-mark ForEach body lets the type-checker pick MapContentBuilder).
+    @ChartContentBuilder
+    private func pointMarks(_ pt: BACCalculator.BACPoint) -> some ChartContent {
+        AreaMark(
+            x: .value("Zeit", pt.date),
+            y: .value("BAC", pt.bac)
+        )
+        .foregroundStyle(
+            LinearGradient(
+                colors: [Color.appAccent.opacity(0.35), Color.appAccent.opacity(0)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+
+        LineMark(
+            x: .value("Zeit", pt.date),
+            y: .value("BAC", pt.bac)
+        )
+        .foregroundStyle(Color.appAccent)
+        .lineStyle(StrokeStyle(lineWidth: 2.5))
     }
 
     private var chart: some View {

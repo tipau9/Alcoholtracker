@@ -791,27 +791,35 @@ private struct BACCurveChartView: View {
     @ChartContentBuilder
     private func curveMarks(_ points: [BACCalculator.BACPoint]) -> some ChartContent {
         ForEach(points) { p in
-            AreaMark(
-                x: .value("Zeit", p.date),
-                y: .value("BAC", p.bac)
-            )
-            .foregroundStyle(
-                LinearGradient(
-                    colors: [Color.appAccent.opacity(0.22), Color.clear],
-                    startPoint: UnitPoint.top,
-                    endPoint: UnitPoint.bottom
-                )
-            )
-            .interpolationMethod(.catmullRom)
-
-            LineMark(
-                x: .value("Zeit", p.date),
-                y: .value("BAC", p.bac)
-            )
-            .foregroundStyle(Color.appAccent)
-            .lineStyle(StrokeStyle(lineWidth: 1.5))
-            .interpolationMethod(.catmullRom)
+            pointMarks(p)
         }
+    }
+
+    // The per-point marks live in their own @ChartContentBuilder function so the
+    // ForEach closure is a single, explicitly-ChartContent expression. A bare
+    // multi-mark ForEach body lets the type-checker pick MapContentBuilder.
+    @ChartContentBuilder
+    private func pointMarks(_ p: BACCalculator.BACPoint) -> some ChartContent {
+        AreaMark(
+            x: .value("Zeit", p.date),
+            y: .value("BAC", p.bac)
+        )
+        .foregroundStyle(
+            LinearGradient(
+                colors: [Color.appAccent.opacity(0.22), Color.clear],
+                startPoint: UnitPoint.top,
+                endPoint: UnitPoint.bottom
+            )
+        )
+        .interpolationMethod(.catmullRom)
+
+        LineMark(
+            x: .value("Zeit", p.date),
+            y: .value("BAC", p.bac)
+        )
+        .foregroundStyle(Color.appAccent)
+        .lineStyle(StrokeStyle(lineWidth: 1.5))
+        .interpolationMethod(.catmullRom)
     }
 
     var body: some View {
