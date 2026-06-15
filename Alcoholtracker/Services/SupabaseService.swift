@@ -237,6 +237,23 @@ final class SupabaseService {
         try await restDELETE("/rest/v1/day_notes?day_start=in.(\(list))")
     }
 
+    // Single per-user JSON document (profile/settings, water log, custom mixes
+    // and drinks). Returned as the raw `data` object for the caller to decode.
+    func fetchUserBackup() async throws -> Data? {
+        try await refreshIfNeeded()
+        let raw = try await restGET("/rest/v1/user_backup?select=data")
+        guard let arr = try? JSONSerialization.jsonObject(with: raw) as? [[String: Any]],
+              let dataObject = arr.first?["data"] else { return nil }
+        return try? JSONSerialization.data(withJSONObject: dataObject)
+    }
+
+    func uploadUserBackup(_ dataObject: Any) async throws {
+        guard let s = session else { throw SupabaseError.notSignedIn }
+        try await refreshIfNeeded()
+        let row: [String: Any] = ["user_id": s.userId, "data": dataObject]
+        try await upsert("/rest/v1/user_backup", rows: [row])
+    }
+
     // Bulk upsert (POST + resolution=merge-duplicates) of a JSON array of rows.
     private func upsert(_ path: String, rows: [[String: Any]]) async throws {
         guard let s = session else { throw SupabaseError.notSignedIn }

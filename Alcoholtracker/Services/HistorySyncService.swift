@@ -67,6 +67,7 @@ final class HistorySyncService {
         do {
             try await syncDrinks(merge: useMerge)
             try await syncNotes(merge: useMerge)
+            try await syncSettings()
             UserDefaults.standard.set(true, forKey: Self.didInitialSyncKey)
             lastSyncDate = Date()
         } catch {
@@ -175,5 +176,252 @@ final class HistorySyncService {
             "text": n.text,
             "mood": n.moodRaw,
         ]
+    }
+
+    // MARK: Settings, water log, custom mixes & drinks (single JSON document)
+
+    private static let blobEncoder: JSONEncoder = {
+        let e = JSONEncoder()
+        e.dateEncodingStrategy = .iso8601
+        return e
+    }()
+
+    private static let blobDecoder: JSONDecoder = {
+        let d = JSONDecoder()
+        d.dateDecodingStrategy = .iso8601
+        return d
+    }()
+
+    private func syncSettings() async throws {
+        let profile = (try? modelContext.fetch(FetchDescriptor<UserProfile>()))?.first
+        let serverData = try await supabase.fetchUserBackup()
+        let server = serverData.flatMap { try? Self.blobDecoder.decode(AccountBackup.self, from: $0) }
+
+        var changed = false
+
+        // 1. Profile / settings: restore from the account only when this device
+        //    hasn't been set up yet (fresh install). An onboarded device keeps
+        //    its own settings and pushes them as the backup.
+        if let sp = server?.profile, sp.hasCompletedOnboarding,
+           !(profile?.hasCompletedOnboarding ?? false) {
+            applyProfile(sp, into: profile)
+            changed = true
+        }
+
+        // 2. Custom mixes & drinks: additive union so no creation is ever lost.
+        if let server {
+            if importMixes(server.customMixes) { changed = true }
+            if importDrinks(server.customDrinks) { changed = true }
+        }
+
+        // 3. Water log: merge (higher count per day wins).
+        if let water = server?.waterLog { WaterLog.merge(water) }
+
+        if changed { try? modelContext.save() }
+
+        // 4. Push the (possibly augmented) local state back as the backup.
+        let backup = buildBackup(profile: (try? modelContext.fetch(FetchDescriptor<UserProfile>()))?.first)
+        let object = try JSONSerialization.jsonObject(with: Self.blobEncoder.encode(backup))
+        try await supabase.uploadUserBackup(object)
+    }
+
+    private func buildBackup(profile: UserProfile?) -> AccountBackup {
+        let mixes = (try? modelContext.fetch(FetchDescriptor<CustomMix>())) ?? []
+        let templates = ((try? modelContext.fetch(FetchDescriptor<DrinkTemplate>())) ?? [])
+            .filter(\.isCustom)
+        return AccountBackup(
+            profile: profile.map(ProfileBackup.init),
+            waterLog: WaterLog.allEntries,
+            customMixes: mixes.map {
+                MixBackup(id: $0.id, name: $0.name, ingredients: $0.ingredients, createdAt: $0.createdAt)
+            },
+            customDrinks: templates.map(TemplateBackup.init)
+        )
+    }
+
+    private func applyProfile(_ b: ProfileBackup, into existing: UserProfile?) {
+        let p: UserProfile
+        if let existing {
+            p = existing
+        } else {
+            p = UserProfile()
+            modelContext.insert(p)
+        }
+        p.weight = b.weight
+        p.height = b.height
+        p.age = b.age
+        p.birthDate = b.birthDate
+        p.genderRaw = b.genderRaw
+        p.eliminationRate = b.eliminationRate
+        p.emergencyContactName = b.emergencyContactName
+        p.emergencyContactPhone = b.emergencyContactPhone
+        p.homeStyleRaw = b.homeStyleRaw
+        p.activeWidgetsRaw = b.activeWidgetsRaw
+        p.largeText = b.largeText
+        p.highContrast = b.highContrast
+        p.reducedMotion = b.reducedMotion
+        p.toleranceMode = b.toleranceMode
+        p.warningThreshold = b.warningThreshold
+        p.stomachStatusRaw = b.stomachStatusRaw
+        p.statusSkinRaw = b.statusSkinRaw
+        p.tipsyThreshold = b.tipsyThreshold
+        p.drunkThreshold = b.drunkThreshold
+        p.carefulThreshold = b.carefulThreshold
+        p.dangerThreshold = b.dangerThreshold
+        p.accentColorHex = b.accentColorHex
+        p.sipVolumeML = b.sipVolumeML
+        p.activeMedicationsRaw = b.activeMedicationsRaw
+        p.healthKitEnabled = b.healthKitEnabled
+        p.weeklyDrinkLimit = b.weeklyDrinkLimit
+        p.soberDaysGoal = b.soberDaysGoal
+        p.isProbationaryDriver = b.isProbationaryDriver
+        p.drunkModeAuto = b.drunkModeAuto
+        p.onboardingStepsCompleted = b.onboardingStepsCompleted
+        p.hasCompletedOnboarding = b.hasCompletedOnboarding
+    }
+
+    private func importMixes(_ remote: [MixBackup]?) -> Bool {
+        guard let remote, !remote.isEmpty else { return false }
+        let existing = Set(((try? modelContext.fetch(FetchDescriptor<CustomMix>())) ?? []).map(\.id))
+        var imported = false
+        for m in remote where !existing.contains(m.id) {
+            let mix = CustomMix(name: m.name, ingredients: m.ingredients)
+            mix.id = m.id
+            mix.createdAt = m.createdAt
+            modelContext.insert(mix)
+            imported = true
+        }
+        return imported
+    }
+
+    private func importDrinks(_ remote: [TemplateBackup]?) -> Bool {
+        guard let remote, !remote.isEmpty else { return false }
+        let existing = Set(((try? modelContext.fetch(FetchDescriptor<DrinkTemplate>())) ?? []).map(\.id))
+        var imported = false
+        for t in remote where !existing.contains(t.id) {
+            let template = DrinkTemplate(
+                name: t.name,
+                category: DrinkCategory(rawValue: t.categoryRaw) ?? .other,
+                volume: t.volume,
+                abv: t.abv,
+                calories: t.calories,
+                iconName: t.iconName,
+                isCustom: true
+            )
+            template.id = t.id
+            template.usageCount = t.usageCount
+            template.barcode = t.barcode
+            modelContext.insert(template)
+            imported = true
+        }
+        return imported
+    }
+}
+
+// MARK: - Backup document (encoded as the user_backup.data JSON blob)
+
+struct AccountBackup: Codable {
+    var profile: ProfileBackup?
+    var waterLog: [String: Int]?
+    var customMixes: [MixBackup]?
+    var customDrinks: [TemplateBackup]?
+}
+
+struct ProfileBackup: Codable {
+    var weight: Double
+    var height: Double
+    var age: Int
+    var birthDate: Date
+    var genderRaw: String
+    var eliminationRate: Double
+    var emergencyContactName: String?
+    var emergencyContactPhone: String?
+    var homeStyleRaw: String
+    var activeWidgetsRaw: String
+    var largeText: Bool
+    var highContrast: Bool
+    var reducedMotion: Bool
+    var toleranceMode: Bool
+    var warningThreshold: Double
+    var stomachStatusRaw: String
+    var statusSkinRaw: String
+    var tipsyThreshold: Double
+    var drunkThreshold: Double
+    var carefulThreshold: Double
+    var dangerThreshold: Double
+    var accentColorHex: String
+    var sipVolumeML: Double
+    var activeMedicationsRaw: String
+    var healthKitEnabled: Bool
+    var weeklyDrinkLimit: Int
+    var soberDaysGoal: Int
+    var isProbationaryDriver: Bool
+    var drunkModeAuto: Bool
+    var onboardingStepsCompleted: [String]
+    var hasCompletedOnboarding: Bool
+
+    init(_ p: UserProfile) {
+        weight = p.weight
+        height = p.height
+        age = p.age
+        birthDate = p.birthDate
+        genderRaw = p.genderRaw
+        eliminationRate = p.eliminationRate
+        emergencyContactName = p.emergencyContactName
+        emergencyContactPhone = p.emergencyContactPhone
+        homeStyleRaw = p.homeStyleRaw
+        activeWidgetsRaw = p.activeWidgetsRaw
+        largeText = p.largeText
+        highContrast = p.highContrast
+        reducedMotion = p.reducedMotion
+        toleranceMode = p.toleranceMode
+        warningThreshold = p.warningThreshold
+        stomachStatusRaw = p.stomachStatusRaw
+        statusSkinRaw = p.statusSkinRaw
+        tipsyThreshold = p.tipsyThreshold
+        drunkThreshold = p.drunkThreshold
+        carefulThreshold = p.carefulThreshold
+        dangerThreshold = p.dangerThreshold
+        accentColorHex = p.accentColorHex
+        sipVolumeML = p.sipVolumeML
+        activeMedicationsRaw = p.activeMedicationsRaw
+        healthKitEnabled = p.healthKitEnabled
+        weeklyDrinkLimit = p.weeklyDrinkLimit
+        soberDaysGoal = p.soberDaysGoal
+        isProbationaryDriver = p.isProbationaryDriver
+        drunkModeAuto = p.drunkModeAuto
+        onboardingStepsCompleted = p.onboardingStepsCompleted
+        hasCompletedOnboarding = p.hasCompletedOnboarding
+    }
+}
+
+struct MixBackup: Codable {
+    var id: UUID
+    var name: String
+    var ingredients: [MixIngredient]
+    var createdAt: Date
+}
+
+struct TemplateBackup: Codable {
+    var id: UUID
+    var name: String
+    var categoryRaw: String
+    var volume: Double
+    var abv: Double
+    var calories: Int
+    var iconName: String
+    var usageCount: Int
+    var barcode: String
+
+    init(_ t: DrinkTemplate) {
+        id = t.id
+        name = t.name
+        categoryRaw = t.categoryRaw
+        volume = t.volume
+        abv = t.abv
+        calories = t.calories
+        iconName = t.iconName
+        usageCount = t.usageCount
+        barcode = t.barcode
     }
 }

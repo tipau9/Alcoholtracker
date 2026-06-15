@@ -73,3 +73,30 @@ create policy "day_notes_update_own" on public.day_notes
     for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "day_notes_delete_own" on public.day_notes
     for delete using (auth.uid() = user_id);
+
+-- =========================================================================
+-- user_backup  (single JSON document per user: profile / settings,
+--               water log, custom mixes, custom drink templates)
+-- =========================================================================
+
+create table if not exists public.user_backup (
+    user_id     uuid primary key references auth.users(id) on delete cascade,
+    data        jsonb not null default '{}'::jsonb,
+    updated_at  timestamptz not null default now()
+);
+
+alter table public.user_backup enable row level security;
+
+drop policy if exists "user_backup_select_own" on public.user_backup;
+drop policy if exists "user_backup_insert_own" on public.user_backup;
+drop policy if exists "user_backup_update_own" on public.user_backup;
+drop policy if exists "user_backup_delete_own" on public.user_backup;
+
+create policy "user_backup_select_own" on public.user_backup
+    for select using (auth.uid() = user_id);
+create policy "user_backup_insert_own" on public.user_backup
+    for insert with check (auth.uid() = user_id);
+create policy "user_backup_update_own" on public.user_backup
+    for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "user_backup_delete_own" on public.user_backup
+    for delete using (auth.uid() = user_id);

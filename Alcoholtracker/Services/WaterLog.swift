@@ -52,4 +52,21 @@ enum WaterLog {
         s[todayKey] = max(0, (s[todayKey] ?? 0) - 1)
         storage = s
     }
+
+    // MARK: Account backup
+
+    /// Every logged day, keyed "YYYY-MM-DD". Used by HistorySyncService to back
+    /// up the water log to the signed-in account.
+    static var allEntries: [String: Int] { storage }
+
+    /// Merges restored entries into the local log, keeping the higher count per
+    /// day so a backup never lowers a freshly logged value.
+    static func merge(_ entries: [String: Int]) {
+        guard !entries.isEmpty else { return }
+        var s = storage
+        for (day, glasses) in entries {
+            s[day] = max(s[day] ?? 0, glasses)
+        }
+        storage = s
+    }
 }
