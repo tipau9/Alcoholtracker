@@ -6,6 +6,10 @@ on:
       - "v*"
   workflow_dispatch:
 
+# Required so softprops/action-gh-release can create the GitHub Release.
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-latest
