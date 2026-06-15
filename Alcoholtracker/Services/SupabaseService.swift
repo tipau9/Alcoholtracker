@@ -151,6 +151,104 @@ final class SupabaseService {
         clearSession()
     }
 
+    // MARK: - Account history sync (drinks + day notes)
+    //
+    // Backs up the on-device history to the signed-in account. Orchestration and
+    // SwiftData live in HistorySyncService; this layer only speaks PostgREST.
+    // RLS scopes every row to auth.uid(), so the GETs need no user_id filter.
+
+    struct RemoteDrink: Decodable {
+        let id: String
+        let name: String
+        let volume: Double
+        let abv: Double
+        let calories: Int
+        let iconName: String
+        let category: String
+        let mixerVolume: Double
+        let mixerWaterContent: Double
+        let drinkDurationMinutes: Double
+        let templateID: String?
+        let consumedAt: Date
+
+        enum CodingKeys: String, CodingKey {
+            case id, name, volume, abv, calories, category
+            case iconName             = "icon_name"
+            case mixerVolume          = "mixer_volume"
+            case mixerWaterContent    = "mixer_water_content"
+            case drinkDurationMinutes = "drink_duration_minutes"
+            case templateID           = "template_id"
+            case consumedAt           = "consumed_at"
+        }
+    }
+
+    struct RemoteDayNote: Decodable {
+        let dayStart: String   // Postgres `date`, e.g. "2026-06-15"
+        let text: String
+        let mood: Int
+
+        enum CodingKeys: String, CodingKey {
+            case dayStart = "day_start"
+            case text, mood
+        }
+    }
+
+    func fetchDrinkHistory() async throws -> [RemoteDrink] {
+        try await refreshIfNeeded()
+        let data = try await restGET("/rest/v1/drink_history?select=*")
+        return (try? Self.decoder.decode([RemoteDrink].self, from: data)) ?? []
+    }
+
+    func uploadDrinkHistory(_ rows: [[String: Any]]) async throws {
+        guard let s = session else { throw SupabaseError.notSignedIn }
+        try await refreshIfNeeded()
+        let withUser = rows.map { row -> [String: Any] in
+            var r = row; r["user_id"] = s.userId; return r
+        }
+        try await upsert("/rest/v1/drink_history", rows: withUser)
+    }
+
+    func deleteDrinkHistory(ids: [UUID]) async throws {
+        guard !ids.isEmpty else { return }
+        try await refreshIfNeeded()
+        let list = ids.map(\.uuidString).joined(separator: ",")
+        try await restDELETE("/rest/v1/drink_history?id=in.(\(list))")
+    }
+
+    func fetchDayNotes() async throws -> [RemoteDayNote] {
+        try await refreshIfNeeded()
+        let data = try await restGET("/rest/v1/day_notes?select=*")
+        return (try? Self.decoder.decode([RemoteDayNote].self, from: data)) ?? []
+    }
+
+    func uploadDayNotes(_ rows: [[String: Any]]) async throws {
+        guard let s = session else { throw SupabaseError.notSignedIn }
+        try await refreshIfNeeded()
+        let withUser = rows.map { row -> [String: Any] in
+            var r = row; r["user_id"] = s.userId; return r
+        }
+        try await upsert("/rest/v1/day_notes", rows: withUser)
+    }
+
+    func deleteDayNotes(days: [String]) async throws {
+        guard !days.isEmpty else { return }
+        try await refreshIfNeeded()
+        let list = days.joined(separator: ",")
+        try await restDELETE("/rest/v1/day_notes?day_start=in.(\(list))")
+    }
+
+    // Bulk upsert (POST + resolution=merge-duplicates) of a JSON array of rows.
+    private func upsert(_ path: String, rows: [[String: Any]]) async throws {
+        guard let s = session else { throw SupabaseError.notSignedIn }
+        guard !rows.isEmpty else { return }
+        var req = buildRequest(path, method: "POST")
+        req.setValue("Bearer \(s.accessToken)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("return=minimal,resolution=merge-duplicates", forHTTPHeaderField: "Prefer")
+        req.httpBody = try JSONSerialization.data(withJSONObject: rows)
+        _ = try await perform(req)
+    }
+
     // MARK: Profile
 
     func syncMyProfile() async throws {

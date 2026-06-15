@@ -8,6 +8,7 @@ import SwiftUI
 struct AuthGate: View {
 
     @Environment(SupabaseService.self) private var supabase
+    @Environment(HistorySyncService.self) private var historySync
     @Environment(\.dismiss) private var dismiss
 
     @State private var mode: AGMode = .signIn
@@ -251,6 +252,9 @@ struct AuthGate: View {
                     displayName: displayName.trimmingCharacters(in: .whitespaces)
                 )
             }
+            // First sync after sign-in: union the account backup with whatever
+            // history this device already has (never deletes either side).
+            Task { await historySync.sync(merge: true) }
             dismiss()
         } catch SupabaseError.emailConfirmationRequired {
             withAnimation {

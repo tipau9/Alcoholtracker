@@ -11,6 +11,7 @@ struct PromilleApp: App {
     @State private var supabase: SupabaseService
     @State private var jamService: JamService
     @State private var offlineSync: OfflineSyncService
+    @State private var historySync: HistorySyncService
     @State private var achievements = AchievementService()
     @State private var health = HealthKitService()
     private let theme = AppTheme.shared
@@ -34,6 +35,10 @@ struct PromilleApp: App {
             supabase: sb
         )
         _offlineSync = State(initialValue: sync)
+        _historySync = State(initialValue: HistorySyncService(
+            modelContext: persistence.container.mainContext,
+            supabase: sb
+        ))
         achievements.supabase = sb
 
         // Let the background-processing task flush the offline queue using the
@@ -48,6 +53,7 @@ struct PromilleApp: App {
                 .environment(supabase)
                 .environment(jamService)
                 .environment(offlineSync)
+                .environment(historySync)
                 .environment(achievements)
                 .environment(health)
                 .environment(theme)
@@ -56,6 +62,7 @@ struct PromilleApp: App {
                     seedDrinkDatabase()
                     await syncCommunityDrinks()
                     syncThemeFromProfile()
+                    await historySync.sync()
                 }
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -64,6 +71,7 @@ struct PromilleApp: App {
                 WidgetCenter.shared.reloadAllTimelines()
                 BackgroundRefreshService.scheduleWidgetRefresh()
                 BackgroundRefreshService.scheduleSupabaseSync()
+                Task { await historySync.sync() }
             default:
                 break
             }
