@@ -69,4 +69,9 @@ enum WaterLog {
         }
         storage = s
     }
+
+    /// Wipes the local water log (used when a different account signs in).
+    static func clear() {
+        UserDefaults.standard.removeObject(forKey: storageKey)
+    }
 }

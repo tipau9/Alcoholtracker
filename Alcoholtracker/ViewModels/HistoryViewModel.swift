@@ -167,24 +167,25 @@ final class HistoryViewModel {
         let averagePeakBAC: Double
     }
 
-    // Korreliert Kater/Stimmung mit dem Peak BAC des *Vortags*
+    // Korreliert Kater/Stimmung mit dem Peak BAC der Nacht, auf die sich die
+    // Notiz bezieht.
     func getMoodCorrelations(drinks: [Drink], notes: [DayNote], profile: UserProfile) -> [MoodCorrelation] {
-        // 1. Drinks nach logischem Tag gruppieren
+        // 1. Drinks nach logischem Tag (Mitternacht des logischen Tages)
+        //    gruppieren - dieselbe Schluesselform wie note.dayStart.
         var drinksByDay: [Date: [Drink]] = [:]
         for d in drinks where d.abv > 0 {
-            let day = cal.logicalDayStart(for: d.timestamp)
+            let day = cal.logicalDay(for: d.timestamp)
             drinksByDay[day, default: []].append(d)
         }
-        
-        // 2. Pro Stimmung (MoodScore) die Peak-BACs sammeln
+
+        // 2. Pro Stimmung (MoodScore) die Peak-BACs sammeln. note.dayStart ist
+        //    bereits die Trinknacht: MorningMoodPrompt und das Tages-Detail
+        //    speichern die Stimmung unter der Nacht, auf die sie sich bezieht -
+        //    daher kein Tagesversatz mehr.
         var bacsByMood: [Int: [Double]] = [:]
-        
+
         for note in notes where note.mood != .neutral {
-            // Die Stimmung von "Heute" korreliert mit den Drinks von "Gestern"
-            let drinkingDay = cal.date(byAdding: .day, value: -1, to: note.dayStart) ?? note.dayStart
-            let logicalStart = cal.logicalDayStart(for: drinkingDay)
-            
-            if let dayDrinks = drinksByDay[logicalStart] {
+            if let dayDrinks = drinksByDay[note.dayStart] {
                 let peakBAC = BACCalculator.peakBAC(drinks: dayDrinks, profile: profile, stomachStatus: profile.defaultStomachStatus)
                 bacsByMood[note.moodRaw, default: []].append(peakBAC)
             }

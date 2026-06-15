@@ -54,9 +54,19 @@ final class HistorySyncService {
     /// instead of one overwriting the other. Best-effort: any failure leaves local
     /// data intact and is retried on the next launch / foreground.
     func sync(merge: Bool = false) async {
-        guard !isSyncing, supabase.isSignedIn, supabase.isConfigured else { return }
+        guard !isSyncing, let userId = supabase.session?.userId, supabase.isConfigured else { return }
         isSyncing = true
         defer { isSyncing = false }
+
+        // A different account on this device must never inherit or upload the
+        // previous user's local data. Purge it so the new account starts from
+        // its own backup (or fresh), and restore the new account's settings.
+        let lastUser = UserDefaults.standard.string(forKey: Self.lastUserKey)
+        let accountSwitched = lastUser != nil && lastUser != userId
+        if accountSwitched {
+            purgeLocalUserData()
+            UserDefaults.standard.removeObject(forKey: Self.didInitialSyncKey)
+        }
 
         // The very first successful sync on this install is always a union, so
         // upgrading an already-signed-in device never clobbers a backup another
@@ -67,15 +77,32 @@ final class HistorySyncService {
         do {
             try await syncDrinks(merge: useMerge)
             try await syncNotes(merge: useMerge)
-            try await syncSettings()
+            try await syncSettings(forceProfileRestore: accountSwitched)
             UserDefaults.standard.set(true, forKey: Self.didInitialSyncKey)
+            UserDefaults.standard.set(userId, forKey: Self.lastUserKey)
             lastSyncDate = Date()
         } catch {
             // Transient (network/server); retried next time.
         }
     }
 
+    // Deletes the signed-out user's on-device data before another account's
+    // sync runs. The UserProfile is intentionally left in place (it is restored
+    // from the new account's backup in syncSettings, or kept if that account has
+    // none) to avoid wiping settings out from under the live UI.
+    private func purgeLocalUserData() {
+        for d in (try? modelContext.fetch(FetchDescriptor<Drink>())) ?? [] { modelContext.delete(d) }
+        for n in (try? modelContext.fetch(FetchDescriptor<DayNote>())) ?? [] { modelContext.delete(n) }
+        for m in (try? modelContext.fetch(FetchDescriptor<CustomMix>())) ?? [] { modelContext.delete(m) }
+        for t in ((try? modelContext.fetch(FetchDescriptor<DrinkTemplate>())) ?? []).filter(\.isCustom) {
+            modelContext.delete(t)
+        }
+        try? modelContext.save()
+        WaterLog.clear()
+    }
+
     private static let didInitialSyncKey = "history.didInitialSync"
+    private static let lastUserKey = "history.lastSyncedUserId"
 
     // MARK: Drinks
 
@@ -192,18 +219,19 @@ final class HistorySyncService {
         return d
     }()
 
-    private func syncSettings() async throws {
+    private func syncSettings(forceProfileRestore: Bool = false) async throws {
         let profile = (try? modelContext.fetch(FetchDescriptor<UserProfile>()))?.first
         let serverData = try await supabase.fetchUserBackup()
         let server = serverData.flatMap { try? Self.blobDecoder.decode(AccountBackup.self, from: $0) }
 
         var changed = false
 
-        // 1. Profile / settings: restore from the account only when this device
-        //    hasn't been set up yet (fresh install). An onboarded device keeps
-        //    its own settings and pushes them as the backup.
+        // 1. Profile / settings: restore from the account when this device hasn't
+        //    been set up yet (fresh install) or a different account just signed in
+        //    (forceProfileRestore). Otherwise an onboarded device keeps its own
+        //    settings and pushes them as the backup.
         if let sp = server?.profile, sp.hasCompletedOnboarding,
-           !(profile?.hasCompletedOnboarding ?? false) {
+           forceProfileRestore || !(profile?.hasCompletedOnboarding ?? false) {
             applyProfile(sp, into: profile)
             changed = true
         }
@@ -392,6 +420,47 @@ struct ProfileBackup: Codable {
         drunkModeAuto = p.drunkModeAuto
         onboardingStepsCompleted = p.onboardingStepsCompleted
         hasCompletedOnboarding = p.hasCompletedOnboarding
+    }
+
+    // Tolerant decoding: every field falls back to the UserProfile default when
+    // absent, so adding a new profile field in a later app version never makes an
+    // older backup fail to decode (which would silently drop the whole restore).
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        func d<T: Decodable>(_ key: CodingKeys, _ fallback: T) -> T {
+            (try? c.decodeIfPresent(T.self, forKey: key)) ?? nil ?? fallback
+        }
+        weight = d(.weight, 70)
+        height = d(.height, 175)
+        age = d(.age, 25)
+        birthDate = d(.birthDate, Calendar.current.date(byAdding: .year, value: -25, to: Date()) ?? Date())
+        genderRaw = d(.genderRaw, "diverse")
+        eliminationRate = d(.eliminationRate, 0.15)
+        emergencyContactName = (try? c.decodeIfPresent(String.self, forKey: .emergencyContactName)) ?? nil
+        emergencyContactPhone = (try? c.decodeIfPresent(String.self, forKey: .emergencyContactPhone)) ?? nil
+        homeStyleRaw = d(.homeStyleRaw, "detailed")
+        activeWidgetsRaw = d(.activeWidgetsRaw, "")
+        largeText = d(.largeText, false)
+        highContrast = d(.highContrast, false)
+        reducedMotion = d(.reducedMotion, false)
+        toleranceMode = d(.toleranceMode, false)
+        warningThreshold = d(.warningThreshold, 0.5)
+        stomachStatusRaw = d(.stomachStatusRaw, "light")
+        statusSkinRaw = d(.statusSkinRaw, "standard")
+        tipsyThreshold = d(.tipsyThreshold, 0.01)
+        drunkThreshold = d(.drunkThreshold, 0.30)
+        carefulThreshold = d(.carefulThreshold, 0.80)
+        dangerThreshold = d(.dangerThreshold, 1.50)
+        accentColorHex = d(.accentColorHex, "C9802F")
+        sipVolumeML = d(.sipVolumeML, 25)
+        activeMedicationsRaw = d(.activeMedicationsRaw, "")
+        healthKitEnabled = d(.healthKitEnabled, false)
+        weeklyDrinkLimit = d(.weeklyDrinkLimit, 0)
+        soberDaysGoal = d(.soberDaysGoal, 4)
+        isProbationaryDriver = d(.isProbationaryDriver, false)
+        drunkModeAuto = d(.drunkModeAuto, false)
+        onboardingStepsCompleted = d(.onboardingStepsCompleted, [String]())
+        hasCompletedOnboarding = d(.hasCompletedOnboarding, false)
     }
 }
 
