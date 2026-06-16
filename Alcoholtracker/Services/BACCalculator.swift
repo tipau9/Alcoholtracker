@@ -48,10 +48,9 @@ enum BACCalculator {
     ) -> [(Date, Double)] {
         guard steps > 0 else { return [] }
         let interval = end.timeIntervalSince(start) / Double(steps)
-        return (0..<steps).map { i in
-            let date = start.addingTimeInterval(Double(i) * interval)
-            return (date, currentBAC(drinks: drinks, profile: profile, at: date, stomachStatus: stomachStatus))
-        }
+        let dates = (0..<steps).map { start.addingTimeInterval(Double($0) * interval) }
+        let bacs = sampledBAC(drinks: drinks, profile: profile, at: dates, stomachStatus: stomachStatus)
+        return Array(zip(dates, bacs))
     }
 
     // MARK: - Core BAC calculation (Watson + Widmark with absorption ramp)
@@ -76,14 +75,37 @@ enum BACCalculator {
         at now: Date = Date(),
         stomachStatus: StomachStatus = .light
     ) -> Double {
-        guard let origin = drinks.map(\.timestamp).min() else { return 0 }
-        let endMinutes = now.timeIntervalSince(origin) / 60.0
-        guard endMinutes > 0 else { return 0 }
+        sampledBAC(drinks: drinks, profile: profile, at: [now], stomachStatus: stomachStatus).first ?? 0
+    }
 
-        let r       = profile.distributionFactor
-        let rate    = profile.effectiveEliminationRate   // ‰ per hour (zero-order)
-        let factor  = stomachStatus.peakFactor           // empty stomach peaks higher
-        let gastric = stomachStatus.absorptionMinutes
+    // Forward-integrates the whole-body BAC curve ONCE and samples it at each of
+    // `sampleDates`. Every public helper routes through this: a chart, a peak
+    // scan or a forecast now does a single integration from the first drink
+    // instead of re-integrating from scratch for every sample point (previously
+    // O(samples x minutes), now O(minutes + samples)).
+    //
+    // The trajectory matches the old per-point integration exactly: `bac` is
+    // advanced on a uniform 1-minute grid, and a sample that falls between two
+    // grid minutes is read with one partial sub-step from the previous whole
+    // minute, just as the old endpoint-aligned loop did. Continuous zero-order
+    // elimination with a per-minute clamp at zero is preserved, so a later drink
+    // still resumes the curve from 0 after an earlier one cleared.
+    private static func sampledBAC(
+        drinks: [Drink],
+        profile: UserProfile,
+        at sampleDates: [Date],
+        stomachStatus: StomachStatus
+    ) -> [Double] {
+        let n = sampleDates.count
+        guard n > 0 else { return [] }
+        guard let origin = drinks.map(\.timestamp).min() else {
+            return Array(repeating: 0, count: n)
+        }
+
+        let r          = profile.distributionFactor
+        let elimPerMin = profile.effectiveEliminationRate / 60.0   // ‰/min, zero-order
+        let factor     = stomachStatus.peakFactor                  // empty stomach peaks higher
+        let gastric    = stomachStatus.absorptionMinutes
 
         // Each drink's absorption envelope, in minutes measured from `origin`.
         // `peak` is the total ‰ this drink contributes once fully absorbed.
@@ -104,28 +126,52 @@ enum BACCalculator {
             return (start, window, peak)
         }
 
-        // Explicit forward integration in 1-minute steps. Eliminating continuously
-        // (including during absorption) and clamping at zero each step is what lets a
-        // later drink correctly resume the curve from 0 after an earlier one cleared.
-        let dt = 1.0
-        let elimPerMin = rate / 60.0
-        var bac = 0.0
-        var t = 0.0
-        while t < endMinutes {
-            let step = min(dt, endMinutes - t)
-            var absorbed = 0.0
+        // Alcohol entering the blood over [lo, hi], summed across drinks.
+        func absorbed(from lo: Double, to hi: Double) -> Double {
+            guard hi > lo else { return 0 }
+            var total = 0.0
             for e in envelopes {
-                let lo = max(t, e.start)
-                let hi = min(t + step, e.start + e.window)
-                if hi > lo { absorbed += e.peak * (hi - lo) / e.window }
+                let l = max(lo, e.start)
+                let h = min(hi, e.start + e.window)
+                if h > l { total += e.peak * (h - l) / e.window }
             }
-            bac = max(0, bac + absorbed - elimPerMin * step)
-            t += step
+            return total
         }
-        return max(0, bac)
+
+        // Sample minute-offsets from origin, paired with their caller-side index
+        // so results can be returned in the requested order. Ascending by minute.
+        let targets = sampleDates.enumerated()
+            .map { (idx: $0.offset, minute: $0.element.timeIntervalSince(origin) / 60.0) }
+            .sorted { $0.minute < $1.minute }
+
+        var result = Array(repeating: 0.0, count: n)
+        var ti = 0
+        // Anything at or before the first drink is 0 (no alcohol in the body yet).
+        while ti < targets.count && targets[ti].minute <= 0 {
+            result[targets[ti].idx] = 0
+            ti += 1
+        }
+
+        let maxMinute = targets.last?.minute ?? 0
+        var bac = 0.0   // bac at the current integer minute `t`
+        var t = 0.0
+        while ti < targets.count {
+            // Emit every sample whose whole-minute floor is the current `t`,
+            // each via one partial sub-step to its exact minute.
+            while ti < targets.count && targets[ti].minute < t + 1.0 {
+                let m = targets[ti].minute
+                result[targets[ti].idx] = max(0, bac + absorbed(from: t, to: m) - elimPerMin * (m - t))
+                ti += 1
+            }
+            if ti >= targets.count || t >= maxMinute { break }
+            // Advance one whole minute on the shared grid.
+            bac = max(0, bac + absorbed(from: t, to: t + 1.0) - elimPerMin)
+            t += 1.0
+        }
+        return result
     }
 
-    // MARK: - Time projection (binary search, accounts for absorption)
+    // MARK: - Time projection (forward scan, accounts for absorption)
 
     /// Hours until BAC reaches or drops below target. Returns 0 if already there,
     /// nil if it won't happen within 24 hours.
@@ -136,29 +182,23 @@ enum BACCalculator {
         from now: Date = Date(),
         stomachStatus: StomachStatus = .light
     ) -> Double? {
-        let current = currentBAC(drinks: drinks, profile: profile, at: now, stomachStatus: stomachStatus)
-        guard current > targetBAC else { return 0 }
+        // Sample the next 24h in one integration (2-minute grid) and return the
+        // first crossing, linearly interpolated between the bracketing samples.
+        // A forward scan handles a still-rising curve correctly, unlike the old
+        // monotonicity-assuming binary search, and costs one pass instead of ~60.
+        let stepMin = 2.0
+        let steps = Int(24.0 * 60.0 / stepMin)
+        let dates = (0...steps).map { now.addingTimeInterval(Double($0) * stepMin * 60.0) }
+        let bacs = sampledBAC(drinks: drinks, profile: profile, at: dates, stomachStatus: stomachStatus)
+        guard let first = bacs.first, first > targetBAC else { return 0 }
 
-        var lo = 0.0, hi = 24.0
-        for _ in 0..<60 {
-            let mid = (lo + hi) / 2.0
-            let future = currentBAC(
-                drinks: drinks,
-                profile: profile,
-                at: now.addingTimeInterval(mid * 3600),
-                stomachStatus: stomachStatus
-            )
-            if future <= targetBAC { hi = mid } else { lo = mid }
+        for i in 1...steps where bacs[i] <= targetBAC {
+            let above = bacs[i - 1], below = bacs[i]
+            let frac  = above > below ? (above - targetBAC) / (above - below) : 0
+            let crossMinutes = (Double(i - 1) + frac) * stepMin
+            return crossMinutes / 60.0
         }
-
-        let at24h = currentBAC(
-            drinks: drinks,
-            profile: profile,
-            at: now.addingTimeInterval(86400),
-            stomachStatus: stomachStatus
-        )
-        guard at24h <= targetBAC else { return nil }
-        return hi
+        return nil
     }
 
     // MARK: - Chart data
@@ -207,12 +247,8 @@ enum BACCalculator {
         stomachStatus: StomachStatus = .light
     ) -> [BACPoint] {
         let steps = Int((hours * 60) / intervalMinutes)
-        return (0...steps).map { i in
-            let date = start.addingTimeInterval(Double(i) * intervalMinutes * 60)
-            return BACPoint(
-                date: date,
-                bac: currentBAC(drinks: drinks, profile: profile, at: date, stomachStatus: stomachStatus)
-            )
-        }
+        let dates = (0...steps).map { start.addingTimeInterval(Double($0) * intervalMinutes * 60) }
+        let bacs = sampledBAC(drinks: drinks, profile: profile, at: dates, stomachStatus: stomachStatus)
+        return zip(dates, bacs).map { BACPoint(date: $0, bac: $1) }
     }
 }
