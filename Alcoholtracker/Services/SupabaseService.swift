@@ -521,14 +521,8 @@ final class SupabaseService {
     }
 
     // Host-initiated removal of another participant (kick). Deletes that one
-    // participant row by its id.
-    //
-    // RLS note: this requires a policy that lets the jam host delete rows of
-    // their own jam, e.g.:
-    //   CREATE POLICY "Host can remove participants" ON jam_participants
-    //   FOR DELETE USING (
-    //     auth.uid() = (SELECT host_user_id::uuid FROM jams WHERE id = jam_id)
-    //   );
+    // participant row by its id. The host-delete RLS policy this needs is in
+    // supabase/jams_security.sql ("jam_participants_delete_self_or_host").
     func removeParticipant(jamID: UUID, participant: JamParticipant) async throws {
         try await refreshIfNeeded()
         try await restDELETE(
@@ -558,10 +552,15 @@ final class SupabaseService {
         )
     }
 
+    // Roster read goes through a SECURITY DEFINER function that only returns
+    // members of a jam the caller belongs to (or hosts), so jam_participants is
+    // no longer directly SELECTable and cannot be enumerated across jams.
+    // See supabase/jams_security.sql.
     func fetchJamParticipants(_ jamID: UUID) async throws -> [JamParticipant] {
         try await refreshIfNeeded()
-        let data = try await restGET(
-            "/rest/v1/jam_participants?jam_id=eq.\(jamID.uuidString)&select=*"
+        let data = try await restRPC(
+            "jam_participants_for_member",
+            body: ["p_jam_id": jamID.uuidString]
         )
         return try Self.decoder.decode([JamParticipantRow].self, from: data)
             .compactMap { $0.toParticipant() }

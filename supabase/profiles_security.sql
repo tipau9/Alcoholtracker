@@ -151,12 +151,9 @@ grant execute on function public.friend_profiles_by_codes(text[]) to authenticat
 grant execute on function public.friend_profiles_by_ids(uuid[])  to authenticated;
 
 -- =========================================================================
--- NOTE on jam_participants (not changed automatically)
+-- NOTE on jam_participants
 -- =========================================================================
--- jam_participants also stores current_bac / has_sos_active per member. Joining
--- a jam already requires its code, so the exposure is far smaller than the
--- profiles enumeration above, and a safe policy there can recurse into jams
--- (see the comment in SupabaseService.fetchJamParticipants). If you want it
--- locked down too, the intended model is "a participant may read rows of a jam
--- they are themselves a member of" via a SECURITY DEFINER helper - ask and it
--- can be added here.
+-- jam_participants also stores current_bac / has_sos_active per member. It is
+-- now locked down the same way in supabase/jams_security.sql ("a participant may
+-- read rows of a jam they are themselves a member of" via a SECURITY DEFINER
+-- helper). Run that file too.
