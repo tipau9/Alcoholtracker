@@ -78,28 +78,35 @@ begin
     end loop;
 end $$;
 
+-- All identity comparisons cast to ::uuid on both sides. This is robust whether
+-- the id columns are typed uuid or text in a given project, AND it normalises
+-- case: the client stores jam/participant ids from Swift's UUID().uuidString
+-- (UPPERCASE), while auth.uid() / a uuid param render lowercase, so a plain text
+-- compare would miss. (auth.uid() already returns uuid.)
+
 -- You can see only your own row directly; the full roster comes from the
 -- function below. (Keeping a self-select keeps any direct self lookups working.)
 create policy "jam_participants_select_own" on public.jam_participants
-    for select using (user_id = auth.uid()::text);
+    for select using (user_id::uuid = auth.uid());
 
 -- You may only insert yourself into a jam.
 create policy "jam_participants_insert_self" on public.jam_participants
-    for insert with check (user_id = auth.uid()::text);
+    for insert with check (user_id::uuid = auth.uid());
 
 -- You may only update your own status (BAC / SOS / status).
 create policy "jam_participants_update_own" on public.jam_participants
-    for update using (user_id = auth.uid()::text)
-            with check (user_id = auth.uid()::text);
+    for update using (user_id::uuid = auth.uid())
+            with check (user_id::uuid = auth.uid());
 
 -- You may delete yourself (leave), and the jam's host may delete anyone (kick).
 -- NOTE: this subselect reads public.jams. To avoid infinite recursion, jams
 -- must NOT have an RLS policy that in turn reads jam_participants.
 create policy "jam_participants_delete_self_or_host" on public.jam_participants
     for delete using (
-        user_id = auth.uid()::text
-        or auth.uid()::text = (
-            select j.host_user_id from public.jams j where j.id = jam_id
+        user_id::uuid = auth.uid()
+        or auth.uid() = (
+            select j.host_user_id::uuid from public.jams j
+            where j.id::uuid = jam_id::uuid
         )
     );
 
@@ -136,17 +143,17 @@ as $$
         p.joined_at,
         p.last_updated
     from public.jam_participants p
-    where p.jam_id = p_jam_id
+    where p.jam_id::uuid = p_jam_id
       and (
           -- caller is a member of this jam ...
           exists (
               select 1 from public.jam_participants me
-              where me.jam_id = p_jam_id
-                and me.user_id = auth.uid()::text
+              where me.jam_id::uuid = p_jam_id
+                and me.user_id::uuid = auth.uid()
           )
           -- ... or the jam's host (covers the moment before anyone else joins)
-          or auth.uid()::text = (
-              select j.host_user_id from public.jams j where j.id = p_jam_id
+          or auth.uid() = (
+              select j.host_user_id::uuid from public.jams j where j.id::uuid = p_jam_id
           )
       )
 $$;
