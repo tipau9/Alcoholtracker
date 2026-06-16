@@ -92,6 +92,7 @@ The backend is **raw Supabase REST (PostgREST)** — no SDK, hand-rolled HTTP. F
    | [`supabase/community_drinks.sql`](supabase/community_drinks.sql) | Self-learning community drink catalogue + `contribute_drink` RPC |
    | [`supabase/community_mixes.sql`](supabase/community_mixes.sql) | Community custom-mix catalogue + `contribute_mix` RPC |
    | [`supabase/account_history.sql`](supabase/account_history.sql) | `drink_history`, `day_notes`, `user_backup` tables with per-user Row Level Security |
+   | [`supabase/profiles_security.sql`](supabase/profiles_security.sql) | Locks `profiles` to self-only and exposes friends' data exclusively through SECURITY DEFINER lookups (prevents enumerating other users' BAC/SOS) |
 
 For CI, also add the credentials as repository secrets (*Settings → Secrets and variables → Actions*): `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
 

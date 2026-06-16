@@ -351,9 +351,7 @@ final class SupabaseService {
         try await refreshIfNeeded()
         let clean = Self.sanitizeCode(code)
         guard !clean.isEmpty else { throw SupabaseError.friendNotFound }
-        let data = try await restGET(
-            "/rest/v1/profiles?friend_code=eq.\(clean)&select=*"
-        )
+        let data = try await restRPC("friend_profiles_by_codes", body: ["p_codes": [clean]])
         let list = try Self.decoder.decode([FriendProfile].self, from: data)
         guard let found = list.first else { throw SupabaseError.friendNotFound }
         return found
@@ -364,23 +362,19 @@ final class SupabaseService {
         try await refreshIfNeeded()
         let cleaned = codes.map { Self.sanitizeCode($0) }.filter { !$0.isEmpty }
         guard !cleaned.isEmpty else { return [] }
-        let joined = cleaned.joined(separator: ",")
-        let data = try await restGET(
-            "/rest/v1/profiles?friend_code=in.(\(joined))&is_sharing=eq.true&select=*"
-        )
+        let data = try await restRPC("friend_profiles_by_codes", body: ["p_codes": cleaned])
+        // The function returns non-sharing friends too (with BAC nulled out);
+        // keep the old behaviour of surfacing only the ones actively sharing.
         return try Self.decoder.decode([FriendProfile].self, from: data)
+            .filter { $0.isSharing }
     }
 
     // Friend code of a single user id, used to verify friends-only jam access.
     func friendCode(ofUser userID: String) async throws -> String? {
         guard !userID.isEmpty, UUID(uuidString: userID) != nil else { return nil }
         try await refreshIfNeeded()
-        let data = try await restGET("/rest/v1/profiles?id=eq.\(userID)&select=friend_code")
-        struct Row: Decodable {
-            let friendCode: String?
-            enum CodingKeys: String, CodingKey { case friendCode = "friend_code" }
-        }
-        return try Self.decoder.decode([Row].self, from: data).first?.friendCode
+        let data = try await restRPC("friend_profiles_by_ids", body: ["p_ids": [userID]])
+        return try Self.decoder.decode([FriendProfile].self, from: data).first?.friendCode
     }
 
     // Profiles for a set of user ids (mutual friends display).
@@ -388,8 +382,7 @@ final class SupabaseService {
         let valid = ids.filter { UUID(uuidString: $0) != nil }
         guard !valid.isEmpty else { return [] }
         try await refreshIfNeeded()
-        let list = valid.joined(separator: ",")
-        let data = try await restGET("/rest/v1/profiles?id=in.(\(list))&select=*")
+        let data = try await restRPC("friend_profiles_by_ids", body: ["p_ids": valid])
         return try Self.decoder.decode([FriendProfile].self, from: data)
     }
 
@@ -589,10 +582,8 @@ final class SupabaseService {
         guard !cleaned.isEmpty else { return [] }
         try await refreshIfNeeded()
 
-        let codeList = cleaned.joined(separator: ",")
-        let profileData = try await restGET("/rest/v1/profiles?friend_code=in.(\(codeList))&select=id")
-        struct IDRow: Decodable { let id: String }
-        let hostIDs = try Self.decoder.decode([IDRow].self, from: profileData)
+        let profileData = try await restRPC("friend_profiles_by_codes", body: ["p_codes": cleaned])
+        let hostIDs = try Self.decoder.decode([FriendProfile].self, from: profileData)
             .map(\.id)
             .filter { UUID(uuidString: $0) != nil }
         guard !hostIDs.isEmpty else { return [] }
@@ -737,6 +728,20 @@ final class SupabaseService {
         var req = buildRequest(path, method: "GET")
         req.setValue("Bearer \(s.accessToken)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Accept")
+        return try await perform(req)
+    }
+
+    // Calls a Postgres function as the signed-in user and returns its rows.
+    // Used for the SECURITY DEFINER friend-profile lookups, which require an
+    // exact friend_code / id and so cannot be enumerated (see
+    // supabase/profiles_security.sql).
+    private func restRPC(_ function: String, body: [String: Any]) async throws -> Data {
+        guard let s = session else { throw SupabaseError.notSignedIn }
+        var req = buildRequest("/rest/v1/rpc/\(function)", method: "POST")
+        req.setValue("Bearer \(s.accessToken)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
         return try await perform(req)
     }
 
