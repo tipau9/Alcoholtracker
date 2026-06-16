@@ -10,10 +10,18 @@ struct HomeView: View {
     @Query private var profiles: [UserProfile]
     @Query(sort: [SortDescriptor(\DrinkTemplate.usageCount, order: .reverse)]) private var allTemplates: [DrinkTemplate]
     @Query private var crewMembers: [CrewMember]
-    @Query private var allDrinks: [Drink]
+    // Home only pages in the last few days of drinks (for the mood prompt and as
+    // the change trigger). The full history is scanned transiently inside the
+    // achievement task, not held in view state and re-diffed on every BAC tick.
+    @Query private var recentDrinks: [Drink]
     @Query private var allPhotos: [PhotoMemory]
     @Query private var allNotes: [DayNote]
     @Environment(\.modelContext) private var context
+
+    init() {
+        let cutoff = Calendar.current.date(byAdding: .day, value: -3, to: Date()) ?? .distantPast
+        _recentDrinks = Query(filter: #Predicate { $0.timestamp >= cutoff }, sort: \.timestamp)
+    }
     @Environment(SupabaseService.self) private var supabase
     @Environment(AchievementService.self) private var achievements
     @Environment(HealthKitService.self) private var health
@@ -69,7 +77,7 @@ struct HomeView: View {
         let cal = Calendar.current
         let day = yesterdayLogical
         guard !UserDefaults.standard.bool(forKey: moodPromptDismissKey) else { return }
-        let hadAlcohol = allDrinks.contains {
+        let hadAlcohol = recentDrinks.contains {
             $0.abv > 0.01 && cal.logicalDay(for: $0.timestamp) == day
         }
         guard hadAlcohol else { return }
@@ -272,10 +280,13 @@ struct HomeView: View {
                 withAnimation { showMedWarning = false }
             }
         }
-        .task(id: allDrinks.map(\.id)) {
+        .task(id: recentDrinks.map(\.id)) {
             // Keep the session in sync with edits made outside it (history tab,
             // widget quick-add) so home BAC never shows stale data.
             session.loadTodaysDrinks()
+            // Achievements need the whole history (lifetime counts, streaks);
+            // fetch it on demand here instead of holding it in view state.
+            let allDrinks = (try? context.fetch(FetchDescriptor<Drink>())) ?? []
             await achievements.evaluate(
                 drinks: allDrinks, templates: allTemplates,
                 crew: crewMembers, photos: allPhotos,
