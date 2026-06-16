@@ -99,6 +99,8 @@ final class HistorySyncService {
         }
         try? modelContext.save()
         WaterLog.clear()
+        UserDefaults.standard.removeObject(forKey: Self.drinksFingerprintKey)
+        UserDefaults.standard.removeObject(forKey: Self.notesFingerprintKey)
     }
 
     private static let didInitialSyncKey = "history.didInitialSync"
@@ -108,6 +110,16 @@ final class HistorySyncService {
 
     private func syncDrinks(merge: Bool) async throws {
         let local = (try? modelContext.fetch(FetchDescriptor<Drink>())) ?? []
+
+        // Skip the whole network round-trip when nothing changed locally since the
+        // last successful sync (and this is not a login/restore merge). Adds and
+        // deletes move the fingerprint; a pure edit to an existing drink does not,
+        // so it rides along with the next add/delete or the next merge.
+        let fingerprint = Self.fingerprint(count: local.count, maxDate: local.map(\.timestamp).max())
+        if !merge, fingerprint == UserDefaults.standard.string(forKey: Self.drinksFingerprintKey) {
+            return
+        }
+
         let remote = try await supabase.fetchDrinkHistory()
         let localIDs = Set(local.map(\.id))
 
@@ -131,7 +143,22 @@ final class HistorySyncService {
             let stale = remote.compactMap { UUID(uuidString: $0.id) }.filter { !localIDs.contains($0) }
             try await supabase.deleteDrinkHistory(ids: stale)
         }
+
+        // Record the fingerprint of the final local state (it may have grown via
+        // an import above) so the next unchanged sync can skip.
+        let finalLocal = (try? modelContext.fetch(FetchDescriptor<Drink>())) ?? local
+        UserDefaults.standard.set(
+            Self.fingerprint(count: finalLocal.count, maxDate: finalLocal.map(\.timestamp).max()),
+            forKey: Self.drinksFingerprintKey
+        )
     }
+
+    private static func fingerprint(count: Int, maxDate: Date?) -> String {
+        "\(count):\(maxDate?.timeIntervalSinceReferenceDate ?? 0)"
+    }
+
+    private static let drinksFingerprintKey = "history.drinksFingerprint"
+    private static let notesFingerprintKey = "history.notesFingerprint"
 
     private func drinkRow(_ d: Drink) -> [String: Any] {
         var row: [String: Any] = [
@@ -173,6 +200,14 @@ final class HistorySyncService {
 
     private func syncNotes(merge: Bool) async throws {
         let local = (try? modelContext.fetch(FetchDescriptor<DayNote>())) ?? []
+
+        // Same skip as syncDrinks. The mood sum is folded in so a mood change on
+        // an existing day (which leaves count and date untouched) still syncs.
+        let fingerprint = Self.notesFingerprint(local)
+        if !merge, fingerprint == UserDefaults.standard.string(forKey: Self.notesFingerprintKey) {
+            return
+        }
+
         let remote = try await supabase.fetchDayNotes()
         let localDays = Set(local.map { Self.dayFormatter.string(from: $0.dayStart) })
 
@@ -195,6 +230,15 @@ final class HistorySyncService {
             let stale = remote.map(\.dayStart).filter { !localDays.contains($0) }
             try await supabase.deleteDayNotes(days: stale)
         }
+
+        let finalNotes = (try? modelContext.fetch(FetchDescriptor<DayNote>())) ?? local
+        UserDefaults.standard.set(Self.notesFingerprint(finalNotes), forKey: Self.notesFingerprintKey)
+    }
+
+    private static func notesFingerprint(_ notes: [DayNote]) -> String {
+        let maxDay = notes.map(\.dayStart).max()?.timeIntervalSinceReferenceDate ?? 0
+        let moodSum = notes.reduce(0) { $0 + $1.moodRaw }
+        return "\(notes.count):\(maxDay):\(moodSum)"
     }
 
     private func noteRow(_ n: DayNote) -> [String: Any] {
