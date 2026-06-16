@@ -481,11 +481,15 @@ final class SupabaseService {
         try await restPOST("/rest/v1/jam_participants", body: participantBody, ignoreDuplicates: true)
     }
 
+    // Join-by-code goes through a SECURITY DEFINER function: the jams table is no
+    // longer directly SELECTable (host-only), so a signed-in user cannot drop the
+    // code filter and enumerate every jam. The exact code is the secret that
+    // authorises the lookup. See supabase/jams_security.sql ("jam_by_code").
     func findJamByCode(_ code: String) async throws -> Jam? {
         try await refreshIfNeeded()
         let clean = Self.sanitizeCode(code)
         guard !clean.isEmpty else { return nil }
-        let data  = try await restGET("/rest/v1/jams?code=eq.\(clean)&ended_at=is.null&select=*")
+        let data = try await restRPC("jam_by_code", body: ["p_code": clean])
         return try Self.decoder.decode([JamRow].self, from: data).compactMap { $0.toJam() }.first
     }
 
@@ -566,17 +570,18 @@ final class SupabaseService {
             .compactMap { $0.toParticipant() }
     }
 
-    // RLS note — the "Visible jams" policy must NOT use EXISTS on jam_participants if
-    // jam_participants itself has a policy that reads from jams (infinite recursion, HTTP 500).
-    // Safe alternative: disable RLS on the jams table and filter client-side, OR use a
-    // SECURITY DEFINER function. For now the app filters client-side (see below).
-    //
     // "Von Freunden" means exactly that: only jams whose host is one of the
     // locally stored friends are returned. The codes are resolved to user ids
     // first; without that filter every signed-in user would see every
     // friends-only jam worldwide.
+    //
+    // The jams table is now host-only readable, so this goes through a SECURITY
+    // DEFINER function (friend_jams) that takes the resolved host ids. UUIDs are
+    // unguessable, so a caller can only ask for friends they actually hold the
+    // code for; nothing can be enumerated. The earlier "filter client-side"
+    // approach (a direct select=* on jams) is gone. See supabase/jams_security.sql.
     func fetchFriendJams(friendCodes: [String]) async throws -> [Jam] {
-        guard let s = session else { return [] }
+        guard session != nil else { return [] }
         let cleaned = friendCodes.map { Self.sanitizeCode($0) }.filter { !$0.isEmpty }
         guard !cleaned.isEmpty else { return [] }
         try await refreshIfNeeded()
@@ -587,13 +592,9 @@ final class SupabaseService {
             .filter { UUID(uuidString: $0) != nil }
         guard !hostIDs.isEmpty else { return [] }
 
-        let idList = hostIDs.joined(separator: ",")
-        let data = try await restGET(
-            "/rest/v1/jams?host_user_id=in.(\(idList))&visibility=eq.Nur%20Freunde&ended_at=is.null&select=*"
-        )
-        let all = try Self.decoder.decode([JamRow].self, from: data).compactMap { $0.toJam() }
-        // Exclude jams hosted by self (already shown as currentJam)
-        return all.filter { $0.hostUserID != s.userId }
+        // friend_jams already excludes the caller's own jams (shown as currentJam).
+        let data = try await restRPC("friend_jams", body: ["p_host_ids": hostIDs])
+        return try Self.decoder.decode([JamRow].self, from: data).compactMap { $0.toJam() }
     }
 
     // MARK: Community Drinks

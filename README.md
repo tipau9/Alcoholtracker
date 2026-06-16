@@ -93,7 +93,7 @@ The backend is **raw Supabase REST (PostgREST)** — no SDK, hand-rolled HTTP. F
    | [`supabase/community_mixes.sql`](supabase/community_mixes.sql) | Community custom-mix catalogue + `contribute_mix` RPC |
    | [`supabase/account_history.sql`](supabase/account_history.sql) | `drink_history`, `day_notes`, `user_backup` tables with per-user Row Level Security |
    | [`supabase/profiles_security.sql`](supabase/profiles_security.sql) | Locks `profiles` to self-only and exposes friends' data exclusively through SECURITY DEFINER lookups (prevents enumerating other users' BAC/SOS) |
-   | [`supabase/jams_security.sql`](supabase/jams_security.sql) | Locks `jam_participants` to self-writes + host-kick and exposes the roster only through a SECURITY DEFINER lookup scoped to jams you belong to (prevents enumerating every jam's members) |
+   | [`supabase/jams_security.sql`](supabase/jams_security.sql) | Locks `jam_participants` to self-writes + host-kick and `jams` to host-only, exposing the roster, join-by-code and friends-only feed exclusively through SECURITY DEFINER lookups (prevents enumerating every jam's members, codes and hosts) |
 
 For CI, also add the credentials as repository secrets (*Settings → Secrets and variables → Actions*): `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
 

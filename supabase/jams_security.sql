@@ -22,6 +22,13 @@
 -- 2. Expose the roster ONLY through a SECURITY DEFINER function that returns the
 --    members of a jam you are yourself a member of (or host). No jam_id you are
 --    not part of returns anything, so there is nothing to enumerate.
+-- 3. Lock the jams table itself down the same way (sections 3-4 below). Until now
+--    `jams` was read with a direct `select=*` (find-by-code, friends-only feed),
+--    so any signed-in user could drop the filter and dump EVERY jam's code, host
+--    identity, visibility and settings. Now: you may write/read only jams you
+--    HOST; joining by code and the friends-only feed go through SECURITY DEFINER
+--    functions that require the exact code (a secret) or a known host id (an
+--    unguessable UUID you only have for friends), so nothing can be enumerated.
 
 -- =========================================================================
 -- 0. Make sure the tables and every column the app uses exist, so the policies
@@ -161,3 +168,110 @@ $$;
 -- Only signed-in users may call this; never the anon role.
 revoke all on function public.jam_participants_for_member(uuid) from public, anon;
 grant execute on function public.jam_participants_for_member(uuid) to authenticated;
+
+-- =========================================================================
+-- 3. jams base-table RLS: you may read/write only jams you HOST. Drop EVERY
+--    existing policy first, then recreate the intended set. Joining a jam you do
+--    not host, and the friends-only feed, go exclusively through the functions
+--    in section 4 (SECURITY DEFINER bypasses these policies in a controlled way).
+--
+--    RECURSION NOTE: these policies reference ONLY host_user_id / auth.uid(),
+--    never jam_participants. jam_participants' kick policy (section 1) in turn
+--    subselects jams. Keeping the dependency one-directional (participants ->
+--    jams, never jams -> participants) avoids the infinite-recursion HTTP 500.
+-- =========================================================================
+
+alter table public.jams enable row level security;
+
+do $$
+declare pol record;
+begin
+    for pol in
+        select policyname from pg_policies
+        where schemaname = 'public' and tablename = 'jams'
+    loop
+        execute format('drop policy if exists %I on public.jams', pol.policyname);
+    end loop;
+end $$;
+
+-- You can read only your own (hosted) jams directly. Members got their Jam
+-- object from jam_by_code at join time and keep it locally; they never re-SELECT
+-- the jams table, so host-only reads do not break the member experience.
+create policy "jams_select_own" on public.jams
+    for select using (host_user_id::uuid = auth.uid());
+
+-- You may only create a jam with yourself as host.
+create policy "jams_insert_host" on public.jams
+    for insert with check (host_user_id::uuid = auth.uid());
+
+-- Only the host may modify or end/delete their jam.
+create policy "jams_update_host" on public.jams
+    for update using (host_user_id::uuid = auth.uid())
+            with check (host_user_id::uuid = auth.uid());
+create policy "jams_delete_host" on public.jams
+    for delete using (host_user_id::uuid = auth.uid());
+
+-- =========================================================================
+-- 4. Jam lookups. Same column shape the client's JamRow decodes.
+-- =========================================================================
+
+-- Join-by-code: returns the single active jam whose code matches exactly. The
+-- code is a secret you can only have by being told it, so this cannot enumerate
+-- strangers' jams. Code is normalised (uppercase, alnum only) on both sides so
+-- client-side and server-side sanitising agree regardless of how it was stored.
+create or replace function public.jam_by_code(p_code text)
+returns table (
+    id            uuid,
+    code          text,
+    host_user_id  text,
+    host_name     text,
+    visibility    text,
+    settings      jsonb,
+    created_at    timestamptz
+)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+    select c.id, c.code, c.host_user_id, c.host_name, c.visibility, c.settings, c.created_at
+    from public.jams c
+    where c.ended_at is null
+      and upper(regexp_replace(c.code,   '[^A-Za-z0-9]', '', 'g'))
+        = upper(regexp_replace(p_code,   '[^A-Za-z0-9]', '', 'g'))
+    limit 1
+$$;
+
+-- Friends-only feed: returns active "Nur Freunde" jams hosted by one of the
+-- given host ids. The client resolves those ids from friend codes first
+-- (friend_profiles_by_codes), so you only ever pass ids of people you added;
+-- UUIDs are unguessable, so this cannot enumerate strangers' jams either. The
+-- caller's own jams are excluded (already shown as currentJam).
+create or replace function public.friend_jams(p_host_ids uuid[])
+returns table (
+    id            uuid,
+    code          text,
+    host_user_id  text,
+    host_name     text,
+    visibility    text,
+    settings      jsonb,
+    created_at    timestamptz
+)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+    select c.id, c.code, c.host_user_id, c.host_name, c.visibility, c.settings, c.created_at
+    from public.jams c
+    where c.ended_at is null
+      and c.visibility = 'Nur Freunde'
+      and c.host_user_id::uuid = any (p_host_ids)
+      and c.host_user_id::uuid <> auth.uid()
+$$;
+
+-- Only signed-in users may call these; never the anon role.
+revoke all on function public.jam_by_code(text)    from public, anon;
+revoke all on function public.friend_jams(uuid[])  from public, anon;
+grant execute on function public.jam_by_code(text)   to authenticated;
+grant execute on function public.friend_jams(uuid[]) to authenticated;
