@@ -632,7 +632,7 @@ final class SupabaseService {
         barcode: String
     ) async throws {
         guard isConfigured, !barcode.isEmpty else { return }
-        try await publicPOST("/rest/v1/rpc/contribute_drink", body: [
+        try await communityPOST("/rest/v1/rpc/contribute_drink", body: [
             "p_barcode":   barcode,
             "p_name":      name,
             "p_category":  category.rawValue,
@@ -672,7 +672,7 @@ final class SupabaseService {
         let ingredientJSON = (try? JSONSerialization.jsonObject(
             with: JSONEncoder().encode(ingredients)
         )) ?? []
-        try await publicPOST("/rest/v1/rpc/contribute_mix", body: [
+        try await communityPOST("/rest/v1/rpc/contribute_mix", body: [
             "p_name":         trimmed,
             "p_ingredients":  ingredientJSON,
             "p_total_volume": totalVolume,
@@ -719,6 +719,21 @@ final class SupabaseService {
             ? "return=minimal,resolution=ignore-duplicates"
             : "return=minimal"
         req.setValue(prefer, forHTTPHeaderField: "Prefer")
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        _ = try await perform(req)
+    }
+
+    // Community contribution write. Prefers the signed-in user's token so the
+    // server keys the crowd vote on a real account id (much harder to sybil than
+    // the request IP, which is the fallback for users who never signed in). The
+    // contribute_* RPCs are SECURITY DEFINER and validate the payload, so either
+    // role only ever reaches the controlled insert-and-vote path.
+    private func communityPOST(_ path: String, body: [String: Any]) async throws {
+        var req = buildRequest(path, method: "POST")
+        let token = session?.accessToken ?? SupabaseConfig.anonKey
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("return=minimal", forHTTPHeaderField: "Prefer")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         _ = try await perform(req)
     }
