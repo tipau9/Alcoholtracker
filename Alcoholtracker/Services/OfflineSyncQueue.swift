@@ -27,6 +27,10 @@ private struct PublishBACPayload: Codable {
     let bac: Double
     // Optional so entries queued before this field existed still decode.
     let recordedAt: Date?
+    // The user's effective elimination rate at enqueue time, so the catch-up
+    // decay matches their settings (e.g. tolerance mode) instead of a constant.
+    // Optional for backward compatibility with older queued entries.
+    let eliminationRate: Double?
 }
 
 private struct LeaveJamPayload: Codable {
@@ -68,8 +72,10 @@ final class OfflineSyncService {
 
     // MARK: Enqueue
 
-    func enqueueBACPublish(bac: Double) {
-        guard let data = try? JSONEncoder().encode(PublishBACPayload(bac: bac, recordedAt: Date())) else { return }
+    func enqueueBACPublish(bac: Double, eliminationRate: Double) {
+        guard let data = try? JSONEncoder().encode(
+            PublishBACPayload(bac: bac, recordedAt: Date(), eliminationRate: eliminationRate)
+        ) else { return }
         // Coalesce: only the newest BAC matters, older queued values are obsolete.
         let predicate = #Predicate<PendingSyncOperation> { $0.operationType == "publishBAC" }
         if let stale = try? modelContext.fetch(FetchDescriptor<PendingSyncOperation>(predicate: predicate)) {
@@ -137,11 +143,15 @@ final class OfflineSyncService {
         switch op.operationType {
         case "publishBAC":
             let p = try JSONDecoder().decode(PublishBACPayload.self, from: op.payload)
-            // The queued value is hours old by the time we reconnect; publish
-            // it decayed at the standard elimination rate instead of raw.
+            // The queued value is hours old by the time we reconnect; publish it
+            // decayed at the user's own elimination rate instead of a constant.
+            // Prefer the rate captured at enqueue time; fall back to the last
+            // shared rate, then the default, for entries queued before this field.
             let reference = p.recordedAt ?? op.createdAt
             let elapsedHours = max(0, Date().timeIntervalSince(reference) / 3600)
-            let decayed = max(0, p.bac - 0.15 * elapsedHours)
+            let sharedRate = UserDefaults.widgetShared.double(forKey: UserDefaults.keyEliminationRate)
+            let rate = p.eliminationRate ?? (sharedRate > 0 ? sharedRate : 0.15)
+            let decayed = max(0, p.bac - rate * elapsedHours)
             try await supabase.publishBAC(decayed)
         case "leaveJam":
             let p = try JSONDecoder().decode(LeaveJamPayload.self, from: op.payload)
