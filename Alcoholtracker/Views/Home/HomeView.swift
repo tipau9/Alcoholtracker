@@ -26,6 +26,7 @@ struct HomeView: View {
     @Environment(AchievementService.self) private var achievements
     @Environment(HealthKitService.self) private var health
     @Environment(JamService.self) private var jamService
+    @Environment(LocationService.self) private var locationService
     @State private var session = SessionViewModel()
     @State private var showAddDrink = false
     @State private var showResetAlert = false
@@ -233,7 +234,10 @@ struct HomeView: View {
             QuickAddSheet(
                 profile: profile,
                 lastBottleLevels: session.lastBottleLevels,
-                onAdd: { session.addDrink($0) },
+                onAdd: { drink in
+                    session.addDrink(drink)
+                    pingCityTrend(drink: drink)
+                },
                 onBottleDrink: { template, size, start, current in
                     session.addBottleDrink(template: template, bottleSize: size,
                                            startLevel: start, currentLevel: current)
@@ -251,6 +255,7 @@ struct HomeView: View {
         .sheet(item: $amountTemplate) { template in
             AmountInputSheet(template: template, profile: profile) { drink in
                 session.addDrink(drink)
+                pingCityTrend(drink: drink)
             }
         }
         .sheet(item: $editingDrink) { drink in
@@ -308,6 +313,11 @@ struct HomeView: View {
                 }
             }
         }
+    }
+
+    private func pingCityTrend(drink: Drink) {
+        guard let city = locationService.currentCity else { return }
+        Task { await supabase.pingCityDrink(city: city, drinkName: drink.name, category: drink.categoryRaw) }
     }
 }
 
@@ -442,7 +452,11 @@ private struct DetailedHomeView: View {
                     if !favourites.isEmpty && activeWidgets.contains(.favStrip) {
                         FavouritesStrip(
                             templates: favourites,
-                            onAdd: { session.addDrink(Drink.from(template: $0)) },
+                            onAdd: { template in
+                                let drink = Drink.from(template: template)
+                                session.addDrink(drink)
+                                pingCityTrend(drink: drink)
+                            },
                             onLongPress: onLongPressFavourite
                         )
                         .padding(.top, 20)

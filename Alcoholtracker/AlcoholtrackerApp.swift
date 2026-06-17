@@ -14,6 +14,7 @@ struct PromilleApp: App {
     @State private var historySync: HistorySyncService
     @State private var achievements = AchievementService()
     @State private var health = HealthKitService()
+    @State private var locationService = LocationService()
     private let theme = AppTheme.shared
     @Environment(\.scenePhase) private var scenePhase
 
@@ -56,6 +57,7 @@ struct PromilleApp: App {
                 .environment(historySync)
                 .environment(achievements)
                 .environment(health)
+                .environment(locationService)
                 .environment(theme)
                 .preferredColorScheme(.dark)
                 .task {
@@ -63,6 +65,10 @@ struct PromilleApp: App {
                     await syncCommunityDrinks()
                     syncThemeFromProfile()
                     await historySync.sync()
+                    // Silently refresh city for pinging if already authorized.
+                    if locationService.status == .granted {
+                        locationService.requestLocation()
+                    }
                 }
         }
         .onChange(of: scenePhase) { _, newPhase in

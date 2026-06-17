@@ -682,6 +682,27 @@ final class SupabaseService {
         ])
     }
 
+    // MARK: City Drink Trends
+
+    // Fire-and-forget ping: records that the user drank p_drink_name in p_city.
+    // Silently skips if not configured or not signed in. The server-side RPC
+    // (SECURITY DEFINER) inserts without exposing user_id -- fully anonymous.
+    func pingCityDrink(city: String, drinkName: String, category: String) async {
+        guard isConfigured, isSignedIn, !city.isEmpty else { return }
+        try? await communityPOST("/rest/v1/rpc/ping_city_drink", body: [
+            "p_city":       city,
+            "p_drink_name": drinkName,
+            "p_category":   category
+        ])
+    }
+
+    // Fetches the top drinks logged in city over the last hours hours.
+    func fetchCityTrends(city: String, hours: Int = 24) async throws -> [CityDrinkTrend] {
+        guard isConfigured else { throw SupabaseError.notConfigured }
+        let data = try await publicRPC("city_drink_trends", body: ["p_city": city, "p_hours": hours])
+        return try Self.decoder.decode([CityDrinkTrend].self, from: data)
+    }
+
     // Stable anonymous id for crowd voting, persisted per install. Counts
     // distinct devices without needing the user to be signed in, and keeps one
     // device from inflating a drink's confirmation count by re-scanning.
@@ -721,6 +742,17 @@ final class SupabaseService {
         req.setValue(prefer, forHTTPHeaderField: "Prefer")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         _ = try await perform(req)
+    }
+
+    // Public RPC — POST to /rest/v1/rpc/{function} with anon key; returns response Data
+    // for RPCs that return rows (unlike publicPOST which discards the body).
+    private func publicRPC(_ function: String, body: [String: Any]) async throws -> Data {
+        var req = buildRequest("/rest/v1/rpc/\(function)", method: "POST")
+        req.setValue("Bearer \(SupabaseConfig.anonKey)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        return try await perform(req)
     }
 
     // Community contribution write. Prefers the signed-in user's token so the
@@ -1022,6 +1054,21 @@ struct CommunityMixRow: Decodable, Identifiable {
         case totalVolume    = "total_volume"
         case totalAbv       = "total_abv"
         case confirmedCount = "confirmed_count"
+    }
+}
+
+// MARK: - CityDrinkTrend
+
+struct CityDrinkTrend: Decodable, Identifiable {
+    var id: String { drinkName + category }
+    let drinkName: String
+    let category: String
+    let pingCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case drinkName = "drink_name"
+        case category
+        case pingCount = "ping_count"
     }
 }
 

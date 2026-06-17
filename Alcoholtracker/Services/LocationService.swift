@@ -14,6 +14,7 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
 
     var coordinate: CLLocationCoordinate2D?
+    var currentCity: String?
     var status: Status = .idle
 
     override init() {
@@ -50,10 +51,21 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         _ manager: CLLocationManager,
         didUpdateLocations locations: [CLLocation]
     ) {
-        guard let coord = locations.last?.coordinate else { return }
+        guard let location = locations.last else { return }
+        let coord = location.coordinate
         Task { @MainActor in
             self.coordinate = coord
             self.status = .granted
+            self.resolveCity(from: location)
+        }
+    }
+
+    private func resolveCity(from location: CLLocation) {
+        CLGeocoder().reverseGeocodeLocation(location) { [weak self] placemarks, _ in
+            let city = placemarks?.first?.locality
+            Task { @MainActor [weak self] in
+                self?.currentCity = city
+            }
         }
     }
 
