@@ -17,9 +17,9 @@ extension ServingSize {
                 ServingSize(name: "Kölschglas",    volumeML: 200,  icon: "mug.fill",         description: nil),
                 ServingSize(name: "Becher",         volumeML: 250,  icon: "cup.and.saucer",   description: "Plastik"),
                 ServingSize(name: "Halbe",          volumeML: 300,  icon: "mug.fill",         description: nil),
-                ServingSize(name: "Flasche 0,33L",  volumeML: 330,  icon: "wineglass",        description: nil),
+                ServingSize(name: "Flasche 0,33L",  volumeML: 330,  icon: "waterbottle",      description: nil),
                 ServingSize(name: "Pint",           volumeML: 500,  icon: "mug.fill",         description: nil),
-                ServingSize(name: "Flasche 0,5L",   volumeML: 500,  icon: "wineglass",        description: nil),
+                ServingSize(name: "Flasche 0,5L",   volumeML: 500,  icon: "waterbottle.fill", description: nil),
                 ServingSize(name: "Krug",           volumeML: 500,  icon: "mug.fill",         description: nil),
                 ServingSize(name: "Maß",            volumeML: 1000, icon: "mug.fill",         description: "Bayrisch"),
             ]
@@ -47,9 +47,9 @@ extension ServingSize {
                 ServingSize(name: "Doppelter",      volumeML: 40,   icon: "drop.fill", description: nil),
                 ServingSize(name: "Cl 4",           volumeML: 40,   icon: "drop.fill", description: nil),
                 ServingSize(name: "Großes Glas",   volumeML: 60,   icon: "drop.fill", description: nil),
-                ServingSize(name: "Mini-Flasche",   volumeML: 50,   icon: "drop.fill", description: "Hotel-Größe"),
-                ServingSize(name: "Flasche 0,7L",   volumeML: 700,  icon: "drop.fill", description: nil),
-                ServingSize(name: "Flasche 1L",     volumeML: 1000, icon: "drop.fill", description: nil),
+                ServingSize(name: "Mini-Flasche",   volumeML: 50,   icon: "waterbottle",      description: "Hotel-Größe"),
+                ServingSize(name: "Flasche 0,7L",   volumeML: 700,  icon: "waterbottle.fill", description: nil),
+                ServingSize(name: "Flasche 1L",     volumeML: 1000, icon: "waterbottle.fill", description: nil),
             ]
         case .shot:
             return [
@@ -68,17 +68,17 @@ extension ServingSize {
             ]
         case .mixed:
             return [
-                ServingSize(name: "Dose klein",    volumeML: 250, icon: "cylinder",      description: nil),
-                ServingSize(name: "Dose Standard",  volumeML: 330, icon: "cylinder.fill", description: nil),
-                ServingSize(name: "Flasche 0,33L",  volumeML: 330, icon: "wineglass",     description: nil),
-                ServingSize(name: "Flasche 0,5L",   volumeML: 500, icon: "wineglass",     description: nil),
+                ServingSize(name: "Dose klein",    volumeML: 250, icon: "cylinder",           description: nil),
+                ServingSize(name: "Dose Standard",  volumeML: 330, icon: "cylinder.fill",      description: nil),
+                ServingSize(name: "Flasche 0,33L",  volumeML: 330, icon: "waterbottle",        description: nil),
+                ServingSize(name: "Flasche 0,5L",   volumeML: 500, icon: "waterbottle.fill",   description: nil),
             ]
         case .cider:
             return [
-                ServingSize(name: "Klein",         volumeML: 200, icon: "wineglass",      description: nil),
-                ServingSize(name: "Flasche 0,33L",  volumeML: 330, icon: "wineglass",      description: nil),
-                ServingSize(name: "Flasche 0,5L",   volumeML: 500, icon: "wineglass.fill", description: nil),
-                ServingSize(name: "Pint",           volumeML: 500, icon: "mug.fill",       description: nil),
+                ServingSize(name: "Klein",         volumeML: 200, icon: "wineglass",          description: nil),
+                ServingSize(name: "Flasche 0,33L",  volumeML: 330, icon: "waterbottle",        description: nil),
+                ServingSize(name: "Flasche 0,5L",   volumeML: 500, icon: "waterbottle.fill",   description: nil),
+                ServingSize(name: "Pint",           volumeML: 500, icon: "mug.fill",           description: nil),
             ]
         }
     }

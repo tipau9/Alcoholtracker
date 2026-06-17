@@ -288,6 +288,10 @@ struct QuickAddSheet: View {
                         do {
                             // 1. Check community DB first (faster + grows with each scan)
                             if let row = try? await supabase.lookupCommunityBarcode(code) {
+                                if row.abv <= 0 {
+                                    barcodeError = "Alkoholfreie Getränke (0,0% Vol.) können nicht hinzugefügt werden."
+                                    return
+                                }
                                 barcodeCandidate = DrinkTemplateCandidate(
                                     name:     row.name,
                                     abv:      row.abv,
@@ -299,6 +303,10 @@ struct QuickAddSheet: View {
                             }
                             // 2. Fall back to Open Food Facts
                             if let candidate = try await BarcodeService.lookup(barcode: code) {
+                                if candidate.abv <= 0 {
+                                    barcodeError = "Alkoholfreie Getränke (0,0% Vol.) können nicht hinzugefügt werden."
+                                    return
+                                }
                                 barcodeCandidate = candidate
                             } else {
                                 // Not in any database: let the user enter it by

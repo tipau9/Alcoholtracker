@@ -1,4 +1,5 @@
 import PhotosUI
+import SwiftData
 import SwiftUI
 
 // MARK: - ActiveJamView
@@ -10,6 +11,7 @@ import SwiftUI
 struct ActiveJamView: View {
     let jam: Jam
     @Environment(JamService.self) private var jamService
+    @Query private var crewMembers: [CrewMember]
     @State private var showPrivacySettings = false
     @State private var showLeaveConfirm   = false
     @State private var longPressParticipant: JamParticipant?
@@ -17,6 +19,11 @@ struct ActiveJamView: View {
     @State private var fullscreenPhoto: FullscreenPhoto?
     @State private var photoShareError: String?
     @State private var showWaterContest = false
+    @State private var showInviteSheet  = false
+
+    private var invitableFriends: [CrewMember] {
+        crewMembers.filter { !$0.isSelf }
+    }
 
     private var sortedParticipants: [JamParticipant] {
         // Stable tiebreak so rows of equal BAC do not swap on every update.
@@ -58,6 +65,9 @@ struct ActiveJamView: View {
         }
         .sheet(isPresented: $showPrivacySettings) {
             JamPrivacySheet(currentSettings: jamService.mySettings)
+        }
+        .sheet(isPresented: $showInviteSheet) {
+            InviteFriendsSheet(jam: jam, friends: invitableFriends)
         }
         .sheet(item: $longPressParticipant) { p in
             ParticipantPrivacySheet(
@@ -291,6 +301,9 @@ struct ActiveJamView: View {
                 jamService.mySOSActive.toggle()
             }
         }
+        ActionChip(icon: "person.badge.plus", label: "Freunde einladen") {
+            showInviteSheet = true
+        }
       }
     }
 
@@ -514,4 +527,95 @@ private struct FullscreenPhoto: Identifiable {
     let id = UUID()
     let image: UIImage
     let bac: Double?
+}
+
+// MARK: - Invite friends sheet
+
+private struct InviteFriendsSheet: View {
+    let jam: Jam
+    let friends: [CrewMember]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            Color.appBackground.ignoresSafeArea()
+            VStack(spacing: 0) {
+                HStack {
+                    Text("Freunde einladen")
+                        .font(.appHeadline)
+                        .foregroundStyle(Color.appText)
+                    Spacer()
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.appTextDim)
+                            .frame(width: 32, height: 32)
+                            .background(Color.appCard)
+                            .clipShape(Circle())
+                            .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 16)
+
+                if friends.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "person.3")
+                            .font(.system(size: 40))
+                            .foregroundStyle(Color.appTextMuted)
+                        Text("Keine Crew-Mitglieder")
+                            .font(.appBody)
+                            .foregroundStyle(Color.appTextDim)
+                        Text("Füge zuerst Freunde in der Crew-Tab hinzu.")
+                            .font(.appCaption)
+                            .foregroundStyle(Color.appTextMuted)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.horizontal, 32)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 0) {
+                            ForEach(friends) { friend in
+                                HStack(spacing: 12) {
+                                    Text(friend.avatarInitial)
+                                        .font(.appBodyBold)
+                                        .foregroundStyle(Color.appAccent)
+                                        .frame(width: 40, height: 40)
+                                        .background(Color.appAccent.opacity(0.12))
+                                        .clipShape(Circle())
+                                    Text(friend.name)
+                                        .font(.appBody)
+                                        .foregroundStyle(Color.appText)
+                                    Spacer()
+                                    ShareLink(item: "Tritt meinem Jam bei! Code: \(jam.code)") {
+                                        Text("Einladen")
+                                            .font(.appCaptionBold)
+                                            .foregroundStyle(Color.appAccent)
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 8)
+                                            .background(Color.appAccent.opacity(0.12))
+                                            .clipShape(Capsule())
+                                            .overlay(Capsule().strokeBorder(Color.appAccent.opacity(0.3), lineWidth: 0.5))
+                                    }
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                                if friend.id != friends.last?.id {
+                                    Divider().background(Color.appBorder).padding(.leading, 68)
+                                }
+                            }
+                        }
+                        .background(Color.appCard)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.appBorder, lineWidth: 0.5))
+                        .padding(.horizontal, 20)
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
 }

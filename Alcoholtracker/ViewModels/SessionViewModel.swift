@@ -521,40 +521,47 @@ final class SessionViewModel {
         )
         UserDefaults.widgetShared.set(perDrink, forKey: UserDefaults.keyPerDrinkBAC)
 
-        // Real curve (absorption + elimination) so the widget never shows a
-        // falling value while the BAC is actually still rising.
-        let curvePoints = BACCalculator.bacCurve(
-            drinks: drinks, profile: profile,
-            hours: 12, intervalMinutes: 15,
-            stomachStatus: stomachStatus
-        ).map { SharedBACPoint(date: $0.date, bac: $0.bac) }
-        SharedStateStore.writeBACCurve(curvePoints)
+        // Heavy work (curve, shared session, Live Activity) deferred so the UI
+        // can update (sheet dismiss, haptic) before the compute burst runs.
+        let drinksCopy   = drinks
+        let bacAtCall    = currentBAC
+        let stomachCopy  = stomachStatus
+        let elimRate     = profile.effectiveEliminationRate
+        let drinkCount   = drinks.count
+        let skin         = profile.statusSkin
+        Task {
+            let curvePoints = BACCalculator.bacCurve(
+                drinks: drinksCopy, profile: profile,
+                hours: 12, intervalMinutes: 15,
+                stomachStatus: stomachCopy
+            ).map { SharedBACPoint(date: $0.date, bac: $0.bac) }
+            SharedStateStore.writeBACCurve(curvePoints)
 
-        let skin = profile.statusSkin
-        SharedStateStore.writeStatusConfig(SharedStatusConfig(
-            tipsyThreshold: profile.tipsyThreshold,
-            drunkThreshold: profile.drunkThreshold,
-            carefulThreshold: profile.carefulThreshold,
-            dangerThreshold: profile.dangerThreshold,
-            labels: [
-                skin.label(for: .sober),
-                skin.label(for: .tipsy),
-                skin.label(for: .drunk),
-                skin.label(for: .careful),
-                skin.label(for: .danger),
-            ]
-        ))
+            SharedStateStore.writeStatusConfig(SharedStatusConfig(
+                tipsyThreshold: profile.tipsyThreshold,
+                drunkThreshold: profile.drunkThreshold,
+                carefulThreshold: profile.carefulThreshold,
+                dangerThreshold: profile.dangerThreshold,
+                labels: [
+                    skin.label(for: .sober),
+                    skin.label(for: .tipsy),
+                    skin.label(for: .drunk),
+                    skin.label(for: .careful),
+                    skin.label(for: .danger),
+                ]
+            ))
 
-        writeSharedSession(profile: profile)
-        LiveActivityService.shared.syncActivity(
-            bac: currentBAC,
-            eliminationRate: profile.effectiveEliminationRate,
-            drinkCount: drinks.count,
-            soberThreshold: profile.tipsyThreshold,
-            warningThreshold: profile.warningThreshold
-        )
-        if profile.healthKitEnabled {
-            Task { await healthKit?.logBAC(currentBAC) }
+            writeSharedSession(profile: profile)
+            LiveActivityService.shared.syncActivity(
+                bac: bacAtCall,
+                eliminationRate: elimRate,
+                drinkCount: drinkCount,
+                soberThreshold: profile.tipsyThreshold,
+                warningThreshold: profile.warningThreshold
+            )
+            if profile.healthKitEnabled {
+                await healthKit?.logBAC(bacAtCall)
+            }
         }
     }
 
@@ -596,8 +603,9 @@ final class SessionViewModel {
     }
 
     private func pushBACToWidget() {
-        // recalculate() already wrote the snapshot; just trigger a widget refresh
-        WidgetCenter.shared.reloadAllTimelines()
+        Task.detached(priority: .utility) {
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
 
     // Reschedule the sober/drive-ready local notifications. Called on drink
