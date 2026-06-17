@@ -71,6 +71,19 @@ private struct PMThumbnail: View {
         }
         .frame(width: 76, height: 76)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(alignment: .bottomLeading) {
+            if let bac = memory.bacAtTime, bac > 0 {
+                Text(String(format: "%.2f ‰", bac))
+                    .font(.system(size: 9, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(BACStatus(bac: bac).color.opacity(0.9))
+                    .clipShape(Capsule())
+                    .padding(4)
+            }
+        }
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(Color.appBorder, lineWidth: 0.5)

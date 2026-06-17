@@ -58,6 +58,25 @@ struct PhotoDetailView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 12)
 
+                // BAC badge for jam photos
+                if let bac = memory.bacAtTime, bac > 0 {
+                    HStack(spacing: 6) {
+                        Image(systemName: "waveform")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(BACStatus(bac: bac).color)
+                        Text(String(format: "%.2f ‰ beim Teilen", bac))
+                            .font(.system(size: 13, weight: .semibold, design: .serif))
+                            .monospacedDigit()
+                            .foregroundStyle(BACStatus(bac: bac).color)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 7)
+                    .background(BACStatus(bac: bac).color.opacity(0.12))
+                    .clipShape(Capsule())
+                    .overlay(Capsule().strokeBorder(BACStatus(bac: bac).color.opacity(0.3), lineWidth: 0.5))
+                    .padding(.bottom, 10)
+                }
+
                 // Image
                 GeometryReader { geo in
                     Group {

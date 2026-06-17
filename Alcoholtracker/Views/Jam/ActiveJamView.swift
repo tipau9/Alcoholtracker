@@ -11,6 +11,7 @@ import SwiftUI
 struct ActiveJamView: View {
     let jam: Jam
     @Environment(JamService.self) private var jamService
+    @Environment(\.modelContext) private var context
     @Query private var crewMembers: [CrewMember]
     @State private var showPrivacySettings = false
     @State private var showLeaveConfirm   = false
@@ -119,6 +120,12 @@ struct ActiveJamView: View {
                    let image = UIImage(data: data) {
                     do {
                         try jamService.sendPhoto(image)
+                        // Save to personal photo history with BAC at time of capture.
+                        if let filename = PhotoMemoryService.save(image) {
+                            let bac = jamService.myCurrentBAC > 0 ? jamService.myCurrentBAC : nil
+                            context.insert(PhotoMemory(filename: filename, bacAtTime: bac))
+                            try? context.save()
+                        }
                     } catch {
                         photoShareError = error.localizedDescription
                     }
