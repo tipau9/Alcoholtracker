@@ -24,7 +24,10 @@ struct AchievementsView: View {
                         ForEach(AchievementCatalog.all) { achievement in
                             AchievementCard(
                                 achievement: achievement,
-                                isUnlocked: achievements.isUnlocked(achievement.id)
+                                isUnlocked: achievements.isUnlocked(achievement.id),
+                                onDelete: achievements.isUnlocked(achievement.id)
+                                    ? { achievements.delete(id: achievement.id) }
+                                    : nil
                             )
                         }
                     }
@@ -100,6 +103,7 @@ struct AchievementsView: View {
 private struct AchievementCard: View {
     let achievement: Achievement
     let isUnlocked: Bool
+    var onDelete: (() -> Void)? = nil
 
     @State private var popped = false
 
@@ -165,6 +169,13 @@ private struct AchievementCard: View {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.55)) { popped = true }
                 try? await Task.sleep(for: .milliseconds(300))
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.55)) { popped = false }
+            }
+        }
+        .contextMenu {
+            if let del = onDelete {
+                Button(role: .destructive, action: del) {
+                    Label("Entfernen", systemImage: "trash")
+                }
             }
         }
     }

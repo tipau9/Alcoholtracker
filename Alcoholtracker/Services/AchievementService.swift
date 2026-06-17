@@ -71,4 +71,10 @@ final class AchievementService {
     func isUnlocked(_ id: String) -> Bool {
         unlockedIDs.contains(id)
     }
+
+    func delete(id: String) {
+        guard unlockedIDs.contains(id) else { return }
+        unlockedIDs.remove(id)
+        UserDefaults.standard.set(Array(unlockedIDs), forKey: defaultsKey)
+    }
 }

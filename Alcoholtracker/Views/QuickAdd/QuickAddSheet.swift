@@ -1,6 +1,8 @@
 import SwiftUI
 import SwiftData
 
+private enum QATab { case drinks, mixes }
+
 // MARK: - QuickAddSheet
 // Full-height sheet: favourites grid with BAC preview, search, category list,
 // and custom brand entry at the bottom.
@@ -36,6 +38,10 @@ struct QuickAddSheet: View {
     @State private var barcodeCandidate: DrinkTemplateCandidate? = nil
     @State private var isLookingUpBarcode = false
     @State private var barcodeError: String? = nil
+    @State private var activeTab: QATab = .drinks
+
+    @Query(sort: [SortDescriptor(\CustomMix.createdAt, order: .reverse)])
+    private var savedMixes: [CustomMix]
 
     init(
         profile: UserProfile?,
@@ -110,96 +116,113 @@ struct QuickAddSheet: View {
                     .disabled(isLookingUpBarcode)
                 }
                 .padding(.horizontal, 16)
-                .padding(.bottom, 10)
+                .padding(.bottom, 8)
+
+                if searchQuery.isEmpty {
+                    QATabPicker(active: $activeTab)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                }
 
                 Divider()
                     .background(Color.appBorder)
 
                 ZStack(alignment: .bottom) {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 0) {
-                            GeometryReader { geo in
-                                Color.clear.preference(
-                                    key: QAScrollOffsetPreferenceKey.self,
-                                    value: geo.frame(in: .named("qa_scroll")).minY
-                                )
-                            }
-                            .frame(height: 0)
-
-                            if debouncedQuery.isEmpty {
-                                if !favourites.isEmpty {
-                                    QAFavouritesSection(
-                                        templates: favourites,
-                                        profile: profile,
-                                        onAdd: { amountTemplate = $0 },
-                                        onLongPress: { amountTemplate = $0 }
+                    if !debouncedQuery.isEmpty || activeTab == .drinks {
+                        ScrollView(showsIndicators: false) {
+                            VStack(spacing: 0) {
+                                GeometryReader { geo in
+                                    Color.clear.preference(
+                                        key: QAScrollOffsetPreferenceKey.self,
+                                        value: geo.frame(in: .named("qa_scroll")).minY
                                     )
-                                    .padding(.horizontal, 16)
-                                    .padding(.top, 20)
                                 }
+                                .frame(height: 0)
 
-                                // PERF: use pre-grouped dict to avoid O(n*k) linear scans
-                                let groups = templatesByCategory
-                                QACategoryFilterBar(
-                                    categories: DrinkCategory.allCases.filter { groups[$0] != nil },
-                                    selected: $selectedCategory
-                                )
-                                .padding(.top, 16)
+                                if debouncedQuery.isEmpty {
+                                    if !favourites.isEmpty {
+                                        QAFavouritesSection(
+                                            templates: favourites,
+                                            profile: profile,
+                                            onAdd: { amountTemplate = $0 },
+                                            onLongPress: { amountTemplate = $0 }
+                                        )
+                                        .padding(.horizontal, 16)
+                                        .padding(.top, 20)
+                                    }
 
-                                ForEach(DrinkCategory.allCases, id: \.self) { cat in
-                                    if selectedCategory == nil || selectedCategory == cat {
-                                        if let items = groups[cat], !items.isEmpty {
-                                            QACategorySection(
-                                                category: cat,
-                                                templates: items,
-                                                profile: profile,
-                                                onAdd: { amountTemplate = $0 },
-                                                onLongPress: { amountTemplate = $0 }
-                                            )
-                                            .padding(.horizontal, 16)
-                                            .padding(.top, 20)
+                                    // PERF: use pre-grouped dict to avoid O(n*k) linear scans
+                                    let groups = templatesByCategory
+                                    QACategoryFilterBar(
+                                        categories: DrinkCategory.allCases.filter { groups[$0] != nil },
+                                        selected: $selectedCategory
+                                    )
+                                    .padding(.top, 16)
+
+                                    ForEach(DrinkCategory.allCases, id: \.self) { cat in
+                                        if selectedCategory == nil || selectedCategory == cat {
+                                            if let items = groups[cat], !items.isEmpty {
+                                                QACategorySection(
+                                                    category: cat,
+                                                    templates: items,
+                                                    profile: profile,
+                                                    onAdd: { amountTemplate = $0 },
+                                                    onLongPress: { amountTemplate = $0 }
+                                                )
+                                                .padding(.horizontal, 16)
+                                                .padding(.top, 20)
+                                            }
                                         }
                                     }
+                                } else {
+                                    QASearchResults(
+                                        templates: searchResults,
+                                        query: debouncedQuery,
+                                        profile: profile,
+                                        onAdd: { amountTemplate = $0 },
+                                        onLongPress: { amountTemplate = $0 },
+                                        onCustom: { showCustomEntry = true }
+                                    )
+                                    .padding(.horizontal, 16)
+                                    .padding(.top, 16)
                                 }
-                            } else {
-                                QASearchResults(
-                                    templates: searchResults,
-                                    query: debouncedQuery,
-                                    profile: profile,
-                                    onAdd: { amountTemplate = $0 },
-                                    onLongPress: { amountTemplate = $0 },
-                                    onCustom: { showCustomEntry = true }
-                                )
-                                .padding(.horizontal, 16)
-                                .padding(.top, 16)
+
+                                // Fixed bottom clearance so list items are never hidden behind the bar.
+                                Color.clear.frame(height: 100)
                             }
-
-                            // Fixed bottom clearance so list items are never hidden behind the bar.
-                            Color.clear.frame(height: 100)
                         }
-                    }
-                    .coordinateSpace(name: "qa_scroll")
-                    .onPreferenceChange(QAScrollOffsetPreferenceKey.self) { value in
-                        // Hysteresis: different thresholds for hide vs. show prevent the feedback
-                        // loop that safeAreaInset caused (layout change -> offset jump -> re-show).
-                        let shouldHide = value < -40
-                        let shouldShow = value > -10
-                        if shouldHide && showBottomBar {
-                            withAnimation(.easeInOut(duration: 0.2)) { showBottomBar = false }
-                        } else if shouldShow && !showBottomBar {
-                            withAnimation(.easeInOut(duration: 0.2)) { showBottomBar = true }
+                        .coordinateSpace(name: "qa_scroll")
+                        .onPreferenceChange(QAScrollOffsetPreferenceKey.self) { value in
+                            // Hysteresis: different thresholds for hide vs. show prevent the feedback
+                            // loop that safeAreaInset caused (layout change -> offset jump -> re-show).
+                            let shouldHide = value < -40
+                            let shouldShow = value > -10
+                            if shouldHide && showBottomBar {
+                                withAnimation(.easeInOut(duration: 0.2)) { showBottomBar = false }
+                            } else if shouldShow && !showBottomBar {
+                                withAnimation(.easeInOut(duration: 0.2)) { showBottomBar = true }
+                            }
                         }
-                    }
 
-                    if showBottomBar {
-                        QABottomBar(
-                            onCustomBrand:  { showCustomEntry = true },
-                            onQuickMix:     { showQuickMix = true },
-                            onMixCreator:   { showMixCreator = true },
-                            onBottleMode:   { showBottleMode = true },
-                            onSipCounter:   onStartSipCounter != nil ? { showSipPicker = true } : nil
+                        if showBottomBar {
+                            QABottomBar(
+                                onCustomBrand:  { showCustomEntry = true },
+                                onQuickMix:     { showQuickMix = true },
+                                onMixCreator:   { showMixCreator = true },
+                                onBottleMode:   { showBottleMode = true },
+                                onSipCounter:   onStartSipCounter != nil ? { showSipPicker = true } : nil
+                            )
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
+                    } else {
+                        QAMixesTab(
+                            savedMixes: savedMixes,
+                            profile: profile,
+                            onAdd: { drink in
+                                onAdd(drink)
+                                dismiss()
+                            }
                         )
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
                 .animation(.easeInOut(duration: 0.2), value: showBottomBar)
@@ -1174,6 +1197,275 @@ private struct SipTemplatePicker: View {
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.hidden)
+    }
+}
+
+// MARK: - Tab Picker
+
+private struct QATabPicker: View {
+    @Binding var active: QATab
+
+    var body: some View {
+        HStack(spacing: 0) {
+            tabButton("Getränke", tab: .drinks)
+            tabButton("Mische",   tab: .mixes)
+        }
+        .padding(3)
+        .background(Color.appCard)
+        .clipShape(Capsule())
+        .overlay(Capsule().strokeBorder(Color.appBorder, lineWidth: 0.5))
+        .animation(.easeInOut(duration: 0.15), value: active)
+    }
+
+    private func tabButton(_ label: String, tab: QATab) -> some View {
+        Button { active = tab } label: {
+            Text(label)
+                .font(.appCaptionBold)
+                .foregroundStyle(active == tab ? Color.appBackground : Color.appTextDim)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 7)
+                .background(active == tab ? Color.appAccent : Color.clear)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Mixes Tab
+
+private struct QAMixesTab: View {
+    let savedMixes: [CustomMix]
+    let profile: UserProfile?
+    let onAdd: (Drink) -> Void
+
+    @Environment(\.modelContext) private var context
+    @Environment(SupabaseService.self) private var supabase
+
+    @State private var communityMixes: [CommunityMixRow] = []
+    @State private var loading = true
+    @State private var adoptedIDs: Set<UUID> = []
+    @State private var upvotedIDs: Set<UUID> = []
+    @State private var hiddenIDs: Set<UUID> = []
+
+    private var visibleCommunity: [CommunityMixRow] {
+        communityMixes.filter { !hiddenIDs.contains($0.id) }
+    }
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 0) {
+
+                if !savedMixes.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        SectionLabel(text: "MEINE MISCHE")
+                            .padding(.horizontal, 16)
+                        VStack(spacing: 0) {
+                            ForEach(Array(savedMixes.enumerated()), id: \.element.id) { i, mix in
+                                QAMySavedMixRow(mix: mix) {
+                                    onAdd(mix.asDrink())
+                                } onDelete: {
+                                    context.delete(mix)
+                                    try? context.save()
+                                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                }
+                                if i < savedMixes.count - 1 {
+                                    Divider()
+                                        .background(Color.appBorder.opacity(0.5))
+                                        .padding(.leading, 62)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                        .background(Color.appCard)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.appBorder, lineWidth: 0.5))
+                        .padding(.horizontal, 16)
+                    }
+                    .padding(.top, 20)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    SectionLabel(text: "COMMUNITY")
+                        .padding(.horizontal, 16)
+
+                    if loading {
+                        HStack { Spacer(); ProgressView().tint(Color.appAccent); Spacer() }
+                            .padding(.vertical, 32)
+                    } else if visibleCommunity.isEmpty {
+                        VStack(spacing: 10) {
+                            Image(systemName: "wineglass")
+                                .font(.system(size: 32, weight: .ultraLight))
+                                .foregroundStyle(Color.appTextMuted)
+                            Text("Keine Community-Mische verfügbar.")
+                                .font(.appCaption)
+                                .foregroundStyle(Color.appTextDim)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 32)
+                    } else {
+                        VStack(spacing: 10) {
+                            ForEach(visibleCommunity) { row in
+                                QACommunityMixRow(
+                                    row: row,
+                                    isAdopted: adoptedIDs.contains(row.id),
+                                    isUpvoted: upvotedIDs.contains(row.id),
+                                    onAdopt: { adoptMix(row) },
+                                    onUpvote: { toggleUpvote(row.id) },
+                                    onDownvote: {
+                                        hiddenIDs.insert(row.id)
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    }
+                                )
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                    }
+                }
+                .padding(.top, 20)
+
+                Color.clear.frame(height: 40)
+            }
+        }
+        .task {
+            communityMixes = (try? await supabase.fetchCommunityMixes()) ?? []
+            loading = false
+        }
+    }
+
+    private func adoptMix(_ row: CommunityMixRow) {
+        let mix = CustomMix(name: row.name, ingredients: row.ingredients)
+        context.insert(mix)
+        context.insert(mix.asTemplate())
+        try? context.save()
+        adoptedIDs.insert(row.id)
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+
+    private func toggleUpvote(_ id: UUID) {
+        if upvotedIDs.contains(id) {
+            upvotedIDs.remove(id)
+        } else {
+            upvotedIDs.insert(id)
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
+    }
+}
+
+private struct QAMySavedMixRow: View {
+    let mix: CustomMix
+    let onDrink: () -> Void
+    let onDelete: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "wineglass.fill")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Color.appAccent)
+                .frame(width: 34, height: 34)
+                .background(Color.appAccent.opacity(0.10))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(mix.name)
+                    .font(.appBody)
+                    .foregroundStyle(Color.appText)
+                    .lineLimit(1)
+                Text("\(Int(mix.totalVolume)) ml · \(String(format: "%.1f", mix.totalAbv)) %")
+                    .font(.appMicro)
+                    .foregroundStyle(Color.appTextDim)
+            }
+
+            Spacer()
+
+            Button(action: onDelete) {
+                Image(systemName: "trash")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.statusRed)
+                    .frame(width: 30, height: 30)
+            }
+            .buttonStyle(.plain)
+
+            Button(action: onDrink) {
+                Image(systemName: "plus.circle")
+                    .font(.system(size: 18, weight: .light))
+                    .foregroundStyle(Color.appAccent)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 11)
+        .contentShape(Rectangle())
+    }
+}
+
+private struct QACommunityMixRow: View {
+    let row: CommunityMixRow
+    let isAdopted: Bool
+    let isUpvoted: Bool
+    let onAdopt: () -> Void
+    let onUpvote: () -> Void
+    let onDownvote: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "wineglass.fill")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Color.appAccent)
+                .frame(width: 38, height: 38)
+                .background(Color.appAccent.opacity(0.10))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(row.name)
+                    .font(.appBody)
+                    .foregroundStyle(Color.appText)
+                    .lineLimit(1)
+                Text("\(row.ingredients.count) Zutaten · \(Int(row.totalVolume)) ml · \(String(format: "%.1f", row.totalAbv)) %")
+                    .font(.appMicro)
+                    .foregroundStyle(Color.appTextDim)
+            }
+
+            Spacer()
+
+            Button(action: onDownvote) {
+                Image(systemName: "hand.thumbsdown")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.appTextDim)
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+
+            Button(action: onUpvote) {
+                Image(systemName: isUpvoted ? "hand.thumbsup.fill" : "hand.thumbsup")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(isUpvoted ? Color.appAccent : Color.appTextDim)
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+
+            if isAdopted {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Color.statusGreen)
+            } else {
+                Button(action: onAdopt) {
+                    Text("Übernehmen")
+                        .font(.appCaptionBold)
+                        .foregroundStyle(Color.appAccent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(Color.appAccent.opacity(0.12))
+                        .clipShape(Capsule())
+                        .overlay(Capsule().strokeBorder(Color.appAccent.opacity(0.3), lineWidth: 0.5))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Color.appCard)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.appBorder, lineWidth: 0.5))
     }
 }
 
