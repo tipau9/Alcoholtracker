@@ -27,6 +27,15 @@ create table if not exists public.city_drink_pings (
     created_at timestamptz not null default now()
 );
 
+-- Idempotent backfill: if an earlier/partial city_drink_pings table already
+-- exists (a previous attempt), `create table if not exists` above is a no-op,
+-- so make sure every column the indexes and RPCs need is present.
+alter table public.city_drink_pings add column if not exists city       text        not null default '';
+alter table public.city_drink_pings add column if not exists drink_name text        not null default '';
+alter table public.city_drink_pings add column if not exists category   text        not null default 'other';
+alter table public.city_drink_pings add column if not exists voter      text        not null default 'anon';
+alter table public.city_drink_pings add column if not exists created_at timestamptz not null default now();
+
 -- Trend aggregation reads (city, recent window); the flood cap reads
 -- (voter, recent window). Both stay cheap with these composite indexes.
 create index if not exists city_drink_pings_city_time_idx
