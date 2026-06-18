@@ -334,6 +334,9 @@ private struct DetailedHomeView: View {
     let onLongPressFavourite: (DrinkTemplate) -> Void
     let onEditDrink: (Drink) -> Void
 
+    @Environment(SupabaseService.self) private var supabase
+    @Environment(LocationService.self) private var locationService
+
     // FIX FEATURE8: full-screen chart on tap
     @State private var showFullChart = false
     // 0 = top (hero full size), 1 = scrolled into the list (hero de-emphasised),
@@ -488,6 +491,11 @@ private struct DetailedHomeView: View {
                 .padding(.trailing, 24)
                 .padding(.bottom, 32)
         }
+    }
+
+    private func pingCityTrend(drink: Drink) {
+        guard let city = locationService.currentCity else { return }
+        Task { await supabase.pingCityDrink(city: city, drinkName: drink.name, category: drink.categoryRaw) }
     }
 }
 
