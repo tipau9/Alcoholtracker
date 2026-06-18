@@ -241,6 +241,7 @@ struct HomeView: View {
                 onBottleDrink: { template, size, start, current in
                     session.addBottleDrink(template: template, bottleSize: size,
                                            startLevel: start, currentLevel: current)
+                    pingCityTrend(name: template.name, category: template.category.rawValue)
                 },
                 onStartSipCounter: { template in
                     session.startSipCounter(for: template)
@@ -316,8 +317,12 @@ struct HomeView: View {
     }
 
     private func pingCityTrend(drink: Drink) {
+        pingCityTrend(name: drink.name, category: drink.categoryRaw)
+    }
+
+    private func pingCityTrend(name: String, category: String) {
         guard let city = locationService.currentCity else { return }
-        Task { await supabase.pingCityDrink(city: city, drinkName: drink.name, category: drink.categoryRaw) }
+        Task { await supabase.pingCityDrink(city: city, drinkName: name, category: category) }
     }
 }
 
