@@ -130,7 +130,10 @@ struct QuickAddSheet: View {
                 ZStack(alignment: .bottom) {
                     if !debouncedQuery.isEmpty || activeTab == .drinks {
                         ScrollView(showsIndicators: false) {
-                            VStack(spacing: 0) {
+                            // PERF: lazy so only on-screen category sections/rows are
+                            // built. With ~600 templates a plain VStack rendered every
+                            // row on open, hanging the sheet for several seconds.
+                            LazyVStack(spacing: 0) {
                                 GeometryReader { geo in
                                     Color.clear.preference(
                                         key: QAScrollOffsetPreferenceKey.self,
@@ -575,7 +578,7 @@ private struct QACategorySection: View {
                     .foregroundStyle(Color.appAccent)
                 SectionLabel(text: category.localizedName.uppercased())
             }
-            VStack(spacing: 0) {
+            LazyVStack(spacing: 0) {
                 ForEach(0..<templates.count, id: \.self) { idx in
                     let t = templates[idx]
                     QADrinkRow(
