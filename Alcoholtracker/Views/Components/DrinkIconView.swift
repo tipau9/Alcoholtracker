@@ -1,7 +1,9 @@
 import SwiftUI
 
-/// Renders a drink icon, preferring a full-colour custom asset from
-/// `Assets.xcassets/DrinkIcons` over a plain SF Symbol.
+/// Renders a drink icon, preferring a custom glyph from
+/// `Assets.xcassets/DrinkIcons` over a plain SF Symbol. The custom glyphs are
+/// monochrome and drawn as template images, so they pick up the surrounding
+/// `foregroundStyle` (the app's accent / skin colour) just like SF Symbols.
 ///
 /// Resolution order (first hit wins):
 /// 1. An explicit `"DrinkIcons/…"` asset already stored on the drink.
@@ -36,8 +38,11 @@ struct DrinkIconView: View {
 
     var body: some View {
         if let asset = Self.resolveAsset(iconName: iconName, name: name, category: category) {
+            // The custom icons are monochrome glyphs on a transparent background,
+            // so render them as template images: the surrounding foregroundStyle
+            // (the user's accent / skin colour) tints them just like an SF Symbol.
             Image(asset)
-                .renderingMode(.original)
+                .renderingMode(.template)
                 .resizable()
                 .scaledToFit()
                 .frame(width: size, height: size)
