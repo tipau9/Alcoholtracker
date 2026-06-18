@@ -46,6 +46,13 @@ create index if not exists city_drink_pings_voter_time_idx
 alter table public.city_drink_pings enable row level security;
 -- No direct policies: all access goes through the SECURITY DEFINER RPCs below.
 
+-- Drop any earlier versions first: `create or replace` cannot change a
+-- function's return type, so a prior city_drink_trends() with different OUT
+-- columns must be removed before recreating it. The grants are re-applied at
+-- the end of this script.
+drop function if exists public.ping_city_drink(text, text, text);
+drop function if exists public.city_drink_trends(text, integer);
+
 -- 2) RPC: record one anonymous ping -----------------------------------------
 
 create or replace function public.ping_city_drink(
