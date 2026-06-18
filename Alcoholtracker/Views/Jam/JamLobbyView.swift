@@ -9,6 +9,7 @@ import SwiftUI
 
 struct JamLobbyView: View {
     @Environment(JamService.self) private var jamService
+    @Environment(SupabaseService.self) private var supabase
     @Environment(\.dismiss) private var dismiss
     @Query private var crewMembers: [CrewMember]
 
@@ -17,6 +18,7 @@ struct JamLobbyView: View {
     @State private var joinError: String?
     @State private var isJoining  = false
     @State private var listJoinError: String?
+    @State private var pendingInvitations: [PendingJamInvite] = []
 
     private var hasContent: Bool {
         !jamService.availableJamsNearby.isEmpty || !jamService.availableJamsFromFriends.isEmpty
@@ -31,6 +33,9 @@ struct JamLobbyView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 20) {
+                        if !pendingInvitations.isEmpty {
+                            invitationsSection
+                        }
                         startCard
                         codeSection
                         if !jamService.availableJamsNearby.isEmpty {
@@ -53,6 +58,7 @@ struct JamLobbyView: View {
             // friends-only access check when joining per code.
             jamService.friendCodes = crewMembers.compactMap(\.friendCode)
             jamService.startBrowsing()
+            Task { pendingInvitations = (try? await supabase.fetchMyJamInvitations()) ?? [] }
         }
         .onDisappear {
             // Joining replaces the lobby with ActiveJamView; the browser that
@@ -79,6 +85,63 @@ struct JamLobbyView: View {
     }
 
     // MARK: Subviews
+
+    private var invitationsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "bell.badge.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.statusOrange)
+                SectionLabel(text: "EINLADUNGEN")
+            }
+            VStack(spacing: 0) {
+                ForEach(pendingInvitations) { invite in
+                    HStack(spacing: 14) {
+                        Image(systemName: "waveform.circle.fill")
+                            .font(.system(size: 28, weight: .medium))
+                            .foregroundStyle(Color.appAccent)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(invite.hostName) laed dich ein")
+                                .font(.appBody)
+                                .foregroundStyle(Color.appText)
+                            Text("Code: \(invite.jamCode)")
+                                .font(.system(.caption, design: .monospaced, weight: .semibold))
+                                .foregroundStyle(Color.appTextDim)
+                                .tracking(2)
+                        }
+                        Spacer()
+                        Button {
+                            joinByInvite(invite)
+                        } label: {
+                            Group {
+                                if isJoining {
+                                    ProgressView().tint(Color.appBackground)
+                                } else {
+                                    Text("Beitreten")
+                                        .font(.appCaptionBold)
+                                }
+                            }
+                            .foregroundStyle(Color.appBackground)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 9)
+                            .background(Color.appAccent)
+                            .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isJoining)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    if invite.id != pendingInvitations.last?.id {
+                        Divider().background(Color.appBorder).padding(.leading, 58)
+                    }
+                }
+            }
+            .background(Color.appAccent.opacity(0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.appAccent.opacity(0.3), lineWidth: 1))
+        }
+    }
 
     private var lobbyHeader: some View {
         HStack {
@@ -285,6 +348,20 @@ struct JamLobbyView: View {
         Task {
             do {
                 try await jamService.joinJamFromFriend(jam)
+            } catch {
+                listJoinError = error.localizedDescription
+            }
+            isJoining = false
+        }
+    }
+
+    private func joinByInvite(_ invite: PendingJamInvite) {
+        isJoining = true
+        Task {
+            do {
+                try await jamService.joinJamByCode(invite.jamCode)
+                await supabase.markInvitationSeen(invite.id)
+                pendingInvitations.removeAll { $0.id == invite.id }
             } catch {
                 listJoinError = error.localizedDescription
             }

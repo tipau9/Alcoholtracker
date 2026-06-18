@@ -703,6 +703,35 @@ final class SupabaseService {
         return try Self.decoder.decode([CityDrinkTrend].self, from: data)
     }
 
+    // MARK: Jam Invitations
+
+    // Sends a jam invitation to a friend identified by their friend code.
+    // Fire-and-forget: silently skips if not configured or not signed in.
+    func sendJamInvitation(inviteeCode: String, jamID: UUID, jamCode: String, hostName: String) async {
+        guard isConfigured, isSignedIn else { return }
+        let clean = Self.sanitizeCode(inviteeCode)
+        guard !clean.isEmpty else { return }
+        _ = try? await restRPC("send_jam_invitation", body: [
+            "p_invitee_code": clean,
+            "p_jam_id":       jamID.uuidString.lowercased(),
+            "p_jam_code":     jamCode,
+            "p_host_name":    hostName
+        ])
+    }
+
+    // Fetches all unseen invitations addressed to the current user.
+    func fetchMyJamInvitations() async throws -> [PendingJamInvite] {
+        guard isConfigured, isSignedIn else { return [] }
+        let data = try await restRPC("my_jam_invitations", body: [:])
+        return (try? Self.decoder.decode([PendingJamInvite].self, from: data)) ?? []
+    }
+
+    // Marks one invitation as seen so it no longer appears on reload.
+    func markInvitationSeen(_ id: UUID) async {
+        guard isConfigured, isSignedIn else { return }
+        _ = try? await restRPC("mark_invitation_seen", body: ["p_id": id.uuidString.lowercased()])
+    }
+
     // Stable anonymous id for crowd voting, persisted per install. Counts
     // distinct devices without needing the user to be signed in, and keeps one
     // device from inflating a drink's confirmation count by re-scanning.
@@ -1069,6 +1098,26 @@ struct CityDrinkTrend: Decodable, Identifiable {
         case drinkName = "drink_name"
         case category
         case pingCount = "ping_count"
+    }
+}
+
+// MARK: - PendingJamInvite
+
+struct PendingJamInvite: Decodable, Identifiable {
+    let id: UUID
+    let inviterCode: String
+    let jamID: UUID
+    let jamCode: String
+    let hostName: String
+    let createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case inviterCode = "inviter_code"
+        case jamID       = "jam_id"
+        case jamCode     = "jam_code"
+        case hostName    = "host_name"
+        case createdAt   = "created_at"
     }
 }
 

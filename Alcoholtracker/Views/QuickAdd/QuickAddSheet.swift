@@ -523,7 +523,7 @@ private struct QADrinkCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Image(systemName: template.iconName)
+            DrinkIconView(template: template, size: 22)
                 .font(.system(size: 22, weight: .medium))
                 .foregroundStyle(Color.appAccent)
                 .frame(width: 44, height: 44)
@@ -610,7 +610,7 @@ private struct QADrinkRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: template.iconName)
+            DrinkIconView(template: template, size: 15)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(Color.appAccent)
                 .frame(width: 34, height: 34)
@@ -1176,7 +1176,7 @@ private struct SipTemplatePicker: View {
                         ForEach(results) { t in
                             Button { onSelect(t) } label: {
                                 HStack(spacing: 12) {
-                                    Image(systemName: t.iconName).font(.system(size: 15))
+                                    DrinkIconView(template: t, size: 15).font(.system(size: 15))
                                         .foregroundStyle(Color.appAccent).frame(width: 34, height: 34)
                                         .background(Color.appAccent.opacity(0.1))
                                         .clipShape(RoundedRectangle(cornerRadius: 8))

@@ -110,7 +110,7 @@ private struct BottleTemplatePickerView: View {
                         ForEach(results) { template in
                             Button { onSelect(template) } label: {
                                 HStack(spacing: 14) {
-                                    Image(systemName: template.iconName)
+                                    DrinkIconView(template: template, size: 16)
                                         .font(.system(size: 16, weight: .medium))
                                         .foregroundStyle(Color.appAccent)
                                         .frame(width: 36, height: 36)

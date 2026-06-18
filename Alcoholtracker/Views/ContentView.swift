@@ -16,7 +16,12 @@ struct ContentView: View {
                 OnboardingView()
             }
         }
-        .background(Color.promille.background.ignoresSafeArea())
+        .background(
+            Group {
+                if #available(iOS 26, *) { Color.clear }
+                else { Color.promille.background }
+            }.ignoresSafeArea()
+        )
         .onChange(of: profile?.highContrast)    { _, _ in AppTheme.shared.sync(from: profile) }
         .onChange(of: profile?.reducedMotion)  { _, _ in AppTheme.shared.sync(from: profile) }
         .onChange(of: profile?.largeText)      { _, _ in AppTheme.shared.sync(from: profile) }

@@ -54,7 +54,7 @@ struct DrinkEditSheet: View {
                     .padding(.bottom, 4)
 
                 HStack(spacing: 14) {
-                    Image(systemName: drink.iconName)
+                    DrinkIconView(drink: drink, size: 18)
                         .font(.system(size: 18, weight: .medium))
                         .foregroundStyle(Color.appAccent)
                         .frame(width: 40, height: 40)

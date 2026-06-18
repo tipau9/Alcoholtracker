@@ -1106,7 +1106,7 @@ private struct FavChip: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: template.iconName)
+            DrinkIconView(template: template, size: 12)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Color.appAccent)
             Text(template.name)
@@ -1172,7 +1172,7 @@ private struct DrinkRowView: View {
 
     private var card: some View {
         HStack(spacing: 12) {
-            Image(systemName: drink.iconName)
+            DrinkIconView(drink: drink, size: 15)
                 .font(.system(size: 15))
                 .foregroundStyle(Color.appAccent)
                 .frame(width: 36, height: 36)

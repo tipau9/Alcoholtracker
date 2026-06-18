@@ -433,7 +433,7 @@ private struct QMSSpiritCard: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 6) {
-                Image(systemName: template.iconName)
+                DrinkIconView(template: template, size: 20)
                     .font(.system(size: 20))
                     .foregroundStyle(isSelected ? Color.appBackground : Color.appAccent)
                     .frame(width: 48, height: 48)

@@ -35,15 +35,15 @@ enum DrinkCategory: String, Codable, CaseIterable {
     var symbolName: String {
         switch self {
         case .beer:      return "mug.fill"
-        case .cider:     return "leaf.fill"
+        case .cider:     return "mug.fill"
         case .wine:      return "wineglass.fill"
         case .sparkling: return "sparkles"
-        case .fortified: return "drop.circle.fill"
+        case .fortified: return "wineglass.fill"
         case .spirits:   return "flame.fill"
-        case .liqueur:   return "star.fill"
-        case .shot:      return "bolt.fill"
-        case .cocktail:  return "wineglass"
-        case .mixed:     return "cup.and.saucer.fill"
+        case .liqueur:   return "wineglass.fill"
+        case .shot:      return "flame.fill"
+        case .cocktail:  return "wineglass.fill"
+        case .mixed:     return "cylinder.fill"
         case .other:     return "cup.and.saucer"
         }
     }

@@ -417,7 +417,7 @@ private struct DDSDrinkRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: drink.iconName)
+            DrinkIconView(drink: drink, size: 14)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(Color.appAccent)
                 .frame(width: 36, height: 36)

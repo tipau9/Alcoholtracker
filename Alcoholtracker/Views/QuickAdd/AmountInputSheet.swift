@@ -65,7 +65,7 @@ struct AmountInputSheet: View {
 
                 // Drink header
                 HStack(spacing: 14) {
-                    Image(systemName: template.iconName)
+                    DrinkIconView(template: template, size: 18)
                         .font(.system(size: 18, weight: .medium))
                         .foregroundStyle(Color.appAccent)
                         .frame(width: 40, height: 40)
