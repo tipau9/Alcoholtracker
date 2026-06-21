@@ -37,9 +37,10 @@ struct DrinkEditSheet: View {
 
     private var bacContribution: Double? {
         guard let p = profile, volume > 0 else { return nil }
-        return BACCalculator.bacContribution(
-            volume: volume, abv: drink.abv,
-            weight: p.weight, distributionFactor: p.distributionFactor
+        return BACCalculator.projectedPeak(
+            volume: volume, abv: drink.abv, category: drink.category,
+            profile: p, stomachStatus: p.defaultStomachStatus,
+            drinkDurationMinutes: drink.drinkDurationMinutes
         )
     }
 

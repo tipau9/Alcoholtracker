@@ -51,11 +51,11 @@ struct QuickMixSheet: View {
     }
 
     private var bacContribution: Double {
-        guard let spirit = selectedSpirit else { return 0 }
-        let w = profile?.weight ?? 70
-        let r = profile?.distributionFactor ?? 0.60
-        return BACCalculator.bacContribution(
-            volume: spiritVol, abv: spirit.abv, weight: w, distributionFactor: r
+        guard let spirit = selectedSpirit, let p = profile else { return 0 }
+        // Realistic peak of the mixed drink, consistent with the live BAC.
+        return BACCalculator.projectedPeak(
+            volume: spiritVol, abv: spirit.abv, category: .cocktail,
+            profile: p, stomachStatus: p.defaultStomachStatus
         )
     }
 

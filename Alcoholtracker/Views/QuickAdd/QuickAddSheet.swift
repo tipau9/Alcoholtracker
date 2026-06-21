@@ -483,9 +483,11 @@ private struct QASearchBar: View {
 
 private func bacContribution(for template: DrinkTemplate, profile: UserProfile?) -> Double? {
     guard let p = profile else { return nil }
-    return BACCalculator.bacContribution(
-        volume: template.volume, abv: template.abv,
-        weight: p.weight, distributionFactor: p.distributionFactor
+    // Realistic peak the drink reaches in the live model, so the shown badge
+    // matches what the BAC display will actually climb to (not raw Widmark).
+    return BACCalculator.projectedPeak(
+        volume: template.volume, abv: template.abv, category: template.category,
+        profile: p, stomachStatus: p.defaultStomachStatus
     )
 }
 
@@ -866,9 +868,9 @@ struct CustomBrandSheet: View {
 
     private var bacPreview: Double? {
         guard let p = profile, volume > 0, abv > 0 else { return nil }
-        return BACCalculator.bacContribution(
-            volume: volume, abv: abv,
-            weight: p.weight, distributionFactor: p.distributionFactor
+        return BACCalculator.projectedPeak(
+            volume: volume, abv: abv, category: .other,
+            profile: p, stomachStatus: p.defaultStomachStatus
         )
     }
 
@@ -1077,9 +1079,9 @@ struct BarcodeCandidateSheet: View {
 
     private var bacPreview: Double? {
         guard let p = profile, volume > 0, abv > 0 else { return nil }
-        return BACCalculator.bacContribution(
-            volume: volume, abv: abv,
-            weight: p.weight, distributionFactor: p.distributionFactor
+        return BACCalculator.projectedPeak(
+            volume: volume, abv: abv, category: category,
+            profile: p, stomachStatus: p.defaultStomachStatus
         )
     }
 

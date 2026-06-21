@@ -45,9 +45,10 @@ struct AmountInputSheet: View {
 
     private var bacContribution: Double? {
         guard let p = profile, volume > 0 else { return nil }
-        return BACCalculator.bacContribution(
-            volume: volume, abv: template.abv,
-            weight: p.weight, distributionFactor: p.distributionFactor
+        // Realistic peak this drink reaches, so the preview matches the live BAC.
+        return BACCalculator.projectedPeak(
+            volume: volume, abv: template.abv, category: template.category,
+            profile: p, stomachStatus: p.defaultStomachStatus
         )
     }
 

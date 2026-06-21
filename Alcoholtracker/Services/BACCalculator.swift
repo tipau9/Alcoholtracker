@@ -15,6 +15,10 @@ enum BACCalculator {
     // MARK: - Spec-compatible entry points
 
     /// Peak BAC contribution of a single drink (fully absorbed, before elimination).
+    /// This is the raw Widmark term: it ignores the resorption deficit, the
+    /// absorption ramp and elimination, so it OVERSTATES what the body ever
+    /// reaches. Use `projectedPeak` for anything shown to the user; this stays
+    /// the raw input the forward integration builds on.
     static func bacContribution(
         volume: Double,
         abv: Double,
@@ -23,6 +27,58 @@ enum BACCalculator {
     ) -> Double {
         let alcoholGrams = (volume * abv / 100.0) * 0.789
         return alcoholGrams / (weight * distributionFactor)
+    }
+
+    /// Minutes over which a drink's alcohol enters the blood.
+    ///
+    /// Absorption finishes roughly at the gastric-emptying time (the stomach's
+    /// `absorptionMinutes`, scaled by the category's CO2/transit modifier), and is
+    /// only stretched further if the drink is actually sipped for longer than
+    /// that. The two are therefore combined with `max`, NOT added: adding the full
+    /// gastric phase on top of the drinking duration double-counted the spread,
+    /// pushing the peak far too late and subtracting elimination across an
+    /// unrealistically long window (which badly understated single-drink peaks).
+    static func absorptionWindowMinutes(
+        category: DrinkCategory,
+        volumeML: Double,
+        drinkDurationMinutes: Double,
+        gastric: Double
+    ) -> Double {
+        let drinkDuration = drinkDurationMinutes > 0
+            ? drinkDurationMinutes
+            : DrinkDurationEstimator.estimate(category: category, volumeML: volumeML)
+        return max(1, max(drinkDuration, gastric * category.absorptionModifier))
+    }
+
+    /// The realistic peak BAC a single drink reaches on its own under the full
+    /// model: raw Widmark x resorption deficit (stomach `peakFactor`), minus the
+    /// zero-order elimination that occurs while it is being absorbed.
+    ///
+    /// Closed form (the single-drink curve rises linearly across the absorption
+    /// window, so its maximum is at the window's end), which keeps it cheap enough
+    /// for per-row list badges and makes the shown "+x permille" match the live
+    /// curve's peak exactly. This is what the user should see when adding a drink.
+    static func projectedPeak(
+        volume: Double,
+        abv: Double,
+        category: DrinkCategory,
+        profile: UserProfile,
+        stomachStatus: StomachStatus,
+        drinkDurationMinutes: Double = 0
+    ) -> Double {
+        let rawPeak = bacContribution(
+            volume: volume, abv: abv,
+            weight: profile.weight,
+            distributionFactor: profile.distributionFactor
+        ) * stomachStatus.peakFactor
+        let window = absorptionWindowMinutes(
+            category: category,
+            volumeML: volume,
+            drinkDurationMinutes: drinkDurationMinutes,
+            gastric: stomachStatus.absorptionMinutes
+        )
+        let elimPerMin = profile.effectiveEliminationRate / 60.0
+        return max(0, rawPeak - elimPerMin * window)
     }
 
     /// Simple linear estimate of time until BAC drops to threshold.
@@ -117,12 +173,14 @@ enum BACCalculator {
                 weight: profile.weight,
                 distributionFactor: r
             ) * factor
-            // Drinking duration extends the ramp: alcohol enters gradually over the
-            // time the drink is consumed, not all at once.
-            let drinkDuration = drink.drinkDurationMinutes > 0
-                ? drink.drinkDurationMinutes
-                : DrinkDurationEstimator.estimate(category: drink.category, volumeML: drink.volume)
-            let window = max(1, drinkDuration + gastric * drink.category.absorptionModifier)
+            // Alcohol enters gradually; the window ends at gastric emptying (or
+            // later if the drink is sipped longer). See absorptionWindowMinutes.
+            let window = absorptionWindowMinutes(
+                category: drink.category,
+                volumeML: drink.volume,
+                drinkDurationMinutes: drink.drinkDurationMinutes,
+                gastric: gastric
+            )
             return (start, window, peak)
         }
 

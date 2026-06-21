@@ -22,15 +22,17 @@ struct MixCreatorSheet: View {
     @State private var shareConfirm = false
 
     private var totalBACContribution: Double {
-        guard let p = profile else { return 0 }
-        return ingredients.reduce(0.0) { sum, ing in
-            sum + BACCalculator.bacContribution(
-                volume: ing.volume,
-                abv: ing.abv,
-                weight: p.weight,
-                distributionFactor: p.distributionFactor
-            )
-        }
+        guard let p = profile, !ingredients.isEmpty else { return 0 }
+        let totalVolume = ingredients.reduce(0.0) { $0 + $1.volume }
+        guard totalVolume > 0 else { return 0 }
+        // Combine the ingredients into one drink (same total alcohol) and show the
+        // realistic peak, consistent with the live BAC rather than raw Widmark.
+        let alcoholMl = ingredients.reduce(0.0) { $0 + $1.volume * $1.abv / 100.0 }
+        let effectiveABV = alcoholMl / totalVolume * 100.0
+        return BACCalculator.projectedPeak(
+            volume: totalVolume, abv: effectiveABV, category: .cocktail,
+            profile: p, stomachStatus: p.defaultStomachStatus
+        )
     }
 
     private var isReadyToAdd: Bool  { !ingredients.isEmpty }
