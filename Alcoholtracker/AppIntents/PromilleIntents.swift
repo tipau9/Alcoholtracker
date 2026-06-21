@@ -1,6 +1,43 @@
 import AppIntents
 import Foundation
 
+// MARK: - Shared snapshot reader
+
+// BAC at an arbitrary moment for the Siri intents. Prefers the live curve the
+// app writes (SharedStateStore.writeBACCurve), so the rising absorption phase
+// right after a drink is reflected just like in the widget. Falls back to linear
+// elimination from the scalar snapshot when no curve is stored yet.
+//
+// Previously the intents only read the scalar snapshot and decayed it linearly,
+// so straight after a drink Siri reported ~0 ("nüchtern") and never showed the
+// climbing value the app/widget display, the exact mismatch the curve fixes.
+private enum PromilleSnapshot {
+    static func bac(at date: Date) -> Double {
+        let defaults = UserDefaults.widgetShared
+        let rate = max(0.05, defaults.double(forKey: UserDefaults.keyEliminationRate))
+        let curve = SharedStateStore.readBACCurve()
+        if let first = curve.first, let last = curve.last {
+            if date <= first.date { return max(0, first.bac) }
+            if date >= last.date {
+                let elapsedH = date.timeIntervalSince(last.date) / 3600.0
+                return max(0, last.bac - rate * elapsedH)
+            }
+            for i in 1..<curve.count where curve[i].date >= date {
+                let a = curve[i - 1], b = curve[i]
+                let span = b.date.timeIntervalSince(a.date)
+                guard span > 0 else { return max(0, b.bac) }
+                let t = date.timeIntervalSince(a.date) / span
+                return max(0, a.bac + (b.bac - a.bac) * t)
+            }
+        }
+        // No curve yet: linear decay of the legacy scalar snapshot.
+        let bac = defaults.double(forKey: UserDefaults.keyCurrentBAC)
+        let lastUpdated = (defaults.object(forKey: UserDefaults.keyLastUpdated) as? Date) ?? date
+        let elapsedH = date.timeIntervalSince(lastUpdated) / 3600.0
+        return max(0, bac - rate * elapsedH)
+    }
+}
+
 // MARK: - Check current BAC
 
 struct CheckCurrentBACIntent: AppIntent {
@@ -8,13 +45,7 @@ struct CheckCurrentBACIntent: AppIntent {
     static var description = IntentDescription("Fragt deinen aktuellen Promillewert ab")
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let defaults = UserDefaults.widgetShared
-        let bac = defaults.double(forKey: UserDefaults.keyCurrentBAC)
-        let rate = defaults.double(forKey: UserDefaults.keyEliminationRate)
-        let lastUpdated = (defaults.object(forKey: UserDefaults.keyLastUpdated) as? Date) ?? Date()
-
-        let elapsed = Date().timeIntervalSince(lastUpdated) / 3600
-        let current = max(0, bac - rate * elapsed)
+        let current = PromilleSnapshot.bac(at: Date())
 
         let formatted = String(format: "%.2f", current).replacingOccurrences(of: ".", with: ",")
         if current < 0.01 {
@@ -35,14 +66,17 @@ struct ForecastIntent: AppIntent {
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let defaults = UserDefaults.widgetShared
-        let bac = defaults.double(forKey: UserDefaults.keyCurrentBAC)
-        let rate = max(0.05, defaults.double(forKey: UserDefaults.keyEliminationRate))
-        let lastUpdated = (defaults.object(forKey: UserDefaults.keyLastUpdated) as? Date) ?? Date()
-        let drivingLimit = defaults.object(forKey: UserDefaults.keyWarningThreshold) as? Double ?? 0.5
+        // Real legal driving limit (0,0 ‰ in der Probezeit), falling back to the
+        // warning threshold and then 0,5 ‰ for profiles saved before this key.
+        let drivingLimit = (defaults.object(forKey: UserDefaults.keyDrivingLimit) as? Double)
+            ?? (defaults.object(forKey: UserDefaults.keyWarningThreshold) as? Double)
+            ?? 0.5
 
-        let elapsed = Date().timeIntervalSince(lastUpdated) / 3600
-        let currentBAC = max(0, bac - rate * elapsed)
-        let projectedBAC = max(0, AlcoholKinetics.bacAtTime(peakBAC: currentBAC, hoursSincePeak: hours, beta: rate))
+        // BAC at the target moment read straight from the live curve, which
+        // already folds in both ongoing absorption and elimination over the
+        // window. (The old code decayed the snapshot to "now" and then applied a
+        // second, mixed-order decay on top, double-counting elimination.)
+        let projectedBAC = PromilleSnapshot.bac(at: Date().addingTimeInterval(hours * 3600))
         let allowed = max(0, drivingLimit - projectedBAC)
         // Estimate per-drink contribution based on stored rate (population average drink ~ 10g alcohol).
         let perDrinkBAC = max(0.05, defaults.object(forKey: UserDefaults.keyPerDrinkBAC) as? Double ?? 0.15)

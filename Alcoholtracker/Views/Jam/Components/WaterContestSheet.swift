@@ -51,10 +51,10 @@ struct WaterContestSheet: View {
     private var header: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Wasser-Wettkampf")
+                Text("Wetttrinken")
                     .font(.appHeadline)
                     .foregroundStyle(Color.appText)
-                Text("Schnellstes Glas Wasser gewinnt")
+                Text("Wer am schnellsten trinkt gewinnt")
                     .font(.appCaption)
                     .foregroundStyle(Color.appTextDim)
             }

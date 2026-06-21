@@ -32,19 +32,32 @@ struct ForecastView: View {
         max(0, targetBAC - projectedBACAtTarget)
     }
 
-    // One standard drink contributes roughly 0.2 promille for an average person.
-    // We use the profile's own contribution estimate for a 330 ml / 5% reference drink.
-    private var oneStandardDrinkBAC: Double {
-        let c = BACCalculator.bacContribution(
+    // Realistic peak one standard drink (0,33 l / 5%) reaches on its own, identical
+    // to the "+x ‰" badge in the add sheet, so both screens show the same number.
+    // Shown to the user; NOT used for the safety budget below.
+    private var oneStandardDrinkPeak: Double {
+        max(0.01, BACCalculator.projectedPeak(
+            volume: 330, abv: 5.0, category: .beer,
+            profile: profile, stomachStatus: profile.defaultStomachStatus
+        ))
+    }
+
+    // Conservative per-drink figure used only to count how many more drinks fit:
+    // the raw Widmark peak with no per-drink elimination credit. projectedPeak
+    // subtracts a full absorption window of elimination, which is valid for one
+    // isolated drink but NOT when stacking several before a target hours away, so
+    // budgeting on it would over-suggest (e.g. 4 beers for a 0,5 ‰ goal). Keeping
+    // the budget on the raw peak errs safe.
+    private var budgetPerDrinkBAC: Double {
+        max(0.01, BACCalculator.bacContribution(
             volume: 330, abv: 5.0,
             weight: profile.weight,
             distributionFactor: profile.distributionFactor
-        )
-        return max(0.01, c)
+        ))
     }
 
     private var allowedDrinks: Int {
-        Int(allowedAdditionalBAC / oneStandardDrinkBAC)
+        Int(allowedAdditionalBAC / budgetPerDrinkBAC)
     }
 
     private var isAlreadyOverLimit: Bool {
@@ -182,7 +195,7 @@ struct ForecastView: View {
                             .font(.appCaption)
                             .foregroundStyle(Color.appTextDim)
                     }
-                    Text("Standarddrinks (je ~\(String(format: "%.2f", oneStandardDrinkBAC)) promille)")
+                    Text("Standarddrinks · je ~\(String(format: "%.2f", oneStandardDrinkPeak)) ‰, konservativ gerechnet")
                         .font(.appMicro)
                         .foregroundStyle(Color.appTextMuted)
                 }

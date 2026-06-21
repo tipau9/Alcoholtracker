@@ -142,4 +142,7 @@ nonisolated extension UserDefaults {
     static let keyEliminationRate   = "eliminationRate"
     static let keyWarningThreshold  = "warningThreshold"
     static let keyPerDrinkBAC       = "perDrinkBAC"
+    // Legal "fit to drive" limit in ‰ (0,0 during Probezeit, else 0,5). Shared so
+    // the Siri forecast respects the novice-driver limit, not just the warning.
+    static let keyDrivingLimit      = "drivingLimit"
 }

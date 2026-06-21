@@ -514,6 +514,7 @@ final class SessionViewModel {
         UserDefaults.widgetShared.set(profile.effectiveEliminationRate, forKey: UserDefaults.keyEliminationRate)
         UserDefaults.widgetShared.set(Date(), forKey: UserDefaults.keyLastUpdated)
         UserDefaults.widgetShared.set(profile.warningThreshold, forKey: UserDefaults.keyWarningThreshold)
+        UserDefaults.widgetShared.set(profile.drivingLimit, forKey: UserDefaults.keyDrivingLimit)
         let perDrink = BACCalculator.bacContribution(
             volume: 330, abv: 5.0,
             weight: profile.weight,
