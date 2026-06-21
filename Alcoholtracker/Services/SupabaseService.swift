@@ -570,6 +570,50 @@ final class SupabaseService {
             .compactMap { $0.toParticipant() }
     }
 
+    // MARK: Jam mini-games (water contest + roulette) over the server
+    //
+    // All five go through SECURITY DEFINER RPCs that check jam membership, so a
+    // member sees and contributes to the games no matter how they joined (online
+    // by code or by Bluetooth). See supabase/jam_games.sql.
+
+    func submitJamWaterTime(jamID: UUID, participantID: UUID, name: String, ms: Int) async throws {
+        try await refreshIfNeeded()
+        _ = try await restRPC("jam_submit_water", body: [
+            "p_jam_id":         jamID.uuidString,
+            "p_participant_id": participantID.uuidString,
+            "p_name":           name,
+            "p_ms":             ms
+        ])
+    }
+
+    func resetJamWater(_ jamID: UUID) async throws {
+        try await refreshIfNeeded()
+        _ = try await restRPC("jam_reset_water", body: ["p_jam_id": jamID.uuidString])
+    }
+
+    func fetchJamWaterScores(_ jamID: UUID) async throws -> [WaterScore] {
+        try await refreshIfNeeded()
+        let data = try await restRPC("jam_water_board", body: ["p_jam_id": jamID.uuidString])
+        return try Self.decoder.decode([JamWaterScoreRow].self, from: data).compactMap { $0.toScore() }
+    }
+
+    func setJamRoulette(_ payload: JamRoulettePayload) async throws {
+        try await refreshIfNeeded()
+        _ = try await restRPC("jam_set_roulette", body: [
+            "p_jam_id":       payload.jamID.uuidString,
+            "p_draw_id":      payload.id.uuidString,
+            "p_participants": payload.participants,
+            "p_winner_index": payload.winnerIndex,
+            "p_starter_name": payload.starterName
+        ])
+    }
+
+    func fetchJamRoulette(_ jamID: UUID) async throws -> JamRoulettePayload? {
+        try await refreshIfNeeded()
+        let data = try await restRPC("jam_roulette", body: ["p_jam_id": jamID.uuidString])
+        return try Self.decoder.decode([JamRouletteRow].self, from: data).first?.toPayload(jamID: jamID)
+    }
+
     // "Von Freunden" means exactly that: only jams whose host is one of the
     // locally stored friends are returned. The codes are resolved to user ids
     // first; without that filter every signed-in user would see every
@@ -1043,6 +1087,46 @@ private struct JamParticipantRow: Decodable {
             hasSOSActive: hasSOSActive ?? false,
             lastUpdated: lastUpdated ?? now,
             sharedSettings: nil
+        )
+    }
+}
+
+// MARK: - Jam game rows (water + roulette)
+
+private struct JamWaterScoreRow: Decodable {
+    let participantID: String
+    let name: String?
+    let ms: Int
+
+    enum CodingKeys: String, CodingKey {
+        case participantID = "participant_id"
+        case name, ms
+    }
+
+    func toScore() -> WaterScore? {
+        guard let uuid = UUID(uuidString: participantID) else { return nil }
+        return WaterScore(id: uuid, name: name ?? "Anonym", ms: ms)
+    }
+}
+
+private struct JamRouletteRow: Decodable {
+    let drawID: String
+    let participants: [String]
+    let winnerIndex: Int
+    let starterName: String?
+
+    enum CodingKeys: String, CodingKey {
+        case drawID = "draw_id"
+        case participants
+        case winnerIndex = "winner_index"
+        case starterName = "starter_name"
+    }
+
+    func toPayload(jamID: UUID) -> JamRoulettePayload? {
+        guard let id = UUID(uuidString: drawID) else { return nil }
+        return JamRoulettePayload(
+            id: id, jamID: jamID, participants: participants,
+            winnerIndex: winnerIndex, starterName: starterName ?? "Jemand"
         )
     }
 }

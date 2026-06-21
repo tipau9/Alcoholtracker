@@ -23,19 +23,38 @@ struct JamControl: Codable {
 
 // Round roulette: the starter picks the loser and broadcasts the ordered
 // participant names + winning index, so every device runs the same spin and
-// lands on the same person. Travels over the Bluetooth channel like photos.
+// lands on the same person. Travels over BOTH the Bluetooth channel and (for
+// server jams) Supabase, so online-only members take part too.
 struct JamRoulettePayload: Codable, Identifiable {
+    // Shared draw identity: the SAME value on every device for one draw, so a
+    // draw that arrives over both transports is presented only once and is
+    // de-duplicated across poll cycles. (Older peers sent no id; init(from:)
+    // falls back to a fresh UUID so their payloads still decode.)
+    var id = UUID()
     let jamID: UUID
     let participants: [String]
     let winnerIndex: Int
     let starterName: String
 
-    // Local identity for sheet(item:); excluded from the wire format so each
-    // receiver assigns its own (same pattern as JamPhotoPayload).
-    var id = UUID()
+    init(id: UUID = UUID(), jamID: UUID, participants: [String], winnerIndex: Int, starterName: String) {
+        self.id = id
+        self.jamID = jamID
+        self.participants = participants
+        self.winnerIndex = winnerIndex
+        self.starterName = starterName
+    }
 
     enum CodingKeys: String, CodingKey {
-        case jamID, participants, winnerIndex, starterName
+        case id, jamID, participants, winnerIndex, starterName
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id           = (try c.decodeIfPresent(UUID.self, forKey: .id)) ?? UUID()
+        self.jamID        = try c.decode(UUID.self, forKey: .jamID)
+        self.participants = try c.decode([String].self, forKey: .participants)
+        self.winnerIndex  = try c.decode(Int.self, forKey: .winnerIndex)
+        self.starterName  = try c.decode(String.self, forKey: .starterName)
     }
 }
 

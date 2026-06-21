@@ -132,6 +132,9 @@ final class JamService {
     private var pollTimer: Timer?
     private var lastBroadcastTime: Date = .distantPast
     private var myJoinedAt: Date?
+    // Draw id of the roulette already presented, so the same draw arriving over
+    // both transports (Bluetooth + server poll) is shown at most once.
+    private var lastRouletteID: UUID?
 
     init(supabase: SupabaseService) {
         self.supabase = supabase
@@ -157,8 +160,7 @@ final class JamService {
             self?.handleControl(control)
         }
         multipeer.onRouletteReceived = { [weak self] payload in
-            guard let self, payload.jamID == self.currentJam?.id else { return }
-            self.incomingRoulette = payload
+            self?.presentRoulette(payload)
         }
         multipeer.onWaterReceived = { [weak self] payload in
             guard let self, payload.jamID == self.currentJam?.id else { return }
@@ -190,6 +192,12 @@ final class JamService {
             jamID: jam.id, kind: .result, participantID: myParticipantID,
             name: name, milliseconds: milliseconds
         ))
+        // Online members (no Bluetooth link) get it via the server poll.
+        if jam.visibility.usesServer {
+            Task { try? await supabase.submitJamWaterTime(
+                jamID: jam.id, participantID: myParticipantID, name: name, ms: milliseconds
+            ) }
+        }
     }
 
     // Clears the leaderboard for everyone in the jam.
@@ -199,6 +207,9 @@ final class JamService {
         multipeer.broadcastWater(WaterPayload(
             jamID: jam.id, kind: .reset, participantID: myParticipantID, name: "", milliseconds: 0
         ))
+        if jam.visibility.usesServer {
+            Task { try? await supabase.resetJamWater(jam.id) }
+        }
     }
 
     // MARK: Round roulette
@@ -215,7 +226,20 @@ final class JamService {
             jamID: jam.id, participants: names, winnerIndex: winner, starterName: starter
         )
         multipeer.broadcastRoulette(payload)
-        incomingRoulette = payload   // show it locally too
+        presentRoulette(payload)     // show it locally too (and record the draw id)
+        // Online members (no Bluetooth link) get the same draw via the server poll.
+        if jam.visibility.usesServer {
+            Task { try? await supabase.setJamRoulette(payload) }
+        }
+    }
+
+    // Presents a roulette draw exactly once, regardless of which transport (or
+    // both) delivered it. De-duplicates on the shared draw id.
+    private func presentRoulette(_ payload: JamRoulettePayload) {
+        guard payload.jamID == currentJam?.id else { return }
+        guard payload.id != lastRouletteID else { return }
+        lastRouletteID = payload.id
+        incomingRoulette = payload
     }
 
     private func appendPhoto(_ photo: JamPhotoPayload) {
@@ -361,6 +385,9 @@ final class JamService {
         availableJamsNearby.removeAll()
         availableJamsFromFriends.removeAll()
         receivedPhotos.removeAll()     // clear photos so next jam starts fresh
+        waterScores.removeAll()        // games are per-jam; do not leak into the next
+        incomingRoulette = nil
+        lastRouletteID = nil
         amHost = false
         confirmedOnServer = false
         currentJam = nil               // immediate: UI transitions to lobby right away
@@ -493,7 +520,10 @@ final class JamService {
             // Short interval so a new participant appears in near real-time for
             // everyone in the jam. One lightweight GET per tick.
             pollTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
-                Task { @MainActor [weak self] in await self?.syncParticipants() }
+                Task { @MainActor [weak self] in
+                    await self?.syncParticipants()
+                    await self?.syncJamGames()
+                }
             }
         }
     }
@@ -613,6 +643,37 @@ final class JamService {
 
         mutableJam.participants = activeParticipants
         currentJam = mutableJam
+    }
+
+    // Pulls the server-backed mini-games (roulette draw + water leaderboard) so
+    // online-only members see the same spin and times as the Bluetooth peers.
+    private func syncJamGames() async {
+        guard let jam = currentJam, jam.visibility.usesServer else { return }
+
+        if let draw = try? await supabase.fetchJamRoulette(jam.id) {
+            presentRoulette(draw)
+        }
+        if let server = try? await supabase.fetchJamWaterScores(jam.id) {
+            mergeServerWaterScores(server)
+        }
+    }
+
+    // The server is authoritative for members with a server row: replace those
+    // entries with the fetched set (so a reset propagates to everyone), while
+    // keeping our own freshly submitted time and any Bluetooth-only proximity
+    // peers that have no server row. Mirrors the roster merge in syncParticipants.
+    private func mergeServerWaterScores(_ server: [WaterScore]) {
+        let serverIDs = Set(server.map(\.id))
+        let proximityIDs = Set(
+            (currentJam?.participants ?? [])
+                .filter { $0.connectionType == .proximity }
+                .map(\.id)
+        )
+        let kept = waterScores.filter { s in
+            if serverIDs.contains(s.id) { return false }
+            return s.id == myParticipantID || proximityIDs.contains(s.id)
+        }
+        waterScores = (server + kept).sorted { $0.ms < $1.ms }
     }
 
     private func fetchFriendJams() async {
