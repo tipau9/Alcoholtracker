@@ -21,6 +21,13 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app
 
+      - name: PROBE available Xcodes and iOS SDKs
+        run: |
+          echo "--- installed Xcodes ---"
+          ls -d /Applications/Xcode*.app
+          echo "--- iOS SDKs (current xcodebuild) ---"
+          xcodebuild -showsdks 2>&1 | grep -i ios || true
+
       - name: Create SupabaseConfig
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
