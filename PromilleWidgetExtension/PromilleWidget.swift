@@ -54,7 +54,34 @@ struct PromilleEntry: TimelineEntry {
     var statusLabel: String { statusConfig.label(forBAC: bac) }
 
     func hoursUntil(_ threshold: Double) -> Double? {
-        guard bac > threshold, eliminationRate > 0 else { return nil }
+        guard bac > threshold else { return nil }
+        // Prefer the real curve the app wrote: while BAC is still rising after a
+        // fresh drink, a pure linear decline under-reports the time and disagrees
+        // with the in-app forward scan. Walk samples from this entry's moment and
+        // return the first downward crossing, interpolated. Linear fallback when
+        // there is no curve or the crossing lies beyond it.
+        let curve = SharedStateStore.readBACCurve()
+        if curve.count >= 2 {
+            var prev: SharedBACPoint? = nil
+            for p in curve {
+                if p.date < date { prev = p; continue }
+                if let a = prev, a.bac > threshold, p.bac <= threshold {
+                    let span = p.date.timeIntervalSince(a.date)
+                    let frac = a.bac > p.bac ? (a.bac - threshold) / (a.bac - p.bac) : 0
+                    let cross = a.date.addingTimeInterval(span * frac)
+                    return max(0, cross.timeIntervalSince(date) / 3600.0)
+                }
+                if p.bac <= threshold {
+                    return max(0, p.date.timeIntervalSince(date) / 3600.0)
+                }
+                prev = p
+            }
+            if let last = curve.last, last.bac > threshold, eliminationRate > 0 {
+                let tail = (last.bac - threshold) / eliminationRate
+                return max(0, last.date.timeIntervalSince(date) / 3600.0 + tail)
+            }
+        }
+        guard eliminationRate > 0 else { return nil }
         return (bac - threshold) / eliminationRate
     }
 }

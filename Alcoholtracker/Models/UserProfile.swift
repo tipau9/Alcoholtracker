@@ -189,13 +189,17 @@ final class UserProfile {
 
     var activeWidgets: [WidgetType] {
         get {
-            var result = _parseRawList(activeWidgetsRaw).compactMap { WidgetType(rawValue: $0) }
-            // An empty stored list means "all active" (default for new profiles);
-            // new cases not yet in a stored list also default to active.
-            for wt in WidgetType.allCases where !result.contains(wt) {
-                result.append(wt)
-            }
-            return result
+            let stored = _parseRawList(activeWidgetsRaw)
+            // An empty stored list means "all active" (the default for a fresh
+            // profile, which is initialised with every case). A NON-empty list is
+            // an explicit user choice and is now respected exactly, so turning a
+            // widget off in the edit sheet actually sticks. Previously every
+            // missing case was re-appended here, which silently resurrected any
+            // widget the user had disabled. New widget types added in an update
+            // stay reachable: the edit sheet lists them and a fresh profile gets
+            // them via the all-cases initialiser.
+            guard !stored.isEmpty else { return WidgetType.allCases }
+            return stored.compactMap { WidgetType(rawValue: $0) }
         }
         set {
             activeWidgetsRaw = newValue.map(\.rawValue).joined(separator: ",")
@@ -237,6 +241,13 @@ final class UserProfile {
 
     // MARK: Widmark distribution factor (Watson 1980 formula)
     // More accurate than a flat gender lookup. Clamped to physiological range.
+    //
+    // Watson estimates TOTAL BODY WATER (litres). The Widmark r for BLOOD alcohol
+    // (the legal Promille basis) is TBW divided by the blood-water fraction
+    // (~0.806), NOT TBW/weight: TBW/weight yields the body-water concentration,
+    // which overstates blood BAC by 1/0.806 (~24%). Dividing by 0.806 brings r in
+    // line with the Watson-Widmark / German forensic values (men ~0.70, women
+    // ~0.60). Clamp is the physiological blood-r range.
     var distributionFactor: Double {
         let a = Double(currentAge)
         let tbw: Double
@@ -250,7 +261,7 @@ final class UserProfile {
             let f = -2.097 + 0.1069 * height + 0.2466 * weight
             tbw = (m + f) / 2.0
         }
-        return min(max(tbw / weight, 0.45), 0.80)
+        return min(max((tbw / weight) / 0.806, 0.50), 0.90)
     }
 
     init(
