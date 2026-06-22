@@ -192,10 +192,11 @@ final class JamService {
             jamID: jam.id, kind: .result, participantID: myParticipantID,
             name: name, milliseconds: milliseconds
         ))
-        // Online members (no Bluetooth link) get it via the server poll.
+        // Online members (no Bluetooth link) get it via the server poll. The
+        // participant id is derived server-side from membership, not sent.
         if jam.visibility.usesServer {
             Task { try? await supabase.submitJamWaterTime(
-                jamID: jam.id, participantID: myParticipantID, name: name, ms: milliseconds
+                jamID: jam.id, name: name, ms: milliseconds
             ) }
         }
     }
@@ -658,22 +659,28 @@ final class JamService {
         }
     }
 
-    // The server is authoritative for members with a server row: replace those
-    // entries with the fetched set (so a reset propagates to everyone), while
-    // keeping our own freshly submitted time and any Bluetooth-only proximity
-    // peers that have no server row. Mirrors the roster merge in syncParticipants.
+    // The server is authoritative for members with a server row (so a reset
+    // propagates to everyone), but our own freshly submitted time and any
+    // Bluetooth-only proximity peers without a server row are kept. For our own
+    // and BT peers we keep whichever time is BETTER (lower ms): otherwise a poll
+    // that races our submit RPC would briefly overwrite a just-improved time with
+    // the stale, worse server value. Mirrors the roster merge in syncParticipants.
     private func mergeServerWaterScores(_ server: [WaterScore]) {
-        let serverIDs = Set(server.map(\.id))
         let proximityIDs = Set(
             (currentJam?.participants ?? [])
                 .filter { $0.connectionType == .proximity }
                 .map(\.id)
         )
-        let kept = waterScores.filter { s in
-            if serverIDs.contains(s.id) { return false }
-            return s.id == myParticipantID || proximityIDs.contains(s.id)
+        var byID: [UUID: WaterScore] = [:]
+        for s in server { byID[s.id] = s }
+        for s in waterScores where s.id == myParticipantID || proximityIDs.contains(s.id) {
+            if let existing = byID[s.id] {
+                if s.ms < existing.ms { byID[s.id] = s }
+            } else {
+                byID[s.id] = s
+            }
         }
-        waterScores = (server + kept).sorted { $0.ms < $1.ms }
+        waterScores = byID.values.sorted { $0.ms < $1.ms }
     }
 
     private func fetchFriendJams() async {

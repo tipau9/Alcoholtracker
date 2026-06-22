@@ -67,7 +67,8 @@ end $$;
 --    never hits "cannot change return type of existing function".
 -- =========================================================================
 
-drop function if exists public.jam_submit_water(uuid, uuid, text, integer);
+drop function if exists public.jam_submit_water(uuid, uuid, text, integer);  -- pre-fix signature
+drop function if exists public.jam_submit_water(uuid, text, integer);
 drop function if exists public.jam_reset_water(uuid);
 drop function if exists public.jam_water_board(uuid);
 drop function if exists public.jam_set_roulette(uuid, uuid, jsonb, integer, text);
@@ -92,24 +93,35 @@ as $$
 $$;
 
 -- Submit (or improve) the caller's water-chug time. Keeps the best (lowest) ms.
+--
+-- The participant id is derived server-side from the caller's own jam_participants
+-- row, never taken from the client: otherwise a member could write rows under
+-- anyone else's id, or flood the board with unlimited fake participant ids. The
+-- lookup doubles as the membership check (you must hold a participant row).
 create or replace function public.jam_submit_water(
-    p_jam_id uuid, p_participant_id uuid, p_name text, p_ms integer
+    p_jam_id uuid, p_name text, p_ms integer
 )
 returns void
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare v_participant_id uuid;
 begin
-    if not public.is_jam_member(p_jam_id) then
-        raise exception 'not a member of this jam';
+    select me.id::uuid into v_participant_id
+    from public.jam_participants me
+    where me.jam_id::uuid = p_jam_id
+      and me.user_id::uuid = auth.uid()
+    limit 1;
+    if v_participant_id is null then
+        raise exception 'not a participant of this jam';
     end if;
     -- 1 ms .. 10 min guards garbage / overflow.
     if p_ms is null or p_ms < 1 or p_ms > 600000 then
         raise exception 'invalid time';
     end if;
     insert into public.jam_water_scores (jam_id, participant_id, user_id, name, ms, updated_at)
-    values (p_jam_id, p_participant_id, auth.uid()::text, left(coalesce(p_name, ''), 40), p_ms, now())
+    values (p_jam_id, v_participant_id, auth.uid()::text, left(coalesce(p_name, ''), 40), p_ms, now())
     on conflict (jam_id, participant_id) do update
         set ms         = least(public.jam_water_scores.ms, excluded.ms),
             name       = excluded.name,
@@ -206,14 +218,14 @@ $$;
 -- =========================================================================
 
 revoke all on function public.is_jam_member(uuid)                              from public, anon;
-revoke all on function public.jam_submit_water(uuid, uuid, text, integer)      from public, anon;
+revoke all on function public.jam_submit_water(uuid, text, integer)            from public, anon;
 revoke all on function public.jam_reset_water(uuid)                            from public, anon;
 revoke all on function public.jam_water_board(uuid)                            from public, anon;
 revoke all on function public.jam_set_roulette(uuid, uuid, jsonb, integer, text) from public, anon;
 revoke all on function public.jam_roulette(uuid)                               from public, anon;
 
 grant execute on function public.is_jam_member(uuid)                              to authenticated;
-grant execute on function public.jam_submit_water(uuid, uuid, text, integer)      to authenticated;
+grant execute on function public.jam_submit_water(uuid, text, integer)            to authenticated;
 grant execute on function public.jam_reset_water(uuid)                            to authenticated;
 grant execute on function public.jam_water_board(uuid)                            to authenticated;
 grant execute on function public.jam_set_roulette(uuid, uuid, jsonb, integer, text) to authenticated;

@@ -576,13 +576,14 @@ final class SupabaseService {
     // member sees and contributes to the games no matter how they joined (online
     // by code or by Bluetooth). See supabase/jam_games.sql.
 
-    func submitJamWaterTime(jamID: UUID, participantID: UUID, name: String, ms: Int) async throws {
+    // The participant id is derived server-side from the caller's membership, so
+    // it is not sent here (a client-supplied id would be spoofable).
+    func submitJamWaterTime(jamID: UUID, name: String, ms: Int) async throws {
         try await refreshIfNeeded()
         _ = try await restRPC("jam_submit_water", body: [
-            "p_jam_id":         jamID.uuidString,
-            "p_participant_id": participantID.uuidString,
-            "p_name":           name,
-            "p_ms":             ms
+            "p_jam_id": jamID.uuidString,
+            "p_name":   name,
+            "p_ms":     ms
         ])
     }
 
