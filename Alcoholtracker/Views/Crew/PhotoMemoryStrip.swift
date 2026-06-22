@@ -73,7 +73,7 @@ private struct PMThumbnail: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(alignment: .bottomLeading) {
             if let bac = memory.bacAtTime, bac > 0 {
-                Text(String(format: "%.2f ‰", bac))
+                Text(bac.permilleString)
                     .font(.system(size: 9, weight: .bold))
                     .monospacedDigit()
                     .foregroundStyle(.white)

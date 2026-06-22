@@ -176,7 +176,7 @@ struct QuickMixSheet: View {
                 Image(systemName: "chart.bar.fill")
                     .font(.system(size: 12))
                     .foregroundStyle(bacStatusColor)
-                Text(String(format: "+%.2f ‰", bacContribution))
+                Text(bacContribution.signedPermilleString)
                     .font(.appCaptionBold)
                     .foregroundStyle(bacStatusColor)
                     .contentTransition(.numericText())

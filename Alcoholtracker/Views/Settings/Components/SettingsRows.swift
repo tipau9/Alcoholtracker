@@ -150,7 +150,7 @@ struct STThresholdRow: View {
                     .font(.appBody)
                     .foregroundStyle(Color.appText)
                 Spacer()
-                Text(String(format: "%.2f ‰", value))
+                Text(value.permilleString)
                     .font(.appCaptionBold)
                     .foregroundStyle(Color.appAccent)
                     .monospacedDigit()
@@ -200,7 +200,7 @@ struct STBACThresholdRow: View {
                         .foregroundStyle(Color.appText)
                 }
                 Spacer()
-                Text(String(format: "%.2f ‰", value))
+                Text(value.permilleString)
                     .font(.appCaptionBold)
                     .foregroundStyle(color)
                     .monospacedDigit()

@@ -89,7 +89,7 @@ struct HomeEditSheet: View {
             HStack {
                 SectionLabel(text: "WARNSCHWELLE")
                 Spacer()
-                Text(String(format: "%.2f ‰", warningThreshold))
+                Text(warningThreshold.permilleString)
                     .font(.appCaptionBold)
                     .foregroundStyle(Color.appAccent)
                     .animation(.easeInOut(duration: 0.15), value: warningThreshold)

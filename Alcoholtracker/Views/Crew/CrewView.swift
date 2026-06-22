@@ -395,7 +395,7 @@ struct CrewView: View {
                     await NotificationService.notifyNow(
                         id: "promille.friend.high.\(member.id.uuidString)",
                         title: "\(member.name) trinkt viel",
-                        body: String(format: "%@ liegt rechnerisch bei %.2f ‰. Vielleicht mal nachfragen.", member.name, member.estimatedBAC)
+                        body: "\(member.name) liegt rechnerisch bei \(member.estimatedBAC.permilleString). Vielleicht mal nachfragen."
                     )
                 } else if member.estimatedBAC < dangerLimit, member.highAlertFired {
                     member.highAlertFired = false   // reset so the next episode can alert again
@@ -940,7 +940,7 @@ private struct CrewMemberRow: View {
                             .font(.appCaption)
                             .foregroundStyle(Color.appTextDim)
                     } else if member.hasLiveData {
-                        Text(String(format: "%.2f ‰", member.estimatedBAC))
+                        Text(member.estimatedBAC.permilleString)
                             .font(.appCaption)
                             .foregroundStyle(member.bacStatus.color)
                             .monospacedDigit()

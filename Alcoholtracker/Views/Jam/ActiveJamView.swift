@@ -108,7 +108,7 @@ struct ActiveJamView: View {
                 if let bac = full.bac, bac > 0 {
                     VStack {
                         Spacer()
-                        Text(String(format: "%.2f ‰", bac))
+                        Text(bac.permilleString)
                             .font(.system(size: 20, weight: .bold, design: .serif))
                             .monospacedDigit()
                             .foregroundStyle(.white)
@@ -417,7 +417,7 @@ private struct JamPhotoThumb: View {
                 // BAC the photo was taken at, pinned to the bottom of the thumb.
                 .overlay(alignment: .bottomLeading) {
                     if let bac = photo.senderBAC, bac > 0 {
-                        Text(String(format: "%.2f ‰", bac))
+                        Text(bac.permilleString)
                             .font(.system(size: 9, weight: .bold))
                             .monospacedDigit()
                             .foregroundStyle(.white)
@@ -485,7 +485,7 @@ private struct ActiveParticipantRow: View {
             return "BAC verborgen"
         }
         guard let bac = participant.currentBAC else { return "Lädt..." }
-        return String(format: "%.2f ‰", bac)
+        return bac.permilleString
     }
 
     private var bacColor: Color {

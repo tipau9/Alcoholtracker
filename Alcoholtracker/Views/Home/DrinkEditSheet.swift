@@ -144,7 +144,7 @@ struct DrinkEditSheet: View {
                                     .font(.appCaption)
                                     .foregroundStyle(Color.appTextDim)
                                 Spacer()
-                                Text(String(format: "+%.2f ‰", bac))
+                                Text(bac.signedPermilleString)
                                     .font(.appCaptionBold)
                                     .foregroundStyle(Color.statusOrange)
                             }

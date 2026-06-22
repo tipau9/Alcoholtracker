@@ -165,7 +165,7 @@ struct DayDetailSheet: View {
                     icon: "drop.fill",
                     iconColor: bacStatusForDay.color,
                     label: "Spitzen-BAC",
-                    value: String(format: "%.2f ‰", peakBAC),
+                    value: peakBAC.permilleString,
                     valueColor: bacStatusForDay.color
                 )
                 Divider()

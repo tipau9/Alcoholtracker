@@ -457,7 +457,7 @@ private struct MCPreviewCard: View {
                 HStack {
                     MCPreviewRow(
                         label: "BAC-Beitrag",
-                        value: String(format: "+%.2f ‰", totalBAC)
+                        value: totalBAC.signedPermilleString
                     )
                     if totalBAC > 0 {
                         Text(totalBAC > 0.3 ? "Stark" : "Moderat")

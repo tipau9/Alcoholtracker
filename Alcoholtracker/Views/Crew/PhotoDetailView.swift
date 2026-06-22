@@ -64,7 +64,7 @@ struct PhotoDetailView: View {
                         Image(systemName: "waveform")
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(BACStatus(bac: bac).color)
-                        Text(String(format: "%.2f ‰ beim Teilen", bac))
+                        Text("\(bac.permilleString) beim Teilen")
                             .font(.system(size: 13, weight: .semibold, design: .serif))
                             .monospacedDigit()
                             .foregroundStyle(BACStatus(bac: bac).color)

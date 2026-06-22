@@ -996,7 +996,7 @@ private struct QABACPreviewRow: View {
 
             Spacer()
 
-            Text(String(format: "+%.2f ‰", contribution))
+            Text(contribution.signedPermilleString)
                 .font(.appCaptionBold)
                 .foregroundStyle(Color.statusOrange)
         }

@@ -189,7 +189,7 @@ struct AmountInputSheet: View {
                                     .font(.appCaption)
                                     .foregroundStyle(Color.appTextDim)
                                 Spacer()
-                                Text(String(format: "+%.2f \u{2030}", bac))
+                                Text(bac.signedPermilleString)
                                     .font(.appCaptionBold)
                                     .foregroundStyle(Color.statusOrange)
                                     .contentTransition(.numericText())
