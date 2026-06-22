@@ -208,7 +208,6 @@ struct HomeView: View {
                 session.configure(profile: p, context: context)
             }
             evaluateMoodPrompt()
-            bacTrend = computeBACTrend()
         }
         .onChange(of: session.undoVersion) { _, _ in
             // Restart the auto-hide window whenever a new undoable action appears.
@@ -269,7 +268,6 @@ struct HomeView: View {
             )
         }
         .onChange(of: session.currentBAC) { _, bac in
-            bacTrend = computeBACTrend()
             jamService.myCurrentBAC = bac
             // Re-arm drunk-mode once back under the threshold.
             if bac < (profile?.carefulThreshold ?? 0.8) { drunkModeDismissed = false }
@@ -503,6 +501,10 @@ private struct DetailedHomeView: View {
                 .padding(.trailing, 24)
                 .padding(.bottom, 32)
         }
+        // Refresh the memoised trend only when the BAC actually changes, not on
+        // every scroll frame (this body re-evaluates as heroCollapse animates).
+        .task { bacTrend = computeBACTrend() }
+        .onChange(of: session.currentBAC) { _, _ in bacTrend = computeBACTrend() }
     }
 
     private func pingCityTrend(drink: Drink) {
