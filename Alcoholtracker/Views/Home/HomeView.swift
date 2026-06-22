@@ -1347,8 +1347,7 @@ private struct AchievementUnlockToast: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .glassCard(cornerRadius: 16)
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
                     .strokeBorder(Color.appAccent.opacity(0.3), lineWidth: 0.5)
@@ -1412,8 +1411,7 @@ private struct MedicationWarningBanner: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .glassCard(cornerRadius: 16)
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
                     .strokeBorder(Color.statusOrange.opacity(0.4), lineWidth: 0.5)
@@ -1452,8 +1450,7 @@ private struct PacingHintBanner: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .glassCard(cornerRadius: 16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(Color.statusOrange.opacity(0.4), lineWidth: 0.5)
