@@ -88,7 +88,17 @@ struct ForecastView: View {
         )
         .onAppear {
             // Start from the user's actual driving limit (0,0 ‰ in Probezeit).
-            if profile.isProbationaryDriver { targetBAC = 0.0 }
+            targetBAC = profile.drivingLimit
+        }
+        .onChange(of: profile.isProbationaryDriver) { _, _ in
+            // The Fahr-Grenzwert segment above can flip Probezeit on/off while this
+            // view is on screen. Without this the old target (e.g. 0,5 ‰) stays
+            // selected, so in Probezeit no pill is highlighted and the result card
+            // is computed against an illegal limit until the user taps it by hand.
+            // Snap the selection to the new driving limit automatically.
+            withAnimation(.easeInOut(duration: 0.15)) {
+                targetBAC = profile.drivingLimit
+            }
         }
     }
 
