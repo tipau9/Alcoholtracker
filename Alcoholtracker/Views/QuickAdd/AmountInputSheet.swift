@@ -34,7 +34,10 @@ struct AmountInputSheet: View {
         }
         self.sliderRange = range
 
-        let clamped = min(range.upperBound, max(range.lowerBound, template.volume))
+        // Start from the user's last chosen size for this drink (so "Dose", "Flasche
+        // 0,5 L", ... is remembered), falling back to the template's nominal volume.
+        let preferred = ServingSizeMemory.volume(for: template.id) ?? template.volume
+        let clamped = min(range.upperBound, max(range.lowerBound, preferred))
         self._volume = State(initialValue: clamped)
 
         // Use the already-created presets array so UUIDs match
@@ -216,6 +219,8 @@ struct AmountInputSheet: View {
                             icon: "plus",
                             isDisabled: !isValid
                         ) {
+                            // Remember this size for next time (auto-selected then).
+                            ServingSizeMemory.save(volume: volume, for: template.id)
                             let drink = Drink.from(template: template, volume: volume)
                             drink.drinkDurationMinutes = durationMinutes
                             onAdd(drink)

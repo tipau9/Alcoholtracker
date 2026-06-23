@@ -162,20 +162,26 @@ enum StomachStatus: String, Codable, CaseIterable {
         switch self {
         case .empty: return 45.0   // fasted: 30-60 min to peak (Widmark)
         case .light: return 75.0   // mixed meal: 60-90 min to peak
-        case .full:  return 120.0  // high-calorie meal: 90-180 min to peak
+        case .full:  return 90.0   // full meal: ~90 min to peak (see note on peakFactor)
         }
     }
 
     // Peak-BAC scaling = (forensic resorption deficit) × (food/absorption-completeness).
     // A ~10% first-pass loss in the gut wall and liver applies to the whole dose even
     // when fasted, so the empty-stomach factor is 0.90 (forensic minimum) rather than
-    // 1.00. Food in the stomach lowers the peak further on top of that, preserving the
-    // empty > light > full gradient: 1.00→0.90, 0.90→0.81, 0.75→0.68.
+    // 1.00. Food lowers the peak further on top of that, keeping the empty > light >
+    // full gradient.
+    //
+    // NOTE: the `full` values were softened (peakFactor 0.68 -> 0.75, absorptionMinutes
+    // 120 -> 90). The two food hebel (a lower peakFactor AND a longer absorption window
+    // that subtracts more elimination) compounded so hard that a single beer's projected
+    // peak collapsed to ~0.00 on a full stomach, which is wrong: a full meal cuts the
+    // peak by ~30-50%, not ~100%. The net peaks stay monotonic (empty > light > full).
     var peakFactor: Double {
         switch self {
         case .empty: return 0.90
         case .light: return 0.81
-        case .full:  return 0.68
+        case .full:  return 0.75
         }
     }
 }

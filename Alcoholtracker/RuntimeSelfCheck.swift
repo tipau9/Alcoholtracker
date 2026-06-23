@@ -213,6 +213,19 @@ enum RuntimeSelfCheck {
                                                 vomitTimes: [vomitBase.addingTimeInterval(5 * 60)])
         checkInt("vomitLowersPeak", peakVomited < peakNoVomit ? 1 : 0, 1)
 
+        // 21) Full-stomach beer must NOT collapse to ~0 (the softened full-stomach
+        //     parameters): a 0.5 L / 5% beer on a full stomach should still show a
+        //     small but clearly non-zero peak, and stay below the lighter-stomach
+        //     values so the empty > light > full gradient holds.
+        let fullBeer = BACCalculator.projectedPeak(
+            volume: 500, abv: 5, category: .beer, profile: profile, stomachStatus: .full)
+        let lightBeer = BACCalculator.projectedPeak(
+            volume: 500, abv: 5, category: .beer, profile: profile, stomachStatus: .light)
+        let emptyBeer = BACCalculator.projectedPeak(
+            volume: 500, abv: 5, category: .beer, profile: profile, stomachStatus: .empty)
+        check("fullStomachBeerNonZero", fullBeer, 0.04, 0.13)
+        checkInt("stomachPeakGradient", (emptyBeer > lightBeer && lightBeer > fullBeer) ? 1 : 0, 1)
+
         // DIAGNOSTIC: 200 ml rum (40%) for an 87 kg / 196 cm male, the user's case.
         // Prints (does not assert) the real values the engine produces so we can see
         // exactly why the shown peak is what it is and how the assumptions move it.

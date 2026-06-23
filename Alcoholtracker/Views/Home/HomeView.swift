@@ -483,7 +483,10 @@ private struct DetailedHomeView: View {
                         FavouritesStrip(
                             templates: favourites,
                             onAdd: { template in
-                                let drink = Drink.from(template: template)
+                                // Honor the user's remembered serving size for this drink.
+                                let drink = Drink.from(
+                                    template: template,
+                                    volume: ServingSizeMemory.volume(for: template.id))
                                 session.addDrink(drink)
                                 pingCityTrend(drink: drink)
                             },
