@@ -119,6 +119,27 @@ enum RuntimeSelfCheck {
         checkInt("probationaryBlockedAt_0_3", novice.mayDrive(at: 0.3) ? 0 : 1, 1)
         checkInt("normalDriverOkAt_0_3", profile.mayDrive(at: 0.3) ? 1 : 0, 1)
 
+        // 14) HealthKit: the alcohol grams that drive the logged "standard drinks"
+        //     value (HealthKitService logs alcoholGrams / 10).
+        check("healthKitAlcoholGrams", beer.alcoholGrams, 19.0, 20.0)
+
+        // 15) Live Activity / AppIntents tail model (AlcoholKinetics, mixed-order).
+        //     From peak 1.0 at beta 0.15: linear above km, so 1.0 - 0.15*2 = 0.70.
+        check("liveActivityBacAtTime",
+              AlcoholKinetics.bacAtTime(peakBAC: 1.0, hoursSincePeak: 2, beta: 0.15), 0.68, 0.72)
+        //     Hours from 1.0 to 0.5 at 0.15 = ~3.33 h.
+        check("liveActivityHoursToThreshold",
+              AlcoholKinetics.hoursUntilThreshold(peakBAC: 1.0, threshold: 0.5, beta: 0.15), 3.0, 3.7)
+
+        // 16) Widget data contract: the BAC curve the app writes to the App Group
+        //     is read back intact (this is exactly what the widget/Live Activity read).
+        let written = [SharedBACPoint(date: Date(), bac: 0.42),
+                       SharedBACPoint(date: Date().addingTimeInterval(900), bac: 0.51)]
+        SharedStateStore.writeBACCurve(written)
+        let readBack = SharedStateStore.readBACCurve()
+        let curveOK = readBack.count == 2 && abs((readBack.last?.bac ?? 0) - 0.51) < 0.001
+        checkInt("widgetCurveRoundTrip", curveOK ? 1 : 0, 1)
+
         print("SELFCHECK SUMMARY pass=\(pass) fail=\(fail)")
     }
 }
