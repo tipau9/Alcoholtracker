@@ -85,8 +85,24 @@ extension DrinkIconView {
         "flame.fill":     Asset.vodkaShot,
     ]
 
+    // Memoised: the asset for a given (iconName, name, category) never changes,
+    // but body re-runs on every list scroll frame, so each visible drink row was
+    // redoing the lowercasing, keyword scans and up to four UIImage(named:) lookups
+    // every frame. @MainActor: resolveAsset is only ever called from a View body.
+    @MainActor private static var resolveCache: [String: String?] = [:]
+
     /// Returns the asset to draw, or `nil` to fall back to an SF Symbol.
+    @MainActor
     static func resolveAsset(iconName: String, name: String, category: DrinkCategory?) -> String? {
+        let key = "\(iconName)\u{1}\(name)\u{1}\(category?.rawValue ?? "")"
+        if let cached = resolveCache[key] { return cached }
+        let resolved = computeAsset(iconName: iconName, name: name, category: category)
+        resolveCache[key] = resolved
+        return resolved
+    }
+
+    /// Pure resolution (see `resolveAsset` for the memoised entry point).
+    private static func computeAsset(iconName: String, name: String, category: DrinkCategory?) -> String? {
         // 1. Explicit custom asset stored on the drink.
         if iconName.hasPrefix("DrinkIcons/"), UIImage(named: iconName) != nil {
             return iconName
