@@ -140,6 +140,29 @@ enum RuntimeSelfCheck {
         let curveOK = readBack.count == 2 && abs((readBack.last?.bac ?? 0) - 0.51) < 0.001
         checkInt("widgetCurveRoundTrip", curveOK ? 1 : 0, 1)
 
+        // DIAGNOSTIC: 200 ml rum (40%) for an 87 kg / 196 cm male, the user's case.
+        // Prints (does not assert) the real values the engine produces so we can see
+        // exactly why the shown peak is what it is and how the assumptions move it.
+        let rumProfile = UserProfile(weight: 87, height: 196, age: 25, gender: .male)
+        let rumGrams = 200.0 * 0.40 * 0.789
+        let rumRaw = BACCalculator.bacContribution(
+            volume: 200, abv: 40, weight: 87, distributionFactor: rumProfile.distributionFactor)
+        let window = BACCalculator.absorptionWindowMinutes(
+            category: .spirits, volumeML: 200, drinkDurationMinutes: 0,
+            gastric: StomachStatus.light.absorptionMinutes)
+        print(String(format: "DIAG rum r=%.4f grams=%.1f rawPeak=%.4f absorptionWindowMin=%.0f",
+                     rumProfile.distributionFactor, rumGrams, rumRaw, window))
+        for s in [StomachStatus.empty, .light, .full] {
+            let pk = BACCalculator.projectedPeak(
+                volume: 200, abv: 40, category: .spirits, profile: rumProfile, stomachStatus: s)
+            print(String(format: "DIAG rum projectedPeak[%@]=%.4f", s.rawValue as NSString, pk))
+        }
+        // Faster drinking (30 min) instead of the 100 min spirits estimate.
+        let fast = BACCalculator.projectedPeak(
+            volume: 200, abv: 40, category: .spirits, profile: rumProfile,
+            stomachStatus: .light, drinkDurationMinutes: 30)
+        print(String(format: "DIAG rum projectedPeak[light,30minDrinking]=%.4f", fast))
+
         print("SELFCHECK SUMMARY pass=\(pass) fail=\(fail)")
     }
 }
