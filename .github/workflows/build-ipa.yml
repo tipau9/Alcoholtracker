@@ -73,3 +73,87 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: Alcoholtracker.ipa
+
+  # Runtime verification of the calculations: boots a simulator, launches the app
+  # with -selfCheck, and asserts the real BAC/hydration/hangover math. Manual runs
+  # only (workflow_dispatch); skipped on tag/release pushes so releases are unaffected.
+  selfcheck:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app
+
+      - name: Create SupabaseConfig
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          cat > Alcoholtracker/Services/SupabaseConfig.swift <<EOF
+          import Foundation
+          enum SupabaseConfig {
+              static let projectURL = "$SUPABASE_URL"
+              static let anonKey    = "$SUPABASE_ANON_KEY"
+              static var isReady: Bool {
+                  !projectURL.contains("YOUR_PROJECT") && !anonKey.contains("YOUR_ANON")
+              }
+          }
+          EOF
+
+      - name: Build for simulator
+        run: |
+          xcodebuild \
+            -project Alcoholtracker.xcodeproj \
+            -scheme Alcoholtracker \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Boot a simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; u=[v['udid'] for rt in d for v in d[rt] if v.get('isAvailable') and 'iPhone' in v['name']]; print(u[0])")
+          echo "Booting simulator $UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Install + run self-check
+        run: |
+          UDID=${{ steps.sim.outputs.udid }}
+          APP=build/Build/Products/Debug-iphonesimulator/Alcoholtracker.app
+          xcrun simctl install "$UDID" "$APP"
+          echo "=== launching with -selfCheck ==="
+          ( xcrun simctl launch --console-pty "$UDID" com.tipau.Alcoholtracker -selfCheck > selfcheck.log 2>&1 ) &
+          for i in $(seq 1 30); do
+            grep -q "SELFCHECK SUMMARY" selfcheck.log && break
+            sleep 1
+          done
+          xcrun simctl terminate "$UDID" com.tipau.Alcoholtracker 2>/dev/null || true
+          echo "=== SELFCHECK OUTPUT ==="
+          grep "SELFCHECK" selfcheck.log || { echo "no SELFCHECK output - app did not run the hook"; tail -40 selfcheck.log; exit 1; }
+
+      - name: Evaluate results
+        run: |
+          if ! grep -q "SELFCHECK SUMMARY pass=" selfcheck.log; then
+            echo "No summary line; the self-check did not complete."; exit 1
+          fi
+          if grep -q "SELFCHECK FAIL" selfcheck.log; then
+            echo "One or more runtime checks FAILED."; exit 1
+          fi
+          grep "SELFCHECK SUMMARY" selfcheck.log | tail -1
+          echo "All runtime self-checks passed."
+
+      - name: Upload self-check log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: selfcheck-log
+          path: selfcheck.log
+          retention-days: 14

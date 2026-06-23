@@ -61,6 +61,7 @@ struct PromilleApp: App {
                 .environment(theme)
                 .preferredColorScheme(.dark)
                 .task {
+                    RuntimeSelfCheck.runIfRequested()
                     seedDrinkDatabase()
                     await syncCommunityDrinks()
                     syncThemeFromProfile()
