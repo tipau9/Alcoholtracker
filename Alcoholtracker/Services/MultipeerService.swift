@@ -14,11 +14,17 @@ struct JamStatusBroadcast: Codable {
 // instead of relying on a staleness timeout; `kick` removes a participant on
 // the host's behalf and signals the target to leave the jam.
 struct JamControl: Codable {
-    enum Action: String, Codable { case leave, kick }
+    enum Action: String, Codable { case leave, kick, transferHost }
     let action: Action
     let jamID: UUID
+    // For leave/kick: the affected participant. For transferHost: the NEW host's
+    // participant id (and userID), so the elected device promotes itself and the
+    // others update who they show as host.
     let participantID: UUID
     let userID: String?
+    // New host's display name on a transferHost (so receivers update the label even
+    // if that participant is not in their local roster). Defaulted for back-compat.
+    var newHostName: String? = nil
 }
 
 // Round roulette: the starter picks the loser and broadcasts the ordered
@@ -78,6 +84,13 @@ struct WaterScore: Identifiable, Equatable {
 
 // Wraps a status broadcast, a photo, a control message, a roulette draw, or a
 // water-contest update so a single send path handles them all.
+//
+// Mesh routing: `messageID` lets every node forward a message at most once (so it
+// can ride A -> B -> C hops without looping), and `ttl` is the remaining hop budget
+// that bounds how far it travels. Both are absent in payloads from older builds, so
+// `messageID` decodes as nil (those fall back to the legacy host-only relay) and
+// `ttl` to 0. New sends always carry them, so a network of updated peers forms a
+// true relay mesh instead of the old host-only star.
 struct JamEnvelope: Codable {
     enum Payload: Codable {
         case status(JamStatusBroadcast)
@@ -87,6 +100,23 @@ struct JamEnvelope: Codable {
         case water(WaterPayload)
     }
     let payload: Payload
+    var messageID: UUID?
+    var ttl: Int
+
+    init(payload: Payload, messageID: UUID? = UUID(), ttl: Int = 5) {
+        self.payload = payload
+        self.messageID = messageID
+        self.ttl = ttl
+    }
+
+    enum CodingKeys: String, CodingKey { case payload, messageID, ttl }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.payload   = try c.decode(Payload.self, forKey: .payload)
+        self.messageID = try c.decodeIfPresent(UUID.self, forKey: .messageID)
+        self.ttl       = (try c.decodeIfPresent(Int.self, forKey: .ttl)) ?? 0
+    }
 }
 
 struct JamPhotoPayload: Codable, Identifiable {
@@ -135,6 +165,24 @@ final class MultipeerService: NSObject {
     private var mcSession: MCSession?
     private var advertiser: MCNearbyServiceAdvertiser?
     private var browser: MCNearbyServiceBrowser?
+
+    // Bounded set of recently-seen mesh message ids, so each message is forwarded
+    // and delivered at most once. A ring buffer (order array) caps memory while a
+    // Set keeps membership checks O(1).
+    private var seenIDs: Set<UUID> = []
+    private var seenOrder: [UUID] = []
+    private let maxSeen = 512
+
+    @MainActor private func hasSeen(_ id: UUID) -> Bool { seenIDs.contains(id) }
+
+    @MainActor private func rememberSeen(_ id: UUID) {
+        guard seenIDs.insert(id).inserted else { return }
+        seenOrder.append(id)
+        if seenOrder.count > maxSeen {
+            let drop = seenOrder.removeFirst()
+            seenIDs.remove(drop)
+        }
+    }
 
     override init() {
         myPeerID = MCPeerID(displayName: UIDevice.current.name)
@@ -304,29 +352,58 @@ extension MultipeerService: MCSessionDelegate {
         let sender = peerID
         Task { @MainActor [weak self] in
             guard let self else { return }
-            // Joiners only connect to the advertising host (star topology), so
-            // the host relays everything to the other peers. Otherwise guests
-            // in proximity-only jams would never see each other. Relayed
-            // messages stop at non-hosting receivers, so no loops.
-            if self.advertiser != nil, let s = self.mcSession {
-                let others = s.connectedPeers.filter { $0 != sender }
-                if !others.isEmpty {
-                    try? s.send(captured, toPeers: others, with: .reliable)
-                }
-            }
-            // Try new envelope format first, fall back to legacy bare broadcast
+            // Try the new envelope format first, fall back to legacy bare broadcast.
             if let envelope = try? JSONDecoder().decode(JamEnvelope.self, from: captured) {
-                switch envelope.payload {
-                case .status(let broadcast): self.onStatusReceived?(broadcast)
-                case .photo(let photo):      self.onPhotoReceived?(photo)
-                case .control(let control):  self.onControlReceived?(control)
-                case .roulette(let r):       self.onRouletteReceived?(r)
-                case .water(let w):          self.onWaterReceived?(w)
+                if let mid = envelope.messageID {
+                    // Mesh path: drop if already seen so a message never circulates,
+                    // otherwise remember it and forward with one less hop to every
+                    // OTHER connected peer (not just the host), so it can travel
+                    // A -> B -> C across a chain. Then deliver locally.
+                    if self.hasSeen(mid) { return }
+                    self.rememberSeen(mid)
+                    if envelope.ttl > 1, let s = self.mcSession {
+                        let others = s.connectedPeers.filter { $0 != sender }
+                        if !others.isEmpty {
+                            var forwarded = envelope
+                            forwarded.ttl = envelope.ttl - 1
+                            if let out = try? JSONEncoder().encode(forwarded) {
+                                try? s.send(out, toPeers: others, with: .reliable)
+                            }
+                        }
+                    }
+                    self.deliver(envelope.payload)
+                } else {
+                    // Legacy envelope (no mesh header): keep the old host-only relay
+                    // so updated and older peers interoperate.
+                    self.legacyRelay(captured, from: sender)
+                    self.deliver(envelope.payload)
                 }
             } else if let broadcast = try? JSONDecoder().decode(JamStatusBroadcast.self, from: captured) {
+                self.legacyRelay(captured, from: sender)
                 self.onStatusReceived?(broadcast)
             }
         }
+    }
+
+    // Delivers a decoded payload to the matching callback.
+    @MainActor
+    private func deliver(_ payload: JamEnvelope.Payload) {
+        switch payload {
+        case .status(let broadcast): onStatusReceived?(broadcast)
+        case .photo(let photo):      onPhotoReceived?(photo)
+        case .control(let control):  onControlReceived?(control)
+        case .roulette(let r):       onRouletteReceived?(r)
+        case .water(let w):          onWaterReceived?(w)
+        }
+    }
+
+    // Legacy star relay: only the advertising host forwards, and only one hop, so
+    // pre-mesh peers (which send no messageID) still reach each other via the host.
+    @MainActor
+    private func legacyRelay(_ data: Data, from sender: MCPeerID) {
+        guard advertiser != nil, let s = mcSession else { return }
+        let others = s.connectedPeers.filter { $0 != sender }
+        if !others.isEmpty { try? s.send(data, toPeers: others, with: .reliable) }
     }
 
     nonisolated func session(_ session: MCSession, didReceive stream: InputStream, withName streamName: String, fromPeer peerID: MCPeerID) {}

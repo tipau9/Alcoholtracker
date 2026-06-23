@@ -83,7 +83,9 @@ struct ActiveJamView: View {
             ParticipantPrivacySheet(
                 participant: p,
                 canKick: jamService.canKick(p),
-                onKick: { jamService.kickParticipant(p) }
+                onKick: { jamService.kickParticipant(p) },
+                canTransferHost: jamService.canTransferHost(p),
+                onTransferHost: { jamService.transferHost(to: p) }
             )
         }
         .sheet(item: Binding(

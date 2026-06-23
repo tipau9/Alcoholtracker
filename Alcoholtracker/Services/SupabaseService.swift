@@ -534,6 +534,21 @@ final class SupabaseService {
         )
     }
 
+    // Hands the host role to another user (host transfer / ghost-jam auto-election)
+    // by repointing the jam row's host. Requires an RLS UPDATE policy on `jams` that
+    // lets the current host set a new host_user_id; without it the PATCH is rejected
+    // and the caller (which wraps this in try?) just keeps the proximity-side host
+    // change. Suggested policy in supabase/jams_security.sql:
+    //   CREATE POLICY jams_update_host ON jams FOR UPDATE
+    //     USING (host_user_id = auth.uid()) WITH CHECK (true);
+    func updateJamHost(jamID: UUID, hostUserID: String, hostName: String) async throws {
+        try await refreshIfNeeded()
+        try await restPATCH(
+            "/rest/v1/jams?id=eq.\(jamID.uuidString)",
+            body: ["host_user_id": hostUserID, "host_name": hostName]
+        )
+    }
+
     // Privacy filtering happens caller-side: withheld values arrive here as nil
     // and are written as SQL null, so the server never stores hidden data.
     func updateMyJamStatus(

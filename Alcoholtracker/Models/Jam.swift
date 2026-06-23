@@ -5,8 +5,9 @@ import Foundation
 struct Jam: Identifiable, Codable {
     let id: UUID
     let code: String
-    let hostUserID: String
-    let hostName: String
+    // Mutable so the host role can be handed over (host transfer / ghost jams).
+    var hostUserID: String
+    var hostName: String
     let createdAt: Date
     var visibility: JamVisibility
     var settings: JamSettings
@@ -104,17 +105,30 @@ struct JamParticipant: Identifiable, Codable {
     }
 }
 
-// MARK: - Array upsert helper
+// MARK: - Array upsert / CRDT merge helpers
 
 extension Array where Element == JamParticipant {
+    // Last-Writer-Wins upsert: an incoming row only replaces an existing one when
+    // it is at least as fresh (lastUpdated). This makes the roster a CRDT-style
+    // LWW map, so a stale broadcast arriving late after an offline reconnect can no
+    // longer clobber a newer status, and merges are order-independent.
     mutating func upsert(_ participant: JamParticipant) {
-        if let uid = participant.userID,
-           let idx = firstIndex(where: { $0.userID == uid }) {
-            self[idx] = participant
-        } else if let idx = firstIndex(where: { $0.id == participant.id }) {
-            self[idx] = participant
+        let existingIdx: Int? =
+            (participant.userID.flatMap { uid in firstIndex(where: { $0.userID == uid }) })
+            ?? firstIndex(where: { $0.id == participant.id })
+        if let idx = existingIdx {
+            if participant.lastUpdated >= self[idx].lastUpdated {
+                self[idx] = participant
+            }
         } else {
             append(participant)
         }
+    }
+
+    // Conflict-free merge of another roster into this one (used when two sides
+    // reconnect after being offline). Pure LWW union: every participant is upserted,
+    // so the result is the same regardless of which side is merged into which.
+    mutating func merge(_ other: [JamParticipant]) {
+        for p in other { upsert(p) }
     }
 }

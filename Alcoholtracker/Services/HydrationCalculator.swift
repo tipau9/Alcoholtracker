@@ -139,6 +139,20 @@ enum HydrationCalculator {
         guard ml > 0 else { return 0 }
         return Int(ceil(ml / glassML))
     }
+
+    // MARK: Weather-driven sweat loss (Wetter-Korrelation)
+
+    // Extra sweat water loss (ml) on a warm night, on top of the alcohol diuresis.
+    // Above a comfort temperature the body sheds roughly this much per °C per hour
+    // spent out. Conservative so weather nudges the recommendation rather than
+    // dominating it. Pass the session duration in hours.
+    static let sweatMlPerDegreeHour = 12.0
+
+    static func heatSweatLossMl(tempC: Double, hours: Double, comfortC: Double = 22) -> Double {
+        let over = max(0, tempC - comfortC)
+        let h    = max(0, hours)
+        return over * h * sweatMlPerDegreeHour
+    }
 }
 
 // MARK: - HydrationStatus

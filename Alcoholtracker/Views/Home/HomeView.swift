@@ -341,6 +341,7 @@ private struct DetailedHomeView: View {
 
     @Environment(SupabaseService.self) private var supabase
     @Environment(LocationService.self) private var locationService
+    @Environment(WeatherProvider.self) private var weather
 
     // FIX FEATURE8: full-screen chart on tap
     @State private var showFullChart = false
@@ -353,6 +354,16 @@ private struct DetailedHomeView: View {
 
     private var activeWidgets: [WidgetType] { profile?.activeWidgets ?? WidgetType.allCases }
     private var skin: StatusSkin { profile?.statusSkin ?? .standard }
+
+    // Extra sweat loss (ml) from a warm night, fed into the water recommendation.
+    // Uses the session span (first drink to now, capped at 6 h) as the time spent
+    // out. Zero unless WeatherKit returned a warm temperature.
+    private var weatherSweatML: Double {
+        guard weather.isWarm, let temp = weather.currentTempC,
+              let first = session.drinks.map(\.timestamp).min() else { return 0 }
+        let hours = min(6, max(0, Date().timeIntervalSince(first) / 3600))
+        return HydrationCalculator.heatSweatLossMl(tempC: temp, hours: hours)
+    }
 
     // Memoised: computing this in body ran a full BAC integration on every scroll
     // frame, because body re-evaluates as heroCollapse changes. It only actually
@@ -463,7 +474,7 @@ private struct DetailedHomeView: View {
 
                     let gridTypes: [WidgetType] = [.timeToLimit, .water, .calories, .drinkCount]
                     if gridTypes.contains(where: { activeWidgets.contains($0) }) {
-                        HomeWidgetGrid(session: session, active: activeWidgets)
+                        HomeWidgetGrid(session: session, active: activeWidgets, extraSweatML: weatherSweatML)
                             .padding(.horizontal, 16)
                             .padding(.top, 20)
                     }
@@ -1090,6 +1101,8 @@ private struct VomitActionCard: View {
 private struct HomeWidgetGrid: View {
     let session: SessionViewModel
     let active: [WidgetType]
+    // Heat-driven sweat loss (ml) added to the water deficit (Wetter-Korrelation).
+    var extraSweatML: Double = 0
 
     // Label reflects the user's actual legal limit (0,0 ‰ in der Probezeit).
     private var limitLabel: String {
@@ -1107,11 +1120,12 @@ private struct HomeWidgetGrid: View {
     }
 
     private var waterText: String {
-        // Exact compensation: grosses the deficit up for ADH pass-through and
-        // credits water already logged today, so the tile reflects what is still
-        // needed rather than the raw shortfall.
+        // Exact compensation: grosses the deficit up for ADH pass-through, credits
+        // water already logged today, and adds warm-weather sweat loss, so the tile
+        // reflects what is still needed rather than the raw shortfall.
         let loggedML = Double(WaterLog.glassesToday()) * WaterLog.glassML
-        let glasses = HydrationCalculator.compensationGlasses(for: session.drinks, extraNetML: loggedML)
+        let glasses = HydrationCalculator.compensationGlasses(
+            for: session.drinks, extraNetML: loggedML - extraSweatML)
         if glasses == 0 { return "Ausreichend" }
         return "\(glasses) \(glasses == 1 ? "Glas" : "Gläser")"
     }
