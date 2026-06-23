@@ -79,6 +79,46 @@ enum RuntimeSelfCheck {
             0.0, drinks: [beer], profile: profile, from: afterPeak, stomachStatus: .light) ?? -1
         check("hoursUntilSober", hrs, 0.3, 6.0)
 
+        // 9) Display formatting (no mistakes in displayed information).
+        checkInt("permilleStringFormat", (0.5).permilleString == "0.50 ‰" ? 1 : 0, 1)
+        checkInt("signedPermilleFormat", (0.13).signedPermilleString == "+0.13 ‰" ? 1 : 0, 1)
+
+        // 10) Jam roulette wire format: the shared id + winner survive a Codable
+        //     round-trip, so every member dedups on the same draw and the wheel
+        //     lands on the same person (the "visible for all users" guarantee).
+        do {
+            let payload = JamRoulettePayload(
+                jamID: UUID(), participants: ["A", "B", "C"], winnerIndex: 2, starterName: "Max")
+            let data = try JSONEncoder().encode(payload)
+            let decoded = try JSONDecoder().decode(JamRoulettePayload.self, from: data)
+            let ok = decoded.id == payload.id && decoded.winnerIndex == 2
+                && decoded.participants.count == 3 && decoded.jamID == payload.jamID
+            checkInt("jamRouletteCodecRoundTrip", ok ? 1 : 0, 1)
+        } catch {
+            checkInt("jamRouletteCodecRoundTrip", 0, 1)
+        }
+
+        // 11) History logical day: a night out (02:00) belongs to the previous
+        //     evening, so 02:00 today and 22:00 yesterday share one logical day.
+        let cal = Calendar.current
+        if let at2am = cal.date(bySettingHour: 2, minute: 0, second: 0, of: Date()),
+           let at10pm = cal.date(bySettingHour: 22, minute: 0, second: 0, of: Date()),
+           let prev10pm = cal.date(byAdding: .day, value: -1, to: at10pm) {
+            checkInt("logicalDayNightSpansOneDay",
+                     cal.logicalDay(for: at2am) == cal.logicalDay(for: prev10pm) ? 1 : 0, 1)
+        }
+
+        // 12) Tolerance mode lifts the elimination floor to 0.20 permille/h.
+        let tol = UserProfile(weight: 75, height: 180, age: 25, gender: .male)
+        tol.toleranceMode = true
+        check("toleranceEliminationFloor", tol.effectiveEliminationRate, 0.20, 0.20)
+
+        // 13) Probezeit / novice driver: not fahrbereit at 0.3, normal driver is.
+        let novice = UserProfile(weight: 75, height: 180, age: 19, gender: .male)
+        novice.isProbationaryDriver = true
+        checkInt("probationaryBlockedAt_0_3", novice.mayDrive(at: 0.3) ? 0 : 1, 1)
+        checkInt("normalDriverOkAt_0_3", profile.mayDrive(at: 0.3) ? 1 : 0, 1)
+
         print("SELFCHECK SUMMARY pass=\(pass) fail=\(fail)")
     }
 }
