@@ -24,7 +24,8 @@ struct ForecastView: View {
             drinks: drinks,
             profile: profile,
             at: targetTime,
-            stomachStatus: profile.defaultStomachStatus
+            stomachStatus: profile.defaultStomachStatus,
+            conservative: profile.conservativeSafety
         )
     }
 
@@ -38,7 +39,8 @@ struct ForecastView: View {
     private var oneStandardDrinkPeak: Double {
         max(0.01, BACCalculator.projectedPeak(
             volume: 330, abv: 5.0, category: .beer,
-            profile: profile, stomachStatus: profile.defaultStomachStatus
+            profile: profile, stomachStatus: profile.defaultStomachStatus,
+            conservative: profile.conservativeSafety
         ))
     }
 
@@ -113,6 +115,15 @@ struct ForecastView: View {
                 .font(.appCaptionBold)
                 .foregroundStyle(Color.appAccent)
             Spacer()
+            if profile.conservativeSafety {
+                Text("WORST-CASE")
+                    .font(.appMicro)
+                    .foregroundStyle(Color.appBackground)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.statusOrange)
+                    .clipShape(Capsule())
+            }
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)

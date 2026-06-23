@@ -165,6 +165,14 @@ final class UserProfile {
     // Inline default required for SwiftData lightweight migration.
     var drunkModeAuto: Bool = false
 
+    // Konservativ rechnen (Worst-Case): when on, the safety-critical figures
+    // (the Sicherheit timers and the Vorausschau) drop the resorption deficit
+    // and the absorption ramp, so they show the highest BAC the body could
+    // plausibly reach (ADAC-style) instead of the realistic peak. The rest of
+    // the app (Home, charts) keeps the realistic model.
+    // Inline default required for SwiftData lightweight migration.
+    var conservativeSafety: Bool = false
+
     // MARK: Computed wrappers
 
     var gender: Gender {

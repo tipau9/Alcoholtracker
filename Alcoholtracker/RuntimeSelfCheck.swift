@@ -140,6 +140,29 @@ enum RuntimeSelfCheck {
         let curveOK = readBack.count == 2 && abs((readBack.last?.bac ?? 0) - 0.51) < 0.001
         checkInt("widgetCurveRoundTrip", curveOK ? 1 : 0, 1)
 
+        // 17) Konservativ/Worst-Case mode: dropping the resorption deficit and the
+        //     absorption ramp returns the raw Widmark peak (~1.01 for 200 ml/40% rum)
+        //     and must sit well above the realistic peak (~0.63 light stomach).
+        let consProfile = UserProfile(weight: 87, height: 196, age: 25, gender: .male)
+        let consPeak = BACCalculator.projectedPeak(
+            volume: 200, abv: 40, category: .spirits, profile: consProfile,
+            stomachStatus: .light, conservative: true)
+        let realPeak = BACCalculator.projectedPeak(
+            volume: 200, abv: 40, category: .spirits, profile: consProfile,
+            stomachStatus: .light, conservative: false)
+        check("conservativeRumPeak", consPeak, 0.98, 1.02)
+        checkInt("conservativeAboveRealistic", consPeak > realPeak ? 1 : 0, 1)
+        //     A worst-case sobriety time must also be >= the realistic one.
+        let consDrink = Drink.from(template: DrinkTemplate(
+            name: "Rum", category: .spirits, volume: 200, abv: 40, calories: 0))
+        let realHrs = BACCalculator.hoursUntilBAC(
+            0.5, drinks: [consDrink], profile: consProfile,
+            from: consDrink.timestamp, stomachStatus: .light, conservative: false) ?? -1
+        let consHrs = BACCalculator.hoursUntilBAC(
+            0.5, drinks: [consDrink], profile: consProfile,
+            from: consDrink.timestamp, stomachStatus: .light, conservative: true) ?? -1
+        checkInt("conservativeSoberTimeLonger", consHrs >= realHrs ? 1 : 0, 1)
+
         // DIAGNOSTIC: 200 ml rum (40%) for an 87 kg / 196 cm male, the user's case.
         // Prints (does not assert) the real values the engine produces so we can see
         // exactly why the shown peak is what it is and how the assumptions move it.

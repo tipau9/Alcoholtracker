@@ -65,14 +65,20 @@ enum BACCalculator {
         category: DrinkCategory,
         profile: UserProfile,
         stomachStatus: StomachStatus,
-        drinkDurationMinutes: Double = 0
+        drinkDurationMinutes: Double = 0,
+        conservative: Bool = false
     ) -> Double {
+        // Worst-case (conservative) mode drops the resorption deficit (peakFactor
+        // 1.0) and collapses the absorption ramp to ~instant, so no elimination is
+        // subtracted before the peak — the highest BAC the body could reach, the
+        // way ADAC-style calculators present it. The individualised Watson r is kept.
+        let factor = conservative ? 1.0 : stomachStatus.peakFactor
         let rawPeak = bacContribution(
             volume: volume, abv: abv,
             weight: profile.weight,
             distributionFactor: profile.distributionFactor
-        ) * stomachStatus.peakFactor
-        let window = absorptionWindowMinutes(
+        ) * factor
+        let window = conservative ? 1.0 : absorptionWindowMinutes(
             category: category,
             volumeML: volume,
             drinkDurationMinutes: drinkDurationMinutes,
@@ -130,9 +136,11 @@ enum BACCalculator {
         drinks: [Drink],
         profile: UserProfile,
         at now: Date = Date(),
-        stomachStatus: StomachStatus = .light
+        stomachStatus: StomachStatus = .light,
+        conservative: Bool = false
     ) -> Double {
-        sampledBAC(drinks: drinks, profile: profile, at: [now], stomachStatus: stomachStatus).first ?? 0
+        sampledBAC(drinks: drinks, profile: profile, at: [now],
+                   stomachStatus: stomachStatus, conservative: conservative).first ?? 0
     }
 
     // Forward-integrates the whole-body BAC curve ONCE and samples it at each of
@@ -151,7 +159,8 @@ enum BACCalculator {
         drinks: [Drink],
         profile: UserProfile,
         at sampleDates: [Date],
-        stomachStatus: StomachStatus
+        stomachStatus: StomachStatus,
+        conservative: Bool = false
     ) -> [Double] {
         let n = sampleDates.count
         guard n > 0 else { return [] }
@@ -161,7 +170,9 @@ enum BACCalculator {
 
         let r          = profile.distributionFactor
         let elimPerMin = profile.effectiveEliminationRate / 60.0   // ‰/min, zero-order
-        let factor     = stomachStatus.peakFactor                  // empty stomach peaks higher
+        // Worst-case mode: no resorption deficit and an ~instant absorption ramp,
+        // so the curve jumps to the raw Widmark peak before elimination bites.
+        let factor     = conservative ? 1.0 : stomachStatus.peakFactor  // empty stomach peaks higher
         let gastric    = stomachStatus.absorptionMinutes
 
         // Each drink's absorption envelope, in minutes measured from `origin`.
@@ -176,7 +187,9 @@ enum BACCalculator {
             ) * factor
             // Alcohol enters gradually; the window ends at gastric emptying (or
             // later if the drink is sipped longer). See absorptionWindowMinutes.
-            let window = absorptionWindowMinutes(
+            // Worst-case mode collapses this to ~instant so the peak isn't shaved
+            // by elimination during absorption.
+            let window = conservative ? 1.0 : absorptionWindowMinutes(
                 category: drink.category,
                 volumeML: drink.volume,
                 drinkDurationMinutes: drink.drinkDurationMinutes,
@@ -239,7 +252,8 @@ enum BACCalculator {
         drinks: [Drink],
         profile: UserProfile,
         from now: Date = Date(),
-        stomachStatus: StomachStatus = .light
+        stomachStatus: StomachStatus = .light,
+        conservative: Bool = false
     ) -> Double? {
         // Sample the next 24h in one integration (2-minute grid) and return the
         // first crossing, linearly interpolated between the bracketing samples.
@@ -248,7 +262,8 @@ enum BACCalculator {
         let stepMin = 2.0
         let steps = Int(24.0 * 60.0 / stepMin)
         let dates = (0...steps).map { now.addingTimeInterval(Double($0) * stepMin * 60.0) }
-        let bacs = sampledBAC(drinks: drinks, profile: profile, at: dates, stomachStatus: stomachStatus)
+        let bacs = sampledBAC(drinks: drinks, profile: profile, at: dates,
+                              stomachStatus: stomachStatus, conservative: conservative)
         guard let first = bacs.first, first > targetBAC else { return 0 }
 
         for i in 1...steps where bacs[i] <= targetBAC {

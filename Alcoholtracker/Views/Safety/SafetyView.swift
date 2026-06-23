@@ -49,7 +49,11 @@ struct SafetyView: View {
 
     private func hoursUntil(_ target: Double) -> Double? {
         guard let p = profile else { return nil }
-        return BACCalculator.hoursUntilBAC(target, drinks: todaysDrinks, profile: p, from: now, stomachStatus: stomachStatus)
+        // The readiness timers respect the "Konservativ rechnen" switch so the
+        // Fahrbereit/Nüchtern times are worst-case when the user wants them safe.
+        return BACCalculator.hoursUntilBAC(
+            target, drinks: todaysDrinks, profile: p, from: now,
+            stomachStatus: stomachStatus, conservative: p.conservativeSafety)
     }
 
     // MARK: Body
