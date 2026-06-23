@@ -232,9 +232,13 @@ enum BACCalculator {
         // crosses into first-order (exponential) decay so the tail tapers off
         // realistically instead of dropping to zero on a straight line. The two
         // regimes meet continuously at km (the first-order constant is chosen so
-        // the instantaneous rate equals elimPerMin there). Below a negligible
-        // sober floor the value snaps to 0 so the curve still reaches true zero in
-        // finite time. km is shared with AlcoholKinetics for one source of truth.
+        // the instantaneous rate equals elimPerMin there). First-order decay only
+        // approaches zero asymptotically; the caller snaps a *purely decaying*
+        // value below soberFloor to 0 so the curve still reaches true zero in
+        // finite time. The snap must NOT be applied while alcohol is still being
+        // absorbed, or a slowly-rising low BAC (e.g. a single beer, whose
+        // per-minute uptake is under the floor) would be pinned at 0 and never
+        // climb. km is shared with AlcoholKinetics for one source of truth.
         let km          = AlcoholKinetics.km
         let firstOrderK = km > 0 ? elimPerMin / km : 0          // per-minute, continuous at km
         let soberFloor  = 0.005                                  // ‰ below this counts as sober
@@ -246,11 +250,9 @@ enum BACCalculator {
                 if afterZero >= km { return afterZero }          // stayed zero-order
                 // Crossed into first-order partway through this step.
                 let tToKm = (c0 - km) / elimPerMin
-                let v = km * exp(-firstOrderK * (dt - tToKm))
-                return v < soberFloor ? 0 : v
+                return km * exp(-firstOrderK * (dt - tToKm))
             } else {
-                let v = c0 * exp(-firstOrderK * dt)
-                return v < soberFloor ? 0 : v
+                return c0 * exp(-firstOrderK * dt)
             }
         }
 
@@ -279,12 +281,20 @@ enum BACCalculator {
             // step's elimination, matching the previous integration order.
             while ti < targets.count && targets[ti].minute < t + 1.0 {
                 let m = targets[ti].minute
-                result[targets[ti].idx] = eliminate(bac + absorbed(from: t, to: m), over: m - t)
+                let add = absorbed(from: t, to: m)
+                var v = eliminate(bac + add, over: m - t)
+                // Snap to true zero only when purely decaying (nothing absorbing),
+                // so a rising sub-floor BAC is never killed mid-climb.
+                if add <= 0 && v < soberFloor { v = 0 }
+                result[targets[ti].idx] = v
                 ti += 1
             }
             if ti >= targets.count || t >= maxMinute { break }
             // Advance one whole minute on the shared grid.
-            bac = eliminate(bac + absorbed(from: t, to: t + 1.0), over: 1.0)
+            let add1 = absorbed(from: t, to: t + 1.0)
+            var nb = eliminate(bac + add1, over: 1.0)
+            if add1 <= 0 && nb < soberFloor { nb = 0 }
+            bac = nb
             t += 1.0
         }
         return result
