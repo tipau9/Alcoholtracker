@@ -71,9 +71,12 @@ enum RuntimeSelfCheck {
         checkInt("hangoverSingleBeer_isMildOrNone",
                  (hang == .none || hang == .mild) ? 1 : 0, 1)
 
-        // 8) Sobriety projection is finite and positive for an above-limit BAC.
+        // 8) Sobriety projection. Query from just after the absorption window, when
+        //    BAC is near its peak: at the drink timestamp itself BAC is still ~0
+        //    (nothing absorbed yet), so a from-timestamp query correctly returns 0.
+        let afterPeak = beer.timestamp.addingTimeInterval(64 * 60)
         let hrs = BACCalculator.hoursUntilBAC(
-            0.0, drinks: [beer], profile: profile, from: beer.timestamp, stomachStatus: .light) ?? -1
+            0.0, drinks: [beer], profile: profile, from: afterPeak, stomachStatus: .light) ?? -1
         check("hoursUntilSober", hrs, 0.3, 6.0)
 
         print("SELFCHECK SUMMARY pass=\(pass) fail=\(fail)")
