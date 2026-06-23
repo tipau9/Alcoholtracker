@@ -30,6 +30,20 @@ German; the German label is given in quotes where it helps.
   charts stay realistic. A WORST-CASE badge appears in the forecast header.
 - **Forward-integrated BAC curve** (`sampledBAC`) sampled for the live chart, session
   peak, and time-to-threshold queries.
+- **Michaelis-Menten dual kinetics**: elimination is zero-order (constant) at higher
+  BAC, where the enzymes are saturated, and switches to first-order (exponential)
+  below km (~0.10 permille), so the low-BAC tail tapers off realistically instead of
+  dropping on a straight line. The two regimes meet continuously at km; below a sober
+  floor the value snaps to 0 so time-to-sober stays finite. km is shared with
+  `AlcoholKinetics`.
+- **Taktisches Übergeben (vomiting)**: logging a vomit (`VomitEvent`) truncates each
+  drink's absorption at that moment, removing only the alcohol still in the stomach
+  (not yet resorbed). Alcohol already in the blood is unaffected, so the displayed
+  BAC does not jump down, it just stops rising from the interrupted drinks. Logged
+  from a home action card with an undo.
+- **Verzögerter Start / sipping**: a drink can be marked as consumed over a window
+  ("Trinkdauer": auto / 30 min / 1-3 h, `Drink.drinkDurationMinutes`), which stretches
+  the absorption window and flattens/lowers the peak for slowly sipped drinks.
 - **"Logical days" start at 06:00** (`CalendarLogicalDay`) so one night out is not
   split across two calendar days.
 
@@ -100,6 +114,11 @@ German; the German label is given in quotes where it helps.
 
 - **Water logging** feeds a net-hydration figure (intake minus diuresis) with a 4-step
   status from "Gut hydriert" to "Dringend trinken" and a recommended-glasses count.
+- **Exact dehydration compensation**: the recommended water grosses the deficit up for
+  the ADH pass-through that happens while alcohol is in the system (you must drink more
+  than the bare shortfall to actually close it), and the severity is scored against the
+  user's Watson total body water rather than an absolute ml threshold, so a lighter
+  person tips into a warning sooner than a heavier one.
 - **Hangover prediction** from the session's drinks, body data and water intake.
 
 ## Achievements & personalisation
