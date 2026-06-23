@@ -435,6 +435,12 @@ private struct DetailedHomeView: View {
                             .padding(.top, 16)
                     }
 
+                    if !session.drinks.isEmpty {
+                        VomitActionCard(session: session)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 16)
+                    }
+
                     if session.bacCurve.count > 1 && activeWidgets.contains(.bacCurve) {
                         BACCurveChartView(
                             session: session,
@@ -1009,6 +1015,76 @@ private struct StomachChip: View {
     }
 }
 
+// MARK: - Übergeben (tactical vomit) action
+
+private struct VomitActionCard: View {
+    let session: SessionViewModel
+    @State private var showConfirm = false
+
+    private var count: Int { session.vomitEvents.count }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionLabel(text: "ÜBERGEBEN")
+            HStack(spacing: 12) {
+                Image(systemName: "arrow.up.heart.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.statusOrange)
+                    .frame(width: 30, height: 30)
+                    .background(Color.statusOrange.opacity(0.13))
+                    .clipShape(RoundedRectangle(cornerRadius: 9))
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(count == 0 ? "Übergeben loggen" : "\(count)x geloggt")
+                        .font(.appBody)
+                        .foregroundStyle(Color.appText)
+                    Text("Entfernt noch nicht aufgenommenen Alkohol aus dem Magen")
+                        .font(.appMicro)
+                        .foregroundStyle(Color.appTextMuted)
+                        .lineLimit(2)
+                }
+
+                Spacer()
+
+                if count > 0 {
+                    Button {
+                        session.removeLastVomit()
+                    } label: {
+                        Image(systemName: "arrow.uturn.backward.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundStyle(Color.appTextDim)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Letztes Übergeben rückgängig")
+                }
+
+                Button {
+                    showConfirm = true
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundStyle(Color.statusOrange)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Übergeben loggen")
+            }
+            .padding(14)
+            .background(Color.appCard)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(Color.appBorder, lineWidth: 0.5)
+            )
+        }
+        .confirmationDialog("Übergeben loggen?", isPresented: $showConfirm, titleVisibility: .visible) {
+            Button("Übergeben loggen") { session.logVomit() }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Nur noch nicht ins Blut aufgenommener Alkohol wird entfernt. Der aktuelle Promillewert ändert sich dadurch nicht sprunghaft.")
+        }
+    }
+}
+
 // MARK: - Widget Grid
 
 private struct HomeWidgetGrid: View {
@@ -1031,7 +1107,11 @@ private struct HomeWidgetGrid: View {
     }
 
     private var waterText: String {
-        let glasses = HydrationCalculator.recommendedGlasses(for: session.drinks)
+        // Exact compensation: grosses the deficit up for ADH pass-through and
+        // credits water already logged today, so the tile reflects what is still
+        // needed rather than the raw shortfall.
+        let loggedML = Double(WaterLog.glassesToday()) * WaterLog.glassML
+        let glasses = HydrationCalculator.compensationGlasses(for: session.drinks, extraNetML: loggedML)
         if glasses == 0 { return "Ausreichend" }
         return "\(glasses) \(glasses == 1 ? "Glas" : "Gläser")"
     }

@@ -22,6 +22,13 @@ enum HydrationCalculator {
 
     static let diuresisPerAlcoholGram = 10.0  // ml extra urine per gram of alcohol
 
+    // While alcohol is still suppressing antidiuretic hormone (ADH), a fraction of
+    // any water you drink is passed straight through rather than retained. To
+    // actually close a deficit you therefore have to drink MORE than the raw
+    // shortfall: required intake = deficit / retentionWhileDrinking. ~0.80 reflects
+    // the ~20% pass-through measured during active intoxication.
+    static let retentionWhileDrinking = 0.80
+
     // MARK: Per-drink
 
     static func waterIn(drink: Drink) -> Double {
@@ -89,6 +96,48 @@ enum HydrationCalculator {
         case -300 ..< -150: return .needsMore
         default:            return .needsLots
         }
+    }
+
+    // MARK: Exact, body-water-aware compensation
+
+    // The water deficit as a fraction of the person's total body water. A given ml
+    // shortfall dehydrates a small body more than a large one, so this is the
+    // correct basis for severity instead of an absolute ml threshold.
+    static func dehydrationFraction(netML: Double, profile: UserProfile) -> Double {
+        let tbwML = max(profile.totalBodyWater * 1000.0, 1)
+        return max(0, -netML) / tbwML
+    }
+
+    // TBW-relative status. Thresholds are in % of body water and are calibrated so
+    // an average adult (~42 L TBW) lands on the same boundaries as the legacy
+    // absolute thresholds (~150 / 300 ml), while a lighter person tips into a
+    // warning sooner and a heavier one later.
+    static func hydrationStatus(netML: Double, profile: UserProfile) -> HydrationStatus {
+        if netML >= 0 { return .ok }
+        switch dehydrationFraction(netML: netML, profile: profile) {
+        case ..<0.0036: return .needsLittle   // < ~0,15 L for a 42 L body
+        case ..<0.0072: return .needsMore      // < ~0,30 L
+        default:        return .needsLots
+        }
+    }
+
+    // Exact water (ml) needed to actually close the deficit, grossing the raw
+    // shortfall up by the ADH pass-through (retentionWhileDrinking). This is what
+    // the user should drink, and it is always >= the bare deficit.
+    static func compensationWaterMl(netML: Double) -> Int {
+        guard netML < 0 else { return 0 }
+        return Int((-netML / retentionWhileDrinking).rounded())
+    }
+
+    static func compensationWaterMl(for drinks: [Drink], extraNetML: Double = 0) -> Int {
+        compensationWaterMl(netML: sessionNetHydration(drinks: drinks) + extraNetML)
+    }
+
+    // Glasses to drink to close the deficit, based on the exact compensation above.
+    static func compensationGlasses(for drinks: [Drink], extraNetML: Double = 0, glassML: Double = 250) -> Int {
+        let ml = Double(compensationWaterMl(for: drinks, extraNetML: extraNetML))
+        guard ml > 0 else { return 0 }
+        return Int(ceil(ml / glassML))
     }
 }
 

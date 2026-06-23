@@ -13,6 +13,7 @@ struct DrinkEditSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var volumeText: String
     @State private var timestamp: Date
+    @State private var durationMinutes: Double
     @State private var showDeleteConfirm = false
 
     init(
@@ -27,6 +28,7 @@ struct DrinkEditSheet: View {
         self.onDelete = onDelete
         self._volumeText = State(initialValue: "\(Int(drink.volume))")
         self._timestamp = State(initialValue: drink.timestamp)
+        self._durationMinutes = State(initialValue: drink.drinkDurationMinutes)
     }
 
     private var volume: Double {
@@ -40,7 +42,7 @@ struct DrinkEditSheet: View {
         return BACCalculator.projectedPeak(
             volume: volume, abv: drink.abv, category: drink.category,
             profile: p, stomachStatus: p.defaultStomachStatus,
-            drinkDurationMinutes: drink.drinkDurationMinutes
+            drinkDurationMinutes: durationMinutes
         )
     }
 
@@ -119,6 +121,14 @@ struct DrinkEditSheet: View {
                         }
 
                         VStack(alignment: .leading, spacing: 8) {
+                            SectionLabel(text: "TRINKDAUER")
+                            DurationChipRow(durationMinutes: $durationMinutes)
+                            Text("Über welchen Zeitraum getrunken. Längere Dauer verteilt die Aufnahme und senkt den Peak.")
+                                .font(.appMicro)
+                                .foregroundStyle(Color.appTextMuted)
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
                             SectionLabel(text: "UHRZEIT")
                             DatePicker("", selection: $timestamp, displayedComponents: [.hourAndMinute])
                                 .datePickerStyle(.wheel)
@@ -158,6 +168,8 @@ struct DrinkEditSheet: View {
                         }
 
                         PrimaryButton(title: "Speichern", icon: "checkmark", isDisabled: !isValid) {
+                            // Persisted via the same context save onSave triggers.
+                            drink.drinkDurationMinutes = durationMinutes
                             onSave(volume, timestamp)
                             dismiss()
                         }

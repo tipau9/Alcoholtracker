@@ -9,6 +9,9 @@ import UIKit
 
 struct HydrationWidget: View {
     let drinks: [Drink]
+    // Optional so the exact, body-water-aware status/compensation are used when a
+    // profile is available; falls back to the absolute model otherwise.
+    var profile: UserProfile? = nil
 
     // Real logged water glasses (counts into net + hangover prediction).
     @State private var loggedGlasses: Int = WaterLog.glassesToday()
@@ -19,9 +22,13 @@ struct HydrationWidget: View {
 
     private var loggedML: Double  { Double(loggedGlasses) * WaterLog.glassML }
     private var net: Double       { HydrationCalculator.sessionNetHydration(drinks: drinks) + loggedML }
-    private var extraWater: Int   { max(0, Int((-net).rounded())) }
+    // Exact compensation (grossed up for ADH pass-through), not the bare deficit.
+    private var extraWater: Int   { HydrationCalculator.compensationWaterMl(netML: net) }
 
-    private var status: HydrationStatus { HydrationCalculator.hydrationStatus(netML: net) }
+    private var status: HydrationStatus {
+        if let p = profile { return HydrationCalculator.hydrationStatus(netML: net, profile: p) }
+        return HydrationCalculator.hydrationStatus(netML: net)
+    }
 
     private var netColor: Color { status.color }
     private var netLabel: String { status.label }

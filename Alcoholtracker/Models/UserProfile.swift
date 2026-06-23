@@ -257,19 +257,27 @@ final class UserProfile {
     // line with the Watson-Widmark / German forensic values (men ~0.70, women
     // ~0.60). Clamp is the physiological blood-r range.
     var distributionFactor: Double {
+        min(max((totalBodyWater / weight) / 0.806, 0.50), 0.90)
+    }
+
+    // MARK: Total body water (Watson 1980)
+    // Estimated total body water in LITRES from age/height/weight/gender. Drives
+    // both the Widmark distribution factor above and the exact dehydration model
+    // (HydrationCalculator): a deficit of X ml is far more dehydrating for a small
+    // person with little body water than for a large one, so the hydration status
+    // is scaled against this rather than an absolute ml threshold.
+    var totalBodyWater: Double {
         let a = Double(currentAge)
-        let tbw: Double
         switch gender {
         case .male:
-            tbw = 2.447 - 0.09516 * a + 0.1074 * height + 0.3362 * weight
+            return 2.447 - 0.09516 * a + 0.1074 * height + 0.3362 * weight
         case .female:
-            tbw = -2.097 + 0.1069 * height + 0.2466 * weight
+            return -2.097 + 0.1069 * height + 0.2466 * weight
         case .diverse:
             let m = 2.447 - 0.09516 * a + 0.1074 * height + 0.3362 * weight
             let f = -2.097 + 0.1069 * height + 0.2466 * weight
-            tbw = (m + f) / 2.0
+            return (m + f) / 2.0
         }
-        return min(max((tbw / weight) / 0.806, 0.50), 0.90)
     }
 
     init(

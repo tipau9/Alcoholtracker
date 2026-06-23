@@ -16,7 +16,13 @@ final class SessionViewModel {
     var currentBAC: Double = 0
     var bacStatus: BACStatus = .sober
     var drinks: [Drink] = []
+    // Logged "Übergeben" events in the current session. Each truncates the
+    // absorption of drinks still in the stomach (see BACCalculator / VomitEvent).
+    var vomitEvents: [VomitEvent] = []
     var currentWeekDrinkCount: Int = 0
+
+    // Timestamps handed to the BAC engine so still-absorbing drinks are cut short.
+    var vomitTimes: [Date] { vomitEvents.map(\.timestamp) }
     var stomachStatus: StomachStatus = .light {
         didSet {
             guard !isConfiguring, stomachStatus != oldValue else { return }
@@ -326,6 +332,8 @@ final class SessionViewModel {
         }
         drinks.forEach { modelContext?.delete($0) }
         drinks = []
+        vomitEvents.forEach { modelContext?.delete($0) }
+        vomitEvents = []
         try? modelContext?.save()
         if !snapshots.isEmpty {
             undoAction = .reset(snapshots)
@@ -456,6 +464,7 @@ final class SessionViewModel {
         }
         
         self.drinks = recentDrinks.filter { $0.timestamp >= sessionStart }
+        loadVomitEvents(since: sessionStart)
         recalculate()
         rescheduleNotifications()
         
@@ -469,11 +478,51 @@ final class SessionViewModel {
         }
     }
 
+    // MARK: Taktisches Übergeben
+
+    private func loadVomitEvents(since start: Date) {
+        guard let context = modelContext else { vomitEvents = []; return }
+        let descriptor = FetchDescriptor<VomitEvent>(
+            predicate: #Predicate { $0.timestamp >= start },
+            sortBy: [SortDescriptor(\.timestamp)]
+        )
+        vomitEvents = (try? context.fetch(descriptor)) ?? []
+    }
+
+    // Logs an "Übergeben" at the current time. Only alcohol still in the stomach
+    // (not yet resorbed) is removed; the BAC already in the blood is unchanged, so
+    // the displayed value does not jump down, it just stops rising from the drinks
+    // that were still being absorbed.
+    func logVomit() {
+        guard let context = modelContext else { return }
+        let event = VomitEvent(timestamp: Date())
+        context.insert(event)
+        try? context.save()
+        vomitEvents.append(event)
+        recalculate()
+        pushBACToWidget()
+        rescheduleNotifications()
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+
+    // Removes the most recently logged vomit (e.g. a mistaken tap).
+    func removeLastVomit() {
+        guard let event = vomitEvents.last else { return }
+        vomitEvents.removeLast()
+        modelContext?.delete(event)
+        try? modelContext?.save()
+        recalculate()
+        pushBACToWidget()
+        rescheduleNotifications()
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
     // MARK: Projections
 
     func hoursUntil(_ target: Double) -> Double? {
         guard let profile else { return nil }
-        return BACCalculator.hoursUntilBAC(target, drinks: drinks, profile: profile, stomachStatus: stomachStatus)
+        return BACCalculator.hoursUntilBAC(target, drinks: drinks, profile: profile,
+                                           stomachStatus: stomachStatus, vomitTimes: vomitTimes)
     }
 
     var hangoverForecast: HangoverLevel {
@@ -487,24 +536,28 @@ final class SessionViewModel {
 
     var bacCurve: [BACCalculator.BACPoint] {
         guard let profile else { return [] }
-        return BACCalculator.bacCurve(drinks: drinks, profile: profile, hours: 8, stomachStatus: stomachStatus)
+        return BACCalculator.bacCurve(drinks: drinks, profile: profile, hours: 8,
+                                      stomachStatus: stomachStatus, vomitTimes: vomitTimes)
     }
 
     var bacCurve24h: [BACCalculator.BACPoint] {
         guard let profile else { return [] }
-        return BACCalculator.bacCurve(drinks: drinks, profile: profile, hours: 24, intervalMinutes: 30, stomachStatus: stomachStatus)
+        return BACCalculator.bacCurve(drinks: drinks, profile: profile, hours: 24,
+                                      intervalMinutes: 30, stomachStatus: stomachStatus, vomitTimes: vomitTimes)
     }
 
     func projectedBAC(hours: Double = 8) -> [(Date, Double)] {
         guard let profile else { return [] }
         let now = Date()
-        return BACCalculator.projectedBAC(
+        return BACCalculator.bacCurve(
             drinks: drinks,
             profile: profile,
             from: now,
-            to: now.addingTimeInterval(hours * 3600),
-            stomachStatus: stomachStatus
-        )
+            hours: hours,
+            intervalMinutes: (hours * 60) / 30,
+            stomachStatus: stomachStatus,
+            vomitTimes: vomitTimes
+        ).map { ($0.date, $0.bac) }
     }
 
     // MARK: Private
@@ -515,7 +568,8 @@ final class SessionViewModel {
             bacStatus  = .sober
             return
         }
-        currentBAC = BACCalculator.currentBAC(drinks: drinks, profile: profile, stomachStatus: stomachStatus)
+        currentBAC = BACCalculator.currentBAC(drinks: drinks, profile: profile,
+                                              stomachStatus: stomachStatus, vomitTimes: vomitTimes)
         bacStatus  = BACStatus(bac: currentBAC, profile: profile)
         UserDefaults.widgetShared.set(currentBAC, forKey: UserDefaults.keyCurrentBAC)
         UserDefaults.widgetShared.set(profile.effectiveEliminationRate, forKey: UserDefaults.keyEliminationRate)
@@ -534,6 +588,7 @@ final class SessionViewModel {
         let drinksCopy   = drinks
         let bacAtCall    = currentBAC
         let stomachCopy  = stomachStatus
+        let vomitCopy    = vomitTimes
         let elimRate     = profile.effectiveEliminationRate
         let drinkCount   = drinks.count
         let skin         = profile.statusSkin
@@ -541,7 +596,7 @@ final class SessionViewModel {
             let curvePoints = BACCalculator.bacCurve(
                 drinks: drinksCopy, profile: profile,
                 hours: 12, intervalMinutes: 15,
-                stomachStatus: stomachCopy
+                stomachStatus: stomachCopy, vomitTimes: vomitCopy
             ).map { SharedBACPoint(date: $0.date, bac: $0.bac) }
             SharedStateStore.writeBACCurve(curvePoints)
 

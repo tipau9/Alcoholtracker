@@ -11,7 +11,7 @@ A German-language iOS app (SwiftUI + SwiftData) that tracks alcohol intake, esti
 - **Real-time BAC engine** — Widmark with a Watson-1980 distribution factor derived from your body data, plus a user-adjustable elimination rate and a tolerance mode.
 - **Drink logging** — quick add, bottle mode, barcode scanning, custom mixes, and a sip counter. "Logical days" start at 06:00 so one night out isn't split across two calendar days.
 - **History & trends** — month calendar colour-coded by peak BAC, per-day notes & mood, weekly/category/mood charts.
-- **Safety** — driving-limit forecast ("when am I fit to drive?"), probationary-driver mode (0.0 ‰), emergency contact, and a ride-home picker (Uber / Apple Maps).
+- **Safety** — driving-limit forecast ("when am I fit to drive?"), probationary-driver mode (0.0 ‰) that auto-syncs the forecast target, an optional "Konservativ rechnen" worst-case mode (ADAC-near) for the readiness timers, emergency contact, and a ride-home picker (Uber / Apple Maps).
 - **Crew** — add friends by code and see their live status; opt-in BAC sharing.
 - **Jams** — synchronised social sessions over MultipeerConnectivity (offline/Bluetooth) **and** Supabase (online), including a "who buys the next round" roulette and a water contest.
 - **Widgets & Live Activities** — current BAC, status, and time-to-limit on the Home Screen and Lock Screen.
@@ -19,6 +19,8 @@ A German-language iOS app (SwiftUI + SwiftData) that tracks alcohol intake, esti
 - **Community drink database** — self-learning: barcode scans contribute to a shared catalogue that auto-approves after enough independent confirmations.
 - **Account-based backup** — optionally sign in to back up your full history, settings, water log and custom drinks/mixes, and restore them on a new device.
 - **Accessibility & theming** — dark-only design, Dynamic Type, high-contrast mode, reduced motion, and a user-chosen accent colour.
+
+A full, area-by-area breakdown lives in [FEATURES.md](FEATURES.md).
 
 ---
 

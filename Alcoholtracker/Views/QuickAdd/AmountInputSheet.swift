@@ -13,6 +13,7 @@ struct AmountInputSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var volume: Double
     @State private var selectedPresetID: UUID? = nil
+    @State private var durationMinutes: Double = 0
 
     private let presets: [ServingSize]
     private let sliderRange: ClosedRange<Double>
@@ -48,7 +49,8 @@ struct AmountInputSheet: View {
         // Realistic peak this drink reaches, so the preview matches the live BAC.
         return BACCalculator.projectedPeak(
             volume: volume, abv: template.abv, category: template.category,
-            profile: p, stomachStatus: p.defaultStomachStatus
+            profile: p, stomachStatus: p.defaultStomachStatus,
+            drinkDurationMinutes: durationMinutes
         )
     }
 
@@ -176,6 +178,12 @@ struct AmountInputSheet: View {
                             }
                         }
 
+                        // Drinking duration ("verzögerter Start" / sipping)
+                        VStack(alignment: .leading, spacing: 10) {
+                            SectionLabel(text: "TRINKDAUER")
+                            DurationChipRow(durationMinutes: $durationMinutes)
+                        }
+
                         // BAC preview
                         if let bac = bacContribution {
                             HStack(spacing: 12) {
@@ -208,7 +216,9 @@ struct AmountInputSheet: View {
                             icon: "plus",
                             isDisabled: !isValid
                         ) {
-                            onAdd(Drink.from(template: template, volume: volume))
+                            let drink = Drink.from(template: template, volume: volume)
+                            drink.drinkDurationMinutes = durationMinutes
+                            onAdd(drink)
                             dismiss()
                         }
 

@@ -163,6 +163,56 @@ enum RuntimeSelfCheck {
             from: consDrink.timestamp, stomachStatus: .light, conservative: true) ?? -1
         checkInt("conservativeSoberTimeLonger", consHrs >= realHrs ? 1 : 0, 1)
 
+        // 18) Exact dehydration compensation: three 40 ml vodka shots (40%) leave a
+        //     net deficit; the compensation must gross that up for ADH pass-through
+        //     (so it exceeds the bare deficit) and the TBW-relative fraction must be
+        //     a small single-digit-permille share of body water.
+        let vodka = (0..<3).map { _ in
+            Drink.from(template: DrinkTemplate(
+                name: "Vodka", category: .spirits, volume: 40, abv: 40, calories: 0))
+        }
+        let vodkaNet   = HydrationCalculator.sessionNetHydration(drinks: vodka)
+        let bareDef    = HydrationCalculator.recommendedExtraWaterMl(drinks: vodka)
+        let exactComp  = HydrationCalculator.compensationWaterMl(for: vodka)
+        check("dehydrationCompensation", Double(exactComp), 360, 420)
+        checkInt("compensationAboveBareDeficit", exactComp > bareDef ? 1 : 0, 1)
+        check("dehydrationFractionTBW",
+              HydrationCalculator.dehydrationFraction(netML: vodkaNet, profile: profile), 0.005, 0.009)
+
+        // 19) Michaelis-Menten tail: below km elimination is first-order, so dropping
+        //     to a low threshold takes LONGER than to a higher one relative to a
+        //     straight line, and the curve still reaches sober (0) in finite time.
+        let mmBeer = Drink.from(template: DrinkTemplate(
+            name: "MM-Bier", category: .beer, volume: 500, abv: 5, calories: 215))
+        let mmStart = mmBeer.timestamp.addingTimeInterval(64 * 60)   // just past the peak
+        let hrsTo010 = BACCalculator.hoursUntilBAC(0.10, drinks: [mmBeer], profile: profile,
+                                                   from: mmStart, stomachStatus: .light) ?? -1
+        let hrsTo005 = BACCalculator.hoursUntilBAC(0.05, drinks: [mmBeer], profile: profile,
+                                                   from: mmStart, stomachStatus: .light) ?? -1
+        let hrsToZero = BACCalculator.hoursUntilBAC(0.0, drinks: [mmBeer], profile: profile,
+                                                    from: mmStart, stomachStatus: .light) ?? -1
+        checkInt("mmTailFirstOrderSlower", hrsTo005 > hrsTo010 ? 1 : 0, 1)
+        check("mmTailReachesSober", hrsToZero, 0.3, 8.0)
+
+        // 20) Taktisches Übergeben: vomiting 5 min into a 200 ml rum (still being
+        //     absorbed) leaves far less alcohol in the blood 90 min later than with
+        //     no vomit, and lowers the whole-session peak.
+        let vomitBase  = Date()
+        let vomitRum   = Drink.from(template: DrinkTemplate(
+            name: "Rum", category: .spirits, volume: 200, abv: 40, calories: 0),
+            timestamp: vomitBase)
+        let at90        = vomitBase.addingTimeInterval(90 * 60)
+        let bacNoVomit  = BACCalculator.currentBAC(drinks: [vomitRum], profile: consProfile,
+                                                   at: at90, stomachStatus: .light)
+        let bacVomited  = BACCalculator.currentBAC(drinks: [vomitRum], profile: consProfile,
+                                                   at: at90, stomachStatus: .light,
+                                                   vomitTimes: [vomitBase.addingTimeInterval(5 * 60)])
+        checkInt("vomitReducesBAC", bacVomited < bacNoVomit ? 1 : 0, 1)
+        let peakNoVomit = BACCalculator.peakBAC(drinks: [vomitRum], profile: consProfile, stomachStatus: .light)
+        let peakVomited = BACCalculator.peakBAC(drinks: [vomitRum], profile: consProfile, stomachStatus: .light,
+                                                vomitTimes: [vomitBase.addingTimeInterval(5 * 60)])
+        checkInt("vomitLowersPeak", peakVomited < peakNoVomit ? 1 : 0, 1)
+
         // DIAGNOSTIC: 200 ml rum (40%) for an 87 kg / 196 cm male, the user's case.
         // Prints (does not assert) the real values the engine produces so we can see
         // exactly why the shown peak is what it is and how the assumptions move it.

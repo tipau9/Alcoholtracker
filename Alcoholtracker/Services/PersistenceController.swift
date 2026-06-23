@@ -20,6 +20,7 @@ final class PersistenceController {
         PhotoMemory.self,
         DayNote.self,
         PendingSyncOperation.self,
+        VomitEvent.self,
     ])
 
     let container: ModelContainer

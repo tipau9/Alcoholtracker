@@ -137,10 +137,12 @@ enum BACCalculator {
         profile: UserProfile,
         at now: Date = Date(),
         stomachStatus: StomachStatus = .light,
-        conservative: Bool = false
+        conservative: Bool = false,
+        vomitTimes: [Date] = []
     ) -> Double {
         sampledBAC(drinks: drinks, profile: profile, at: [now],
-                   stomachStatus: stomachStatus, conservative: conservative).first ?? 0
+                   stomachStatus: stomachStatus, conservative: conservative,
+                   vomitTimes: vomitTimes).first ?? 0
     }
 
     // Forward-integrates the whole-body BAC curve ONCE and samples it at each of
@@ -160,7 +162,8 @@ enum BACCalculator {
         profile: UserProfile,
         at sampleDates: [Date],
         stomachStatus: StomachStatus,
-        conservative: Bool = false
+        conservative: Bool = false,
+        vomitTimes: [Date] = []
     ) -> [Double] {
         let n = sampleDates.count
         guard n > 0 else { return [] }
@@ -175,9 +178,18 @@ enum BACCalculator {
         let factor     = conservative ? 1.0 : stomachStatus.peakFactor  // empty stomach peaks higher
         let gastric    = stomachStatus.absorptionMinutes
 
+        // Vomit ("taktisches Übergeben") times, in minutes from origin, ascending.
+        // A vomit expels alcohol still sitting in the stomach (not yet resorbed),
+        // so it TRUNCATES each drink's absorption envelope: nothing more from that
+        // drink enters the blood after the vomit. Alcohol already in the blood is
+        // unaffected, so the running `bac` is never reduced directly here.
+        let vomitMins = vomitTimes.map { $0.timeIntervalSince(origin) / 60.0 }.sorted()
+
         // Each drink's absorption envelope, in minutes measured from `origin`.
-        // `peak` is the total ‰ this drink contributes once fully absorbed.
-        let envelopes: [(start: Double, window: Double, peak: Double)] = drinks.map { drink in
+        // `peak` is the total ‰ this drink would contribute if fully absorbed;
+        // `effEnd` is where absorption actually stops (gastric emptying, or an
+        // earlier vomit). Alcohol absorbed = peak * (effEnd - start) / window.
+        let envelopes: [(start: Double, window: Double, effEnd: Double, peak: Double)] = drinks.map { drink in
             let start = drink.timestamp.timeIntervalSince(origin) / 60.0
             let peak = bacContribution(
                 volume: drink.volume,
@@ -195,19 +207,51 @@ enum BACCalculator {
                 drinkDurationMinutes: drink.drinkDurationMinutes,
                 gastric: gastric
             )
-            return (start, window, peak)
+            var effEnd = start + window
+            // Earliest vomit strictly inside this drink's absorption window cuts it
+            // short (sorted ascending, so the first match is the earliest).
+            for tv in vomitMins where tv > start && tv < effEnd { effEnd = tv; break }
+            return (start, window, effEnd, peak)
         }
 
-        // Alcohol entering the blood over [lo, hi], summed across drinks.
+        // Alcohol entering the blood over [lo, hi], summed across drinks. The rate
+        // stays peak/window, but integration stops at effEnd (vomit truncation).
         func absorbed(from lo: Double, to hi: Double) -> Double {
             guard hi > lo else { return 0 }
             var total = 0.0
             for e in envelopes {
                 let l = max(lo, e.start)
-                let h = min(hi, e.start + e.window)
+                let h = min(hi, e.effEnd)
                 if h > l { total += e.peak * (h - l) / e.window }
             }
             return total
+        }
+
+        // Mixed-order (Michaelis-Menten) elimination. Above km the body clears at
+        // the constant zero-order `elimPerMin` (Widmark, unchanged); below km it
+        // crosses into first-order (exponential) decay so the tail tapers off
+        // realistically instead of dropping to zero on a straight line. The two
+        // regimes meet continuously at km (the first-order constant is chosen so
+        // the instantaneous rate equals elimPerMin there). Below a negligible
+        // sober floor the value snaps to 0 so the curve still reaches true zero in
+        // finite time. km is shared with AlcoholKinetics for one source of truth.
+        let km          = AlcoholKinetics.km
+        let firstOrderK = km > 0 ? elimPerMin / km : 0          // per-minute, continuous at km
+        let soberFloor  = 0.005                                  // ‰ below this counts as sober
+        func eliminate(_ c0: Double, over dt: Double) -> Double {
+            guard c0 > 0 else { return 0 }
+            guard dt > 0 else { return c0 }
+            if c0 >= km {
+                let afterZero = c0 - elimPerMin * dt
+                if afterZero >= km { return afterZero }          // stayed zero-order
+                // Crossed into first-order partway through this step.
+                let tToKm = (c0 - km) / elimPerMin
+                let v = km * exp(-firstOrderK * (dt - tToKm))
+                return v < soberFloor ? 0 : v
+            } else {
+                let v = c0 * exp(-firstOrderK * dt)
+                return v < soberFloor ? 0 : v
+            }
         }
 
         // Sample minute-offsets from origin, paired with their caller-side index
@@ -229,15 +273,18 @@ enum BACCalculator {
         var t = 0.0
         while ti < targets.count {
             // Emit every sample whose whole-minute floor is the current `t`,
-            // each via one partial sub-step to its exact minute.
+            // each via one partial sub-step to its exact minute. Above km this is
+            // identical to the old `bac + absorbed - elimPerMin*(m-t)`; only the
+            // low-BAC tail differs (first-order). Absorption is added before the
+            // step's elimination, matching the previous integration order.
             while ti < targets.count && targets[ti].minute < t + 1.0 {
                 let m = targets[ti].minute
-                result[targets[ti].idx] = max(0, bac + absorbed(from: t, to: m) - elimPerMin * (m - t))
+                result[targets[ti].idx] = eliminate(bac + absorbed(from: t, to: m), over: m - t)
                 ti += 1
             }
             if ti >= targets.count || t >= maxMinute { break }
             // Advance one whole minute on the shared grid.
-            bac = max(0, bac + absorbed(from: t, to: t + 1.0) - elimPerMin)
+            bac = eliminate(bac + absorbed(from: t, to: t + 1.0), over: 1.0)
             t += 1.0
         }
         return result
@@ -253,7 +300,8 @@ enum BACCalculator {
         profile: UserProfile,
         from now: Date = Date(),
         stomachStatus: StomachStatus = .light,
-        conservative: Bool = false
+        conservative: Bool = false,
+        vomitTimes: [Date] = []
     ) -> Double? {
         // Sample the next 24h in one integration (2-minute grid) and return the
         // first crossing, linearly interpolated between the bracketing samples.
@@ -263,7 +311,8 @@ enum BACCalculator {
         let steps = Int(24.0 * 60.0 / stepMin)
         let dates = (0...steps).map { now.addingTimeInterval(Double($0) * stepMin * 60.0) }
         let bacs = sampledBAC(drinks: drinks, profile: profile, at: dates,
-                              stomachStatus: stomachStatus, conservative: conservative)
+                              stomachStatus: stomachStatus, conservative: conservative,
+                              vomitTimes: vomitTimes)
         guard let first = bacs.first, first > targetBAC else { return 0 }
 
         for i in 1...steps where bacs[i] <= targetBAC {
@@ -295,7 +344,8 @@ enum BACCalculator {
         drinks: [Drink],
         profile: UserProfile,
         intervalMinutes: Double = 10,
-        stomachStatus: StomachStatus = .light
+        stomachStatus: StomachStatus = .light,
+        vomitTimes: [Date] = []
     ) -> Double {
         guard let first = drinks.map(\.timestamp).min(),
               let last  = drinks.map(\.timestamp).max() else { return 0 }
@@ -306,7 +356,8 @@ enum BACCalculator {
             from: first,
             hours: spanHours + 6.0,
             intervalMinutes: intervalMinutes,
-            stomachStatus: stomachStatus
+            stomachStatus: stomachStatus,
+            vomitTimes: vomitTimes
         )
         return curve.map(\.bac).max() ?? 0
     }
@@ -318,11 +369,13 @@ enum BACCalculator {
         from start: Date = Date(),
         hours: Double = 8,
         intervalMinutes: Double = 15,
-        stomachStatus: StomachStatus = .light
+        stomachStatus: StomachStatus = .light,
+        vomitTimes: [Date] = []
     ) -> [BACPoint] {
         let steps = Int((hours * 60) / intervalMinutes)
         let dates = (0...steps).map { start.addingTimeInterval(Double($0) * intervalMinutes * 60) }
-        let bacs = sampledBAC(drinks: drinks, profile: profile, at: dates, stomachStatus: stomachStatus)
+        let bacs = sampledBAC(drinks: drinks, profile: profile, at: dates,
+                              stomachStatus: stomachStatus, vomitTimes: vomitTimes)
         return zip(dates, bacs).map { BACPoint(date: $0, bac: $1) }
     }
 }
