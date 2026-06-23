@@ -109,6 +109,17 @@ German; the German label is given in quotes where it helps.
   privacy controls.
 - **Mini-games, server-synced** so every member sees the same result: round
   **roulette** ("who buys the next round") and a **water contest**.
+- **Mesh routing** (offline): every peer forwards messages it has not seen yet with a
+  decremented hop budget, so a jam survives over a chain of devices (A -> B -> C), not
+  just within range of the host.
+- **Host transfer**: the host can hand the role to another participant ("Host
+  übergeben"); the elected device starts hosting and the server host is repointed.
+- **Ghost jams**: when the host leaves (or drops off a server jam), the session keeps
+  running. A successor is elected deterministically on every client (lowest BAC, then
+  longest jam history), so the jam does not die with its host.
+- **Conflict-free roster (CRDT)**: participant state is merged Last-Writer-Wins with
+  leave/kick tombstones, so an offline peer reconnecting cannot clobber newer data or
+  resurrect someone who already left.
 
 ## Hydration & hangover
 
@@ -119,6 +130,9 @@ German; the German label is given in quotes where it helps.
   than the bare shortfall to actually close it), and the severity is scored against the
   user's Watson total body water rather than an absolute ml threshold, so a lighter
   person tips into a warning sooner than a heavier one.
+- **Weather correlation (WeatherKit)**: on a warm night the recommendation adds
+  estimated sweat loss (more water needed), reflecting the higher dehydration / hangover
+  risk in heat. Requires the WeatherKit entitlement; degrades to no effect without it.
 - **Hangover prediction** from the session's drinks, body data and water intake.
 
 ## Achievements & personalisation
