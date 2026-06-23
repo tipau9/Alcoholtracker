@@ -136,10 +136,17 @@ final class SessionViewModel {
 
     var sipTotalML: Double { Double(sipCount) * currentSipVolume }
 
+    // Realistic peak this many sips reaches, matching the "+x ‰" badges shown when
+    // adding any other drink (QuickAdd/AmountInput/Mix all use projectedPeak). The
+    // old raw-Widmark term ignored the resorption deficit and absorption-window
+    // elimination, so the live sip readout overstated what actually landed on the
+    // home screen once the sips were committed through the full model.
     var sipPromille: Double {
-        guard let drink = activeSipDrink, let p = profile else { return 0 }
-        let alcoholGrams = (sipTotalML * drink.abv / 100.0) * 0.789
-        return alcoholGrams / (p.weight * p.distributionFactor)
+        guard let drink = activeSipDrink, let p = profile, sipTotalML > 0 else { return 0 }
+        return BACCalculator.projectedPeak(
+            volume: sipTotalML, abv: drink.abv, category: drink.category,
+            profile: p, stomachStatus: stomachStatus
+        )
     }
 
     // MARK: Computed
@@ -600,7 +607,15 @@ final class SessionViewModel {
     private func startTimer() {
         timer = Timer.publish(every: 30, on: .main, in: .common)
             .autoconnect()
-            .sink { [weak self] _ in self?.recalculate() }
+            .sink { [weak self] _ in
+                guard let self else { return }
+                // While sober with no drinks the BAC stays 0 tick-to-tick, so the
+                // deferred curve / shared-session / Live-Activity burst would be pure
+                // waste. Drink changes still call recalculate() directly, so nothing
+                // can go stale. This skips ~2880 idle recompute bursts per sober day.
+                guard !self.drinks.isEmpty || self.currentBAC > 0 else { return }
+                self.recalculate()
+            }
     }
 
     private func pushBACToWidget() {

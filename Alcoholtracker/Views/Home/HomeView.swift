@@ -354,7 +354,12 @@ private struct DetailedHomeView: View {
     private var activeWidgets: [WidgetType] { profile?.activeWidgets ?? WidgetType.allCases }
     private var skin: StatusSkin { profile?.statusSkin ?? .standard }
 
-    private var bacTrend: BACTrend {
+    // Memoised: computing this in body ran a full BAC integration on every scroll
+    // frame, because body re-evaluates as heroCollapse changes. It only actually
+    // changes when the BAC does, so it is refreshed from .task / .onChange instead.
+    @State private var bacTrend: BACTrend = .stable
+
+    private func computeBACTrend() -> BACTrend {
         guard session.currentBAC > 0.01, let p = profile else { return .stable }
         let fiveMinutesAgo = BACCalculator.currentBAC(
             drinks: session.drinks,
@@ -496,6 +501,10 @@ private struct DetailedHomeView: View {
                 .padding(.trailing, 24)
                 .padding(.bottom, 32)
         }
+        // Refresh the memoised trend only when the BAC actually changes, not on
+        // every scroll frame (this body re-evaluates as heroCollapse animates).
+        .task { bacTrend = computeBACTrend() }
+        .onChange(of: session.currentBAC) { _, _ in bacTrend = computeBACTrend() }
     }
 
     private func pingCityTrend(drink: Drink) {
@@ -819,10 +828,6 @@ private struct BACCurveChartView: View {
         showFullDay ? session.bacCurve24h : session.bacCurve
     }
 
-    private var yMax: Double {
-        max(1.0, (displayPoints.map(\.bac).max() ?? 0) + 0.2)
-    }
-
     // Extracted so the ForEach resolves unambiguously as ChartContent. Inline in
     // a Chart {} the type-checker can otherwise (non-deterministically) try to
     // treat ForEach as MapContent and fail with a MapContentBuilder error.
@@ -861,7 +866,11 @@ private struct BACCurveChartView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        // Integrate the curve once per render: yMax and the chart marks both need
+        // it, and session.bacCurve(24h) is an uncached full integration per access.
+        let points = displayPoints
+        let yMax = max(1.0, (points.map(\.bac).max() ?? 0) + 0.2)
+        return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center) {
                 SectionLabel(text: "VERLAUF")
                 Spacer()
@@ -878,7 +887,7 @@ private struct BACCurveChartView: View {
             }
 
             Chart {
-                curveMarks(displayPoints)
+                curveMarks(points)
 
                 RuleMark(y: .value("Grenzwert", warningThreshold))
                     .foregroundStyle(Color.statusOrange.opacity(0.55))
@@ -1338,8 +1347,7 @@ private struct AchievementUnlockToast: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .glassCard(cornerRadius: 16)
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
                     .strokeBorder(Color.appAccent.opacity(0.3), lineWidth: 0.5)
@@ -1403,8 +1411,7 @@ private struct MedicationWarningBanner: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .glassCard(cornerRadius: 16)
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
                     .strokeBorder(Color.statusOrange.opacity(0.4), lineWidth: 0.5)
@@ -1443,8 +1450,7 @@ private struct PacingHintBanner: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .glassCard(cornerRadius: 16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(Color.statusOrange.opacity(0.4), lineWidth: 0.5)

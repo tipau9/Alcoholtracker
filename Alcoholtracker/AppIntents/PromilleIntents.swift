@@ -11,7 +11,11 @@ import Foundation
 // Previously the intents only read the scalar snapshot and decayed it linearly,
 // so straight after a drink Siri reported ~0 ("nüchtern") and never showed the
 // climbing value the app/widget display, the exact mismatch the curve fixes.
-private enum PromilleSnapshot {
+// nonisolated: pure snapshot math (reads App Group UserDefaults + the shared
+// curve), called from AppIntents.perform() outside the main actor. Mirrors
+// AlcoholKinetics. Without this, Xcode 26's default main-actor isolation makes it
+// main-actor-isolated and the call from perform() warns (a Swift 6 error).
+private nonisolated enum PromilleSnapshot {
     static func bac(at date: Date) -> Double {
         let defaults = UserDefaults.widgetShared
         let rate = max(0.05, defaults.double(forKey: UserDefaults.keyEliminationRate))

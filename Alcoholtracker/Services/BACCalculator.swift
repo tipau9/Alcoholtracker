@@ -3,7 +3,8 @@ import Foundation
 // MARK: - BACCalculator
 //
 // Uses the Widmark formula with Watson (1980) body-water estimation for the
-// distribution factor (TBW / weight, clamped 0.45-0.80). Absorption is modelled
+// distribution factor (TBW / (0.806 x weight) for blood Promille, clamped
+// 0.50-0.90; see UserProfile.distributionFactor). Absorption is modelled
 // as a linear ramp (duration = stomachStatus.absorptionMinutes x category.absorptionModifier)
 // followed by linear elimination at profile.effectiveEliminationRate ‰/h (respects toleranceMode).
 //

@@ -5,7 +5,8 @@ import Foundation
 // Original design avoided quantity-based achievements. The expanded catalog
 // (v2) adds BAC-level, streak, and milestone achievements per user request.
 // BAC estimates use the real user profile via BACCalculator.peakBAC; the
-// 70 kg / 0.60 approximation is only a fallback when no profile exists yet.
+// 70 kg / 0.68 approximation is only a fallback when no profile exists yet
+// (0.68 is a gender-neutral blood-r, consistent with UserProfile.distributionFactor).
 // Day grouping uses the logical day (06:00 to 05:59, matches SessionViewModel).
 
 enum AchievementCatalog {
@@ -325,7 +326,7 @@ enum AchievementCatalog {
 
                 currentBAC += BACCalculator.bacContribution(
                     volume: d.volume, abv: d.abv,
-                    weight: 70, distributionFactor: 0.60
+                    weight: 70, distributionFactor: 0.68
                 )
                 peak = max(peak, currentBAC)
                 lastTime = d.timestamp
