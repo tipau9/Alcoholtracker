@@ -99,6 +99,25 @@ enum AchievementCatalog {
 
     // MARK: - isEarned
 
+    // Caches the whole-history derived metrics that would otherwise be recomputed
+    // once per BAC/streak achievement within a single evaluation pass: peakDayBAC
+    // for bac_05/10/15 and soberStreak for sober_3/7/14/30. The values are lazy,
+    // so when those achievements are already unlocked the heavy work never runs.
+    // One instance is built per evaluate() pass on the main actor, so the lazy
+    // stored properties are accessed single-threaded.
+    final class EvalContext {
+        private let drinks: [Drink]
+        private let profile: UserProfile?
+
+        init(drinks: [Drink], profile: UserProfile?) {
+            self.drinks = drinks
+            self.profile = profile
+        }
+
+        lazy var peakDayBAC: Double = AchievementCatalog.peakDayBAC(drinks: drinks, profile: profile)
+        lazy var soberStreak: Int = AchievementCatalog.soberStreak(drinks: drinks)
+    }
+
     // swiftlint:disable:next cyclomatic_complexity function_body_length
     static func isEarned(
         id: String,
@@ -106,7 +125,8 @@ enum AchievementCatalog {
         templates: [DrinkTemplate],
         crew: [CrewMember],
         photos: [PhotoMemory],
-        profile: UserProfile?
+        profile: UserProfile?,
+        cache: EvalContext
     ) -> Bool {
         switch id {
 
@@ -178,15 +198,15 @@ enum AchievementCatalog {
             return hasKolsch && hasAlt
 
         // BAC-Stufen
-        case "bac_05": return peakDayBAC(drinks: drinks, profile: profile) >= 0.5
-        case "bac_10": return peakDayBAC(drinks: drinks, profile: profile) >= 1.0
-        case "bac_15": return peakDayBAC(drinks: drinks, profile: profile) >= 1.5
+        case "bac_05": return cache.peakDayBAC >= 0.5
+        case "bac_10": return cache.peakDayBAC >= 1.0
+        case "bac_15": return cache.peakDayBAC >= 1.5
 
         // Nüchternheit-Streaks (current streak from today backwards)
-        case "sober_3":  return soberStreak(drinks: drinks) >= 3
-        case "sober_7":  return soberStreak(drinks: drinks) >= 7
-        case "sober_14": return soberStreak(drinks: drinks) >= 14
-        case "sober_30": return soberStreak(drinks: drinks) >= 30
+        case "sober_3":  return cache.soberStreak >= 3
+        case "sober_7":  return cache.soberStreak >= 7
+        case "sober_14": return cache.soberStreak >= 14
+        case "sober_30": return cache.soberStreak >= 30
 
         // Cocktails
         case "cocktails_5":
