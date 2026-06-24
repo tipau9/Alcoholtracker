@@ -82,7 +82,7 @@ enum AchievementCatalog {
 
         // --- Zeit-basiert ---
         Achievement(id: "night_owl",      title: "Nachteule",         subtitle: "Drink zwischen 0 und 4 Uhr eingetragen",        icon: "moon.stars.fill",         accent: .yellow),
-        Achievement(id: "early_bird",     title: "Fruehstuecks-Bier", subtitle: "Drink vor 12 Uhr eingetragen",                  icon: "sunrise.fill",            accent: .amber),
+        Achievement(id: "early_bird",     title: "Fruehstuecks-Bier", subtitle: "Drink zwischen 6 und 12 Uhr eingetragen",       icon: "sunrise.fill",            accent: .amber),
         Achievement(id: "silvester",      title: "Gutes Neues",       subtitle: "Drink am 31. Dezember eingetragen",             icon: "fireworks",               accent: .yellow),
         Achievement(id: "monday_drink",   title: "Montags-Freude",    subtitle: "Drink an einem Montag eingetragen",             icon: "calendar.badge.plus",     accent: .green),
 
@@ -247,7 +247,7 @@ enum AchievementCatalog {
         case "night_owl":
             return drinks.contains {
                 let hour = Calendar.current.component(.hour, from: $0.timestamp)
-                return hour >= 0 && hour < 4
+                return hour < 4
             }
         case "early_bird":
             return drinks.contains {

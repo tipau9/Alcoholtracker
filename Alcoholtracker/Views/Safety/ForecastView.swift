@@ -33,17 +33,6 @@ struct ForecastView: View {
         max(0, targetBAC - projectedBACAtTarget)
     }
 
-    // Realistic peak one standard drink (0,33 l / 5%) reaches on its own, identical
-    // to the "+x ‰" badge in the add sheet, so both screens show the same number.
-    // Shown to the user; NOT used for the safety budget below.
-    private var oneStandardDrinkPeak: Double {
-        max(0.01, BACCalculator.projectedPeak(
-            volume: 330, abv: 5.0, category: .beer,
-            profile: profile, stomachStatus: profile.defaultStomachStatus,
-            conservative: profile.conservativeForSafety
-        ))
-    }
-
     // Conservative per-drink figure used only to count how many more drinks fit:
     // the raw Widmark peak with no per-drink elimination credit. projectedPeak
     // subtracts a full absorption window of elimination, which is valid for one
