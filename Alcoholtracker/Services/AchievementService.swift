@@ -29,10 +29,18 @@ final class AchievementService {
         photos: [PhotoMemory],
         profile: UserProfile?
     ) async {
+        // Nothing left to earn: skip the whole-history scan entirely.
+        guard unlockedIDs.count < AchievementCatalog.all.count else {
+            publishIfNeeded(didUnlock: false)
+            return
+        }
+
         // Runs on the main actor on purpose: the scan reads SwiftData models,
         // which are bound to the main-actor model context. Shipping them into
         // a detached task was a data race wearing a performance costume.
+        // The cache derives peakDayBAC / soberStreak at most once per pass.
         let currentIDs = unlockedIDs
+        let cache = AchievementCatalog.EvalContext(drinks: drinks, profile: profile)
         let freshUnlocks: [Achievement] = AchievementCatalog.all.filter { a in
             !currentIDs.contains(a.id) &&
             AchievementCatalog.isEarned(
@@ -41,7 +49,8 @@ final class AchievementService {
                 templates: templates,
                 crew: crew,
                 photos: photos,
-                profile: profile
+                profile: profile,
+                cache: cache
             )
         }
 
