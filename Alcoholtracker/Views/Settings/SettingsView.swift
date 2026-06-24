@@ -13,7 +13,10 @@ import UIKit
 struct SettingsView: View {
 
     @Query private var profiles: [UserProfile]
-    @Query(sort: \Drink.timestamp) private var allDrinks: [Drink]
+    // Only the count is needed on screen; the full history is fetched on demand
+    // (export / notification reschedule) instead of paging every Drink into
+    // memory each time Settings opens.
+    @State private var drinkCount = 0
     @Environment(\.modelContext) private var context
     @Environment(SupabaseService.self) private var supabase
     @Environment(AchievementService.self) private var achievements
@@ -65,6 +68,9 @@ struct SettingsView: View {
                     }
                 }
             }
+        }
+        .task {
+            drinkCount = (try? context.fetchCount(FetchDescriptor<Drink>())) ?? 0
         }
     }
 
@@ -145,7 +151,10 @@ struct SettingsView: View {
                                         // 48h window covers rolling sessions past 06:00;
                                         // fully metabolised drinks contribute zero anyway.
                                         let lookback = Date().addingTimeInterval(-48 * 3600)
-                                        let recent = allDrinks.filter { $0.timestamp >= lookback }
+                                        let recentDescriptor = FetchDescriptor<Drink>(
+                                            predicate: #Predicate { $0.timestamp >= lookback }
+                                        )
+                                        let recent = (try? context.fetch(recentDescriptor)) ?? []
                                         await NotificationService.reschedule(
                                             drinks: recent,
                                             profile: p,
@@ -184,7 +193,10 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionLabel(text: "DATEN")
             Button {
-                if let url = try? ExportService.csvURL(drinks: allDrinks) {
+                let all = (try? context.fetch(
+                    FetchDescriptor<Drink>(sortBy: [SortDescriptor(\.timestamp)])
+                )) ?? []
+                if let url = try? ExportService.csvURL(drinks: all) {
                     exportFile = ExportFile(url: url)
                 }
             } label: {
@@ -197,7 +209,7 @@ struct SettingsView: View {
                         Text("Verlauf als CSV exportieren")
                             .font(.appBody)
                             .foregroundStyle(Color.appText)
-                        Text("\(allDrinks.count) Drinks, öffnet sich in Excel und Numbers")
+                        Text("\(drinkCount) Drinks, öffnet sich in Excel und Numbers")
                             .font(.appCaption)
                             .foregroundStyle(Color.appTextDim)
                     }
@@ -217,8 +229,8 @@ struct SettingsView: View {
                 RoundedRectangle(cornerRadius: 16)
                     .strokeBorder(Color.appBorder, lineWidth: 0.5)
             )
-            .disabled(allDrinks.isEmpty)
-            .opacity(allDrinks.isEmpty ? 0.5 : 1)
+            .disabled(drinkCount == 0)
+            .opacity(drinkCount == 0 ? 0.5 : 1)
         }
         .sheet(item: $exportFile) { file in
             STShareSheet(url: file.url)
