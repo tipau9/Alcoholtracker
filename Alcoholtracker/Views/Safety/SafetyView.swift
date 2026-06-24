@@ -289,11 +289,16 @@ private struct SFTimerRow: View {
     let label: String
     let icon: String
     let iconColor: Color
-    let hours: Double?     // 0 or nil (BAC already at target) → show readyLabel; nil from hoursUntilBAC → already there
+    // hoursUntilBAC returns 0 when the BAC is ALREADY at/below the target and
+    // nil when it will NOT be reached within the 24h forecast window (still far
+    // off, e.g. a very high current BAC). Those two must read differently: only
+    // 0 means "ready"; nil must show it is more than a day away so the safety
+    // screen never tells an intoxicated user they are already nüchtern.
+    let hours: Double?
     let readyLabel: String
 
     private var isReady: Bool {
-        guard let h = hours else { return true }
+        guard let h = hours else { return false }
         return h <= 0
     }
 
@@ -302,7 +307,8 @@ private struct SFTimerRow: View {
     }
 
     private var displayText: String {
-        guard let h = hours, h > 0 else { return readyLabel }
+        guard let h = hours else { return "> 24 h" }
+        guard h > 0 else { return readyLabel }
         let totalMin = Int(h * 60)
         let hr = totalMin / 60
         let min = totalMin % 60
