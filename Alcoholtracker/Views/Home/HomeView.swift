@@ -27,7 +27,13 @@ struct HomeView: View {
     @Environment(HealthKitService.self) private var health
     @Environment(JamService.self) private var jamService
     @Environment(LocationService.self) private var locationService
+    @Environment(OfflineSyncService.self) private var offlineSync
     @State private var session = SessionViewModel()
+    // Throttle for the friend-BAC publish: currentBAC ticks every 30s while a
+    // session is live, so publishing on every tick floods the backend and drains
+    // the battery. Track the last published value/time to rate-limit it.
+    @State private var lastPublishedBAC: Double = -1
+    @State private var lastPublishAt: Date = .distantPast
     @State private var showAddDrink = false
     @State private var showResetAlert = false
     @State private var showEditSheet = false
@@ -272,7 +278,7 @@ struct HomeView: View {
             // Re-arm drunk-mode once back under the threshold.
             if bac < (profile?.carefulThreshold ?? 0.8) { drunkModeDismissed = false }
             guard supabase.isSignedIn else { return }
-            Task { try? await supabase.publishBAC(bac) }
+            publishBACThrottled(bac)
         }
         .onChange(of: session.drinks.count) { old, new in
             guard new > old, !medWarningShownThisSession,
@@ -312,6 +318,28 @@ struct HomeView: View {
                     try? await Task.sleep(for: .seconds(3))
                     withAnimation(.easeInOut(duration: 0.25)) { showUnlockToast = false }
                 }
+            }
+        }
+    }
+
+    // Publishes the BAC to the backend at most once every 2 minutes, plus
+    // immediately on a >= 0.05 permille move or a sober transition, so friends
+    // still see meaningful changes promptly without a PATCH on every 30s timer
+    // tick. If the network call fails (offline) the value is queued through the
+    // offline sync service instead of being silently dropped.
+    private func publishBACThrottled(_ bac: Double) {
+        let crossedSober = (bac <= 0.001) != (lastPublishedBAC <= 0.001)
+        let movedEnough  = abs(bac - lastPublishedBAC) >= 0.05
+        let intervalDue  = Date().timeIntervalSince(lastPublishAt) >= 120
+        guard crossedSober || movedEnough || intervalDue else { return }
+        lastPublishedBAC = bac
+        lastPublishAt = Date()
+        let rate = profile?.effectiveEliminationRate ?? 0.15
+        Task {
+            do {
+                try await supabase.publishBAC(bac)
+            } catch {
+                offlineSync.enqueueBACPublish(bac: bac, eliminationRate: rate)
             }
         }
     }
