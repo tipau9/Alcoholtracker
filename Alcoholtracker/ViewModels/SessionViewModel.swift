@@ -30,6 +30,15 @@ final class SessionViewModel {
 
     var lastBottleLevels: [UUID: Double] = [:]  // templateID -> last currentLevel
 
+    // MARK: HealthKit BAC throttle (in-memory)
+
+    // recalculate() fires every 30s while BAC > 0, so writing a HealthKit BAC
+    // sample on each tick would flood Health with ~120 samples/hour for the whole
+    // session plus its sober tail. Sample at most every 5 minutes, or sooner when
+    // the value moved enough to be worth a point on the Health graph.
+    private var lastHealthKitBACLog: Date?
+    private var lastHealthKitBAC: Double = 0
+
     // MARK: Undo state (in-memory)
 
     // Value snapshot so a deleted @Model drink can be recreated for undo.
@@ -567,7 +576,7 @@ final class SessionViewModel {
                 soberThreshold: profile.tipsyThreshold,
                 warningThreshold: profile.warningThreshold
             )
-            if profile.healthKitEnabled {
+            if profile.healthKitEnabled, shouldLogHealthKitBAC(bacAtCall) {
                 await healthKit?.logBAC(bacAtCall)
             }
         }
@@ -602,6 +611,21 @@ final class SessionViewModel {
             statusLabel: bacStatus.localizedName
         )
         SharedStateStore.writeSession(session)
+    }
+
+    // Arms the HealthKit BAC throttle: returns true (and records the write) when
+    // a sample is due: on the first sample, once 5 minutes have elapsed, or when
+    // the BAC moved by at least 0.1 permille since the last logged sample.
+    private func shouldLogHealthKitBAC(_ bac: Double) -> Bool {
+        let now = Date()
+        if let last = lastHealthKitBACLog,
+           now.timeIntervalSince(last) < 300,
+           abs(bac - lastHealthKitBAC) < 0.1 {
+            return false
+        }
+        lastHealthKitBACLog = now
+        lastHealthKitBAC = bac
+        return true
     }
 
     private func startTimer() {
