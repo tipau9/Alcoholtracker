@@ -355,6 +355,7 @@ enum BACCalculator {
         profile: UserProfile,
         intervalMinutes: Double = 10,
         stomachStatus: StomachStatus = .light,
+        conservative: Bool = false,
         vomitTimes: [Date] = []
     ) -> Double {
         guard let first = drinks.map(\.timestamp).min(),
@@ -367,6 +368,7 @@ enum BACCalculator {
             hours: spanHours + 6.0,
             intervalMinutes: intervalMinutes,
             stomachStatus: stomachStatus,
+            conservative: conservative,
             vomitTimes: vomitTimes
         )
         return curve.map(\.bac).max() ?? 0
@@ -380,12 +382,14 @@ enum BACCalculator {
         hours: Double = 8,
         intervalMinutes: Double = 15,
         stomachStatus: StomachStatus = .light,
+        conservative: Bool = false,
         vomitTimes: [Date] = []
     ) -> [BACPoint] {
         let steps = Int((hours * 60) / intervalMinutes)
         let dates = (0...steps).map { start.addingTimeInterval(Double($0) * intervalMinutes * 60) }
         let bacs = sampledBAC(drinks: drinks, profile: profile, at: dates,
-                              stomachStatus: stomachStatus, vomitTimes: vomitTimes)
+                              stomachStatus: stomachStatus, conservative: conservative,
+                              vomitTimes: vomitTimes)
         return zip(dates, bacs).map { BACPoint(date: $0, bac: $1) }
     }
 }

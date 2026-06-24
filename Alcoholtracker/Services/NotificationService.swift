@@ -70,14 +70,18 @@ enum NotificationService {
         default: return
         }
 
+        // Safety-relevant times honour the "Konservativ rechnen" switch (or the
+        // app-wide one), matching the Fahrbereit/Nüchtern timers in the Safety tab.
+        let conservative = profile.conservativeForSafety
         let currentBAC = BACCalculator.currentBAC(
-            drinks: drinks, profile: profile, stomachStatus: stomachStatus
+            drinks: drinks, profile: profile, stomachStatus: stomachStatus, conservative: conservative
         )
         guard currentBAC > profile.tipsyThreshold else { return }
 
         // Sober notification
         if let hours = BACCalculator.hoursUntilBAC(
-            profile.tipsyThreshold, drinks: drinks, profile: profile, stomachStatus: stomachStatus
+            profile.tipsyThreshold, drinks: drinks, profile: profile,
+            stomachStatus: stomachStatus, conservative: conservative
         ), hours > 0.05 {
             schedule(
                 id: soberID,
@@ -91,7 +95,8 @@ enum NotificationService {
         // Drive-ready notification (only if currently above the warning threshold)
         if currentBAC > profile.warningThreshold,
            let hours = BACCalculator.hoursUntilBAC(
-               profile.warningThreshold, drinks: drinks, profile: profile, stomachStatus: stomachStatus
+               profile.warningThreshold, drinks: drinks, profile: profile,
+               stomachStatus: stomachStatus, conservative: conservative
            ), hours > 0.05 {
             schedule(
                 id: driveID,

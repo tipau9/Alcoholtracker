@@ -28,6 +28,11 @@ German; the German label is given in quotes where it helps.
   ~1 min, so the safety screens show near-raw Widmark (ADAC-near). The individualised
   Watson *r* is kept. Affects only the readiness timers and the forecast; Home and
   charts stay realistic. A WORST-CASE badge appears in the forecast header.
+- **"Konservativ in ganzer App"** (`UserProfile.conservativeEverywhere`): a second
+  Settings switch that applies the worst-case model everywhere (home BAC, curves, add
+  badges, history, drive-ready notifications), not just the safety screens. When on it
+  implies the safety figures too; off keeps the realistic model app-wide. Achievements
+  and the hangover prediction stay on the realistic model (objective records).
 - **Forward-integrated BAC curve** (`sampledBAC`) sampled for the live chart, session
   peak, and time-to-threshold queries.
 - **Michaelis-Menten dual kinetics**: elimination is zero-order (constant) at higher

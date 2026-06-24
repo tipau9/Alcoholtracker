@@ -42,7 +42,7 @@ struct DrinkEditSheet: View {
         return BACCalculator.projectedPeak(
             volume: volume, abv: drink.abv, category: drink.category,
             profile: p, stomachStatus: p.defaultStomachStatus,
-            drinkDurationMinutes: durationMinutes
+            drinkDurationMinutes: durationMinutes, conservative: p.conservativeForApp
         )
     }
 

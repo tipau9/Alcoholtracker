@@ -208,6 +208,13 @@ struct SettingsDisplaySection: View {
                 )
                 Divider().background(Color.appBorder).padding(.leading, 16)
                 STToggleRow(
+                    icon: "exclamationmark.shield",
+                    label: "Konservativ in ganzer App",
+                    subtitle: "Worst-Case auch für Startseite, Kurven & Badges, nicht nur Sicherheit",
+                    isOn: Binding(get: { p.conservativeEverywhere }, set: { p.conservativeEverywhere = $0; save() })
+                )
+                Divider().background(Color.appBorder).padding(.leading, 16)
+                STToggleRow(
                     icon: "moon.zzz.fill",
                     label: "Drunk-Modus",
                     subtitle: "Vereinfacht die Startseite automatisch bei hohem Pegel",

@@ -25,7 +25,8 @@ struct FullScreenBACChart: View {
             drivingLimit,
             drinks: session.drinks,
             profile: p,
-            stomachStatus: session.stomachStatus
+            stomachStatus: session.stomachStatus,
+            conservative: p.conservativeForApp
         ).map { Date().addingTimeInterval($0 * 3600) }
     }
 

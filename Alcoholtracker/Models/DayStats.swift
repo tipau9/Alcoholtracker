@@ -22,7 +22,8 @@ struct DayStats: Identifiable {
         BACCalculator.peakBAC(
             drinks: drinks,
             profile: profile,
-            stomachStatus: profile.defaultStomachStatus
+            stomachStatus: profile.defaultStomachStatus,
+            conservative: profile.conservativeForApp
         )
     }
 

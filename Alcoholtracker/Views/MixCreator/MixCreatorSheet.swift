@@ -31,7 +31,7 @@ struct MixCreatorSheet: View {
         let effectiveABV = alcoholMl / totalVolume * 100.0
         return BACCalculator.projectedPeak(
             volume: totalVolume, abv: effectiveABV, category: .cocktail,
-            profile: p, stomachStatus: p.defaultStomachStatus
+            profile: p, stomachStatus: p.defaultStomachStatus, conservative: p.conservativeForApp
         )
     }
 

@@ -487,7 +487,7 @@ private func bacContribution(for template: DrinkTemplate, profile: UserProfile?)
     // matches what the BAC display will actually climb to (not raw Widmark).
     return BACCalculator.projectedPeak(
         volume: template.volume, abv: template.abv, category: template.category,
-        profile: p, stomachStatus: p.defaultStomachStatus
+        profile: p, stomachStatus: p.defaultStomachStatus, conservative: p.conservativeForApp
     )
 }
 
@@ -870,7 +870,7 @@ struct CustomBrandSheet: View {
         guard let p = profile, volume > 0, abv > 0 else { return nil }
         return BACCalculator.projectedPeak(
             volume: volume, abv: abv, category: .other,
-            profile: p, stomachStatus: p.defaultStomachStatus
+            profile: p, stomachStatus: p.defaultStomachStatus, conservative: p.conservativeForApp
         )
     }
 
@@ -1081,7 +1081,7 @@ struct BarcodeCandidateSheet: View {
         guard let p = profile, volume > 0, abv > 0 else { return nil }
         return BACCalculator.projectedPeak(
             volume: volume, abv: abv, category: category,
-            profile: p, stomachStatus: p.defaultStomachStatus
+            profile: p, stomachStatus: p.defaultStomachStatus, conservative: p.conservativeForApp
         )
     }
 

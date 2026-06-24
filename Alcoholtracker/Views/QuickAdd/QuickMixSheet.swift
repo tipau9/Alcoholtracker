@@ -55,7 +55,7 @@ struct QuickMixSheet: View {
         // Realistic peak of the mixed drink, consistent with the live BAC.
         return BACCalculator.projectedPeak(
             volume: spiritVol, abv: spirit.abv, category: .cocktail,
-            profile: p, stomachStatus: p.defaultStomachStatus
+            profile: p, stomachStatus: p.defaultStomachStatus, conservative: p.conservativeForApp
         )
     }
 

@@ -173,6 +173,21 @@ final class UserProfile {
     // Inline default required for SwiftData lightweight migration.
     var conservativeSafety: Bool = false
 
+    // Konservativ in der ganzen App: when on, the worst-case model is applied
+    // everywhere (home BAC, curves, add badges), not just the safety screens. This
+    // implies the safety figures are conservative too. Off keeps the realistic
+    // model app-wide (the safety screens still honour conservativeSafety on their own).
+    // Inline default required for SwiftData lightweight migration.
+    var conservativeEverywhere: Bool = false
+
+    // Whether the safety readiness timers + forecast should use the worst-case model:
+    // either the safety-only switch or the app-wide switch turns it on.
+    var conservativeForSafety: Bool { conservativeSafety || conservativeEverywhere }
+
+    // Whether the rest of the app (home, charts, badges) should use the worst-case
+    // model. Only the app-wide switch does this.
+    var conservativeForApp: Bool { conservativeEverywhere }
+
     // MARK: Computed wrappers
 
     var gender: Gender {

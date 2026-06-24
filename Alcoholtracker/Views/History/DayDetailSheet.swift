@@ -43,7 +43,8 @@ struct DayDetailSheet: View {
         return BACCalculator.peakBAC(
             drinks: dayDrinks,
             profile: p,
-            stomachStatus: p.defaultStomachStatus
+            stomachStatus: p.defaultStomachStatus,
+            conservative: p.conservativeForApp
         )
     }
 

@@ -25,7 +25,7 @@ struct ForecastView: View {
             profile: profile,
             at: targetTime,
             stomachStatus: profile.defaultStomachStatus,
-            conservative: profile.conservativeSafety
+            conservative: profile.conservativeForSafety
         )
     }
 
@@ -40,7 +40,7 @@ struct ForecastView: View {
         max(0.01, BACCalculator.projectedPeak(
             volume: 330, abv: 5.0, category: .beer,
             profile: profile, stomachStatus: profile.defaultStomachStatus,
-            conservative: profile.conservativeSafety
+            conservative: profile.conservativeForSafety
         ))
     }
 
@@ -115,7 +115,7 @@ struct ForecastView: View {
                 .font(.appCaptionBold)
                 .foregroundStyle(Color.appAccent)
             Spacer()
-            if profile.conservativeSafety {
+            if profile.conservativeForSafety {
                 Text("WORST-CASE")
                     .font(.appMicro)
                     .foregroundStyle(Color.appBackground)

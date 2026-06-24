@@ -376,7 +376,8 @@ private struct DetailedHomeView: View {
             drinks: session.drinks,
             profile: p,
             at: Date().addingTimeInterval(-300),
-            stomachStatus: session.stomachStatus
+            stomachStatus: session.stomachStatus,
+            conservative: p.conservativeForApp
         )
         if session.currentBAC > fiveMinutesAgo + 0.005 { return .rising }
         if session.currentBAC < fiveMinutesAgo - 0.005 { return .falling }

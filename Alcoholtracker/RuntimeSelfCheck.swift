@@ -226,6 +226,25 @@ enum RuntimeSelfCheck {
         check("fullStomachBeerNonZero", fullBeer, 0.04, 0.13)
         checkInt("stomachPeakGradient", (emptyBeer > lightBeer && lightBeer > fullBeer) ? 1 : 0, 1)
 
+        // 22) "Konservativ in ganzer App" flag wiring: the app-wide switch turns on
+        //     both the app-wide and the safety conservative model; the safety-only
+        //     switch turns on only the safety side. Also a full session's app-wide
+        //     conservative current BAC must exceed the realistic one.
+        let appCons = UserProfile(weight: 75, height: 180, age: 25, gender: .male)
+        appCons.conservativeEverywhere = true
+        checkInt("everywhereImpliesApp", appCons.conservativeForApp ? 1 : 0, 1)
+        checkInt("everywhereImpliesSafety", appCons.conservativeForSafety ? 1 : 0, 1)
+        let safetyOnly = UserProfile(weight: 75, height: 180, age: 25, gender: .male)
+        safetyOnly.conservativeSafety = true
+        checkInt("safetyOnlyNotApp", safetyOnly.conservativeForApp ? 0 : 1, 1)
+        checkInt("safetyOnlyIsSafety", safetyOnly.conservativeForSafety ? 1 : 0, 1)
+        let appConsBeer = BACCalculator.currentBAC(
+            drinks: [beer], profile: appCons, at: afterPeak,
+            stomachStatus: .light, conservative: appCons.conservativeForApp)
+        let realBeerNow = BACCalculator.currentBAC(
+            drinks: [beer], profile: appCons, at: afterPeak, stomachStatus: .light)
+        checkInt("appConservativeAboveRealistic", appConsBeer > realBeerNow ? 1 : 0, 1)
+
         // DIAGNOSTIC: 200 ml rum (40%) for an 87 kg / 196 cm male, the user's case.
         // Prints (does not assert) the real values the engine produces so we can see
         // exactly why the shown peak is what it is and how the assumptions move it.

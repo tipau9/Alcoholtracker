@@ -37,7 +37,8 @@ struct SafetyView: View {
 
     private var currentBAC: Double {
         guard let p = profile else { return 0 }
-        return BACCalculator.currentBAC(drinks: todaysDrinks, profile: p, at: now, stomachStatus: stomachStatus)
+        return BACCalculator.currentBAC(drinks: todaysDrinks, profile: p, at: now,
+                                        stomachStatus: stomachStatus, conservative: p.conservativeForApp)
     }
 
     private var stomachStatus: StomachStatus { profile?.defaultStomachStatus ?? .light }
@@ -53,7 +54,7 @@ struct SafetyView: View {
         // Fahrbereit/Nüchtern times are worst-case when the user wants them safe.
         return BACCalculator.hoursUntilBAC(
             target, drinks: todaysDrinks, profile: p, from: now,
-            stomachStatus: stomachStatus, conservative: p.conservativeSafety)
+            stomachStatus: stomachStatus, conservative: p.conservativeForSafety)
     }
 
     // MARK: Body
