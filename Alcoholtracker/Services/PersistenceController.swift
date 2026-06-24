@@ -64,6 +64,23 @@ final class PersistenceController {
     // MARK: Store recovery
 
     private static func nukeStores() {
+        // A failed container init (incompatible schema change, corruption) must
+        // move the unreadable store ASIDE, not delete it: silently erasing a
+        // user's whole drinking history on an upgrade is the worst possible
+        // outcome. The renamed ".corrupt-<timestamp>" copy stays in place for
+        // manual recovery/export, and the app starts fresh on the next launch.
+        let stamp = Int(Date().timeIntervalSince1970)
+        func backupOrRemove(_ url: URL) {
+            guard FileManager.default.fileExists(atPath: url.path) else { return }
+            let backup = url.deletingLastPathComponent()
+                .appendingPathComponent(url.lastPathComponent + ".corrupt-\(stamp)")
+            if (try? FileManager.default.moveItem(at: url, to: backup)) == nil {
+                // Move failed (e.g. backup already exists): fall back to delete so
+                // the unreadable store can never wedge every future launch.
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+
         // Default SwiftData location
         if let appSupport = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
@@ -72,7 +89,7 @@ final class PersistenceController {
             for url in contents {
                 let name = url.lastPathComponent
                 if name.hasSuffix(".store") || name.hasSuffix(".store-wal") || name.hasSuffix(".store-shm") {
-                    try? FileManager.default.removeItem(at: url)
+                    backupOrRemove(url)
                 }
             }
         }
@@ -81,7 +98,7 @@ final class PersistenceController {
             let dir = groupURL.deletingLastPathComponent()
             let base = groupURL.lastPathComponent
             for suffix in ["", "-wal", "-shm"] {
-                try? FileManager.default.removeItem(at: dir.appendingPathComponent(base + suffix))
+                backupOrRemove(dir.appendingPathComponent(base + suffix))
             }
         }
     }
