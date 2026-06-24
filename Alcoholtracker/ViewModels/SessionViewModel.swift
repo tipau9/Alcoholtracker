@@ -40,6 +40,26 @@ final class SessionViewModel {
 
     var lastBottleLevels: [UUID: Double] = [:]  // templateID -> last currentLevel
 
+    // MARK: HealthKit BAC throttle (in-memory)
+
+    // recalculate() fires every 30s while BAC > 0, so writing a HealthKit BAC
+    // sample on each tick would flood Health with ~120 samples/hour for the whole
+    // session plus its sober tail. Sample at most every 5 minutes, or sooner when
+    // the value moved enough to be worth a point on the Health graph.
+    private var lastHealthKitBACLog: Date?
+    private var lastHealthKitBAC: Double = 0
+
+    // MARK: Deferred recalc state (in-memory)
+
+    // The shared BAC curve written for the widget is a function of the drinks,
+    // not the wall clock, so plain 30s timer ticks only need an occasional
+    // refresh to slide its 12h window. Tracks the last write so the timer can
+    // throttle it; any state change forces an immediate recompute.
+    private var lastSharedCurveWrite: Date?
+    // The most recent deferred recalc burst; cancelled when superseded so a
+    // pile-up of queued ticks does not each redo the heavy work.
+    private var deferredRecalcTask: Task<Void, Never>?
+
     // MARK: Undo state (in-memory)
 
     // Value snapshot so a deleted @Model drink can be recreated for undo.
@@ -570,7 +590,10 @@ final class SessionViewModel {
 
     // MARK: Private
 
-    private func recalculate() {
+    // refreshCurve: force a fresh shared BAC curve (widget data). Every state
+    // change passes true; only the 30s timer tick passes false so a quiescent
+    // session does not recompute the 12h curve twice a minute for hours.
+    private func recalculate(refreshCurve: Bool = true) {
         guard let profile else {
             currentBAC = 0
             bacStatus  = .sober
@@ -602,28 +625,42 @@ final class SessionViewModel {
         let elimRate     = profile.effectiveEliminationRate
         let drinkCount   = drinks.count
         let skin         = profile.statusSkin
-        Task {
-            let curvePoints = BACCalculator.bacCurve(
-                drinks: drinksCopy, profile: profile,
-                hours: 12, intervalMinutes: 15,
-                stomachStatus: stomachCopy, conservative: conservativeCopy, vomitTimes: vomitCopy
-            ).map { SharedBACPoint(date: $0.date, bac: $0.bac) }
-            SharedStateStore.writeBACCurve(curvePoints)
+        let forceCurve   = refreshCurve
 
-            SharedStateStore.writeStatusConfig(SharedStatusConfig(
-                tipsyThreshold: profile.tipsyThreshold,
-                drunkThreshold: profile.drunkThreshold,
-                carefulThreshold: profile.carefulThreshold,
-                dangerThreshold: profile.dangerThreshold,
-                labels: [
-                    skin.label(for: .sober),
-                    skin.label(for: .tipsy),
-                    skin.label(for: .drunk),
-                    skin.label(for: .careful),
-                    skin.label(for: .danger),
-                ]
-            ))
+        deferredRecalcTask?.cancel()
+        deferredRecalcTask = Task {
+            // A superseded tick that never started its work bails immediately.
+            guard !Task.isCancelled else { return }
 
+            // Curve + status config are shape/threshold data, not live BAC, so
+            // recompute them only on a forced refresh or once the window slides
+            // (>= 5 min). The live-BAC writes below always run per tick.
+            let curveStale = lastSharedCurveWrite.map { Date().timeIntervalSince($0) >= 300 } ?? true
+            if forceCurve || curveStale {
+                let curvePoints = BACCalculator.bacCurve(
+                    drinks: drinksCopy, profile: profile,
+                    hours: 12, intervalMinutes: 15,
+                    stomachStatus: stomachCopy, conservative: conservativeCopy, vomitTimes: vomitCopy
+                ).map { SharedBACPoint(date: $0.date, bac: $0.bac) }
+                guard !Task.isCancelled else { return }
+                SharedStateStore.writeBACCurve(curvePoints)
+                SharedStateStore.writeStatusConfig(SharedStatusConfig(
+                    tipsyThreshold: profile.tipsyThreshold,
+                    drunkThreshold: profile.drunkThreshold,
+                    carefulThreshold: profile.carefulThreshold,
+                    dangerThreshold: profile.dangerThreshold,
+                    labels: [
+                        skin.label(for: .sober),
+                        skin.label(for: .tipsy),
+                        skin.label(for: .drunk),
+                        skin.label(for: .careful),
+                        skin.label(for: .danger),
+                    ]
+                ))
+                lastSharedCurveWrite = Date()
+            }
+
+            guard !Task.isCancelled else { return }
             writeSharedSession(profile: profile)
             LiveActivityService.shared.syncActivity(
                 bac: bacAtCall,
@@ -632,7 +669,7 @@ final class SessionViewModel {
                 soberThreshold: profile.tipsyThreshold,
                 warningThreshold: profile.warningThreshold
             )
-            if profile.healthKitEnabled {
+            if profile.healthKitEnabled, shouldLogHealthKitBAC(bacAtCall) {
                 await healthKit?.logBAC(bacAtCall)
             }
         }
@@ -669,6 +706,21 @@ final class SessionViewModel {
         SharedStateStore.writeSession(session)
     }
 
+    // Arms the HealthKit BAC throttle: returns true (and records the write) when
+    // a sample is due: on the first sample, once 5 minutes have elapsed, or when
+    // the BAC moved by at least 0.1 permille since the last logged sample.
+    private func shouldLogHealthKitBAC(_ bac: Double) -> Bool {
+        let now = Date()
+        if let last = lastHealthKitBACLog,
+           now.timeIntervalSince(last) < 300,
+           abs(bac - lastHealthKitBAC) < 0.1 {
+            return false
+        }
+        lastHealthKitBACLog = now
+        lastHealthKitBAC = bac
+        return true
+    }
+
     private func startTimer() {
         timer = Timer.publish(every: 30, on: .main, in: .common)
             .autoconnect()
@@ -679,7 +731,7 @@ final class SessionViewModel {
                 // waste. Drink changes still call recalculate() directly, so nothing
                 // can go stale. This skips ~2880 idle recompute bursts per sober day.
                 guard !self.drinks.isEmpty || self.currentBAC > 0 else { return }
-                self.recalculate()
+                self.recalculate(refreshCurve: false)
             }
     }
 
