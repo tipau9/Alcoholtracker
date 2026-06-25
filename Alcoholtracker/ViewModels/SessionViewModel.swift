@@ -193,11 +193,17 @@ final class SessionViewModel {
     var drivingLimit: Double { profile?.drivingLimit ?? 0.5 }
 
     var timeUntilSober: TimeInterval {
-        BACCalculator.timeUntilThreshold(
-            currentBAC: currentBAC,
-            threshold: 0.0,
-            eliminationRate: profile?.effectiveEliminationRate ?? 0.15
-        )
+        guard let p = profile, currentBAC > 0 else { return 0 }
+        // Use the same forward-scan engine as the Safety "Nüchtern" timer rather than
+        // a linear currentBAC / rate line, so alcohol still being absorbed and the
+        // Michaelis-Menten low-end tail are accounted for and every screen agrees.
+        if let hours = BACCalculator.hoursUntilBAC(
+            0.0, drinks: drinks, profile: p,
+            stomachStatus: stomachStatus, conservative: conservative, vomitTimes: vomitTimes
+        ) {
+            return hours * 3600
+        }
+        return 24 * 3600   // target not reached within the 24h scan horizon
     }
 
     // MARK: - Insights & Warnings
@@ -495,10 +501,18 @@ final class SessionViewModel {
             sessionStart = blockStart
         }
         
-        self.drinks = recentDrinks.filter { $0.timestamp >= sessionStart }
-        loadVomitEvents(since: sessionStart)
-        recalculate()
-        rescheduleNotifications()
+        let sessionDrinks = recentDrinks.filter { $0.timestamp >= sessionStart }
+        // The @Query in HomeView re-fires this right after a local addDrink/removeDrink,
+        // which already recalculated and rescheduled. Skip the expensive BAC recompute +
+        // notification reschedule when the session set is unchanged; the cheap weekly
+        // counter below still refreshes either way.
+        let unchanged = sessionDrinks.map(\.id) == drinks.map(\.id)
+        self.drinks = sessionDrinks
+        if !unchanged {
+            loadVomitEvents(since: sessionStart)
+            recalculate()
+            rescheduleNotifications()
+        }
         
         // Aktuelle Woche berechnen (für das Wochenlimit)
         var cal = Calendar.current

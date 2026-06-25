@@ -88,18 +88,6 @@ enum BACCalculator {
         return max(0, rawPeak - elimPerMin * window)
     }
 
-    /// Simple linear estimate of time until BAC drops to threshold.
-    /// Does not account for drinks still in absorption; use for UI hints only.
-    static func timeUntilThreshold(
-        currentBAC: Double,
-        threshold: Double,
-        eliminationRate: Double
-    ) -> TimeInterval {
-        guard currentBAC > threshold else { return 0 }
-        let hours = (currentBAC - threshold) / eliminationRate
-        return hours * 3600
-    }
-
     /// BAC time series between two dates. Returns (Date, BAC) pairs.
     static func projectedBAC(
         drinks: [Drink],

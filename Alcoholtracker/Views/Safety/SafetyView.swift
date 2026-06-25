@@ -37,8 +37,10 @@ struct SafetyView: View {
 
     private var currentBAC: Double {
         guard let p = profile else { return 0 }
+        // Use the same conservative setting as the readiness timers below so the big
+        // headline pegel and the Nüchtern/Fahrbereit times are derived from one curve.
         return BACCalculator.currentBAC(drinks: todaysDrinks, profile: p, at: now,
-                                        stomachStatus: stomachStatus, conservative: p.conservativeForApp)
+                                        stomachStatus: stomachStatus, conservative: p.conservativeForSafety)
     }
 
     private var stomachStatus: StomachStatus { profile?.defaultStomachStatus ?? .light }
