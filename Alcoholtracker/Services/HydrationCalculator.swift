@@ -31,17 +31,8 @@ enum HydrationCalculator {
 
     // MARK: Per-drink
 
-    // ABV above which the liquid is a concentrated spirit: its small non-alcohol
-    // fraction is not meaningfully hydrating, so a neat shot must not be credited
-    // as water intake. Only an explicit mixer's water counts for such drinks;
-    // diluted drinks (beer, wine, long drinks) keep the full non-alcohol volume.
-    static let neatSpiritABV = 22.0
-
     static func waterIn(drink: Drink) -> Double {
-        if drink.abv > neatSpiritABV {
-            return mixerWaterContribution(drink: drink)
-        }
-        return drink.volume * (1.0 - drink.abv / 100.0)
+        drink.volume * (1.0 - drink.abv / 100.0)
     }
 
     static func diuresisLoss(drink: Drink) -> Double {
