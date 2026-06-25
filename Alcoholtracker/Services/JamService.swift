@@ -649,9 +649,10 @@ final class JamService {
             }
         }
         if useServer {
-            // Short interval so a new participant appears in near real-time for
-            // everyone in the jam. One lightweight GET per tick.
-            pollTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
+            // Poll often enough that a new participant appears near real-time, but
+            // not so aggressively it drains battery/quota: each tick is two GETs
+            // (roster + games), so 12s is ~10 req/min instead of 24 at the old 5s.
+            pollTimer = Timer.scheduledTimer(withTimeInterval: 12, repeats: true) { [weak self] _ in
                 Task { @MainActor [weak self] in
                     await self?.syncParticipants()
                     await self?.syncJamGames()
