@@ -9,8 +9,14 @@ struct ForecastView: View {
     let profile: UserProfile
 
     @State private var targetTime: Date = Date().addingTimeInterval(3 * 3600)
-    // Defaults to the user's driving limit in onAppear (0,5 ‰ or 0,0 ‰ in Probezeit).
-    @State private var targetBAC: Double = 0.5
+    // Seeded from the user's driving limit in init so Probezeit drivers never see a 0,5 ‰ flash.
+    @State private var targetBAC: Double
+
+    init(drinks: [Drink], profile: UserProfile) {
+        self.drinks = drinks
+        self.profile = profile
+        _targetBAC = State(initialValue: profile.drivingLimit)
+    }
 
     private var hoursUntilTarget: Double {
         max(0, targetTime.timeIntervalSinceNow / 3600)
@@ -205,7 +211,7 @@ struct ForecastView: View {
                             .font(.appCaption)
                             .foregroundStyle(Color.appTextDim)
                     }
-                    Text("Standarddrinks · je ~\(String(format: "%.2f", oneStandardDrinkPeak)) ‰, konservativ gerechnet")
+                    Text("Standarddrinks · je ~\(String(format: "%.2f", budgetPerDrinkBAC)) ‰ Budget (konservativ)")
                         .font(.appMicro)
                         .foregroundStyle(Color.appTextMuted)
                 }
