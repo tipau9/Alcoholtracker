@@ -270,7 +270,7 @@ struct HomeView: View {
                 drink: drink,
                 profile: profile,
                 onSave: { vol, ts in session.updateDrink(drink, volume: vol, timestamp: ts) },
-                onDelete: { session.removeDrink(drink) }
+                onDelete: { session.removeDrink(drink, recordUndo: true) }
             )
         }
         .onChange(of: session.currentBAC) { _, bac in
@@ -501,6 +501,12 @@ private struct DetailedHomeView: View {
                         }
                     }
 
+                    if activeWidgets.contains(.hydration) {
+                        HydrationWidget(drinks: session.drinks, profile: profile, extraSweatML: weatherSweatML)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 20)
+                    }
+
                     let gridTypes: [WidgetType] = [.timeToLimit, .water, .calories, .drinkCount]
                     if gridTypes.contains(where: { activeWidgets.contains($0) }) {
                         HomeWidgetGrid(session: session, active: activeWidgets, extraSweatML: weatherSweatML)
@@ -649,6 +655,20 @@ private struct DrunkHomeView: View {
     @Binding var showAddDrink: Bool
     let onExit: () -> Void
 
+    // Live water count so the big "+Wasser" button gives immediate feedback.
+    @State private var waterGlasses: Int = WaterLog.glassesToday()
+
+    // "noch ca. Xh Ym bis nüchtern" - the one piece of forward info a drunk user wants.
+    private var soberCountdown: String? {
+        guard session.currentBAC > 0.01 else { return nil }
+        let secs = Int(session.timeUntilSober)
+        guard secs > 0 else { return nil }
+        let h = secs / 3600
+        let m = (secs % 3600) / 60
+        if h > 0 { return "noch ca. \(h) h \(m) min bis nüchtern" }
+        return "noch ca. \(m) min bis nüchtern"
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -686,27 +706,58 @@ private struct DrunkHomeView: View {
                         .foregroundStyle(Color.appTextDim)
                 }
                 StatusPill(status: session.bacStatus, skin: skin)
+
+                if let soberCountdown {
+                    Text(soberCountdown)
+                        .font(.appBody)
+                        .foregroundStyle(Color.appTextDim)
+                        .monospacedDigit()
+                }
             }
 
             Spacer()
 
-            Button { showAddDrink = true } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "plus")
-                    Text("Drink hinzufügen")
+            VStack(spacing: 14) {
+                // Big water button - hydration matters most exactly here, so it's
+                // one oversized tap with the running glass count.
+                Button {
+                    WaterLog.addGlassToday()
+                    withAnimation(.easeInOut(duration: 0.2)) { waterGlasses = WaterLog.glassesToday() }
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "drop.fill")
+                        Text(waterGlasses == 0 ? "Wasser trinken" : "Wasser (\(waterGlasses))")
+                    }
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(Color.statusGreen)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                    .background(Color.statusGreen.opacity(0.14))
+                    .clipShape(RoundedRectangle(cornerRadius: 22))
+                    .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(Color.statusGreen.opacity(0.4), lineWidth: 1))
                 }
-                .font(.system(size: 24, weight: .bold))
-                .foregroundStyle(Color.appBackground)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 28)
-                .background(Color.appAccent)
-                .clipShape(RoundedRectangle(cornerRadius: 24))
+                .buttonStyle(.plain)
+
+                Button { showAddDrink = true } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "plus")
+                        Text("Drink hinzufügen")
+                    }
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(Color.appBackground)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 28)
+                    .background(Color.appAccent)
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
             .padding(.horizontal, 20)
             .padding(.bottom, 48)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear { waterGlasses = WaterLog.glassesToday() }
     }
 }
 
@@ -1297,7 +1348,7 @@ private struct DrinkHistorySection: View {
             ForEach(recent) { drink in
                 DrinkRowView(
                     drink: drink,
-                    onDelete: { session.removeDrink(drink) },
+                    onDelete: { session.removeDrink(drink, recordUndo: true) },
                     onDuplicate: { session.duplicateDrink(drink) },
                     onEdit: { onEdit(drink) }
                 )

@@ -55,6 +55,7 @@ enum WidgetType: String, Codable, CaseIterable {
     case drinkCount       = "drinkCount"
     // Abschnitte (full-width sections)
     case bacCurve         = "bacCurve"
+    case hydration        = "hydration"
     case stomachStatus    = "stomachStatus"
     case favStrip         = "favStrip"
     case drinkHistory     = "drinkHistory"
@@ -71,6 +72,7 @@ enum WidgetType: String, Codable, CaseIterable {
         case .calories:      return "Kalorien"
         case .drinkCount:    return "Drinks heute"
         case .bacCurve:      return "BAC-Verlauf"
+        case .hydration:     return "Wasser-Tracker"
         case .stomachStatus: return "Magen-Status"
         case .favStrip:      return "Schnell hinzufügen"
         case .drinkHistory:  return "Verlauf heute"
@@ -88,6 +90,7 @@ enum WidgetType: String, Codable, CaseIterable {
         case .calories:      return "flame.fill"
         case .drinkCount:    return "figure.walk"
         case .bacCurve:      return "chart.line.uptrend.xyaxis"
+        case .hydration:     return "drop.circle.fill"
         case .stomachStatus: return "fork.knife"
         case .favStrip:      return "bolt.fill"
         case .drinkHistory:  return "clock.fill"

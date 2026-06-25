@@ -23,13 +23,23 @@ struct HomeEditSheet: View {
         _activeWidgets     = State(initialValue: profile.activeWidgets)
     }
 
+    // Persist staged changes. Used by both "Fertig" and the close (✕) so swiping the
+    // sheet away never silently discards the user's edits.
+    private func commitAndDismiss() {
+        profile.homeStyle        = homeStyle
+        profile.warningThreshold = warningThreshold
+        profile.activeWidgets    = activeWidgets
+        try? context.save()
+        dismiss()
+    }
+
     var body: some View {
         ZStack {
             Color.appBackground.ignoresSafeArea()
             VStack(spacing: 0) {
                 HEHandle()
 
-                HEHeader(title: "Darstellung") { dismiss() }
+                HEHeader(title: "Darstellung") { commitAndDismiss() }
                     .padding(.horizontal, 20)
                     .padding(.top, 4)
                     .padding(.bottom, 12)
@@ -47,13 +57,7 @@ struct HomeEditSheet: View {
                     .padding(.bottom, 12)
                 }
                 .safeAreaInset(edge: .bottom) {
-                    PrimaryButton(title: "Fertig") {
-                        profile.homeStyle        = homeStyle
-                        profile.warningThreshold = warningThreshold
-                        profile.activeWidgets    = activeWidgets
-                        try? context.save()
-                        dismiss()
-                    }
+                    PrimaryButton(title: "Fertig") { commitAndDismiss() }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 16)
                     .background(Color.appBackground)

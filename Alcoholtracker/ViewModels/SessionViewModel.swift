@@ -97,6 +97,7 @@ final class SessionViewModel {
 
     enum UndoAction {
         case added(Drink)
+        case removed([DrinkSnapshot])
         case reset([DrinkSnapshot])
     }
 
@@ -107,6 +108,7 @@ final class SessionViewModel {
     var undoLabel: String? {
         switch undoAction {
         case .added(let drink): return "\(drink.name) hinzugefügt"
+        case .removed(let snaps): return snaps.count == 1 ? "\(snaps.first!.name) gelöscht" : "\(snaps.count) Drinks gelöscht"
         case .reset(let snaps): return "Sitzung gelöscht (\(snaps.count) Drinks)"
         case nil:               return nil
         }
@@ -117,7 +119,7 @@ final class SessionViewModel {
         case .added(let drink):
             undoAction = nil
             removeDrink(drink)
-        case .reset(let snapshots):
+        case .removed(let snapshots), .reset(let snapshots):
             undoAction = nil
             guard let context = modelContext else { return }
             var restored: [Drink] = []
@@ -127,7 +129,7 @@ final class SessionViewModel {
                 restored.append(drink)
             }
             try? context.save()
-            // Re-log into HealthKit since resetSession removed the samples.
+            // Re-log into HealthKit since the delete/reset removed the samples.
             if profile?.healthKitEnabled == true, let hk = healthKit {
                 Task {
                     for d in restored { await hk.logDrink(d) }
@@ -312,7 +314,9 @@ final class SessionViewModel {
         addDrink(copy)
     }
 
-    func removeDrink(_ drink: Drink) {
+    func removeDrink(_ drink: Drink, recordUndo: Bool = false) {
+        // Snapshot before mutation so an accidental swipe-delete can be undone.
+        let snapshot = recordUndo ? DrinkSnapshot(drink) : nil
         // The pending undo would resurrect or re-delete a drink that no longer matches.
         if case .added(let pending) = undoAction, pending.id == drink.id {
             undoAction = nil
@@ -327,6 +331,10 @@ final class SessionViewModel {
         pushBACToWidget()
         rescheduleNotifications()
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        if let snapshot {
+            undoAction = .removed([snapshot])
+            undoVersion += 1
+        }
     }
 
     func updateDrink(_ drink: Drink, volume: Double, timestamp: Date) {
