@@ -268,6 +268,29 @@ enum RuntimeSelfCheck {
             stomachStatus: .light, drinkDurationMinutes: 30)
         print(String(format: "DIAG rum projectedPeak[light,30minDrinking]=%.4f", fast))
 
+        // 23) Regression guard: editing a drink's volume must immediately update
+        //     currentBAC, not wait for the 30 s timer. Before the force fix, the
+        //     loadTodaysDrinks idempotency guard skipped recalculate() because the
+        //     session ID set was unchanged after an in-place volume edit.
+        if let box = try? ModelContainer(
+            for: Schema([Drink.self, DrinkTemplate.self, VomitEvent.self]),
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        ) {
+            let ctx = box.mainContext
+            let p23 = UserProfile(weight: 75, height: 180, age: 25, gender: .male)
+            let vm  = SessionViewModel()
+            vm.configure(profile: p23, context: ctx)
+            let d23 = Drink.from(
+                template: DrinkTemplate(name: "selfcheck-update", category: .beer,
+                                        volume: 500, abv: 5, calories: 215),
+                timestamp: Date().addingTimeInterval(-75 * 60))
+            vm.addDrink(d23)
+            let bac1 = vm.currentBAC
+            vm.updateDrink(d23, volume: 1000, timestamp: d23.timestamp)
+            let bac2 = vm.currentBAC
+            checkInt("updateDrinkRecalculates", (bac1 > 0.001 && bac2 > bac1) ? 1 : 0, 1)
+        }
+
         print("SELFCHECK SUMMARY pass=\(pass) fail=\(fail)")
     }
 }

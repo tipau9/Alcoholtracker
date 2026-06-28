@@ -352,20 +352,21 @@ final class SessionViewModel {
         drink.volume = volume
         drink.timestamp = timestamp
         try? modelContext?.save()
-        loadTodaysDrinks()
+        // force: true — the drink ID is unchanged after a volume/timestamp edit, so
+        // the normal idempotency guard would skip recalculate(). Force bypasses it.
+        loadTodaysDrinks(force: true)
         pushBACToWidget()
-        rescheduleNotifications()
     }
 
     func resetSession() {
         // Keep value snapshots so the deletion can be undone from the snackbar.
         let snapshots = drinks.map { DrinkSnapshot($0) }
-        // Mirror the deletion into HealthKit (timestamps captured before the
-        // models are deleted; the async task must not touch dead models).
+        // Mirror the deletion into HealthKit (id+timestamp pairs captured before
+        // the models are deleted; the async task must not touch dead models).
         if profile?.healthKitEnabled == true, let hk = healthKit {
-            let timestamps = drinks.map(\.timestamp)
+            let drinkInfo = drinks.map { (id: $0.id, timestamp: $0.timestamp) }
             Task {
-                for t in timestamps { await hk.removeDrinkSample(at: t) }
+                for info in drinkInfo { await hk.removeDrink(id: info.id, timestamp: info.timestamp) }
             }
         }
         drinks.forEach { modelContext?.delete($0) }
@@ -453,7 +454,7 @@ final class SessionViewModel {
         sipCounterStartTime = nil
     }
 
-    func loadTodaysDrinks() {
+    func loadTodaysDrinks(force: Bool = false) {
         guard let context = modelContext else { return }
         
         let now = Date()
@@ -506,7 +507,7 @@ final class SessionViewModel {
         // which already recalculated and rescheduled. Skip the expensive BAC recompute +
         // notification reschedule when the session set is unchanged; the cheap weekly
         // counter below still refreshes either way.
-        let unchanged = sessionDrinks.map(\.id) == drinks.map(\.id)
+        let unchanged = !force && sessionDrinks.map(\.id) == drinks.map(\.id)
         self.drinks = sessionDrinks
         if !unchanged {
             loadVomitEvents(since: sessionStart)

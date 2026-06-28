@@ -72,6 +72,21 @@ final class HealthKitService {
         }
     }
 
+    // UUID + timestamp variant: safe to call after the SwiftData model is
+    // deleted (capture id+timestamp before deletion). Same UUID-first / timestamp
+    // fallback as removeDrink(_:).
+    func removeDrink(id: UUID, timestamp: Date) async {
+        guard isAuthorized, let beverages = beveragesType else { return }
+        let predicate = HKQuery.predicateForObjects(
+            withMetadataKey: HKMetadataKeyExternalUUID,
+            allowedValues: [id.uuidString]
+        )
+        let deleted = (try? await store.deleteObjects(of: beverages, predicate: predicate)) ?? 0
+        if deleted == 0 {
+            await removeDrinkSample(at: timestamp)
+        }
+    }
+
     // Timestamp-based variant: safe to call after the SwiftData model was
     // already deleted (e.g. session reset captures timestamps first).
     func removeDrinkSample(at timestamp: Date) async {
