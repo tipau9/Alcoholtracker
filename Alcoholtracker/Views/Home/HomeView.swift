@@ -66,7 +66,7 @@ struct HomeView: View {
         crewMembers.filter { !$0.isHome && $0.careScore >= 40 }
     }
 
-    private var topFavourites: [DrinkTemplate] { Array(allTemplates.prefix(3)) }
+    private var topFavourites: [DrinkTemplate] { Array(allTemplates.prefix(4)) }
 
     // MARK: Morning mood prompt
 

@@ -29,6 +29,15 @@ extension Font {
     /// 80pt serif light: BAC readout in cards and widgets (always fixed).
     static let appLargeNumber  = Font.system(size: 80, weight: .light,  design: .serif)
 
+    /// 52pt serif semibold: onboarding wordmark "promille." (always fixed).
+    static let appSerifLogo    = Font.system(size: 52, weight: .semibold, design: .serif)
+
+    /// 30pt serif semibold: onboarding question titles (always fixed).
+    static let appSerifTitle   = Font.system(size: 30, weight: .semibold, design: .serif)
+
+    /// 64pt serif medium: large picker value readout, e.g. weight (always fixed).
+    static let appSerifValue   = Font.system(size: 64, weight: .medium, design: .serif)
+
     /// Screen titles and top headlines (~28pt at default size).
     static let appHeadline    = Font.title.weight(.semibold)
 
