@@ -352,7 +352,7 @@ final class SessionViewModel {
         drink.volume = volume
         drink.timestamp = timestamp
         try? modelContext?.save()
-        // force: true — the drink ID is unchanged after a volume/timestamp edit, so
+        // force: true -- the drink ID is unchanged after a volume/timestamp edit, so
         // the normal idempotency guard would skip recalculate(). Force bypasses it.
         loadTodaysDrinks(force: true)
         pushBACToWidget()
@@ -575,7 +575,13 @@ final class SessionViewModel {
 
     var hangoverForecast: HangoverLevel {
         guard let profile else { return .none }
-        guard currentBAC > 0.3 else { return .none }
+        // Gate on the session peak, not the live BAC: the forecast would
+        // otherwise vanish while sobering down, exactly when it matters.
+        let peak = BACCalculator.peakBAC(drinks: drinks, profile: profile,
+                                         stomachStatus: stomachStatus,
+                                         conservative: conservative,
+                                         vomitTimes: vomitTimes)
+        guard peak > 0.3 else { return .none }
         let water = WaterLog.loggedGlasses(
             forDay: Calendar.current.logicalDay(for: Date())
         ).map(Double.init)
