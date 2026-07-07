@@ -398,6 +398,33 @@ private struct DetailedHomeView: View {
     // changes when the BAC does, so it is refreshed from .task / .onChange instead.
     @State private var bacTrend: BACTrend = .stable
 
+    // MARK: In-place widget edit mode (long-press on the BAC display)
+
+    @Environment(\.modelContext) private var modelContext
+    @State private var widgetEditMode = false
+    @State private var jiggle = false
+    @State private var sectionOrder: [String] = DetailedHomeView.defaultSectionOrder
+    @State private var sectionFrames: [String: CGRect] = [:]
+    @State private var draggingSection: String? = nil
+    @State private var dragTranslation: CGFloat = 0
+    @State private var dragCompensation: CGFloat = 0
+
+    // Section ids are WidgetType rawValues plus "grid" for the 2x2 tile block.
+    // The default order mirrors the layout the app always had, so an untouched
+    // profile renders exactly as before.
+    static let gridSectionID = "grid"
+    static let defaultSectionOrder: [String] = [
+        WidgetType.bacCurve.rawValue,
+        WidgetType.milestone.rawValue,
+        WidgetType.hydration.rawValue,
+        gridSectionID,
+        WidgetType.dayStats.rawValue,
+        WidgetType.favStrip.rawValue,
+        WidgetType.drinkHistory.rawValue,
+        WidgetType.safetyActions.rawValue
+    ]
+    private static let gridTiles: [WidgetType] = [.timeToLimit, .water, .calories, .drinkCount]
+
     private func computeBACTrend() -> BACTrend {
         guard session.currentBAC > 0.01, let p = profile else { return .stable }
         let fiveMinutesAgo = BACCalculator.currentBAC(
@@ -426,13 +453,32 @@ private struct DetailedHomeView: View {
                     }
                     .frame(height: 0)
 
-                    HomeTopBar(
-                        profile: profile,
-                        onReset: { showResetAlert = true },
-                        onEdit: { showEditSheet = true }
-                    )
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
+                    if widgetEditMode {
+                        HStack(spacing: 12) {
+                            SectionLabel(text: "WIDGETS ANPASSEN")
+                            Spacer()
+                            Button(action: exitWidgetEdit) {
+                                Text("Fertig")
+                                    .font(.appCaptionBold)
+                                    .foregroundStyle(Color.appBackground)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color.appAccent)
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
+                    } else {
+                        HomeTopBar(
+                            profile: profile,
+                            onReset: { showResetAlert = true },
+                            onEdit: { showEditSheet = true }
+                        )
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
+                    }
 
                     if !alertCrew.isEmpty {
                         CrewAlertBanner(members: alertCrew)
@@ -449,6 +495,26 @@ private struct DetailedHomeView: View {
                     .scaleEffect(heroScale, anchor: .top)
                     .opacity(heroOpacity)
                     .padding(.top, 28)
+                    .contentShape(Rectangle())
+                    .onLongPressGesture(minimumDuration: 0.45) {
+                        if !widgetEditMode { enterWidgetEdit() }
+                    }
+                    .overlay(alignment: .top) {
+                        if widgetEditMode {
+                            HStack(spacing: 4) {
+                                Image(systemName: "lock.fill")
+                                Text("Immer sichtbar")
+                            }
+                            .font(.appMicro)
+                            .foregroundStyle(Color.appTextMuted)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color.appCard)
+                            .clipShape(Capsule())
+                            .overlay(Capsule().strokeBorder(Color.appBorder, lineWidth: 0.5))
+                            .padding(.top, 12)
+                        }
+                    }
 
                     if let pacing = session.pacingWarning {
                         PacingHintBanner(message: pacing)
@@ -481,59 +547,8 @@ private struct DetailedHomeView: View {
                             .padding(.top, 16)
                     }
 
-                    if session.bacCurve.count > 1 && activeWidgets.contains(.bacCurve) {
-                        BACCurveChartView(
-                            session: session,
-                            warningThreshold: profile?.warningThreshold ?? 0.5
-                        )
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
-                        // FIX FEATURE8: tap opens full-screen interactive chart
-                        .onTapGesture { showFullChart = true }
-                        .overlay(alignment: .topTrailing) {
-                            Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(Color.appTextDim)
-                                .padding(18)
-                        }
-                        .fullScreenCover(isPresented: $showFullChart) {
-                            FullScreenBACChart(session: session, profile: profile)
-                        }
-                    }
-
-                    if activeWidgets.contains(.hydration) {
-                        HydrationWidget(drinks: session.drinks, profile: profile, extraSweatML: weatherSweatML)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 20)
-                    }
-
-                    let gridTypes: [WidgetType] = [.timeToLimit, .water, .calories, .drinkCount]
-                    if gridTypes.contains(where: { activeWidgets.contains($0) }) {
-                        HomeWidgetGrid(session: session, active: activeWidgets, extraSweatML: weatherSweatML)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 20)
-                    }
-
-                    if !favourites.isEmpty && activeWidgets.contains(.favStrip) {
-                        FavouritesStrip(
-                            templates: favourites,
-                            onAdd: { template in
-                                // Honor the user's remembered serving size for this drink.
-                                let drink = Drink.from(
-                                    template: template,
-                                    volume: ServingSizeMemory.volume(for: template.id))
-                                session.addDrink(drink)
-                                pingCityTrend(drink: drink)
-                            },
-                            onLongPress: onLongPressFavourite
-                        )
-                        .padding(.top, 20)
-                    }
-
-                    if !session.drinks.isEmpty && activeWidgets.contains(.drinkHistory) {
-                        DrinkHistorySection(session: session, onEdit: onEditDrink)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 20)
+                    ForEach(Array(sectionOrder.enumerated()), id: \.element) { index, id in
+                        sectionView(for: id, index: index)
                     }
 
                     Text("Widmark-Schätzwert. Müdigkeit, Medikamente und individuelle Faktoren können stark abweichen. Kein Ersatz für einen Atemtest. Im Zweifel nicht fahren.")
@@ -552,14 +567,292 @@ private struct DetailedHomeView: View {
                 withAnimation(.easeOut(duration: 0.12)) { heroCollapse = t }
             }
 
-            FABButton(title: "Drink hinzufügen") { showAddDrink = true }
-                .padding(.trailing, 24)
-                .padding(.bottom, 32)
+            if !widgetEditMode {
+                FABButton(title: "Drink hinzufügen") { showAddDrink = true }
+                    .padding(.trailing, 24)
+                    .padding(.bottom, 32)
+            }
         }
         // Refresh the memoised trend only when the BAC actually changes, not on
         // every scroll frame (this body re-evaluates as heroCollapse animates).
-        .task { bacTrend = computeBACTrend() }
+        .task {
+            bacTrend = computeBACTrend()
+            sectionOrder = resolvedSectionOrder()
+        }
         .onChange(of: session.currentBAC) { _, _ in bacTrend = computeBACTrend() }
+        .onChange(of: profile?.homeSectionOrderRaw) { _, _ in
+            if !widgetEditMode { sectionOrder = resolvedSectionOrder() }
+        }
+        .onPreferenceChange(SectionFramePreferenceKey.self) { sectionFrames = $0 }
+        .sensoryFeedback(.impact(weight: .medium), trigger: widgetEditMode)
+    }
+
+    // MARK: Widget sections (order-driven rendering + in-place edit)
+
+    private var activeGridTiles: Bool {
+        Self.gridTiles.contains { activeWidgets.contains($0) }
+    }
+
+    private func isSectionActive(_ id: String) -> Bool {
+        if id == Self.gridSectionID { return activeGridTiles }
+        guard let type = WidgetType(rawValue: id) else { return false }
+        return activeWidgets.contains(type)
+    }
+
+    // Data-driven visibility on top of the on/off toggle (matches the previous
+    // hardcoded conditions). In edit mode a placeholder stands in instead.
+    private func sectionHasContent(_ id: String) -> Bool {
+        switch id {
+        case WidgetType.bacCurve.rawValue:     return session.bacCurve.count > 1
+        case WidgetType.favStrip.rawValue:     return !favourites.isEmpty
+        case WidgetType.drinkHistory.rawValue: return !session.drinks.isEmpty
+        default:                               return true
+        }
+    }
+
+    @ViewBuilder
+    private func sectionView(for id: String, index: Int) -> some View {
+        if widgetEditMode {
+            editableSection(id: id, index: index)
+        } else if isSectionActive(id) && sectionHasContent(id) {
+            sectionContent(id)
+        }
+    }
+
+    @ViewBuilder
+    private func sectionContent(_ id: String) -> some View {
+        switch id {
+        case WidgetType.bacCurve.rawValue:
+            BACCurveChartView(
+                session: session,
+                warningThreshold: profile?.warningThreshold ?? 0.5
+            )
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            // FIX FEATURE8: tap opens full-screen interactive chart
+            .onTapGesture { showFullChart = true }
+            .overlay(alignment: .topTrailing) {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.appTextDim)
+                    .padding(18)
+            }
+            .fullScreenCover(isPresented: $showFullChart) {
+                FullScreenBACChart(session: session, profile: profile)
+            }
+
+        case WidgetType.milestone.rawValue:
+            MilestoneCard(session: session, profile: profile)
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+
+        case WidgetType.hydration.rawValue:
+            HydrationWidget(drinks: session.drinks, profile: profile, extraSweatML: weatherSweatML)
+                .padding(.horizontal, 16)
+                .padding(.top, 20)
+
+        case Self.gridSectionID:
+            HomeWidgetGrid(session: session, active: activeWidgets, extraSweatML: weatherSweatML)
+                .padding(.horizontal, 16)
+                .padding(.top, 20)
+
+        case WidgetType.dayStats.rawValue:
+            DayStatsCard(session: session)
+                .padding(.horizontal, 16)
+                .padding(.top, 20)
+
+        case WidgetType.favStrip.rawValue:
+            FavouritesStrip(
+                templates: favourites,
+                onAdd: { template in
+                    // Honor the user's remembered serving size for this drink.
+                    let drink = Drink.from(
+                        template: template,
+                        volume: ServingSizeMemory.volume(for: template.id))
+                    session.addDrink(drink)
+                    pingCityTrend(drink: drink)
+                },
+                onLongPress: onLongPressFavourite
+            )
+            .padding(.top, 20)
+
+        case WidgetType.drinkHistory.rawValue:
+            DrinkHistorySection(session: session, onEdit: onEditDrink)
+                .padding(.horizontal, 16)
+                .padding(.top, 20)
+
+        case WidgetType.safetyActions.rawValue:
+            SafetyActionsCard(profile: profile)
+                .padding(.horizontal, 16)
+                .padding(.top, 20)
+
+        default:
+            EmptyView()
+        }
+    }
+
+    private func sectionPlaceholder(_ id: String) -> some View {
+        let type = WidgetType(rawValue: id)
+        return HStack(spacing: 12) {
+            Image(systemName: type?.symbolName ?? "square.grid.2x2.fill")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(Color.appTextDim)
+                .frame(width: 30, height: 30)
+                .background(Color.appBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 9))
+            Text(id == Self.gridSectionID ? "Info-Kacheln" : (type?.localizedName ?? id))
+                .font(.appBody)
+                .foregroundStyle(Color.appTextDim)
+            Spacer()
+            Text("Noch keine Daten")
+                .font(.appMicro)
+                .foregroundStyle(Color.appTextMuted)
+        }
+        .padding(14)
+        .background(Color.appCard)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(Color.appBorder, lineWidth: 0.5)
+        )
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
+    }
+
+    @ViewBuilder
+    private func editableSection(id: String, index: Int) -> some View {
+        Group {
+            if sectionHasContent(id) {
+                sectionContent(id)
+            } else {
+                sectionPlaceholder(id)
+            }
+        }
+        .allowsHitTesting(false)
+        .opacity(isSectionActive(id) ? 1 : 0.35)
+        .overlay(alignment: .topLeading) { dragHandle(id) }
+        .overlay(alignment: .topTrailing) { sectionToggle(id) }
+        .rotationEffect(.degrees(jiggleAngle(index)))
+        .offset(y: draggingSection == id ? dragTranslation + dragCompensation : 0)
+        .scaleEffect(draggingSection == id ? 1.02 : 1)
+        .zIndex(draggingSection == id ? 10 : 0)
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: SectionFramePreferenceKey.self,
+                    value: [id: geo.frame(in: .named("homeScroll"))]
+                )
+            }
+        )
+        .animation(.snappy(duration: 0.25), value: sectionOrder)
+    }
+
+    private func jiggleAngle(_ index: Int) -> Double {
+        guard widgetEditMode, draggingSection == nil else { return 0 }
+        let base = jiggle ? 0.7 : -0.7
+        return index.isMultiple(of: 2) ? base : -base
+    }
+
+    private func dragHandle(_ id: String) -> some View {
+        Image(systemName: "line.3.horizontal")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(Color.appTextDim)
+            .frame(width: 28, height: 28)
+            .background(Color.appCard)
+            .clipShape(Circle())
+            .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
+            .padding(.leading, 8)
+            .padding(.top, 4)
+            .gesture(
+                DragGesture(minimumDistance: 2, coordinateSpace: .named("homeScroll"))
+                    .onChanged { value in
+                        if draggingSection != id {
+                            draggingSection = id
+                            dragCompensation = 0
+                        }
+                        dragTranslation = value.translation.height
+                        reorderIfNeeded(id, dragY: value.location.y)
+                    }
+                    .onEnded { _ in
+                        withAnimation(.snappy(duration: 0.3)) {
+                            draggingSection = nil
+                            dragTranslation = 0
+                            dragCompensation = 0
+                        }
+                    }
+            )
+    }
+
+    private func sectionToggle(_ id: String) -> some View {
+        Button { toggleSection(id) } label: {
+            Image(systemName: isSectionActive(id) ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 24, weight: .medium))
+                .foregroundStyle(isSectionActive(id) ? Color.appAccent : Color.appTextDim)
+                .background(Circle().fill(Color.appBackground).padding(3))
+        }
+        .buttonStyle(.plain)
+        .padding(.trailing, 8)
+        .padding(.top, 4)
+    }
+
+    private func toggleSection(_ id: String) {
+        guard let profile else { return }
+        var list = profile.activeWidgets
+        if id == Self.gridSectionID {
+            if Self.gridTiles.contains(where: { list.contains($0) }) {
+                list.removeAll { Self.gridTiles.contains($0) }
+            } else {
+                list.append(contentsOf: Self.gridTiles)
+            }
+        } else if let type = WidgetType(rawValue: id) {
+            if let idx = list.firstIndex(of: type) {
+                list.remove(at: idx)
+            } else {
+                list.append(type)
+            }
+        }
+        profile.activeWidgets = list
+        try? modelContext.save()
+    }
+
+    private func reorderIfNeeded(_ id: String, dragY: CGFloat) {
+        guard let fromIdx = sectionOrder.firstIndex(of: id) else { return }
+        for other in sectionOrder where other != id {
+            guard let frame = sectionFrames[other], frame.height > 0,
+                  dragY > frame.minY, dragY < frame.maxY,
+                  let toIdx = sectionOrder.firstIndex(of: other) else { continue }
+            let movingDown = toIdx > fromIdx
+            withAnimation(.snappy(duration: 0.25)) {
+                sectionOrder.move(
+                    fromOffsets: IndexSet(integer: fromIdx),
+                    toOffset: movingDown ? toIdx + 1 : toIdx
+                )
+            }
+            // The dragged view's resting position jumped by the passed section's
+            // height; compensate so it stays under the finger.
+            dragCompensation += movingDown ? -frame.height : frame.height
+            break
+        }
+    }
+
+    private func resolvedSectionOrder() -> [String] {
+        let stored = profile?.homeSectionOrder ?? []
+        var order = stored.filter { Self.defaultSectionOrder.contains($0) }
+        for id in Self.defaultSectionOrder where !order.contains(id) { order.append(id) }
+        return order
+    }
+
+    private func enterWidgetEdit() {
+        sectionOrder = resolvedSectionOrder()
+        withAnimation(.snappy(duration: 0.3)) { widgetEditMode = true }
+        withAnimation(.easeInOut(duration: 0.14).repeatForever(autoreverses: true)) { jiggle = true }
+    }
+
+    private func exitWidgetEdit() {
+        withAnimation(.easeInOut(duration: 0.15)) { jiggle = false }
+        withAnimation(.snappy(duration: 0.3)) { widgetEditMode = false }
+        profile?.homeSectionOrder = sectionOrder
+        try? modelContext.save()
     }
 
     private func pingCityTrend(drink: Drink) {
@@ -867,6 +1160,10 @@ private struct BACDisplaySection: View {
     let trend: BACTrend
     let skin: StatusSkin
 
+    // Subtle breathing of the glow behind the number while any alcohol is in
+    // the system; static when sober.
+    @State private var glowPulse = false
+
     var body: some View {
         VStack(spacing: 20) {
             ZStack {
@@ -881,6 +1178,16 @@ private struct BACDisplaySection: View {
                     )
                     .frame(width: 280, height: 280)
                     .animation(.easeInOut(duration: 0.6), value: status)
+                    .scaleEffect(glowPulse ? 1.07 : 0.96)
+                    .opacity(glowPulse ? 1.0 : 0.72)
+                    .animation(
+                        bac > 0.01
+                            ? .easeInOut(duration: 2.4).repeatForever(autoreverses: true)
+                            : .easeInOut(duration: 0.4),
+                        value: glowPulse
+                    )
+                    .onAppear { glowPulse = bac > 0.01 }
+                    .onChange(of: bac > 0.01) { _, active in glowPulse = active }
 
                 Circle()
                     .strokeBorder(status.color.opacity(0.20), lineWidth: 1)
@@ -965,11 +1272,46 @@ private struct BACCurveChartView: View {
         .interpolationMethod(.catmullRom)
     }
 
+    // One dot on the curve per logged drink inside the visible window. The y
+    // value is taken from the nearest curve sample so the dot sits on the line.
+    private struct DrinkDot: Identifiable {
+        let id: UUID
+        let date: Date
+        let bac: Double
+    }
+
+    private func drinkDotItems(_ points: [BACCalculator.BACPoint]) -> [DrinkDot] {
+        guard let first = points.first?.date, let last = points.last?.date else { return [] }
+        return session.drinks.compactMap { drink in
+            guard drink.timestamp >= first, drink.timestamp <= last else { return nil }
+            let nearest = points.min {
+                abs($0.date.timeIntervalSince(drink.timestamp)) < abs($1.date.timeIntervalSince(drink.timestamp))
+            }
+            guard let nearest else { return nil }
+            return DrinkDot(id: drink.id, date: drink.timestamp, bac: nearest.bac)
+        }
+    }
+
+    // Separate @ChartContentBuilder for the same reason as curveMarks: a bare
+    // ForEach inline in Chart {} can flakily resolve as MapContentBuilder.
+    @ChartContentBuilder
+    private func drinkMarks(_ items: [DrinkDot]) -> some ChartContent {
+        ForEach(items) { item in
+            PointMark(
+                x: .value("Zeit", item.date),
+                y: .value("BAC", item.bac)
+            )
+            .symbolSize(26)
+            .foregroundStyle(Color.appAccent)
+        }
+    }
+
     var body: some View {
         // Integrate the curve once per render: yMax and the chart marks both need
         // it, and session.bacCurve(24h) is an uncached full integration per access.
         let points = displayPoints
         let yMax = max(1.0, (points.map(\.bac).max() ?? 0) + 0.2)
+        let dotItems = drinkDotItems(points)
         return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center) {
                 SectionLabel(text: "VERLAUF")
@@ -988,6 +1330,7 @@ private struct BACCurveChartView: View {
 
             Chart {
                 curveMarks(points)
+                drinkMarks(dotItems)
 
                 RuleMark(y: .value("Grenzwert", warningThreshold))
                     .foregroundStyle(Color.statusOrange.opacity(0.55))
@@ -1303,6 +1646,9 @@ private struct FavChip: View {
     let onTap: () -> Void
     let onLongPress: () -> Void
 
+    // Each tap bumps the trigger: haptic tick plus a small "+1" flying up.
+    @State private var addTrigger = 0
+
     var body: some View {
         HStack(spacing: 6) {
             DrinkIconView(template: template, size: 12)
@@ -1318,9 +1664,39 @@ private struct FavChip: View {
         .background(Color.appCard)
         .clipShape(Capsule())
         .overlay(Capsule().strokeBorder(Color.appBorder, lineWidth: 0.5))
+        .overlay(alignment: .top) {
+            FlyUpPlusOne(trigger: addTrigger)
+        }
         .contentShape(Capsule())
-        .onTapGesture { onTap() }
+        .onTapGesture {
+            addTrigger += 1
+            onTap()
+        }
         .onLongPressGesture(minimumDuration: 0.5, perform: { onLongPress() })
+        .sensoryFeedback(.impact(weight: .light), trigger: addTrigger)
+    }
+}
+
+// Small "+1" that rises out of the tapped chip and fades. Restarts cleanly on
+// rapid taps because the trigger resets the state before each run.
+private struct FlyUpPlusOne: View {
+    let trigger: Int
+    @State private var animating = false
+
+    var body: some View {
+        Text("+1")
+            .font(.appCaptionBold)
+            .foregroundStyle(Color.appAccent)
+            .opacity(trigger > 0 && !animating ? 1 : 0)
+            .offset(y: animating ? -30 : -6)
+            .allowsHitTesting(false)
+            .onChange(of: trigger) { _, _ in
+                animating = false
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 30_000_000)
+                    withAnimation(.easeOut(duration: 0.7)) { animating = true }
+                }
+            }
     }
 }
 
@@ -1691,6 +2067,251 @@ private struct WeeklyLimitCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(Color.appBorder, lineWidth: 0.5)
         )
+    }
+}
+
+// MARK: - Section frame reporting (widget edit mode)
+
+private struct SectionFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [String: CGRect] = [:]
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+        value.merge(nextValue()) { _, new in new }
+    }
+}
+
+// MARK: - Milestone Card (Fahrbereit-Countdown)
+
+private struct MilestoneCard: View {
+    let session: SessionViewModel
+    let profile: UserProfile?
+
+    private var isProbation: Bool { profile?.isProbationaryDriver ?? false }
+    private var target: Double { isProbation ? (profile?.tipsyThreshold ?? 0.01) : 0.5 }
+
+    var body: some View {
+        // Re-evaluates every minute so the countdown and target time stay fresh
+        // without the parent view having to tick.
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            let hours = session.hoursUntil(target)
+            HStack(spacing: 14) {
+                Image(systemName: "car.fill")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.appAccent)
+                    .frame(width: 34, height: 34)
+                    .background(Color.appAccent.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(isProbation ? "Fahrbereit (0,0 ‰)" : "Fahrbereit (0,5 ‰)")
+                        .font(.appCaptionBold)
+                        .foregroundStyle(Color.appText)
+                    Text(subtitle(hours: hours, now: context.date))
+                        .font(.appMicro)
+                        .foregroundStyle(Color.appTextDim)
+                }
+
+                Spacer(minLength: 8)
+
+                countdownPill(hours: hours)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(Color.appCard)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .strokeBorder(Color.appBorder, lineWidth: 0.5)
+            )
+        }
+    }
+
+    private func subtitle(hours: Double?, now: Date) -> String {
+        guard let h = hours else { return "Mehr als 24 Stunden" }
+        guard h > 0 else { return "Du bist unter dem Limit" }
+        let eta = now.addingTimeInterval(h * 3600)
+        return "um \(eta.formatted(date: .omitted, time: .shortened)) Uhr"
+    }
+
+    @ViewBuilder
+    private func countdownPill(hours: Double?) -> some View {
+        let (text, color): (String, Color) = {
+            guard let h = hours else { return ("> 24 h", Color.statusOrange) }
+            guard h > 0 else { return ("Jetzt", Color.statusGreen) }
+            let totalMinutes = Int((h * 60).rounded())
+            if totalMinutes < 60 { return ("in \(totalMinutes) min", Color.appAccent) }
+            return ("in \(totalMinutes / 60) h \(totalMinutes % 60) min", Color.appAccent)
+        }()
+
+        Text(text)
+            .font(.appCaptionBold)
+            .monospacedDigit()
+            .foregroundStyle(color)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(color.opacity(0.12))
+            .clipShape(Capsule())
+    }
+}
+
+// MARK: - Day Stats Card
+
+private struct DayStatsCard: View {
+    let session: SessionViewModel
+
+    // Memoised: bacCurve24h runs a full BAC integration, so it must never be
+    // computed in body. Refreshed only when the BAC actually changes.
+    @State private var maxToday: Double = 0
+
+    private var todayDrinks: [Drink] {
+        session.drinks.filter { Calendar.current.isDateInToday($0.timestamp) }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionLabel(text: "HEUTE")
+
+            HStack(spacing: 0) {
+                statBlock(value: "\(todayDrinks.count)", unit: nil, label: "Drinks")
+                blockDivider
+                statBlock(value: String(format: "%.2f", maxToday), unit: "‰", label: "Maximum")
+                blockDivider
+                TimelineView(.periodic(from: .now, by: 60)) { context in
+                    statBlock(value: sinceLastText(now: context.date), unit: nil, label: "Letzter Drink")
+                }
+            }
+            .padding(.vertical, 16)
+            .background(Color.appCard)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .strokeBorder(Color.appBorder, lineWidth: 0.5)
+            )
+        }
+        .task { refreshMax() }
+        .onChange(of: session.currentBAC) { _, _ in refreshMax() }
+    }
+
+    private func refreshMax() {
+        let now = Date()
+        let peak = session.bacCurve24h
+            .filter { $0.date <= now && Calendar.current.isDateInToday($0.date) }
+            .map(\.bac)
+            .max() ?? 0
+        maxToday = max(peak, session.currentBAC)
+    }
+
+    private func sinceLastText(now: Date) -> String {
+        guard let last = session.drinks.map(\.timestamp).max() else { return "-" }
+        let minutes = max(0, Int(now.timeIntervalSince(last) / 60))
+        if minutes < 60 { return "\(minutes) min" }
+        return String(format: "%d:%02d h", minutes / 60, minutes % 60)
+    }
+
+    private func statBlock(value: String, unit: String?, label: String) -> some View {
+        VStack(spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text(value)
+                    .font(.appHeadline)
+                    .foregroundStyle(Color.appText)
+                    .monospacedDigit()
+                if let unit {
+                    Text(unit)
+                        .font(.appCaption)
+                        .foregroundStyle(Color.appTextDim)
+                }
+            }
+            Text(label)
+                .font(.appMicro)
+                .foregroundStyle(Color.appTextDim)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var blockDivider: some View {
+        Rectangle()
+            .fill(Color.appBorder)
+            .frame(width: 0.5, height: 32)
+    }
+}
+
+// MARK: - Safety Actions Card
+
+private struct SafetyActionsCard: View {
+    let profile: UserProfile?
+
+    @Environment(SupabaseService.self) private var supabase
+    @Environment(LocationService.self) private var locationService
+
+    @State private var showRidePicker = false
+    @State private var showSOSConfirm = false
+    @State private var sosActive = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionLabel(text: "SICHER NACH HAUSE")
+
+            HStack(spacing: 12) {
+                Button { showRidePicker = true } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "car.circle.fill")
+                            .font(.system(size: 16, weight: .medium))
+                        Text("Fahrt rufen")
+                            .font(.appCaptionBold)
+                    }
+                    .foregroundStyle(Color.appBackground)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.appAccent)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(.plain)
+
+                Button { showSOSConfirm = true } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                        Text(sosActive ? "SOS aktiv" : "SOS")
+                            .font(.appCaptionBold)
+                    }
+                    .foregroundStyle(Color.statusRed)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.statusRed.opacity(sosActive ? 0.22 : 0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(Color.statusRed.opacity(0.5), lineWidth: 0.5)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .task { sosActive = supabase.myProfile?.sosActive ?? false }
+        .sheet(isPresented: $showRidePicker) {
+            RidePickerSheet(locationService: locationService)
+        }
+        .confirmationDialog(
+            sosActive ? "SOS beenden?" : "SOS an deine Freunde senden?",
+            isPresented: $showSOSConfirm,
+            titleVisibility: .visible
+        ) {
+            if sosActive {
+                Button("SOS beenden") { toggleSOS() }
+            } else {
+                Button("SOS senden", role: .destructive) { toggleSOS() }
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text(sosActive
+                 ? "Deine Freunde sehen dann kein SOS mehr."
+                 : "Deine Freunde werden benachrichtigt, dass du Hilfe brauchst.")
+        }
+    }
+
+    private func toggleSOS() {
+        let newState = !sosActive
+        sosActive = newState
+        Task { try? await supabase.setSOS(newState) }
     }
 }
 

@@ -115,7 +115,10 @@ struct HomeEditSheet: View {
     // MARK: Widgets section
 
     private let gridTypes: [WidgetType]    = [.timeToLimit, .water, .calories, .drinkCount]
-    private let sectionTypes: [WidgetType] = [.bacCurve, .stomachStatus, .favStrip, .drinkHistory]
+    private let sectionTypes: [WidgetType] = [
+        .bacCurve, .stomachStatus, .favStrip, .drinkHistory,
+        .milestone, .dayStats, .safetyActions
+    ]
 
     private var widgetsSection: some View {
         VStack(alignment: .leading, spacing: 20) {

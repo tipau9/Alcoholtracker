@@ -59,11 +59,24 @@ enum WidgetType: String, Codable, CaseIterable {
     case stomachStatus    = "stomachStatus"
     case favStrip         = "favStrip"
     case drinkHistory     = "drinkHistory"
+    case milestone        = "milestone"
+    case dayStats         = "dayStats"
+    case safetyActions    = "safetyActions"
     // Reserved for future phases
     case streak           = "streak"
     case crewStatus       = "crewStatus"
     case drinkingSpeed    = "drinkingSpeed"
     case hangover         = "hangover"
+
+    // Widgets added after the initial widget system shipped. Profiles whose
+    // stored list is empty (created before customisation existed) do NOT get
+    // these automatically, so an app update never changes an untouched home
+    // screen; fresh profiles receive every case via the initialiser.
+    static let newerAdditions: Set<WidgetType> = [.milestone, .dayStats, .safetyActions]
+
+    static var preWidgetDefault: [WidgetType] {
+        allCases.filter { !newerAdditions.contains($0) }
+    }
 
     var localizedName: String {
         switch self {
@@ -76,6 +89,9 @@ enum WidgetType: String, Codable, CaseIterable {
         case .stomachStatus: return "Magen-Status"
         case .favStrip:      return "Schnell hinzufügen"
         case .drinkHistory:  return "Verlauf heute"
+        case .milestone:     return "Nächster Meilenstein"
+        case .dayStats:      return "Tages-Stats"
+        case .safetyActions: return "Safety-Aktionen"
         case .streak:        return "Streak"
         case .crewStatus:    return "Freunde-Status"
         case .drinkingSpeed: return "Trinkgeschwindigkeit"
@@ -94,6 +110,9 @@ enum WidgetType: String, Codable, CaseIterable {
         case .stomachStatus: return "fork.knife"
         case .favStrip:      return "bolt.fill"
         case .drinkHistory:  return "clock.fill"
+        case .milestone:     return "car.fill"
+        case .dayStats:      return "chart.bar.fill"
+        case .safetyActions: return "shield.fill"
         case .streak:        return "star.fill"
         case .crewStatus:    return "person.3.fill"
         case .drinkingSpeed: return "speedometer"
@@ -139,6 +158,11 @@ final class UserProfile {
     var genderRaw: String
     var homeStyleRaw: String
     var activeWidgetsRaw: String // comma-separated WidgetType rawValues (legacy: JSON array)
+
+    // Order of the full-width home sections (WidgetType rawValues plus the
+    // pseudo id "grid" for the 2x2 tile block). Empty = built-in default order.
+    // Inline default required for SwiftData lightweight migration.
+    var homeSectionOrderRaw: String = ""
     var stomachStatusRaw: String
     var statusSkinRaw: String = "standard"
 
@@ -213,6 +237,11 @@ final class UserProfile {
         set { statusSkinRaw = newValue.rawValue }
     }
 
+    var homeSectionOrder: [String] {
+        get { homeSectionOrderRaw.isEmpty ? [] : homeSectionOrderRaw.components(separatedBy: ",") }
+        set { homeSectionOrderRaw = newValue.joined(separator: ",") }
+    }
+
     var activeWidgets: [WidgetType] {
         get {
             let stored = _parseRawList(activeWidgetsRaw)
@@ -224,7 +253,7 @@ final class UserProfile {
             // widget the user had disabled. New widget types added in an update
             // stay reachable: the edit sheet lists them and a fresh profile gets
             // them via the all-cases initialiser.
-            guard !stored.isEmpty else { return WidgetType.allCases }
+            guard !stored.isEmpty else { return WidgetType.preWidgetDefault }
             return stored.compactMap { WidgetType(rawValue: $0) }
         }
         set {
