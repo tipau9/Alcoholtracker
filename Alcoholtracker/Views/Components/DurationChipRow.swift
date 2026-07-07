@@ -40,8 +40,8 @@ struct DurationChipRow: View {
                                 .strokeBorder(isSelected ? Color.appAccent : Color.appBorder, lineWidth: 0.5)
                         )
                 }
-                .buttonStyle(.plain)
-                .animation(.easeInOut(duration: 0.15), value: isSelected)
+                .buttonStyle(.pressable)
+                .animation(.appSnappy, value: isSelected)
             }
         }
     }

@@ -88,7 +88,7 @@ struct AchievementsView: View {
                 RoundedRectangle(cornerRadius: 3)
                     .fill(Color.appAccent)
                     .frame(width: geo.size.width * fraction, height: 4)
-                    .animation(.easeInOut(duration: 0.4), value: achievements.unlockedCount)
+                    .animation(.appSpring, value: achievements.unlockedCount)
             }
         }
         .frame(height: 4)

@@ -44,7 +44,7 @@ struct SipCounterView: View {
                     .font(.system(size: 22))
                     .foregroundStyle(Color.appTextMuted)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableChip)
         }
     }
 
@@ -75,7 +75,7 @@ struct SipCounterView: View {
         HStack(spacing: 20) {
             // Minus
             Button {
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) { session.removeSip() }
+                withAnimation(.appSnappy) { session.removeSip() }
             } label: {
                 Image(systemName: "minus")
                     .font(.system(size: 22, weight: .medium))
@@ -85,21 +85,22 @@ struct SipCounterView: View {
                     .clipShape(Circle())
                     .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 1))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableChip)
 
             // Big tap button
             Button {
-                withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) { session.addSip() }
+                withAnimation(.appPop) { session.addSip() }
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 34, weight: .semibold))
                     .foregroundStyle(.white)
+                    .symbolEffect(.bounce, options: .speed(1.5), value: session.sipCount)
                     .frame(width: 90, height: 90)
                     .background(Color.appAccent)
                     .clipShape(Circle())
                     .shadow(color: Color.appAccent.opacity(0.45), radius: 14)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableChip)
 
             // Sip size display
             VStack(spacing: 2) {
@@ -130,6 +131,6 @@ struct SipCounterView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .disabled(session.sipCount == 0)
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }

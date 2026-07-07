@@ -112,7 +112,7 @@ struct QuickAddSheet: View {
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                             .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.appBorder, lineWidth: 0.5))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .disabled(isLookingUpBarcode)
                 }
                 .padding(.horizontal, 16)
@@ -201,9 +201,9 @@ struct QuickAddSheet: View {
                             let shouldHide = value < -40
                             let shouldShow = value > -10
                             if shouldHide && showBottomBar {
-                                withAnimation(.easeInOut(duration: 0.2)) { showBottomBar = false }
+                                withAnimation(.appSpring) { showBottomBar = false }
                             } else if shouldShow && !showBottomBar {
-                                withAnimation(.easeInOut(duration: 0.2)) { showBottomBar = true }
+                                withAnimation(.appSpring) { showBottomBar = true }
                             }
                         }
 
@@ -215,7 +215,7 @@ struct QuickAddSheet: View {
                                 onBottleMode:   { showBottleMode = true },
                                 onSipCounter:   onStartSipCounter != nil ? { showSipPicker = true } : nil
                             )
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                            .transition(.appToastBottom)
                         }
                     } else {
                         QAMixesTab(
@@ -228,12 +228,12 @@ struct QuickAddSheet: View {
                         )
                     }
                 }
-                .animation(.easeInOut(duration: 0.2), value: showBottomBar)
+                .animation(.appSpring, value: showBottomBar)
             }
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.hidden)
-        // PERF: 150ms debounce — avoids refiltering 800+ items on every keystroke
+        // PERF: 150ms debounce -- avoids refiltering 800+ items on every keystroke
         .task(id: searchQuery) {
             try? await Task.sleep(for: .milliseconds(150))
             debouncedQuery = searchQuery
@@ -435,7 +435,7 @@ private struct QAHeader: View {
                     .clipShape(Circle())
                     .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
     }
 }
@@ -462,7 +462,7 @@ private struct QASearchBar: View {
                         .font(.system(size: 16))
                         .foregroundStyle(Color.appTextDim)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
         .padding(.horizontal, 14)
@@ -785,7 +785,7 @@ private struct QAActionChip: View {
             }
             .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }
 
@@ -838,7 +838,7 @@ private struct QACategoryChip: View {
                 lineWidth: isSelected ? 1.0 : 0.5
             ))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }
 
@@ -1161,7 +1161,7 @@ private struct SipTemplatePicker: View {
                             .foregroundStyle(Color.appTextDim)
                             .frame(width: 30, height: 30).background(Color.appCard).clipShape(Circle())
                             .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
-                    }.buttonStyle(.plain)
+                    }.buttonStyle(.pressable)
                 }
                 .padding(.horizontal, 20).padding(.vertical, 14)
 
@@ -1193,7 +1193,7 @@ private struct SipTemplatePicker: View {
                                     Image(systemName: "hand.tap.fill").font(.system(size: 12)).foregroundStyle(Color.appAccent)
                                 }
                                 .padding(.horizontal, 16).padding(.vertical, 11)
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(.pressable)
                             Divider().background(Color.appBorder).padding(.leading, 62)
                         }
                     }
@@ -1219,7 +1219,7 @@ private struct QATabPicker: View {
         .background(Color.appCard)
         .clipShape(Capsule())
         .overlay(Capsule().strokeBorder(Color.appBorder, lineWidth: 0.5))
-        .animation(.easeInOut(duration: 0.15), value: active)
+        .animation(.appSnappy, value: active)
     }
 
     private func tabButton(_ label: String, tab: QATab) -> some View {
@@ -1232,7 +1232,7 @@ private struct QATabPicker: View {
                 .background(active == tab ? Color.appAccent : Color.clear)
                 .clipShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }
 
@@ -1389,14 +1389,14 @@ private struct QAMySavedMixRow: View {
                     .foregroundStyle(Color.statusRed)
                     .frame(width: 30, height: 30)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
 
             Button(action: onDrink) {
                 Image(systemName: "plus.circle")
                     .font(.system(size: 18, weight: .light))
                     .foregroundStyle(Color.appAccent)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
         .padding(.vertical, 11)
         .contentShape(Rectangle())
@@ -1438,7 +1438,7 @@ private struct QACommunityMixRow: View {
                     .foregroundStyle(Color.appTextDim)
                     .frame(width: 28, height: 28)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
 
             Button(action: onUpvote) {
                 Image(systemName: isUpvoted ? "hand.thumbsup.fill" : "hand.thumbsup")
@@ -1446,7 +1446,7 @@ private struct QACommunityMixRow: View {
                     .foregroundStyle(isUpvoted ? Color.appAccent : Color.appTextDim)
                     .frame(width: 28, height: 28)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
 
             if isAdopted {
                 Image(systemName: "checkmark.circle.fill")
@@ -1463,7 +1463,7 @@ private struct QACommunityMixRow: View {
                         .clipShape(Capsule())
                         .overlay(Capsule().strokeBorder(Color.appAccent.opacity(0.3), lineWidth: 0.5))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
         .padding(.horizontal, 14)

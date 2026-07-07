@@ -93,7 +93,7 @@ struct ForecastView: View {
             // selected, so in Probezeit no pill is highlighted and the result card
             // is computed against an illegal limit until the user taps it by hand.
             // Snap the selection to the new driving limit automatically.
-            withAnimation(.easeInOut(duration: 0.15)) {
+            withAnimation(.appSnappy) {
                 targetBAC = profile.drivingLimit
             }
         }
@@ -164,7 +164,7 @@ struct ForecastView: View {
             HStack(spacing: 8) {
                 ForEach(planningTargets, id: \.0) { limit, label in
                     Button {
-                        withAnimation(.easeInOut(duration: 0.15)) { targetBAC = limit }
+                        withAnimation(.appSnappy) { targetBAC = limit }
                     } label: {
                         Text(label)
                             .font(.appCaption)
@@ -179,7 +179,7 @@ struct ForecastView: View {
                             ))
                     }
                     .buttonStyle(.plain)
-                    .animation(.easeInOut(duration: 0.15), value: targetBAC)
+                    .animation(.appSnappy, value: targetBAC)
                 }
             }
         }

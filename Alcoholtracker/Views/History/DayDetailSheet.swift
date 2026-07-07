@@ -287,7 +287,7 @@ struct DayDetailSheet: View {
                 HStack(spacing: 8) {
                     ForEach(DayMood.allCases, id: \.self) { mood in
                         Button {
-                            withAnimation(.spring(response: 0.25)) {
+                            withAnimation(.appSnappy) {
                                 selectedMood = mood
                             }
                         } label: {

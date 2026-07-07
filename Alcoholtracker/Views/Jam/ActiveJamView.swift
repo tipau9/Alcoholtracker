@@ -689,7 +689,7 @@ private struct InviteFriendsSheet: View {
                                             }
                                             .buttonStyle(.plain)
                                             .disabled(sentIDs.contains(friend.id))
-                                            .animation(.easeInOut(duration: 0.2), value: sentIDs.contains(friend.id))
+                                            .animation(.appSnappy, value: sentIDs.contains(friend.id))
                                         }
                                         // OS share sheet as fallback
                                         ShareLink(item: "Tritt meinem Jam bei! Code: \(jam.code)") {
@@ -769,7 +769,7 @@ private struct FriendInviteChip: View {
             }
         }
         .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.2), value: invited)
+        .animation(.appSnappy, value: invited)
         .disabled(friend.friendCode == nil)
     }
 }

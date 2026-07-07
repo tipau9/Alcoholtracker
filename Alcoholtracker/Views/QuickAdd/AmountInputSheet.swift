@@ -122,7 +122,7 @@ struct AmountInputSheet: View {
                                             preset: preset,
                                             isSelected: selectedPresetID == preset.id,
                                             onTap: {
-                                                withAnimation(.spring(response: 0.25)) {
+                                                withAnimation(.appSnappy) {
                                                     volume = preset.volumeML
                                                     selectedPresetID = preset.id
                                                 }

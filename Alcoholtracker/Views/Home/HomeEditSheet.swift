@@ -233,7 +233,7 @@ private struct HEStyleCard: View {
             )
         }
         .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.18), value: isSelected)
+        .animation(.appSnappy, value: isSelected)
     }
 }
 

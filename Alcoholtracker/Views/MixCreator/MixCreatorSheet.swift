@@ -109,10 +109,10 @@ struct MixCreatorSheet: View {
                                 },
                                 onShare: { shareMix() }
                             )
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                            .transition(.appToastBottom)
                         }
                     }
-                    .animation(.easeInOut(duration: 0.22), value: isReadyToAdd)
+                    .animation(.appSpring, value: isReadyToAdd)
                 }
             }
         }
@@ -159,7 +159,7 @@ struct MixCreatorSheet: View {
                 VStack(spacing: 0) {
                     ForEach(Array(ingredients.enumerated()), id: \.element.id) { (i, ing) in
                         MCIngredientRow(ingredient: ing) {
-                            withAnimation { ingredients.removeAll { $0.id == ing.id } }
+                            withAnimation(.appSpring) { ingredients.removeAll { $0.id == ing.id } }
                         }
                         if i < ingredients.count - 1 {
                             Divider()
@@ -179,15 +179,15 @@ struct MixCreatorSheet: View {
             if showAddForm {
                 MCAddIngredientForm { name, volume, abv in
                     let ing = MixIngredient(name: name, abv: abv, volume: volume)
-                    withAnimation { ingredients.append(ing) }
+                    withAnimation(.appSpring) { ingredients.append(ing) }
                     showAddForm = false
                 } onCancel: {
                     showAddForm = false
                 }
-                .transition(.move(edge: .top).combined(with: .opacity))
+                .transition(.appBannerTop)
             } else {
                 Button {
-                    withAnimation(.easeInOut(duration: 0.18)) { showAddForm = true }
+                    withAnimation(.appSpring) { showAddForm = true }
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "plus.circle.fill")
@@ -203,7 +203,7 @@ struct MixCreatorSheet: View {
                 .buttonStyle(.plain)
             }
         }
-        .animation(.easeInOut(duration: 0.18), value: showAddForm)
+        .animation(.appSpring, value: showAddForm)
     }
 
     private func buildMix() -> CustomMix {

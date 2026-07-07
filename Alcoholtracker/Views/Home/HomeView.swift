@@ -56,7 +56,7 @@ struct HomeView: View {
         return session.currentBAC >= (profile?.carefulThreshold ?? 0.8)
     }
 
-    // Composite key of BAC-relevant fields — configure() only re-runs when one of these changes.
+    // Composite key of BAC-relevant fields -- configure() only re-runs when one of these changes.
     private var bacConfigureKey: String {
         guard let p = profile else { return "" }
         return "\(p.weight)-\(p.height)-\(p.genderRaw)-\(p.eliminationRate)-\(p.toleranceMode)-\(p.birthDate.timeIntervalSinceReferenceDate)"
@@ -90,7 +90,7 @@ struct HomeView: View {
         guard hadAlcohol else { return }
         let existingMood = allNotes.first { cal.isDate($0.dayStart, inSameDayAs: day) }?.mood ?? .neutral
         guard existingMood == .neutral else { return }
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+        withAnimation(.appSpring) {
             showMoodPrompt = true
         }
     }
@@ -106,7 +106,7 @@ struct HomeView: View {
         try? context.save()
         UserDefaults.standard.set(true, forKey: moodPromptDismissKey)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        withAnimation(.easeInOut(duration: 0.25)) { showMoodPrompt = false }
+        withAnimation(.appSpring) { showMoodPrompt = false }
     }
 
     var body: some View {
@@ -118,7 +118,7 @@ struct HomeView: View {
                     session: session,
                     skin: profile?.statusSkin ?? .standard,
                     showAddDrink: $showAddDrink,
-                    onExit: { withAnimation(.easeInOut(duration: 0.25)) { drunkModeDismissed = true } }
+                    onExit: { withAnimation(.appSpring) { drunkModeDismissed = true } }
                 )
             } else if (profile?.homeStyle ?? .detailed) == .minimal {
                 MinimalHomeView(session: session, showAddDrink: $showAddDrink, skin: profile?.statusSkin ?? .standard)
@@ -142,37 +142,37 @@ struct HomeView: View {
                         onSelect: { saveMoodForYesterday($0) },
                         onDismiss: {
                             UserDefaults.standard.set(true, forKey: moodPromptDismissKey)
-                            withAnimation(.easeInOut(duration: 0.25)) { showMoodPrompt = false }
+                            withAnimation(.appSpring) { showMoodPrompt = false }
                         }
                     )
                     .padding(.top, 8)
                     Spacer()
                 }
-                .transition(.move(edge: .top).combined(with: .opacity))
+                .transition(.appBannerTop)
                 .zIndex(35)
             }
 
             if showMedWarning, let meds = profile?.activeMedications, !meds.isEmpty {
                 VStack {
                     MedicationWarningBanner(medications: meds) {
-                        withAnimation { showMedWarning = false }
+                        withAnimation(.appSpring) { showMedWarning = false }
                     }
                     .padding(.top, 8)
                     Spacer()
                 }
-                .transition(.move(edge: .top).combined(with: .opacity))
+                .transition(.appBannerTop)
                 .zIndex(40)
             }
 
-            // Sip counter overlay — replaces bottom area while counting
+            // Sip counter overlay -- replaces bottom area while counting
             if session.activeSipDrink != nil {
                 VStack {
                     Spacer()
                     SipCounterView(session: session, profile: profile)
                         .padding(.bottom, 20)
                 }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: session.activeSipDrink != nil)
+                .transition(.appToastBottom)
+                .animation(.appSpring, value: session.activeSipDrink != nil)
                 .zIndex(45)
             }
 
@@ -185,7 +185,7 @@ struct HomeView: View {
                     }
                     .padding(.bottom, 24)
                 }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .transition(.appToastBottom)
                 .zIndex(47)
             }
 
@@ -196,18 +196,18 @@ struct HomeView: View {
                         achievement: first,
                         count: achievements.newlyUnlocked.count,
                         onDismiss: {
-                            withAnimation(.easeInOut(duration: 0.25)) { showUnlockToast = false }
+                            withAnimation(.appSpring) { showUnlockToast = false }
                             achievements.acknowledgeUnlocks()
                         }
                     )
                     .padding(.bottom, 24)
                 }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .transition(.appToastBottom)
                 .zIndex(50)
             }
         }
-        .animation(.spring(response: 0.4, dampingFraction: 0.75), value: showUnlockToast)
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: session.undoVersion)
+        .animation(.appSpring, value: showUnlockToast)
+        .animation(.appSpring, value: session.undoVersion)
         .task {
             if let p = profile {
                 session.healthKit = health
@@ -221,7 +221,7 @@ struct HomeView: View {
             undoDismissTask = Task {
                 try? await Task.sleep(for: .seconds(6))
                 guard !Task.isCancelled else { return }
-                withAnimation(.easeInOut(duration: 0.25)) { session.clearUndo() }
+                withAnimation(.appSpring) { session.clearUndo() }
             }
         }
         .onChange(of: bacConfigureKey) { _, _ in
@@ -284,12 +284,12 @@ struct HomeView: View {
             guard new > old, !medWarningShownThisSession,
                   let meds = profile?.activeMedications, !meds.isEmpty else { return }
             medWarningShownThisSession = true
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            withAnimation(.appSpring) {
                 showMedWarning = true
             }
             Task {
                 try? await Task.sleep(for: .seconds(6))
-                withAnimation { showMedWarning = false }
+                withAnimation(.appSpring) { showMedWarning = false }
             }
         }
         .task(id: recentDrinks.map(\.id)) {
@@ -309,14 +309,14 @@ struct HomeView: View {
             guard count > 0 else { return }
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             if !showUnlockToast {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                withAnimation(.appSpring) {
                     showUnlockToast = true
                 }
-                // Auto-hide after 3 s — but do NOT acknowledgeUnlocks here;
+                // Auto-hide after 3 s -- but do NOT acknowledgeUnlocks here;
                 // onDismiss (user tap) handles it so concurrent unlocks are not lost.
                 Task {
                     try? await Task.sleep(for: .seconds(3))
-                    withAnimation(.easeInOut(duration: 0.25)) { showUnlockToast = false }
+                    withAnimation(.appSpring) { showUnlockToast = false }
                 }
             }
         }
@@ -520,7 +520,7 @@ private struct DetailedHomeView: View {
                         PacingHintBanner(message: pacing)
                             .padding(.horizontal, 16)
                             .padding(.top, 16)
-                            .transition(.move(edge: .top).combined(with: .opacity))
+                            .transition(.appBannerTop)
                     }
 
                     if let limit = profile?.weeklyDrinkLimit, limit > 0 {
@@ -561,6 +561,7 @@ private struct DetailedHomeView: View {
                 }
             }
             .coordinateSpace(name: "homeScroll")
+            .animation(.appSpring, value: session.pacingWarning)
             .onPreferenceChange(QAScrollOffsetPreferenceKey.self) { y in
                 // y starts near 0 and goes negative as the content scrolls up.
                 let t = min(max(-y / 150, 0), 1)
@@ -883,7 +884,7 @@ private struct MinimalHomeView: View {
                             .font(.system(size: 130, weight: .ultraLight, design: .serif))
                             .foregroundStyle(Color.appText)
                             .contentTransition(.numericText(countsDown: false))
-                            .animation(.easeInOut(duration: 0.4), value: session.currentBAC)
+                            .animation(.appGentle, value: session.currentBAC)
                             .monospacedDigit()
                             // Long-press to exit minimal mode without needing Settings
                             .contextMenu {
@@ -992,7 +993,7 @@ private struct DrunkHomeView: View {
                         .font(.system(size: 150, weight: .ultraLight, design: .serif))
                         .foregroundStyle(session.bacStatus.color)
                         .contentTransition(.numericText(countsDown: false))
-                        .animation(.easeInOut(duration: 0.4), value: session.currentBAC)
+                        .animation(.appGentle, value: session.currentBAC)
                         .monospacedDigit()
                     Text("‰")
                         .font(.system(size: 40, weight: .ultraLight, design: .serif))
@@ -1200,7 +1201,7 @@ private struct BACDisplaySection: View {
                             .font(.appDisplay)
                             .foregroundStyle(Color.appText)
                             .contentTransition(.numericText(countsDown: false))
-                            .animation(.easeInOut(duration: 0.4), value: bac)
+                            .animation(.appGentle, value: bac)
                             .monospacedDigit()
 
                         if bac > 0.01 {
@@ -1368,7 +1369,7 @@ private struct BACCurveChartView: View {
             }
             .chartYScale(domain: 0...yMax)
             .frame(height: 140)
-            .animation(.easeInOut(duration: 0.3), value: showFullDay)
+            .animation(.appGentle, value: showFullDay)
         }
         .padding(16)
         .background(Color.appCard)
@@ -1395,8 +1396,8 @@ private struct ChartTimeButton: View {
                 .background(isSelected ? Color.appAccent : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: 7))
         }
-        .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.15), value: isSelected)
+        .buttonStyle(.pressable)
+        .animation(.appSnappy, value: isSelected)
     }
 }
 
@@ -1447,8 +1448,8 @@ private struct StomachChip: View {
                     )
             )
         }
-        .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.15), value: isSelected)
+        .buttonStyle(.pressable)
+        .animation(.appSnappy, value: isSelected)
     }
 }
 
@@ -1491,7 +1492,7 @@ private struct VomitActionCard: View {
                             .font(.system(size: 24))
                             .foregroundStyle(Color.appTextDim)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressableChip)
                     .accessibilityLabel("Letztes Übergeben rückgängig")
                 }
 
@@ -1502,7 +1503,7 @@ private struct VomitActionCard: View {
                         .font(.system(size: 24))
                         .foregroundStyle(Color.statusOrange)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressableChip)
                 .accessibilityLabel("Übergeben loggen")
             }
             .padding(14)
@@ -1648,6 +1649,7 @@ private struct FavChip: View {
 
     // Each tap bumps the trigger: haptic tick plus a small "+1" flying up.
     @State private var addTrigger = 0
+    @State private var squish = false
 
     var body: some View {
         HStack(spacing: 6) {
@@ -1668,8 +1670,12 @@ private struct FavChip: View {
             FlyUpPlusOne(trigger: addTrigger)
         }
         .contentShape(Capsule())
+        .scaleEffect(squish ? 0.88 : 1)
         .onTapGesture {
             addTrigger += 1
+            // Quick squish-and-release so the chip visibly reacts to the tap.
+            withAnimation(.easeOut(duration: 0.09)) { squish = true }
+            withAnimation(.appPop.delay(0.09)) { squish = false }
             onTap()
         }
         .onLongPressGesture(minimumDuration: 0.5, perform: { onLongPress() })
@@ -1861,7 +1867,7 @@ private struct EmptyDrinkHint: View {
                     .strokeBorder(Color.appAccent.opacity(0.3), lineWidth: 0.5)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .contentShape(RoundedRectangle(cornerRadius: 16))
     }
 }
@@ -1907,7 +1913,7 @@ private struct AchievementUnlockToast: View {
             )
             .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .padding(.horizontal, 20)
     }
 }
@@ -2057,7 +2063,7 @@ private struct WeeklyLimitCard: View {
                 }
             }
             .frame(height: 8)
-            .animation(.easeInOut(duration: 0.3), value: fraction)
+            .animation(.appGentle, value: fraction)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
@@ -2264,7 +2270,7 @@ private struct SafetyActionsCard: View {
                     .background(Color.appAccent)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
 
                 Button { showSOSConfirm = true } label: {
                     HStack(spacing: 8) {
@@ -2283,7 +2289,7 @@ private struct SafetyActionsCard: View {
                             .strokeBorder(Color.statusRed.opacity(0.5), lineWidth: 0.5)
                     )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
         .task { sosActive = supabase.myProfile?.sosActive ?? false }

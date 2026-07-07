@@ -1036,7 +1036,7 @@ private struct SOSBar: View {
                 )
             }
             .buttonStyle(.plain)
-            .animation(.easeInOut(duration: 0.25), value: isActive)
+            .animation(.appSnappy, value: isActive)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)

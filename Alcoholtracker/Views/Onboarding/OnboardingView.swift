@@ -72,7 +72,7 @@ struct OnboardingView: View {
                     Capsule()
                         .fill(i == page ? Color.appAccent : Color.appBorder)
                         .frame(width: i == page ? 22 : 7, height: 7)
-                        .animation(.easeInOut(duration: 0.3), value: page)
+                        .animation(.appSnappy, value: page)
                 }
             }
 
@@ -109,13 +109,13 @@ struct OnboardingView: View {
     private func advance() {
         guard page < pageCount - 1, canLeave(page) else { return }
         forward = true
-        withAnimation(.easeInOut(duration: 0.32)) { page += 1 }
+        withAnimation(.appSpring) { page += 1 }
     }
 
     private func goBack() {
         guard page > 0 else { return }
         forward = false
-        withAnimation(.easeInOut(duration: 0.32)) { page -= 1 }
+        withAnimation(.appSpring) { page -= 1 }
     }
 
     // MARK: Finish
@@ -446,7 +446,7 @@ private struct ONGenderCard: View {
             }
         }
         .buttonStyle(.plain)
-        .animation(.spring(duration: 0.3), value: isSelected)
+        .animation(.appSnappy, value: isSelected)
     }
 }
 
@@ -810,7 +810,7 @@ private struct ONDrinkCard: View {
             .opacity(isDimmed ? 0.4 : 1)
         }
         .buttonStyle(.plain)
-        .animation(.spring(duration: 0.25), value: isSelected)
+        .animation(.appSnappy, value: isSelected)
     }
 }
 
@@ -866,7 +866,7 @@ private struct ONUnitToggle: View {
                 .strokeBorder(Color.appBorder, lineWidth: 0.5)
         )
         .padding(.horizontal, compact ? 0 : 24)
-        .animation(.easeInOut(duration: 0.2), value: selected)
+        .animation(.appSnappy, value: selected)
     }
 }
 

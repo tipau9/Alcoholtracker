@@ -119,7 +119,7 @@ struct HydrationWidget: View {
                     .font(.appBodyBold)
                     .foregroundStyle(netColor)
                     .contentTransition(.numericText())
-                    .animation(.easeInOut(duration: 0.3), value: net)
+                    .animation(.appGentle, value: net)
 
                 Text(netLabel)
                     .font(.appMicro)
@@ -143,6 +143,7 @@ struct HydrationWidget: View {
             Image(systemName: "waterbottle.fill")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.statusGreen)
+                .symbolEffect(.bounce, options: .speed(1.4), value: loggedGlasses)
                 .frame(width: 28, height: 28)
                 .background(Color.statusGreen.opacity(0.13))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -161,26 +162,26 @@ struct HydrationWidget: View {
 
             Button {
                 WaterLog.removeGlassToday()
-                withAnimation(.easeInOut(duration: 0.2)) { loggedGlasses = WaterLog.glassesToday() }
+                withAnimation(.appSnappy) { loggedGlasses = WaterLog.glassesToday() }
             } label: {
                 Image(systemName: "minus.circle.fill")
                     .font(.system(size: 24))
                     .foregroundStyle(loggedGlasses > 0 ? Color.appTextDim : Color.appBorder)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableChip)
             .disabled(loggedGlasses == 0)
             .accessibilityLabel("Glas Wasser entfernen")
 
             Button {
                 WaterLog.addGlassToday()
-                withAnimation(.easeInOut(duration: 0.2)) { loggedGlasses = WaterLog.glassesToday() }
+                withAnimation(.appPop) { loggedGlasses = WaterLog.glassesToday() }
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             } label: {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 24))
                     .foregroundStyle(Color.appAccent)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableChip)
             .accessibilityLabel("Glas Wasser hinzufügen")
         }
     }
@@ -209,7 +210,7 @@ struct HydrationWidget: View {
             }
         }
         .frame(height: 8)
-        .animation(.easeInOut(duration: 0.4), value: net)
+        .animation(.appSpring, value: net)
     }
 
     // MARK: Recommendation
@@ -282,7 +283,7 @@ private struct HydrationRow: View {
                 .font(.appBodyBold)
                 .foregroundStyle(valueColor)
                 .contentTransition(.numericText())
-                .animation(.easeInOut(duration: 0.3), value: value)
+                .animation(.appGentle, value: value)
         }
     }
 }

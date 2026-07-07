@@ -103,8 +103,8 @@ struct AuthGate: View {
 
                         // Mode switcher
                         HStack(spacing: 0) {
-                            AGModeButton(title: "Anmelden",      selected: mode == .signIn)  { withAnimation(.spring(response: 0.2)) { mode = .signIn } }
-                            AGModeButton(title: "Registrieren",  selected: mode == .signUp)  { withAnimation(.spring(response: 0.2)) { mode = .signUp } }
+                            AGModeButton(title: "Anmelden",      selected: mode == .signIn)  { withAnimation(.appSnappy) { mode = .signIn } }
+                            AGModeButton(title: "Registrieren",  selected: mode == .signUp)  { withAnimation(.appSnappy) { mode = .signUp } }
                         }
                         .background(Color.appCard)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -143,7 +143,7 @@ struct AuthGate: View {
                             RoundedRectangle(cornerRadius: 16)
                                 .strokeBorder(Color.appBorder, lineWidth: 0.5)
                         )
-                        .animation(.easeInOut(duration: 0.18), value: mode)
+                        .animation(.appSnappy, value: mode)
 
                         // Error banner
                         if let msg = errorMessage {
@@ -163,7 +163,7 @@ struct AuthGate: View {
                                 RoundedRectangle(cornerRadius: 12)
                                     .strokeBorder(Color.statusRed.opacity(0.25), lineWidth: 0.5)
                             )
-                            .transition(.opacity.combined(with: .move(edge: .top)))
+                            .transition(.appBannerTop)
                         }
 
                         // Email-Bestätigung ausstehend
@@ -184,7 +184,7 @@ struct AuthGate: View {
                                 RoundedRectangle(cornerRadius: 12)
                                     .strokeBorder(Color.statusGreen.opacity(0.3), lineWidth: 0.5)
                             )
-                            .transition(.opacity.combined(with: .move(edge: .top)))
+                            .transition(.appBannerTop)
                         }
 
                         // Submit button
@@ -212,7 +212,7 @@ struct AuthGate: View {
                                 RoundedRectangle(cornerRadius: 16)
                                     .strokeBorder(isValid ? Color.clear : Color.appBorder, lineWidth: 0.5)
                             )
-                            .animation(.easeInOut(duration: 0.15), value: isValid)
+                            .animation(.appSnappy, value: isValid)
                         }
                         .buttonStyle(.plain)
                         .disabled(!isValid || !supabase.isConfigured)

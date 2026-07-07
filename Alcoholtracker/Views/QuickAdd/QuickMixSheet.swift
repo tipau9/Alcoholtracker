@@ -83,7 +83,7 @@ struct QuickMixSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Fixed header — always visible regardless of scroll position
+            // Fixed header -- always visible regardless of scroll position
             QMSHandle()
             VStack(alignment: .leading, spacing: 0) {
                 QMSHeader(title: "Quick Mix") { dismiss() }
@@ -216,7 +216,7 @@ struct QuickMixSheet: View {
 
             Spacer()
         }
-        .animation(.easeOut(duration: 0.2), value: bacContribution)
+        .animation(.appGentle, value: bacContribution)
     }
 
     // MARK: Spirit

@@ -372,7 +372,7 @@ private struct SFLimitSegment: View {
             )
         }
         .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.15), value: selected)
+        .animation(.appSnappy, value: selected)
     }
 }
 
