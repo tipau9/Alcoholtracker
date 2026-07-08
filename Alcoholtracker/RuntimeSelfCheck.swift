@@ -81,8 +81,8 @@ enum RuntimeSelfCheck {
         check("hoursUntilSober", hrs, 0.3, 6.0)
 
         // 9) Display formatting (no mistakes in displayed information).
-        checkInt("permilleStringFormat", (0.5).permilleString == "0.50 ‰" ? 1 : 0, 1)
-        checkInt("signedPermilleFormat", (0.13).signedPermilleString == "+0.13 ‰" ? 1 : 0, 1)
+        checkInt("permilleStringFormat", (0.5).permilleString == "0,50 ‰" ? 1 : 0, 1)
+        checkInt("signedPermilleFormat", (0.13).signedPermilleString == "+0,13 ‰" ? 1 : 0, 1)
 
         // 10) Jam roulette wire format: the shared id + winner survive a Codable
         //     round-trip, so every member dedups on the same draw and the wheel
