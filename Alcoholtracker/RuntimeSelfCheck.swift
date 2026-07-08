@@ -292,6 +292,35 @@ enum RuntimeSelfCheck {
             checkInt("updateDrinkRecalculates", (bac1 > 0.001 && bac2 > bac1) ? 1 : 0, 1)
         }
 
+        // 24) Curve cache: repeated reads return the identical memoized curve,
+        //     and adding a drink invalidates it immediately (a mutation must
+        //     never serve a stale curve out of the 60s time bucket).
+        if let box24 = try? ModelContainer(
+            for: Schema([Drink.self, DrinkTemplate.self, VomitEvent.self]),
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        ) {
+            let ctx24 = box24.mainContext
+            let p24 = UserProfile(weight: 75, height: 180, age: 25, gender: .male)
+            let vm24 = SessionViewModel()
+            vm24.configure(profile: p24, context: ctx24)
+            vm24.addDrink(Drink.from(
+                template: DrinkTemplate(name: "cache-beer-1", category: .beer,
+                                        volume: 500, abv: 5, calories: 215),
+                timestamp: Date().addingTimeInterval(-30 * 60)))
+            let c1 = vm24.bacCurve
+            let c2 = vm24.bacCurve
+            let stable = c1.count == c2.count
+                && zip(c1, c2).allSatisfy { $0.0.bac == $0.1.bac && $0.0.date == $0.1.date }
+            checkInt("curveCacheStableRead", (stable && !c1.isEmpty) ? 1 : 0, 1)
+            let peak1 = c1.map(\.bac).max() ?? 0
+            vm24.addDrink(Drink.from(
+                template: DrinkTemplate(name: "cache-beer-2", category: .beer,
+                                        volume: 500, abv: 5, calories: 215),
+                timestamp: Date().addingTimeInterval(-20 * 60)))
+            let peak2 = vm24.bacCurve.map(\.bac).max() ?? 0
+            checkInt("curveCacheInvalidatesOnAdd", (peak1 > 0.001 && peak2 > peak1) ? 1 : 0, 1)
+        }
+
         print("SELFCHECK SUMMARY pass=\(pass) fail=\(fail)")
     }
 }

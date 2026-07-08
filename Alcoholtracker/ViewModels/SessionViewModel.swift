@@ -589,17 +589,42 @@ final class SessionViewModel {
     }
 
     var bacCurve: [BACCalculator.BACPoint] {
-        guard let profile else { return [] }
-        return BACCalculator.bacCurve(drinks: drinks, profile: profile, hours: 8,
-                                      stomachStatus: stomachStatus,
-                                      conservative: conservative, vomitTimes: vomitTimes)
+        cachedCurve(hours: 8, intervalMinutes: 15)
     }
 
     var bacCurve24h: [BACCalculator.BACPoint] {
+        cachedCurve(hours: 24, intervalMinutes: 30)
+    }
+
+    // MARK: Curve cache
+    //
+    // HomeView reads bacCurve/bacCurve24h on every body evaluation and each
+    // raw call integrates the whole drink list. Results are memoized per
+    // (generation, minute): recalculate() bumps the generation on every state
+    // change and 30s tick, and the 60s time bucket bounds staleness even if a
+    // mutation path ever skips recalculate(). At 15/30 min curve resolution a
+    // <= 60s stale start point is invisible.
+
+    @ObservationIgnored private var curveCache: [Int: (generation: Int, bucket: Int, points: [BACCalculator.BACPoint])] = [:]
+    @ObservationIgnored private var curveGeneration = 0
+
+    private func cachedCurve(hours: Double, intervalMinutes: Double) -> [BACCalculator.BACPoint] {
         guard let profile else { return [] }
-        return BACCalculator.bacCurve(drinks: drinks, profile: profile, hours: 24,
-                                      intervalMinutes: 30, stomachStatus: stomachStatus,
-                                      conservative: conservative, vomitTimes: vomitTimes)
+        // Touch the observed inputs even on a cache hit so views that only
+        // read the curve still re-render when drinks or settings change.
+        _ = (drinks.count, stomachStatus, conservative)
+
+        let bucket = Int(Date().timeIntervalSinceReferenceDate / 60)
+        let key = Int(hours)
+        if let hit = curveCache[key], hit.generation == curveGeneration, hit.bucket == bucket {
+            return hit.points
+        }
+        let points = BACCalculator.bacCurve(drinks: drinks, profile: profile, hours: hours,
+                                            intervalMinutes: intervalMinutes,
+                                            stomachStatus: stomachStatus,
+                                            conservative: conservative, vomitTimes: vomitTimes)
+        curveCache[key] = (curveGeneration, bucket, points)
+        return points
     }
 
     func projectedBAC(hours: Double = 8) -> [(Date, Double)] {
@@ -623,6 +648,7 @@ final class SessionViewModel {
     // change passes true; only the 30s timer tick passes false so a quiescent
     // session does not recompute the 12h curve twice a minute for hours.
     private func recalculate(refreshCurve: Bool = true) {
+        curveGeneration &+= 1
         guard let profile else {
             currentBAC = 0
             bacStatus  = .sober

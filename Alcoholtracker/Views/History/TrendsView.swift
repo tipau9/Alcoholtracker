@@ -237,33 +237,34 @@ struct TrendsView: View {
     
     private func moodChart(profile: UserProfile) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Stimmung vs. Höchstpromille")
+            Text("Morgen danach")
                 .font(.appHeadline)
                 .foregroundStyle(Color.appText)
-            
+
             let correlations = viewModel.getMoodCorrelations(drinks: drinks, notes: notes, profile: profile)
-            
+
             if correlations.isEmpty {
-                Text("Protokolliere deine Morgenstimmung, um hier Zusammenhänge mit deinem Promillewert zu sehen.")
+                Text("Bewerte morgens deine Nacht, um hier zu sehen, wie sich dein Promillewert auf den nächsten Tag auswirkt.")
                     .font(.appCaption)
                     .foregroundStyle(Color.appTextMuted)
             } else {
-                Chart(correlations) { corr in
-                    PointMark(
-                        x: .value("Stimmung", DayMood(rawValue: corr.moodScore)?.emoji ?? ""),
-                        y: .value("Ø Peak BAC", corr.averagePeakBAC)
-                    )
-                    .symbolSize(400)
-                    .foregroundStyle(Color.statusRed.opacity(0.8))
-                }
-                .frame(height: 180)
-                .chartYAxis {
-                    AxisMarks { val in
-                        if let v = val.as(Double.self) {
-                            AxisValueLabel("\(String(format: "%.1f", locale: germanLocale, v)) ‰")
-                                .foregroundStyle(Color.appTextDim)
-                        }
+                let maxAvg = max(correlations.map(\.averagePeakBAC).max() ?? 0, 0.01)
+                VStack(spacing: 10) {
+                    ForEach(correlations) { corr in
+                        MoodCorrelationRow(
+                            mood: DayMood(rawValue: corr.moodScore) ?? .neutral,
+                            averagePeakBAC: corr.averagePeakBAC,
+                            nights: corr.nights,
+                            fraction: corr.averagePeakBAC / maxAvg
+                        )
                     }
+                }
+
+                if let insight = viewModel.moodInsight(drinks: drinks, notes: notes, profile: profile) {
+                    Text("Deine positiv bewerteten Morgen folgten auf Abende mit im Schnitt \(insight.goodAvg.permilleString), die negativ bewerteten auf \(insight.badAvg.permilleString).")
+                        .font(.appCaption)
+                        .foregroundStyle(Color.appTextDim)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
@@ -271,5 +272,54 @@ struct TrendsView: View {
         .background(Color.appCard)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.appBorder, lineWidth: 0.5))
+    }
+}
+
+// MARK: - MoodCorrelationRow
+//
+// One rated mood: label, night count and the average peak promille of those
+// nights, with a thin bar so the good-vs-bad gap is visible at a glance.
+
+private struct MoodCorrelationRow: View {
+    let mood: DayMood
+    let averagePeakBAC: Double
+    let nights: Int
+    let fraction: Double
+
+    private var barColor: Color {
+        switch mood {
+        case .happy, .proud:  return .statusGreen
+        case .regret:         return .statusOrange
+        case .terrible:       return .statusRed
+        case .neutral:        return .appTextMuted
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("\(mood.emoji) \(mood.label)")
+                    .font(.appCaption)
+                    .foregroundStyle(Color.appText)
+                Text(nights == 1 ? "1 Nacht" : "\(nights) Nächte")
+                    .font(.appMicro)
+                    .foregroundStyle(Color.appTextMuted)
+                Spacer()
+                Text(averagePeakBAC.permilleString)
+                    .font(.appCaptionBold)
+                    .foregroundStyle(Color.appText)
+                    .monospacedDigit()
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.appBorder.opacity(0.5))
+                    Capsule()
+                        .fill(barColor)
+                        .frame(width: max(4, geo.size.width * min(max(fraction, 0), 1)))
+                }
+            }
+            .frame(height: 4)
+        }
     }
 }
