@@ -234,12 +234,12 @@ private func laStatusLabel(_ bac: Double) -> String {
 }
 
 private func laFormatBAC(_ value: Double) -> String {
-    String(format: "%.2f", value).replacingOccurrences(of: ".", with: ",")
+    String(format: "%.2f", locale: Locale(identifier: "de_DE"), value)
 }
 
 private func laFormatBACShort(_ value: Double) -> String {
     if value < 0.01 { return "0,0" }
-    return String(format: "%.1f", value).replacingOccurrences(of: ".", with: ",")
+    return String(format: "%.1f", locale: Locale(identifier: "de_DE"), value)
 }
 
 // Absolute clock time the user is expected to drop below 0.01 ‰. Computed from

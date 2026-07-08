@@ -121,7 +121,7 @@ private struct BottleTemplatePickerView: View {
                                             .font(.appBody)
                                             .foregroundStyle(Color.appText)
                                             .lineLimit(1)
-                                        Text("\(template.abv, specifier: "%.1f")% vol")
+                                        Text("\(template.abv.deFormatted(1))% vol")
                                             .font(.appCaption)
                                             .foregroundStyle(Color.appTextDim)
                                     }
@@ -199,7 +199,7 @@ private struct BottleLevelView: View {
                             .font(.appBodyBold)
                             .foregroundStyle(Color.appText)
                             .lineLimit(1)
-                        Text("\(template.abv, specifier: "%.1f")% vol")
+                        Text("\(template.abv.deFormatted(1))% vol")
                             .font(.appCaption)
                             .foregroundStyle(Color.appTextDim)
                     }
@@ -224,7 +224,7 @@ private struct BottleLevelView: View {
                         .frame(maxWidth: .infinity)
                         Rectangle().fill(Color.appBorder).frame(width: 0.5, height: 40)
                         VStack(spacing: 2) {
-                            Text("+\(promilleContrib, specifier: "%.2f") ‰")
+                            Text("+\(promilleContrib.deFormatted(2)) ‰")
                                 .font(.system(size: 30, weight: .light, design: .serif))
                                 .foregroundStyle(Color.appAccent)
                                 .monospacedDigit()

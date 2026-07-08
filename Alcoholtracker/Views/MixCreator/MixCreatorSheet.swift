@@ -292,7 +292,7 @@ private struct MCIngredientRow: View {
                 Text(ingredient.name)
                     .font(.appBody)
                     .foregroundStyle(Color.appText)
-                Text(String(format: "%.0f ml, %.1f%%", ingredient.volume, ingredient.abv))
+                Text(String(format: "%.0f ml, %.1f%%", locale: germanLocale, ingredient.volume, ingredient.abv))
                     .font(.appCaption)
                     .foregroundStyle(Color.appTextDim)
             }
@@ -438,13 +438,13 @@ private struct MCPreviewCard: View {
             VStack(spacing: 0) {
                 MCPreviewRow(
                     label: "Gesamtmenge",
-                    value: String(format: "%.0f ml", totalVolume)
+                    value: String(format: "%.0f ml", locale: germanLocale, totalVolume)
                 )
                 Divider().background(Color.appBorder).padding(.leading, 16)
 
                 MCPreviewRow(
                     label: "Eff. Alkohol",
-                    value: String(format: "%.1f %%", effectiveABV)
+                    value: String(format: "%.1f %%", locale: germanLocale, effectiveABV)
                 )
                 Divider().background(Color.appBorder).padding(.leading, 16)
 

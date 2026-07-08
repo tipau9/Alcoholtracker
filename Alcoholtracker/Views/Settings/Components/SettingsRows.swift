@@ -91,7 +91,7 @@ struct STElimRow: View {
                     .font(.appBody)
                     .foregroundStyle(Color.appText)
                 Spacer()
-                Text(String(format: "%.3f ‰/h", value))
+                Text(String(format: "%.3f ‰/h", locale: germanLocale, value))
                     .font(.appCaptionBold)
                     .foregroundStyle(Color.appAccent)
                     .monospacedDigit()

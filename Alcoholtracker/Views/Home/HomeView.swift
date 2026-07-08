@@ -1232,6 +1232,9 @@ private struct BACCurveChartView: View {
 
     @State private var showFullDay = false
 
+    // 0 -> 1 once on first appearance: the curve draws itself from left to right.
+    @State private var chartReveal: CGFloat = 0
+
     private var displayPoints: [BACCalculator.BACPoint] {
         showFullDay ? session.bacCurve24h : session.bacCurve
     }
@@ -1337,7 +1340,7 @@ private struct BACCurveChartView: View {
                     .foregroundStyle(Color.statusOrange.opacity(0.55))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
                     .annotation(position: .top, alignment: .trailing) {
-                        Text(String(format: "%.1f‰", warningThreshold))
+                        Text(String(format: "%.1f‰", locale: germanLocale, warningThreshold))
                             .font(.appMicro)
                             .foregroundStyle(Color.statusOrange)
                     }
@@ -1358,7 +1361,7 @@ private struct BACCurveChartView: View {
                 AxisMarks(position: .leading, values: .stride(by: 0.5)) { val in
                     if let v = val.as(Double.self), v >= 0 {
                         AxisValueLabel {
-                            Text(String(format: "%.1f", v))
+                            Text(String(format: "%.1f", locale: germanLocale, v))
                                 .font(.appMicro)
                                 .foregroundStyle(Color.appTextDim)
                         }
@@ -1370,6 +1373,13 @@ private struct BACCurveChartView: View {
             .chartYScale(domain: 0...yMax)
             .frame(height: 140)
             .animation(.appGentle, value: showFullDay)
+            .mask(alignment: .leading) {
+                Rectangle().scaleEffect(x: chartReveal, y: 1, anchor: .leading)
+            }
+            .onAppear {
+                guard chartReveal < 1 else { return }
+                withAnimation(.easeOut(duration: 0.8)) { chartReveal = 1 }
+            }
         }
         .padding(16)
         .background(Color.appCard)
@@ -1533,7 +1543,7 @@ private struct HomeWidgetGrid: View {
 
     // Label reflects the user's actual legal limit (0,0 ‰ in der Probezeit).
     private var limitLabel: String {
-        let s = String(format: "%.1f", session.drivingLimit).replacingOccurrences(of: ".", with: ",")
+        let s = String(format: "%.1f", locale: germanLocale, session.drivingLimit)
         return "Bis \(s) ‰"
     }
 
@@ -1649,7 +1659,6 @@ private struct FavChip: View {
 
     // Each tap bumps the trigger: haptic tick plus a small "+1" flying up.
     @State private var addTrigger = 0
-    @State private var squish = false
 
     var body: some View {
         HStack(spacing: 6) {
@@ -1670,12 +1679,8 @@ private struct FavChip: View {
             FlyUpPlusOne(trigger: addTrigger)
         }
         .contentShape(Capsule())
-        .scaleEffect(squish ? 0.88 : 1)
         .onTapGesture {
             addTrigger += 1
-            // Quick squish-and-release so the chip visibly reacts to the tap.
-            withAnimation(.easeOut(duration: 0.09)) { squish = true }
-            withAnimation(.appPop.delay(0.09)) { squish = false }
             onTap()
         }
         .onLongPressGesture(minimumDuration: 0.5, perform: { onLongPress() })
@@ -1765,7 +1770,7 @@ private struct DrinkRowView: View {
                     .font(.appBodyBold)
                     .foregroundStyle(Color.appText)
 
-                Text("\(Int(drink.volume)) ml · \(String(format: "%.1f", drink.abv)) % · \(drink.calories) kcal")
+                Text("\(Int(drink.volume)) ml · \(String(format: "%.1f", locale: germanLocale, drink.abv)) % · \(drink.calories) kcal")
                     .font(.appMicro)
                     .foregroundStyle(Color.appTextDim)
             }
@@ -2179,7 +2184,7 @@ private struct DayStatsCard: View {
             HStack(spacing: 0) {
                 statBlock(value: "\(todayDrinks.count)", unit: nil, label: "Drinks")
                 blockDivider
-                statBlock(value: String(format: "%.2f", maxToday), unit: "‰", label: "Maximum")
+                statBlock(value: String(format: "%.2f", locale: germanLocale, maxToday), unit: "‰", label: "Maximum")
                 blockDivider
                 TimelineView(.periodic(from: .now, by: 60)) { context in
                     statBlock(value: sinceLastText(now: context.date), unit: nil, label: "Letzter Drink")

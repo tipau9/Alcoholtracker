@@ -429,7 +429,7 @@ private struct DDSDrinkRow: View {
                 Text(drink.name)
                     .font(.appBody)
                     .foregroundStyle(Color.appText)
-                Text("\(Int(drink.volume)) ml · \(String(format: "%.1f", drink.abv)) %")
+                Text("\(Int(drink.volume)) ml · \(String(format: "%.1f", locale: germanLocale, drink.abv)) %")
                     .font(.appMicro)
                     .foregroundStyle(Color.appTextDim)
             }

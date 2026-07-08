@@ -213,7 +213,7 @@ private struct WSmallView: View {
                     .foregroundStyle(cText)
             }
             Spacer()
-            Text(String(format: "%.2f", entry.bac))
+            Text(String(format: "%.2f", locale: Locale(identifier: "de_DE"), entry.bac))
                 .font(.system(size: 44, weight: .light, design: .serif))
                 .foregroundStyle(entry.statusColor)
                 .monospacedDigit()
@@ -277,7 +277,7 @@ private struct WMediumView: View {
                         .foregroundStyle(cText)
                 }
                 Spacer()
-                Text(String(format: "%.2f", entry.bac))
+                Text(String(format: "%.2f", locale: Locale(identifier: "de_DE"), entry.bac))
                     .font(.system(size: 52, weight: .light, design: .serif))
                     .foregroundStyle(entry.statusColor)
                     .monospacedDigit()
@@ -378,7 +378,7 @@ private struct WLargeView: View {
 
             Spacer()
 
-            Text(String(format: "%.2f", entry.bac))
+            Text(String(format: "%.2f", locale: Locale(identifier: "de_DE"), entry.bac))
                 .font(.system(size: 72, weight: .light, design: .serif))
                 .foregroundStyle(entry.statusColor)
                 .monospacedDigit()
@@ -436,7 +436,7 @@ private struct WCircularView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Text(String(format: "%.2f", entry.bac))
+            Text(String(format: "%.2f", locale: Locale(identifier: "de_DE"), entry.bac))
                 .font(.system(size: 14, weight: .semibold, design: .serif))
                 .foregroundStyle(entry.statusColor)
                 .monospacedDigit()
@@ -459,7 +459,7 @@ private struct WRectangularView: View {
                 .font(.system(size: 18, weight: .light))
                 .foregroundStyle(entry.statusColor)
             VStack(alignment: .leading, spacing: 1) {
-                Text(String(format: "%.2f ‰", entry.bac))
+                Text(String(format: "%.2f ‰", locale: Locale(identifier: "de_DE"), entry.bac))
                     .font(.system(size: 16, weight: .semibold, design: .serif))
                     .foregroundStyle(entry.statusColor)
                     .monospacedDigit()

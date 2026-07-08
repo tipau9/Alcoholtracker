@@ -32,7 +32,7 @@ struct SipCounterView: View {
                     .font(.appBodyBold)
                     .foregroundStyle(Color.appText)
                 if let drink = session.activeSipDrink {
-                    Text("\(drink.name)  \(drink.abv, specifier: "%.1f")% vol")
+                    Text("\(drink.name)  \(drink.abv.deFormatted(1))% vol")
                         .font(.appCaption)
                         .foregroundStyle(Color.appTextDim)
                         .lineLimit(1)
@@ -55,7 +55,7 @@ struct SipCounterView: View {
                 .foregroundStyle(Color.appText)
                 .monospacedDigit()
                 .contentTransition(.numericText())
-                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: session.sipCount)
+                .animation(.appSnappy, value: session.sipCount)
 
             Text(session.sipCount == 1 ? "Schluck" : "Schlucke")
                 .font(.appCaption)
@@ -63,7 +63,7 @@ struct SipCounterView: View {
 
             let ml  = Int(session.sipTotalML)
             let ppm = session.sipPromille
-            Text("\(ml) ml    +\(ppm, specifier: "%.2f") Promille")
+            Text("\(ml) ml    +\(ppm.deFormatted(2)) Promille")
                 .font(.system(size: 12, design: .serif))
                 .foregroundStyle(Color.appAccent)
                 .monospacedDigit()
@@ -89,16 +89,14 @@ struct SipCounterView: View {
 
             // Big tap button
             Button {
-                withAnimation(.appPop) { session.addSip() }
+                withAnimation(.appSnappy) { session.addSip() }
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 34, weight: .semibold))
                     .foregroundStyle(.white)
-                    .symbolEffect(.bounce, options: .speed(1.5), value: session.sipCount)
                     .frame(width: 90, height: 90)
                     .background(Color.appAccent)
                     .clipShape(Circle())
-                    .shadow(color: Color.appAccent.opacity(0.45), radius: 14)
             }
             .buttonStyle(.pressableChip)
 

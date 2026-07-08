@@ -143,7 +143,6 @@ struct HydrationWidget: View {
             Image(systemName: "waterbottle.fill")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.statusGreen)
-                .symbolEffect(.bounce, options: .speed(1.4), value: loggedGlasses)
                 .frame(width: 28, height: 28)
                 .background(Color.statusGreen.opacity(0.13))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -174,7 +173,7 @@ struct HydrationWidget: View {
 
             Button {
                 WaterLog.addGlassToday()
-                withAnimation(.appPop) { loggedGlasses = WaterLog.glassesToday() }
+                withAnimation(.appSnappy) { loggedGlasses = WaterLog.glassesToday() }
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             } label: {
                 Image(systemName: "plus.circle.fill")

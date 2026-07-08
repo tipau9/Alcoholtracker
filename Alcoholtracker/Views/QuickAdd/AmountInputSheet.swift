@@ -81,7 +81,7 @@ struct AmountInputSheet: View {
                         Text(template.name)
                             .font(.appBodyBold)
                             .foregroundStyle(Color.appText)
-                        Text("\(String(format: "%.1f", template.abv)) % Alk.")
+                        Text("\(String(format: "%.1f", locale: germanLocale, template.abv)) % Alk.")
                             .font(.appCaption)
                             .foregroundStyle(Color.appTextDim)
                     }

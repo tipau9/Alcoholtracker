@@ -132,7 +132,7 @@ struct ForecastView: View {
                     .font(.appMicro)
                     .foregroundStyle(Color.appTextMuted)
                     .tracking(1)
-                Text("\(String(format: "%.1f", hoursUntilTarget)) h ab jetzt")
+                Text("\(String(format: "%.1f", locale: germanLocale, hoursUntilTarget)) h ab jetzt")
                     .font(.appCaption)
                     .foregroundStyle(Color.appTextDim)
             }
@@ -211,7 +211,7 @@ struct ForecastView: View {
                             .font(.appCaption)
                             .foregroundStyle(Color.appTextDim)
                     }
-                    Text("Standarddrinks · je ~\(String(format: "%.2f", budgetPerDrinkBAC)) ‰ Budget (konservativ)")
+                    Text("Standarddrinks · je ~\(String(format: "%.2f", locale: germanLocale, budgetPerDrinkBAC)) ‰ Budget (konservativ)")
                         .font(.appMicro)
                         .foregroundStyle(Color.appTextMuted)
                 }

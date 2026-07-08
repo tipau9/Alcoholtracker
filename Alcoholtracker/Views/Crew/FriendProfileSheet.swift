@@ -187,7 +187,7 @@ struct FriendProfileSheet: View {
                     }
                     Spacer()
                     HStack(alignment: .firstTextBaseline, spacing: 3) {
-                        Text(String(format: "%.2f", bac))
+                        Text(String(format: "%.2f", locale: germanLocale, bac))
                             .font(.system(size: 34, weight: .light, design: .serif))
                             .foregroundStyle(status.color)
                             .monospacedDigit()

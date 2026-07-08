@@ -204,7 +204,7 @@ struct QuickMixSheet: View {
                 Image(systemName: "drop.fill")
                     .font(.system(size: 12))
                     .foregroundStyle(Color.appAccent)
-                Text(String(format: "%.1f %%", effectiveABV))
+                Text(String(format: "%.1f %%", locale: germanLocale, effectiveABV))
                     .font(.appCaptionBold)
                     .foregroundStyle(Color.appTextDim)
             }
@@ -451,7 +451,7 @@ private struct QMSSpiritCard: View {
                     .multilineTextAlignment(.center)
                     .frame(width: 68)
 
-                Text(String(format: "%.0f%%", template.abv))
+                Text(String(format: "%.0f%%", locale: germanLocale, template.abv))
                     .font(.appMicro)
                     .foregroundStyle(Color.appTextMuted)
             }

@@ -83,10 +83,21 @@ extension View {
     }
 }
 
-// MARK: - BAC number formatting
+// MARK: - Number formatting
+//
+// All user-facing decimals use a German decimal comma ("0,52" statt "0.52").
+// Plain String(format:) renders a point regardless of device locale, so every
+// visible number goes through deFormatted / bacFormatted instead.
+
+let germanLocale = Locale(identifier: "de_DE")
 
 extension Double {
-    var bacFormatted: String { String(format: "%.2f", self) }
+    /// German-locale decimal string with the given fraction digits ("1,5").
+    func deFormatted(_ fractionDigits: Int = 1) -> String {
+        String(format: "%.\(fractionDigits)f", locale: germanLocale, self)
+    }
+
+    var bacFormatted: String { String(format: "%.2f", locale: germanLocale, self) }
 
     var asHoursMinutes: String {
         let h = Int(self)

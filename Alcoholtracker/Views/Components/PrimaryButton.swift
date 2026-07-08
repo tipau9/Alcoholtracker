@@ -30,7 +30,6 @@ struct PrimaryButton: View {
             .padding(.vertical, 16)
             .background(tint.opacity(isDisabled ? 0.4 : 1))
             .clipShape(RoundedRectangle(cornerRadius: 20))
-            .shadow(color: tint.opacity(isDisabled ? 0 : 0.3), radius: 8, x: 0, y: 4)
         }
         .buttonStyle(.pressable)
         .disabled(isDisabled)
@@ -57,7 +56,6 @@ struct FABButton: View {
             .padding(.vertical, 15)
             .background(Color.appAccent)
             .clipShape(Capsule())
-            .shadow(color: Color.appAccent.opacity(0.45), radius: 14, x: 0, y: 6)
         }
         .buttonStyle(.pressable)
     }

@@ -541,7 +541,7 @@ private struct QADrinkCard: View {
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("\(Int(template.volume)) ml · \(String(format: "%.1f", template.abv)) %")
+            Text("\(Int(template.volume)) ml · \(String(format: "%.1f", locale: germanLocale, template.abv)) %")
                 .font(.appMicro)
                 .foregroundStyle(Color.appTextDim)
 
@@ -627,7 +627,7 @@ private struct QADrinkRow: View {
                     .font(.appBody)
                     .foregroundStyle(Color.appText)
                     .lineLimit(1)
-                Text("\(Int(template.volume)) ml · \(String(format: "%.1f", template.abv)) %")
+                Text("\(Int(template.volume)) ml · \(String(format: "%.1f", locale: germanLocale, template.abv)) %")
                     .font(.appMicro)
                     .foregroundStyle(Color.appTextDim)
             }
@@ -714,7 +714,7 @@ private struct QABACBadge: View {
     private var tint: Color { contribution > 0.3 ? .statusOrange : .statusGreen }
 
     var body: some View {
-        Text(String(format: "+%.2f‰", contribution))
+        Text(String(format: "+%.2f‰", locale: germanLocale, contribution))
             .font(.appMicro)
             .foregroundStyle(tint)
             .padding(.horizontal, 7)
@@ -853,7 +853,7 @@ struct CustomBrandSheet: View {
 
     @State private var name = ""
     @State private var volumeText = "330"
-    @State private var abvText = "5.0"
+    @State private var abvText = "5,0"
 
     private var volume: Double {
         Double(volumeText.replacingOccurrences(of: ",", with: ".")) ?? 0
@@ -905,7 +905,7 @@ struct CustomBrandSheet: View {
                             )
                             QAFormField(
                                 label: "ALKOHOL",
-                                placeholder: "5.0",
+                                placeholder: "5,0",
                                 text: $abvText,
                                 suffix: "%",
                                 isNumeric: true
@@ -1069,7 +1069,7 @@ struct BarcodeCandidateSheet: View {
         self.onConfirm = onConfirm
         _name = State(initialValue: candidate.name)
         _volumeText = State(initialValue: "\(Int(candidate.volume))")
-        _abvText = State(initialValue: String(format: "%.1f", candidate.abv))
+        _abvText = State(initialValue: String(format: "%.1f", locale: germanLocale, candidate.abv))
         _category = State(initialValue: candidate.category)
     }
 
@@ -1113,7 +1113,7 @@ struct BarcodeCandidateSheet: View {
                         BCCategoryRow(category: $category)
                         HStack(spacing: 12) {
                             QAFormField(label: "MENGE", placeholder: "330", text: $volumeText, suffix: "ml", isNumeric: true)
-                            QAFormField(label: "ALKOHOL", placeholder: "5.0", text: $abvText, suffix: "%", isNumeric: true)
+                            QAFormField(label: "ALKOHOL", placeholder: "5,0", text: $abvText, suffix: "%", isNumeric: true)
                         }
                         if let bac = bacPreview {
                             QABACPreviewRow(contribution: bac)
@@ -1187,7 +1187,7 @@ private struct SipTemplatePicker: View {
                                         .clipShape(RoundedRectangle(cornerRadius: 8))
                                     VStack(alignment: .leading, spacing: 1) {
                                         Text(t.name).font(.appBody).foregroundStyle(Color.appText).lineLimit(1)
-                                        Text("\(t.abv, specifier: "%.1f")% vol").font(.appCaption).foregroundStyle(Color.appTextDim)
+                                        Text("\(t.abv.deFormatted(1))% vol").font(.appCaption).foregroundStyle(Color.appTextDim)
                                     }
                                     Spacer()
                                     Image(systemName: "hand.tap.fill").font(.system(size: 12)).foregroundStyle(Color.appAccent)
@@ -1376,7 +1376,7 @@ private struct QAMySavedMixRow: View {
                     .font(.appBody)
                     .foregroundStyle(Color.appText)
                     .lineLimit(1)
-                Text("\(Int(mix.totalVolume)) ml · \(String(format: "%.1f", mix.totalAbv)) %")
+                Text("\(Int(mix.totalVolume)) ml · \(String(format: "%.1f", locale: germanLocale, mix.totalAbv)) %")
                     .font(.appMicro)
                     .foregroundStyle(Color.appTextDim)
             }
@@ -1425,7 +1425,7 @@ private struct QACommunityMixRow: View {
                     .font(.appBody)
                     .foregroundStyle(Color.appText)
                     .lineLimit(1)
-                Text("\(row.ingredients.count) Zutaten · \(Int(row.totalVolume)) ml · \(String(format: "%.1f", row.totalAbv)) %")
+                Text("\(row.ingredients.count) Zutaten · \(Int(row.totalVolume)) ml · \(String(format: "%.1f", locale: germanLocale, row.totalAbv)) %")
                     .font(.appMicro)
                     .foregroundStyle(Color.appTextDim)
             }

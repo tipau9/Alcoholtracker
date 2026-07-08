@@ -260,7 +260,7 @@ struct TrendsView: View {
                 .chartYAxis {
                     AxisMarks { val in
                         if let v = val.as(Double.self) {
-                            AxisValueLabel("\(String(format: "%.1f", v)) ‰")
+                            AxisValueLabel("\(String(format: "%.1f", locale: germanLocale, v)) ‰")
                                 .foregroundStyle(Color.appTextDim)
                         }
                     }

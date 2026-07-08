@@ -313,7 +313,6 @@ private struct ONRulerPicker: View {
                 RoundedRectangle(cornerRadius: 2)
                     .fill(Color.appAccent)
                     .frame(width: 3, height: 56)
-                    .shadow(color: Color.appAccent.opacity(0.6), radius: 7)
                     .offset(y: -10)
                     .allowsHitTesting(false)
             }
@@ -765,9 +764,9 @@ private struct ONDrinkCard: View {
 
     private var meta: String {
         let vol = template.volume >= 1000
-            ? "\(String(format: "%.1f", template.volume / 1000).replacingOccurrences(of: ".", with: ",")) l"
+            ? "\(String(format: "%.1f", locale: germanLocale, template.volume / 1000)) l"
             : "\(Int(template.volume)) ml"
-        let abv = String(format: "%.1f", template.abv).replacingOccurrences(of: ".", with: ",")
+        let abv = String(format: "%.1f", locale: germanLocale, template.abv)
         return "\(vol) \u{00B7} \(abv)%"
     }
 

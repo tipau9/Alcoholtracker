@@ -67,7 +67,7 @@ struct DrinkEditSheet: View {
                         Text(drink.name)
                             .font(.appBodyBold)
                             .foregroundStyle(Color.appText)
-                        Text("\(String(format: "%.1f", drink.abv)) % Alk.")
+                        Text("\(String(format: "%.1f", locale: germanLocale, drink.abv)) % Alk.")
                             .font(.appCaption)
                             .foregroundStyle(Color.appTextDim)
                         if drink.mixerVolume > 0 {

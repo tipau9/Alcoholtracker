@@ -257,7 +257,7 @@ private struct SFBACCard: View {
             Divider().background(Color.appBorder.opacity(0.5))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(String(format: "%.2f", bac))
+                Text(String(format: "%.2f", locale: germanLocale, bac))
                     .font(.system(size: 56, weight: .light, design: .serif))
                     .foregroundStyle(status.color)
                     .monospacedDigit()

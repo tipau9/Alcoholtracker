@@ -850,7 +850,7 @@ private struct CareCard: View {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 0) {
-                    Text(String(format: "%.2f", member.estimatedBAC))
+                    Text(String(format: "%.2f", locale: germanLocale, member.estimatedBAC))
                         .font(.system(size: 38, weight: .light, design: .serif))
                         .foregroundStyle(member.bacStatus.color)
                         .monospacedDigit()
