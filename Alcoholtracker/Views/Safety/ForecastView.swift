@@ -7,14 +7,16 @@ struct ForecastView: View {
 
     let drinks: [Drink]
     let profile: UserProfile
+    let vomitTimes: [Date]
 
     @State private var targetTime: Date = Date().addingTimeInterval(3 * 3600)
     // Seeded from the user's driving limit in init so Probezeit drivers never see a 0,5 ‰ flash.
     @State private var targetBAC: Double
 
-    init(drinks: [Drink], profile: UserProfile) {
+    init(drinks: [Drink], profile: UserProfile, vomitTimes: [Date] = []) {
         self.drinks = drinks
         self.profile = profile
+        self.vomitTimes = vomitTimes
         _targetBAC = State(initialValue: profile.drivingLimit)
     }
 
@@ -31,7 +33,8 @@ struct ForecastView: View {
             profile: profile,
             at: targetTime,
             stomachStatus: profile.defaultStomachStatus,
-            conservative: profile.conservativeForSafety
+            conservative: profile.conservativeForSafety,
+            vomitTimes: vomitTimes
         )
     }
 

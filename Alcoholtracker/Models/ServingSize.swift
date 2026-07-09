@@ -67,6 +67,16 @@ extension ServingSize {
                 ServingSize(name: "Bowle-Schöpfer",    volumeML: 150,  icon: "wineglass",      description: nil),
                 ServingSize(name: "Pitcher",            volumeML: 1000, icon: "wineglass.fill", description: "Karaffe"),
             ]
+        case .water, .softDrink, .juice, .coffeeTea, .milk:
+            return [
+                ServingSize(name: "Glas",          volumeML: 200,  icon: "cup.and.saucer",   description: nil),
+                ServingSize(name: "Dose 0,25L",    volumeML: 250,  icon: "cylinder",         description: nil),
+                ServingSize(name: "Dose 0,33L",    volumeML: 330,  icon: "cylinder.fill",    description: nil),
+                ServingSize(name: "Flasche 0,5L",  volumeML: 500,  icon: "waterbottle.fill", description: nil),
+                ServingSize(name: "Flasche 0,75L", volumeML: 750,  icon: "waterbottle.fill", description: nil),
+                ServingSize(name: "Flasche 1L",    volumeML: 1000, icon: "waterbottle.fill", description: nil),
+                ServingSize(name: "Flasche 1,5L",  volumeML: 1500, icon: "waterbottle.fill", description: nil),
+            ]
         case .mixed:
             return [
                 ServingSize(name: "Dose 0,25L",    volumeML: 250, icon: "cylinder",           description: nil),

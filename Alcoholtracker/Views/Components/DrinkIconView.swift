@@ -155,6 +155,23 @@ extension DrinkIconView {
         case .liqueur, .fortified:
             return Asset.wineGlass
 
+        case .water:
+            return Asset.water
+
+        case .softDrink:
+            if has("cola", "spezi") { return Asset.cola }
+            if has("red bull", "monster", "energy", "effect", "mate") { return Asset.energy }
+            return Asset.soda
+
+        case .juice:
+            return Asset.orangeJuice
+
+        case .coffeeTea:
+            return nil
+
+        case .milk:
+            return nil
+
         case .cocktail:
             return Asset.cocktail
 

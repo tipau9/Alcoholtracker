@@ -203,7 +203,7 @@ final class SessionViewModel {
         ) {
             return hours * 3600
         }
-        return 24 * 3600   // target not reached within the 24h scan horizon
+        return 72 * 3600   // target not reached within the scan horizon
     }
 
     // MARK: - Insights & Warnings
@@ -317,6 +317,7 @@ final class SessionViewModel {
             mixerVolume: drink.mixerVolume,
             mixerWaterContent: drink.mixerWaterContent
         )
+        copy.drinkDurationMinutes = drink.drinkDurationMinutes
         addDrink(copy)
     }
 
@@ -343,7 +344,7 @@ final class SessionViewModel {
         }
     }
 
-    func updateDrink(_ drink: Drink, volume: Double, timestamp: Date) {
+    func updateDrink(_ drink: Drink, volume: Double, timestamp: Date, durationMinutes: Double) {
         guard volume > 0, drink.volume > 0 else { return }
         // Scale calories from original volume to avoid int-rounding accumulation across edits.
         let originalVolume = drink.volume
@@ -351,11 +352,21 @@ final class SessionViewModel {
         drink.calories = Int((Double(originalCalories) / originalVolume * volume).rounded())
         drink.volume = volume
         drink.timestamp = timestamp
+        drink.drinkDurationMinutes = durationMinutes
         try? modelContext?.save()
         // force: true -- the drink ID is unchanged after a volume/timestamp edit, so
         // the normal idempotency guard would skip recalculate(). Force bypasses it.
         loadTodaysDrinks(force: true)
         pushBACToWidget()
+    }
+
+    func finishDrinkNow(_ drink: Drink) {
+        drink.finish()
+        try? modelContext?.save()
+        loadTodaysDrinks(force: true)
+        pushBACToWidget()
+        rescheduleNotifications()
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     func resetSession() {
@@ -585,7 +596,14 @@ final class SessionViewModel {
         let water = WaterLog.loggedGlasses(
             forDay: Calendar.current.logicalDay(for: Date())
         ).map(Double.init)
-        return HangoverPredictor.predict(drinks: drinks, profile: profile, waterGlasses: water)
+        return HangoverPredictor.predict(
+            drinks: drinks,
+            profile: profile,
+            waterGlasses: water,
+            stomachStatus: stomachStatus,
+            conservative: conservative,
+            vomitTimes: vomitTimes
+        )
     }
 
     var bacCurve: [BACCalculator.BACPoint] {

@@ -11,21 +11,31 @@ import SwiftUI
 //   .appGentle  - slow value drift (BAC number, gauges, bars)
 
 extension Animation {
-    static let appSnappy = Animation.smooth(duration: 0.22)
-    static let appSpring = Animation.smooth(duration: 0.38)
-    static let appGentle = Animation.easeInOut(duration: 0.35)
+    static var appSnappy: Animation {
+        AppTheme.shared.reducedMotion ? .linear(duration: 0.01) : .smooth(duration: 0.22)
+    }
+
+    static var appSpring: Animation {
+        AppTheme.shared.reducedMotion ? .linear(duration: 0.01) : .smooth(duration: 0.38)
+    }
+
+    static var appGentle: Animation {
+        AppTheme.shared.reducedMotion ? .linear(duration: 0.01) : .easeInOut(duration: 0.35)
+    }
 }
 
 // MARK: - Shared transitions
 
 extension AnyTransition {
     /// Banner dropping in from the top (med warning, mood prompt, errors).
-    static let appBannerTop = AnyTransition.move(edge: .top)
-        .combined(with: .opacity)
+    static var appBannerTop: AnyTransition {
+        AppTheme.shared.reducedMotion ? .opacity : .move(edge: .top).combined(with: .opacity)
+    }
 
     /// Toast / card rising from the bottom (undo snackbar, unlock toast, sip counter).
-    static let appToastBottom = AnyTransition.move(edge: .bottom)
-        .combined(with: .opacity)
+    static var appToastBottom: AnyTransition {
+        AppTheme.shared.reducedMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity)
+    }
 }
 
 // MARK: - Pressable
@@ -39,9 +49,12 @@ struct PressableButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? scale : 1)
-            .opacity(configuration.isPressed ? 0.85 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .scaleEffect(AppTheme.shared.reducedMotion ? 1 : (configuration.isPressed ? scale : 1))
+            .opacity(AppTheme.shared.reducedMotion ? 1 : (configuration.isPressed ? 0.85 : 1))
+            .animation(
+                AppTheme.shared.reducedMotion ? .linear(duration: 0.01) : .easeOut(duration: 0.12),
+                value: configuration.isPressed
+            )
     }
 }
 

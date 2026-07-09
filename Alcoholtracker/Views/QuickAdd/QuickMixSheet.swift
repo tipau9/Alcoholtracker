@@ -14,6 +14,7 @@ struct QuickMixSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(SupabaseService.self) private var supabase
     @State private var shareConfirm = false
+    @State private var showShareConfirmation = false
 
     @Query(sort: [SortDescriptor(\DrinkTemplate.usageCount, order: .reverse)])
     private var allTemplates: [DrinkTemplate]
@@ -119,7 +120,7 @@ struct QuickMixSheet: View {
                 HStack(spacing: 12) {
                     // Share this mix to the community (same self-learning DB as
                     // the cocktail creator).
-                    Button(action: shareMix) {
+                    Button { showShareConfirmation = true } label: {
                         Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(canAdd ? Color.appAccent : Color.appTextMuted)
@@ -142,6 +143,12 @@ struct QuickMixSheet: View {
         .background(Color.appBackground)
         .presentationDetents([.large])
         .presentationDragIndicator(.hidden)
+        .confirmationDialog("Mix wirklich teilen?", isPresented: $showShareConfirmation, titleVisibility: .visible) {
+            Button("Teilen") { shareMix() }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Der Mix wird an die Community-Datenbank gesendet und kann nach Bestätigung für andere sichtbar werden.")
+        }
         .alert("Mix geteilt", isPresented: $shareConfirm) {
             Button("OK", role: .cancel) {}
         } message: {

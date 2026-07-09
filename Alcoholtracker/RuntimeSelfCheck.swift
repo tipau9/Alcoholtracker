@@ -72,6 +72,24 @@ enum RuntimeSelfCheck {
         checkInt("hangoverSingleBeer_isMildOrNone",
                  (hang == .none || hang == .mild) ? 1 : 0, 1)
 
+        let hydratedHigh = HangoverPredictor.predict(
+            peakBAC: 1.9,
+            durationHours: 5,
+            waterGlasses: 6,
+            drinksCount: 8
+        )
+        checkInt("hangover_1_9_notLethal",
+                 hydratedHigh == .lethal ? 0 : 1, 1)
+
+        let medicalAlarm = HangoverPredictor.predict(
+            peakBAC: 4.1,
+            durationHours: 5,
+            waterGlasses: 6,
+            drinksCount: 8
+        )
+        checkInt("hangover_4_1_lethal",
+                 medicalAlarm == .lethal ? 1 : 0, 1)
+
         // 8) Sobriety projection. Query from just after the absorption window, when
         //    BAC is near its peak: at the drink timestamp itself BAC is still ~0
         //    (nothing absorbed yet), so a from-timestamp query correctly returns 0.
@@ -287,7 +305,7 @@ enum RuntimeSelfCheck {
                 timestamp: Date().addingTimeInterval(-75 * 60))
             vm.addDrink(d23)
             let bac1 = vm.currentBAC
-            vm.updateDrink(d23, volume: 1000, timestamp: d23.timestamp)
+            vm.updateDrink(d23, volume: 1000, timestamp: d23.timestamp, durationMinutes: d23.drinkDurationMinutes)
             let bac2 = vm.currentBAC
             checkInt("updateDrinkRecalculates", (bac1 > 0.001 && bac2 > bac1) ? 1 : 0, 1)
         }

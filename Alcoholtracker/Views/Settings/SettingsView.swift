@@ -54,7 +54,6 @@ struct SettingsView: View {
                             SettingsMeasurementsSection(p: p, save: save)
                             SettingsThresholdSection(p: p, save: save)
                             SettingsAccessibilitySection(p: p, save: save)
-                            SettingsMedicationSection(p: p, save: save)
                             SettingsHealthKitSection(p: p, save: save)
                             achievementsSection
                             dataSection

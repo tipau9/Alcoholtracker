@@ -314,25 +314,17 @@ struct QuickAddSheet: View {
                         do {
                             // 1. Check community DB first (faster + grows with each scan)
                             if let row = try? await supabase.lookupCommunityBarcode(code) {
-                                if row.abv <= 0 {
-                                    barcodeError = "Alkoholfreie Getränke (0,0% Vol.) können nicht hinzugefügt werden."
-                                    return
-                                }
                                 barcodeCandidate = DrinkTemplateCandidate(
                                     name:     row.name,
                                     abv:      row.abv,
                                     barcode:  row.barcode,
                                     volume:   row.volume,
-                                    category: DrinkCategory(rawValue: row.category) ?? .beer
+                                    category: DrinkCategory(rawValue: row.category) ?? (row.abv > 0 ? .beer : .softDrink)
                                 )
                                 return
                             }
                             // 2. Fall back to Open Food Facts
                             if let candidate = try await BarcodeService.lookup(barcode: code) {
-                                if candidate.abv <= 0 {
-                                    barcodeError = "Alkoholfreie Getränke (0,0% Vol.) können nicht hinzugefügt werden."
-                                    return
-                                }
                                 barcodeCandidate = candidate
                             } else {
                                 // Not in any database: let the user enter it by
@@ -341,7 +333,7 @@ struct QuickAddSheet: View {
                                 // learns products that exist nowhere else.
                                 barcodeCandidate = DrinkTemplateCandidate(
                                     name: "", abv: 0, barcode: code,
-                                    volume: 330, category: .beer,
+                                    volume: 330, category: .softDrink,
                                     foundInDatabase: false
                                 )
                             }
@@ -1075,7 +1067,7 @@ struct BarcodeCandidateSheet: View {
 
     private var volume: Double { Double(volumeText.replacingOccurrences(of: ",", with: ".")) ?? 0 }
     private var abv: Double { Double(abvText.replacingOccurrences(of: ",", with: ".")) ?? 0 }
-    private var isValid: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty && volume > 0 && abv > 0 }
+    private var isValid: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty && volume > 0 && abv >= 0 }
 
     private var bacPreview: Double? {
         guard let p = profile, volume > 0, abv > 0 else { return nil }

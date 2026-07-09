@@ -412,58 +412,6 @@ struct SettingsAccessibilitySection: View {
     }
 }
 
-// MARK: - Medication (B3)
-
-struct SettingsMedicationSection: View {
-    let p: UserProfile
-    let save: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionLabel(text: "MEDIKAMENTE (AKTUELL)")
-            VStack(spacing: 0) {
-                ForEach(Array(MedicationFlag.allCases.enumerated()), id: \.element.rawValue) { idx, med in
-                    Toggle(isOn: Binding(
-                        get: { p.activeMedications.contains(med) },
-                        set: { on in
-                            var current = p.activeMedications
-                            if on { current.append(med) } else { current.removeAll { $0 == med } }
-                            p.activeMedications = current
-                            save()
-                        }
-                    )) {
-                        HStack(spacing: 12) {
-                            Image(systemName: med.symbolName)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(Color.appAccent)
-                                .frame(width: 22)
-                            Text(med.rawValue)
-                                .font(.appBody)
-                                .foregroundStyle(Color.appText)
-                        }
-                    }
-                    .tint(Color.appAccent)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    if idx < MedicationFlag.allCases.count - 1 {
-                        Divider().background(Color.appBorder).padding(.leading, 16)
-                    }
-                }
-            }
-            .background(Color.appCard)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(Color.appBorder, lineWidth: 0.5)
-            )
-
-            Text("Aktive Medikamente werden bei deinem ersten Drink des Abends als Hinweis angezeigt. Kein medizinischer Rat.")
-                .font(.appMicro)
-                .foregroundStyle(Color.appTextMuted)
-        }
-    }
-}
-
 // MARK: - Apple Health (B7)
 
 struct SettingsHealthKitSection: View {

@@ -15,6 +15,7 @@ struct DayDetailSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
+    @Query(sort: [SortDescriptor(\VomitEvent.timestamp)]) private var allVomitEvents: [VomitEvent]
 
     @State private var noteText: String = ""
     @State private var selectedMood: DayMood = .neutral
@@ -33,6 +34,14 @@ struct DayDetailSheet: View {
             .sorted { $0.timestamp < $1.timestamp }
     }
 
+    private var dayVomitTimes: [Date] {
+        let start = cal.date(bySettingHour: 6, minute: 0, second: 0, of: date) ?? cal.startOfDay(for: date)
+        let end   = cal.date(byAdding: .day, value: 1, to: start) ?? start
+        return allVomitEvents
+            .filter { $0.timestamp >= start && $0.timestamp < end }
+            .map(\.timestamp)
+    }
+
     private var existingNote: DayNote? {
         allNotes.first { cal.isDate($0.dayStart, inSameDayAs: date) }
     }
@@ -44,7 +53,8 @@ struct DayDetailSheet: View {
             drinks: dayDrinks,
             profile: p,
             stomachStatus: p.defaultStomachStatus,
-            conservative: p.conservativeForApp
+            conservative: p.conservativeForApp,
+            vomitTimes: dayVomitTimes
         )
     }
 
@@ -141,7 +151,9 @@ struct DayDetailSheet: View {
             DrinkEditSheet(
                 drink: drink,
                 profile: profile,
-                onSave: { volume, timestamp in updateDrink(drink, volume: volume, timestamp: timestamp) },
+                onSave: { volume, timestamp, duration in
+                    updateDrink(drink, volume: volume, timestamp: timestamp, durationMinutes: duration)
+                },
                 onDelete: { deleteDrink(drink) }
             )
         }
@@ -209,7 +221,13 @@ struct DayDetailSheet: View {
         let level: HangoverLevel = {
             guard let p = profile else { return .none }
             let water = WaterLog.loggedGlasses(forDay: date).map(Double.init)
-            return HangoverPredictor.predict(drinks: dayDrinks, profile: p, waterGlasses: water)
+            return HangoverPredictor.predict(
+                drinks: dayDrinks,
+                profile: p,
+                waterGlasses: water,
+                conservative: p.conservativeForApp,
+                vomitTimes: dayVomitTimes
+            )
         }()
 
         return HStack(spacing: 14) {
@@ -336,11 +354,12 @@ struct DayDetailSheet: View {
 
     // Same calorie scaling as SessionViewModel.updateDrink so edits behave
     // identically no matter where they happen.
-    private func updateDrink(_ drink: Drink, volume: Double, timestamp: Date) {
+    private func updateDrink(_ drink: Drink, volume: Double, timestamp: Date, durationMinutes: Double) {
         guard volume > 0, drink.volume > 0 else { return }
         drink.calories = Int((Double(drink.calories) / drink.volume * volume).rounded())
         drink.volume = volume
         drink.timestamp = timestamp
+        drink.drinkDurationMinutes = durationMinutes
         try? context.save()
     }
 
@@ -472,4 +491,3 @@ private struct DDSEmptyState: View {
         .padding(.vertical, 32)
     }
 }
-

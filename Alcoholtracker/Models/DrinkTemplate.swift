@@ -14,6 +14,11 @@ enum DrinkCategory: String, Codable, CaseIterable {
     case shot      = "shot"
     case cider     = "cider"
     case fortified = "fortified"
+    case water     = "water"
+    case softDrink = "softDrink"
+    case juice     = "juice"
+    case coffeeTea = "coffeeTea"
+    case milk      = "milk"
     case other     = "other"
 
     var localizedName: String {
@@ -28,6 +33,11 @@ enum DrinkCategory: String, Codable, CaseIterable {
         case .shot:      return "Shot"
         case .cider:     return "Cider"
         case .fortified: return "Likörwein"
+        case .water:     return "Wasser"
+        case .softDrink: return "Softdrink"
+        case .juice:     return "Saft"
+        case .coffeeTea: return "Kaffee und Tee"
+        case .milk:      return "Milch"
         case .other:     return "Sonstiges"
         }
     }
@@ -44,6 +54,11 @@ enum DrinkCategory: String, Codable, CaseIterable {
         case .shot:      return "flame.fill"
         case .cocktail:  return "wineglass.fill"
         case .mixed:     return "cylinder.fill"
+        case .water:     return "waterbottle.fill"
+        case .softDrink: return "cylinder.fill"
+        case .juice:     return "takeoutbag.and.cup.and.straw.fill"
+        case .coffeeTea: return "cup.and.saucer.fill"
+        case .milk:      return "drop.fill"
         case .other:     return "cup.and.saucer"
         }
     }
@@ -52,17 +67,18 @@ enum DrinkCategory: String, Codable, CaseIterable {
     var commonBottleSizes: [(label: String, volumeML: Double)] {
         switch self {
         case .spirits, .liqueur:
-            return [("Klein (0,2 L)", 200), ("Standard (0,5 L)", 500),
-                    ("Flasche (0,7 L)", 700), ("Liter (1,0 L)", 1000)]
+            return [("0,2 L", 200), ("0,5 L", 500),
+                    ("0,7 L", 700), ("1,0 L", 1000)]
         case .beer, .cider:
-            return [("Flasche (0,33 L)", 330), ("Flasche (0,5 L)", 500),
-                    ("Sixpack (6x0,33 L)", 1980), ("Kasten (20x0,5 L)", 10000)]
+            return [("0,25 L", 250), ("0,33 L", 330),
+                    ("0,5 L", 500), ("0,7 L", 700)]
         case .wine, .sparkling, .fortified:
-            return [("Halbe (0,375 L)", 375), ("Flasche (0,75 L)", 750),
-                    ("Magnum (1,5 L)", 1500)]
-        default:
-            return [("Klein (0,33 L)", 330), ("Standard (0,5 L)", 500),
-                    ("Gross (0,7 L)", 700), ("Liter (1,0 L)", 1000)]
+            return [("0,375 L", 375), ("0,7 L", 700),
+                    ("0,75 L", 750), ("1,5 L", 1500)]
+        case .water, .softDrink, .juice, .coffeeTea, .milk, .cocktail, .mixed, .shot, .other:
+            return [("0,33 L", 330), ("0,5 L", 500),
+                    ("0,7 L", 700), ("0,75 L", 750),
+                    ("1,0 L", 1000), ("1,5 L", 1500)]
         }
     }
 
@@ -72,7 +88,8 @@ enum DrinkCategory: String, Codable, CaseIterable {
         switch self {
         case .shot:                         return 0.75
         case .beer, .cider, .sparkling:     return 0.85
-        default:                            return 1.0
+        case .water, .softDrink, .juice, .coffeeTea, .milk, .cocktail, .mixed, .spirits, .liqueur, .wine, .fortified, .other:
+            return 1.0
         }
     }
 }

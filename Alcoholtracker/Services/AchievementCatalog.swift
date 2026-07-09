@@ -142,7 +142,9 @@ enum AchievementCatalog {
         // Vielfalt
         case "categories_3":    return Set(drinks.map(\.categoryRaw)).count >= 3
         case "categories_5":    return Set(drinks.map(\.categoryRaw)).count >= 5
-        case "categories_all":  return Set(drinks.map(\.categoryRaw)).count >= DrinkCategory.allCases.count
+        case "categories_all":
+            let alcoholicCategories: Set<DrinkCategory> = [.beer, .wine, .sparkling, .spirits, .liqueur, .cocktail, .mixed, .shot, .cider, .fortified, .other]
+            return alcoholicCategories.isSubset(of: Set(drinks.map(\.category)))
         case "abv_spectrum":
             return drinks.contains { $0.abv < 5 }
                 && drinks.contains { $0.abv >= 5 && $0.abv <= 20 }

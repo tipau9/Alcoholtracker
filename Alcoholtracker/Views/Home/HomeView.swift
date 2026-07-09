@@ -40,8 +40,6 @@ struct HomeView: View {
     @State private var amountTemplate: DrinkTemplate? = nil
     @State private var editingDrink: Drink? = nil
     @State private var showUnlockToast = false
-    @State private var showMedWarning = false
-    @State private var medWarningShownThisSession = false
     @State private var showMoodPrompt = false
     @State private var undoDismissTask: Task<Void, Never>? = nil
     // Lets the user drop back to the normal home for this session even while the
@@ -59,7 +57,16 @@ struct HomeView: View {
     // Composite key of BAC-relevant fields -- configure() only re-runs when one of these changes.
     private var bacConfigureKey: String {
         guard let p = profile else { return "" }
-        return "\(p.weight)-\(p.height)-\(p.genderRaw)-\(p.eliminationRate)-\(p.toleranceMode)-\(p.birthDate.timeIntervalSinceReferenceDate)"
+        return [
+            p.weight.description,
+            p.height.description,
+            p.genderRaw,
+            p.eliminationRate.description,
+            p.toleranceMode.description,
+            p.birthDate.timeIntervalSinceReferenceDate.description,
+            p.stomachStatusRaw,
+            p.conservativeEverywhere.description
+        ].joined(separator: "|")
     }
 
     private var alertCrew: [CrewMember] {
@@ -118,7 +125,14 @@ struct HomeView: View {
                     session: session,
                     skin: profile?.statusSkin ?? .standard,
                     showAddDrink: $showAddDrink,
-                    onExit: { withAnimation(.appSpring) { drunkModeDismissed = true } }
+                    onExit: {
+                        if profile?.largeText == true {
+                            profile?.largeText = false
+                            AppTheme.shared.sync(from: profile)
+                            try? context.save()
+                        }
+                        withAnimation(.appSpring) { drunkModeDismissed = true }
+                    }
                 )
             } else if (profile?.homeStyle ?? .detailed) == .minimal {
                 MinimalHomeView(session: session, showAddDrink: $showAddDrink, skin: profile?.statusSkin ?? .standard)
@@ -136,7 +150,7 @@ struct HomeView: View {
                 )
             }
 
-            if showMoodPrompt && !showMedWarning {
+            if showMoodPrompt {
                 VStack {
                     MorningMoodPrompt(
                         onSelect: { saveMoodForYesterday($0) },
@@ -150,18 +164,6 @@ struct HomeView: View {
                 }
                 .transition(.appBannerTop)
                 .zIndex(35)
-            }
-
-            if showMedWarning, let meds = profile?.activeMedications, !meds.isEmpty {
-                VStack {
-                    MedicationWarningBanner(medications: meds) {
-                        withAnimation(.appSpring) { showMedWarning = false }
-                    }
-                    .padding(.top, 8)
-                    Spacer()
-                }
-                .transition(.appBannerTop)
-                .zIndex(40)
             }
 
             // Sip counter overlay -- replaces bottom area while counting
@@ -269,7 +271,9 @@ struct HomeView: View {
             DrinkEditSheet(
                 drink: drink,
                 profile: profile,
-                onSave: { vol, ts in session.updateDrink(drink, volume: vol, timestamp: ts) },
+                onSave: { vol, ts, duration in
+                    session.updateDrink(drink, volume: vol, timestamp: ts, durationMinutes: duration)
+                },
                 onDelete: { session.removeDrink(drink, recordUndo: true) }
             )
         }
@@ -279,18 +283,6 @@ struct HomeView: View {
             if bac < (profile?.carefulThreshold ?? 0.8) { drunkModeDismissed = false }
             guard supabase.isSignedIn else { return }
             publishBACThrottled(bac)
-        }
-        .onChange(of: session.drinks.count) { old, new in
-            guard new > old, !medWarningShownThisSession,
-                  let meds = profile?.activeMedications, !meds.isEmpty else { return }
-            medWarningShownThisSession = true
-            withAnimation(.appSpring) {
-                showMedWarning = true
-            }
-            Task {
-                try? await Task.sleep(for: .seconds(6))
-                withAnimation(.appSpring) { showMedWarning = false }
-            }
         }
         .task(id: recentDrinks.map(\.id)) {
             // Keep the session in sync with edits made outside it (history tab,
@@ -406,6 +398,7 @@ private struct DetailedHomeView: View {
     @State private var sectionOrder: [String] = DetailedHomeView.defaultSectionOrder
     @State private var sectionFrames: [String: CGRect] = [:]
     @State private var draggingSection: String? = nil
+    @State private var dragSectionFrames: [String: CGRect] = [:]
     @State private var dragTranslation: CGFloat = 0
     @State private var dragCompensation: CGFloat = 0
 
@@ -585,6 +578,9 @@ private struct DetailedHomeView: View {
             if !widgetEditMode { sectionOrder = resolvedSectionOrder() }
         }
         .onPreferenceChange(SectionFramePreferenceKey.self) { sectionFrames = $0 }
+        .onDisappear {
+            persistWidgetEditIfNeeded()
+        }
         .sensoryFeedback(.impact(weight: .medium), trigger: widgetEditMode)
     }
 
@@ -749,7 +745,7 @@ private struct DetailedHomeView: View {
     }
 
     private func jiggleAngle(_ index: Int) -> Double {
-        guard widgetEditMode, draggingSection == nil else { return 0 }
+        guard widgetEditMode else { return 0 }
         let base = jiggle ? 0.7 : -0.7
         return index.isMultiple(of: 2) ? base : -base
     }
@@ -769,14 +765,16 @@ private struct DetailedHomeView: View {
                     .onChanged { value in
                         if draggingSection != id {
                             draggingSection = id
+                            dragSectionFrames = sectionFrames
                             dragCompensation = 0
                         }
                         dragTranslation = value.translation.height
-                        reorderIfNeeded(id, dragY: value.location.y)
+                        reorderIfNeeded(id)
                     }
                     .onEnded { _ in
                         withAnimation(.snappy(duration: 0.3)) {
                             draggingSection = nil
+                            dragSectionFrames = [:]
                             dragTranslation = 0
                             dragCompensation = 0
                         }
@@ -816,24 +814,42 @@ private struct DetailedHomeView: View {
         try? modelContext.save()
     }
 
-    private func reorderIfNeeded(_ id: String, dragY: CGFloat) {
+    private func reorderIfNeeded(_ id: String) {
         guard let fromIdx = sectionOrder.firstIndex(of: id) else { return }
-        for other in sectionOrder where other != id {
-            guard let frame = sectionFrames[other], frame.height > 0,
-                  dragY > frame.minY, dragY < frame.maxY,
-                  let toIdx = sectionOrder.firstIndex(of: other) else { continue }
-            let movingDown = toIdx > fromIdx
-            withAnimation(.snappy(duration: 0.25)) {
-                sectionOrder.move(
-                    fromOffsets: IndexSet(integer: fromIdx),
-                    toOffset: movingDown ? toIdx + 1 : toIdx
-                )
+        let frames = dragSectionFrames.isEmpty ? sectionFrames : dragSectionFrames
+        guard let draggedFrame = frames[id], draggedFrame.height > 0 else { return }
+
+        let draggedMidY = draggedFrame.midY + dragTranslation + dragCompensation
+
+        if fromIdx < sectionOrder.index(before: sectionOrder.endIndex) {
+            let nextID = sectionOrder[fromIdx + 1]
+            if let nextFrame = frames[nextID], draggedMidY > nextFrame.midY {
+                moveDraggingSection(from: fromIdx, to: fromIdx + 1, crossedFrame: nextFrame, draggedFrame: draggedFrame)
+                return
             }
-            // The dragged view's resting position jumped by the passed section's
-            // height; compensate so it stays under the finger.
-            dragCompensation += movingDown ? -frame.height : frame.height
-            break
         }
+
+        if fromIdx > sectionOrder.startIndex {
+            let previousID = sectionOrder[fromIdx - 1]
+            if let previousFrame = frames[previousID], draggedMidY < previousFrame.midY {
+                moveDraggingSection(from: fromIdx, to: fromIdx - 1, crossedFrame: previousFrame, draggedFrame: draggedFrame)
+            }
+        }
+    }
+
+    private func moveDraggingSection(from fromIdx: Int, to toIdx: Int, crossedFrame: CGRect, draggedFrame: CGRect) {
+        let visualDelta = crossedFrame.midY - draggedFrame.midY
+        withAnimation(.snappy(duration: 0.22)) {
+            sectionOrder.move(
+                fromOffsets: IndexSet(integer: fromIdx),
+                toOffset: toIdx > fromIdx ? toIdx + 1 : toIdx
+            )
+        }
+        // After the order changes, SwiftUI gives the dragged section a new
+        // resting slot. Offset it by the inverse slot delta so it stays under
+        // the finger instead of snapping back and forth during slow drags.
+        dragCompensation = -visualDelta
+        persistWidgetOrder()
     }
 
     private func resolvedSectionOrder() -> [String] {
@@ -852,6 +868,22 @@ private struct DetailedHomeView: View {
     private func exitWidgetEdit() {
         withAnimation(.easeInOut(duration: 0.15)) { jiggle = false }
         withAnimation(.snappy(duration: 0.3)) { widgetEditMode = false }
+        persistWidgetOrder()
+    }
+
+    private func persistWidgetEditIfNeeded() {
+        guard widgetEditMode else { return }
+        widgetEditMode = false
+        jiggle = false
+        draggingSection = nil
+        dragSectionFrames = [:]
+        dragTranslation = 0
+        dragCompensation = 0
+        persistWidgetOrder()
+    }
+
+    private func persistWidgetOrder() {
+        guard profile?.homeSectionOrder != sectionOrder else { return }
         profile?.homeSectionOrder = sectionOrder
         try? modelContext.save()
     }
@@ -883,8 +915,6 @@ private struct MinimalHomeView: View {
                         Text(session.currentBAC.bacFormatted)
                             .font(.system(size: 130, weight: .ultraLight, design: .serif))
                             .foregroundStyle(Color.appText)
-                            .contentTransition(.numericText(countsDown: false))
-                            .animation(.appGentle, value: session.currentBAC)
                             .monospacedDigit()
                             // Long-press to exit minimal mode without needing Settings
                             .contextMenu {
@@ -955,10 +985,11 @@ private struct DrunkHomeView: View {
     // "noch ca. Xh Ym bis nüchtern" - the one piece of forward info a drunk user wants.
     private var soberCountdown: String? {
         guard session.currentBAC > 0.01 else { return nil }
-        let secs = Int(session.timeUntilSober)
-        guard secs > 0 else { return nil }
-        let h = secs / 3600
-        let m = (secs % 3600) / 60
+        guard let hours = session.hoursUntil(0.0) else { return "> 72 h bis nüchtern" }
+        guard hours > 0 else { return nil }
+        let totalMinutes = Int((hours * 60).rounded())
+        let h = totalMinutes / 60
+        let m = totalMinutes % 60
         if h > 0 { return "noch ca. \(h) h \(m) min bis nüchtern" }
         return "noch ca. \(m) min bis nüchtern"
     }
@@ -992,8 +1023,6 @@ private struct DrunkHomeView: View {
                     Text(session.currentBAC.bacFormatted)
                         .font(.system(size: 150, weight: .ultraLight, design: .serif))
                         .foregroundStyle(session.bacStatus.color)
-                        .contentTransition(.numericText(countsDown: false))
-                        .animation(.appGentle, value: session.currentBAC)
                         .monospacedDigit()
                     Text("‰")
                         .font(.system(size: 40, weight: .ultraLight, design: .serif))
@@ -1161,6 +1190,8 @@ private struct BACDisplaySection: View {
     let trend: BACTrend
     let skin: StatusSkin
 
+    private var reducedMotion: Bool { AppTheme.shared.reducedMotion }
+
     // Subtle breathing of the glow behind the number while any alcohol is in
     // the system; static when sober.
     @State private var glowPulse = false
@@ -1178,37 +1209,38 @@ private struct BACDisplaySection: View {
                         )
                     )
                     .frame(width: 280, height: 280)
-                    .animation(.easeInOut(duration: 0.6), value: status)
-                    .scaleEffect(glowPulse ? 1.07 : 0.96)
-                    .opacity(glowPulse ? 1.0 : 0.72)
+                    .animation(reducedMotion ? nil : .easeInOut(duration: 0.6), value: status)
+                    .scaleEffect(reducedMotion ? 1.0 : (glowPulse ? 1.07 : 0.96))
+                    .opacity(reducedMotion ? 0.82 : (glowPulse ? 1.0 : 0.72))
                     .animation(
-                        bac > 0.01
+                        !reducedMotion && bac > 0.01
                             ? .easeInOut(duration: 2.4).repeatForever(autoreverses: true)
-                            : .easeInOut(duration: 0.4),
+                            : nil,
                         value: glowPulse
                     )
-                    .onAppear { glowPulse = bac > 0.01 }
-                    .onChange(of: bac > 0.01) { _, active in glowPulse = active }
+                    .onAppear { glowPulse = !reducedMotion && bac > 0.01 }
+                    .onChange(of: bac > 0.01) { _, active in glowPulse = !reducedMotion && active }
+                    .onChange(of: reducedMotion) { _, isReduced in
+                        glowPulse = !isReduced && bac > 0.01
+                    }
 
                 Circle()
                     .strokeBorder(status.color.opacity(0.20), lineWidth: 1)
                     .frame(width: 220, height: 220)
-                    .animation(.easeInOut(duration: 0.6), value: status)
+                    .animation(reducedMotion ? nil : .easeInOut(duration: 0.6), value: status)
 
                 VStack(spacing: 0) {
                     HStack(alignment: .lastTextBaseline, spacing: 6) {
                         Text(bac.bacFormatted)
                             .font(.appDisplay)
                             .foregroundStyle(Color.appText)
-                            .contentTransition(.numericText(countsDown: false))
-                            .animation(.appGentle, value: bac)
                             .monospacedDigit()
 
                         if bac > 0.01 {
                             Image(systemName: trend.symbol)
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundStyle(trend.tintColor)
-                                .animation(.easeInOut(duration: 0.3), value: trend)
+                                .animation(reducedMotion ? nil : .easeInOut(duration: 0.3), value: trend)
                         }
                     }
 
@@ -1552,7 +1584,7 @@ private struct HomeWidgetGrid: View {
         guard session.currentBAC > limit + 0.005 else {
             return session.currentBAC > 0.01 ? "Fahrbereit" : "Nüchtern"
         }
-        guard let h = session.hoursUntil(limit) else { return "> 24 h" }
+        guard let h = session.hoursUntil(limit) else { return "> 72 h" }
         return h <= 0 ? "Fahrbereit" : h.asHoursMinutes
     }
 
@@ -1737,6 +1769,7 @@ private struct DrinkHistorySection: View {
                     drink: drink,
                     onDelete: { session.removeDrink(drink, recordUndo: true) },
                     onDuplicate: { session.duplicateDrink(drink) },
+                    onFinish: { session.finishDrinkNow(drink) },
                     onEdit: { onEdit(drink) }
                 )
             }
@@ -1748,6 +1781,7 @@ private struct DrinkRowView: View {
     let drink: Drink
     let onDelete: () -> Void
     let onDuplicate: () -> Void
+    let onFinish: () -> Void
     let onEdit: () -> Void
 
     // Custom swipe: the home list is a ScrollView, not a List, so the SwiftUI
@@ -1777,9 +1811,28 @@ private struct DrinkRowView: View {
 
             Spacer()
 
-            Text(drink.timestamp.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute()))
-                .font(.appMicro)
-                .foregroundStyle(Color.appTextMuted)
+            HStack(spacing: 8) {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(drink.timestamp.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute()))
+                        .font(.appMicro)
+                        .foregroundStyle(Color.appTextMuted)
+                    Text("bis \(drink.estimatedFinishedAt.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute()))")
+                        .font(.appMicro)
+                        .foregroundStyle(Color.appTextMuted)
+                }
+
+                if Date() < drink.estimatedFinishedAt {
+                    Button(action: onFinish) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(Color.statusGreen)
+                            .frame(width: 34, height: 34)
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Jetzt fertig")
+                }
+            }
         }
         .padding(12)
         .background(Color.appCard)
@@ -1919,70 +1972,6 @@ private struct AchievementUnlockToast: View {
             .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
         }
         .buttonStyle(.pressable)
-        .padding(.horizontal, 20)
-    }
-}
-
-// MARK: - Medication Warning Banner (B3)
-
-private struct MedicationWarningBanner: View {
-    let medications: [MedicationFlag]
-    let onDismiss: () -> Void
-
-    private var topMed: MedicationFlag { medications.first ?? .ibuprofen }
-
-    // Names of the other active meds, so the banner reflects every one the user
-    // configured instead of silently ignoring all but the first.
-    private var othersText: String? {
-        let rest = medications.dropFirst().map(\.rawValue)
-        return rest.isEmpty ? nil : "Auch aktiv: " + rest.joined(separator: ", ")
-    }
-
-    var body: some View {
-        Button(action: onDismiss) {
-            HStack(spacing: 12) {
-                Image(systemName: "pills.fill")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Color.statusOrange)
-                    .frame(width: 36, height: 36)
-                    .background(Color.statusOrange.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(medications.count > 1
-                         ? "Medikamenten-Hinweis (\(medications.count) aktiv)"
-                         : "Medikamenten-Hinweis")
-                        .font(.appMicro)
-                        .foregroundStyle(Color.appTextDim)
-                    Text("\(topMed.rawValue): \(topMed.warningText)")
-                        .font(.appCaptionBold)
-                        .foregroundStyle(Color.appText)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if let othersText {
-                        Text(othersText)
-                            .font(.appMicro)
-                            .foregroundStyle(Color.appTextDim)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Text("Kein medizinischer Rat.")
-                        .font(.appMicro)
-                        .foregroundStyle(Color.appTextMuted)
-                }
-                Spacer()
-                Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.appTextDim)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .glassCard(cornerRadius: 16)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(Color.statusOrange.opacity(0.4), lineWidth: 0.5)
-            )
-            .shadow(color: .black.opacity(0.3), radius: 10, y: 4)
-        }
-        .buttonStyle(.plain)
         .padding(.horizontal, 20)
     }
 }
@@ -2146,7 +2135,7 @@ private struct MilestoneCard: View {
     @ViewBuilder
     private func countdownPill(hours: Double?) -> some View {
         let (text, color): (String, Color) = {
-            guard let h = hours else { return ("> 24 h", Color.statusOrange) }
+            guard let h = hours else { return ("> 72 h", Color.statusOrange) }
             guard h > 0 else { return ("Jetzt", Color.statusGreen) }
             let totalMinutes = Int((h * 60).rounded())
             if totalMinutes < 60 { return ("in \(totalMinutes) min", Color.appAccent) }

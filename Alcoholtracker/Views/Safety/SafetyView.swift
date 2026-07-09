@@ -12,6 +12,7 @@ struct SafetyView: View {
     @Environment(SupabaseService.self) private var supabase
     @Query private var profiles: [UserProfile]
     @Query private var allDrinks: [Drink]
+    @Query private var allVomitEvents: [VomitEvent]
     @State private var now = Date()
     @State private var locationService = LocationService()
     @State private var showRidePicker = false
@@ -26,6 +27,10 @@ struct SafetyView: View {
             filter: #Predicate { $0.timestamp >= cutoff },
             sort: \.timestamp
         )
+        _allVomitEvents = Query(
+            filter: #Predicate { $0.timestamp >= cutoff },
+            sort: \.timestamp
+        )
     }
 
     private var profile: UserProfile? { profiles.first }
@@ -35,12 +40,20 @@ struct SafetyView: View {
         return allDrinks.filter { $0.timestamp >= logicalStart }
     }
 
+    private var todaysVomitTimes: [Date] {
+        let logicalStart = Calendar.current.logicalDayStart(for: now)
+        return allVomitEvents
+            .filter { $0.timestamp >= logicalStart }
+            .map(\.timestamp)
+    }
+
     private var currentBAC: Double {
         guard let p = profile else { return 0 }
         // Use the same conservative setting as the readiness timers below so the big
         // headline pegel and the Nüchtern/Fahrbereit times are derived from one curve.
         return BACCalculator.currentBAC(drinks: todaysDrinks, profile: p, at: now,
-                                        stomachStatus: stomachStatus, conservative: p.conservativeForSafety)
+                                        stomachStatus: stomachStatus, conservative: p.conservativeForSafety,
+                                        vomitTimes: todaysVomitTimes)
     }
 
     private var stomachStatus: StomachStatus { profile?.defaultStomachStatus ?? .light }
@@ -56,7 +69,8 @@ struct SafetyView: View {
         // Fahrbereit/Nüchtern times are worst-case when the user wants them safe.
         return BACCalculator.hoursUntilBAC(
             target, drinks: todaysDrinks, profile: p, from: now,
-            stomachStatus: stomachStatus, conservative: p.conservativeForSafety)
+            stomachStatus: stomachStatus, conservative: p.conservativeForSafety,
+            vomitTimes: todaysVomitTimes)
     }
 
     // MARK: Body
@@ -78,7 +92,7 @@ struct SafetyView: View {
                         timersSection
                         driveModeSection
                         if let p = profile {
-                            ForecastView(drinks: todaysDrinks, profile: p)
+                            ForecastView(drinks: todaysDrinks, profile: p, vomitTimes: todaysVomitTimes)
                         }
                         actionsSection
                         SFDisclaimer()
@@ -292,7 +306,7 @@ private struct SFTimerRow: View {
     let icon: String
     let iconColor: Color
     // hoursUntilBAC returns 0 when the BAC is ALREADY at/below the target and
-    // nil when it will NOT be reached within the 24h forecast window (still far
+    // nil when it will NOT be reached within the forecast window (still far
     // off, e.g. a very high current BAC). Those two must read differently: only
     // 0 means "ready"; nil must show it is more than a day away so the safety
     // screen never tells an intoxicated user they are already nüchtern.
@@ -309,7 +323,7 @@ private struct SFTimerRow: View {
     }
 
     private var displayText: String {
-        guard let h = hours else { return "> 24 h" }
+        guard let h = hours else { return "> 72 h" }
         guard h > 0 else { return readyLabel }
         let totalMin = Int(h * 60)
         let hr = totalMin / 60

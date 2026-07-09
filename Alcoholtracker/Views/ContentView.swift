@@ -33,22 +33,29 @@ struct ContentView: View {
 // MARK: - MainTabView
 
 struct MainTabView: View {
+    @SceneStorage("mainTabSelection") private var selectedTab = "home"
+
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             HomeView()
                 .tabItem { Label("Home", systemImage: "house.fill") }
+                .tag("home")
 
             HistoryView()
                 .tabItem { Label("Verlauf", systemImage: "calendar") }
+                .tag("history")
 
             CrewView()
                 .tabItem { Label("Freunde", systemImage: "person.3.fill") }
+                .tag("crew")
 
             SafetyView()
                 .tabItem { Label("Sicher", systemImage: "shield.fill") }
+                .tag("safety")
 
             SettingsView()
                 .tabItem { Label("Profil", systemImage: "person.fill") }
+                .tag("settings")
         }
         .tint(Color.appAccent)
         .preferredColorScheme(.dark)

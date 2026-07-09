@@ -1,36 +1,32 @@
 import Foundation
 
 // MARK: - DrinkDurationEstimator
-// Estimates how many minutes it takes to drink a given beverage.
-// Used by BACCalculator to spread absorption over the actual drinking window
-// instead of modelling all alcohol as a single instantaneous bolus.
 
+// Estimates how many minutes a drink takes based on beverage type and volume.
+// BACCalculator uses this as the default drinking window when the user has not
+// entered a custom estimate.
 enum DrinkDurationEstimator {
-
     static func estimate(category: DrinkCategory, volumeML: Double) -> Double {
         let minutesPerML: Double
         switch category {
         case .shot:
             return 1
         case .spirits:
-            // Sipped neat, but not absurdly slowly: at 0.50 a 200 ml pour implied a
-            // 100 min drinking window, which (being longer than gastric emptying)
-            // stretched absorption and subtracted ~0.25 permille of elimination,
-            // pushing the shown peak well below reality. 0.35 keeps a realistic sip
-            // pace while letting gastric emptying gate absorption for normal pours.
             minutesPerML = 0.35
         case .liqueur:
             minutesPerML = 0.30
         case .beer, .cider:
-            minutesPerML = 0.06  // 500 ml ~ 30 min
+            minutesPerML = 0.16   // 500 ml ~ 80 min
         case .wine, .sparkling:
-            minutesPerML = 0.12  // 200 ml ~ 24 min
+            minutesPerML = 0.18   // 200 ml ~ 36 min
         case .cocktail:
-            minutesPerML = 0.10
+            minutesPerML = 0.12
         case .mixed:
-            minutesPerML = 0.08
+            minutesPerML = 0.14
         case .fortified:
-            minutesPerML = 0.15  // sherry / port, sipped slowly
+            minutesPerML = 0.15
+        case .water, .softDrink, .juice, .coffeeTea, .milk:
+            minutesPerML = 0.04
         case .other:
             minutesPerML = 0.08
         }

@@ -7,7 +7,7 @@ struct DrinkEditSheet: View {
 
     let drink: Drink
     let profile: UserProfile?
-    let onSave: (Double, Date) -> Void
+    let onSave: (Double, Date, Double) -> Void
     let onDelete: () -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -19,7 +19,7 @@ struct DrinkEditSheet: View {
     init(
         drink: Drink,
         profile: UserProfile?,
-        onSave: @escaping (Double, Date) -> Void,
+        onSave: @escaping (Double, Date, Double) -> Void,
         onDelete: @escaping () -> Void
     ) {
         self.drink = drink
@@ -44,6 +44,18 @@ struct DrinkEditSheet: View {
             profile: p, stomachStatus: p.defaultStomachStatus,
             drinkDurationMinutes: durationMinutes, conservative: p.conservativeForApp
         )
+    }
+
+    private var autoDurationMinutes: Double {
+        DrinkDurationEstimator.estimate(category: drink.category, volumeML: volume)
+    }
+
+    private var effectiveDurationMinutes: Double {
+        durationMinutes > 0 ? durationMinutes : autoDurationMinutes
+    }
+
+    private var estimatedEndTime: Date {
+        timestamp.addingTimeInterval(effectiveDurationMinutes * 60)
     }
 
     var body: some View {
@@ -122,8 +134,11 @@ struct DrinkEditSheet: View {
 
                         VStack(alignment: .leading, spacing: 8) {
                             SectionLabel(text: "TRINKDAUER")
-                            DurationChipRow(durationMinutes: $durationMinutes)
-                            Text("Über welchen Zeitraum getrunken. Längere Dauer verteilt die Aufnahme und senkt den Peak.")
+                            DurationChipRow(
+                                durationMinutes: $durationMinutes,
+                                estimatedMinutes: autoDurationMinutes
+                            )
+                            Text("Start \(timestamp.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute())) · fertig ca. \(estimatedEndTime.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute()))")
                                 .font(.appMicro)
                                 .foregroundStyle(Color.appTextMuted)
                         }
@@ -168,9 +183,7 @@ struct DrinkEditSheet: View {
                         }
 
                         PrimaryButton(title: "Speichern", icon: "checkmark", isDisabled: !isValid) {
-                            // Persisted via the same context save onSave triggers.
-                            drink.drinkDurationMinutes = durationMinutes
-                            onSave(volume, timestamp)
+                            onSave(volume, timestamp, durationMinutes)
                             dismiss()
                         }
 

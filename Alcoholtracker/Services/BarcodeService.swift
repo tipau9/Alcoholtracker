@@ -65,30 +65,64 @@ enum BarcodeService {
             ?? positive(parseNumber(nutriments?["alcohol_100g"]))
             ?? 0
 
-        // Quantity string like "330 ml", "33 cl", or "0.5 l"
-        var volume: Double = 330
-        if let qStr = product["quantity"] as? String {
-            let nums = qStr.components(separatedBy: CharacterSet.letters.union(.whitespaces))
-            if let v = Double(nums.joined().trimmingCharacters(in: .whitespaces)) {
-                let lower = qStr.lowercased()
-                if lower.contains("ml") {
-                    volume = v
-                } else if lower.contains("cl") {
-                    volume = v * 10
-                } else if lower.contains("l") {
-                    volume = v * 1000
-                } else {
-                    volume = v
-                }
-            }
+        var quantityParts = [
+            product["quantity"] as? String,
+            product["product_quantity"] as? String,
+            product["serving_size"] as? String
+        ].compactMap { $0 }
+        if let quantity = parseNumber(product["product_quantity"]) {
+            quantityParts.append(String(quantity))
         }
+        if let unit = product["product_quantity_unit"] as? String {
+            quantityParts.append(unit)
+        }
+        let quantityText = quantityParts.joined(separator: " ")
+        let volume = parseVolumeML(from: quantityText) ?? 330
 
-        var category: DrinkCategory = .beer
-        let cats = (product["categories"] as? String ?? "").lowercased()
-        if cats.contains("wine") || cats.contains("wein") { category = .wine }
-        else if cats.contains("spirit") || cats.contains("whisky") || cats.contains("vodka") { category = .spirits }
-        else if cats.contains("cider") { category = .cider }
+        var tags: [String] = [productName]
+        if let categories = product["categories"] as? String { tags.append(categories) }
+        if let genericName = product["generic_name"] as? String { tags.append(genericName) }
+        if let categoryTags = product["categories_tags"] as? [String] { tags.append(contentsOf: categoryTags) }
+        if let hierarchy = product["categories_hierarchy"] as? [String] { tags.append(contentsOf: hierarchy) }
+        let category = inferCategory(from: tags, abv: abv)
 
         return DrinkTemplateCandidate(name: productName, abv: abv, barcode: barcode, volume: volume, category: category)
+    }
+
+    private static func parseVolumeML(from text: String) -> Double? {
+        let normalized = text
+            .lowercased()
+            .replacingOccurrences(of: ",", with: ".")
+            .replacingOccurrences(of: "ℓ", with: "l")
+        let pattern = #"(\d+(?:\.\d+)?)\s*(ml|milliliter|cl|centiliter|l|liter|litre)\b"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: normalized, range: NSRange(normalized.startIndex..., in: normalized)),
+              let valueRange = Range(match.range(at: 1), in: normalized),
+              let unitRange = Range(match.range(at: 2), in: normalized),
+              let value = Double(normalized[valueRange])
+        else { return nil }
+
+        let unit = String(normalized[unitRange])
+        if unit.hasPrefix("ml") || unit.hasPrefix("milli") { return value }
+        if unit.hasPrefix("cl") || unit.hasPrefix("centi") { return value * 10 }
+        return value * 1000
+    }
+
+    private static func inferCategory(from tags: [String], abv: Double) -> DrinkCategory {
+        let text = tags.joined(separator: " ").lowercased()
+        func has(_ needles: String...) -> Bool { needles.contains { text.contains($0) } }
+
+        if has("wine", "wein", "vino", "vin ") { return .wine }
+        if has("sparkling", "champagne", "sekt", "prosecco", "cava") { return .sparkling }
+        if has("spirit", "whisky", "whiskey", "vodka", "wodka", "rum", "gin", "tequila", "schnaps") { return .spirits }
+        if has("liqueur", "likör", "likoer") { return .liqueur }
+        if has("cider") { return .cider }
+        if has("beer", "bier", "cerveza", "biere") { return .beer }
+        if has("water", "wasser", "mineral-water", "eau-minerale", "still-water", "sparkling-water") { return .water }
+        if has("juice", "saft", "jus", "nectar", "smoothie") { return .juice }
+        if has("coffee", "kaffee", "café", "tea", "tee", "iced-tea", "eistee") { return .coffeeTea }
+        if has("milk", "milch", "yoghurt-drink", "kefir") { return .milk }
+        if has("soda", "soft-drink", "soft drink", "cola", "lemonade", "limonade", "energy-drink", "isotonic") { return .softDrink }
+        return abv > 0 ? .beer : .softDrink
     }
 }

@@ -291,7 +291,7 @@ enum BACCalculator {
     // MARK: - Time projection (forward scan, accounts for absorption)
 
     /// Hours until BAC reaches or drops below target. Returns 0 if already there,
-    /// nil if it won't happen within 24 hours.
+    /// nil if it won't happen within the forecast horizon.
     static func hoursUntilBAC(
         _ targetBAC: Double,
         drinks: [Drink],
@@ -299,14 +299,15 @@ enum BACCalculator {
         from now: Date = Date(),
         stomachStatus: StomachStatus = .light,
         conservative: Bool = false,
-        vomitTimes: [Date] = []
+        vomitTimes: [Date] = [],
+        maxHours: Double = 72.0
     ) -> Double? {
-        // Sample the next 24h in one integration (2-minute grid) and return the
+        // Sample the forecast horizon in one integration (2-minute grid) and return the
         // first crossing, linearly interpolated between the bracketing samples.
         // A forward scan handles a still-rising curve correctly, unlike the old
         // monotonicity-assuming binary search, and costs one pass instead of ~60.
         let stepMin = 2.0
-        let steps = Int(24.0 * 60.0 / stepMin)
+        let steps = max(1, Int(max(0, maxHours) * 60.0 / stepMin))
         let dates = (0...steps).map { now.addingTimeInterval(Double($0) * stepMin * 60.0) }
         let bacs = sampledBAC(drinks: drinks, profile: profile, at: dates,
                               stomachStatus: stomachStatus, conservative: conservative,
