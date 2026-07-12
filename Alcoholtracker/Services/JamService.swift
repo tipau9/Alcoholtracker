@@ -135,6 +135,8 @@ final class JamService {
     // Draw id of the roulette already presented, so the same draw arriving over
     // both transports (Bluetooth + server poll) is shown at most once.
     private var lastRouletteID: UUID?
+    private var lastRouletteStarterID: UUID?
+    private var lastRouletteReceivedAt: Date?
 
     // CRDT tombstones: participants who left/were kicked recently, so a stale
     // broadcast arriving late (e.g. after an offline peer reconnects) cannot
@@ -230,15 +232,36 @@ final class JamService {
     // MARK: Round roulette
 
     // Picks a random participant to buy the next round and broadcasts the draw so
-    // every peer shows the same spin and loser. Anyone in the jam can start one.
+    // every peer shows the same spin and loser. Anyone can start a fresh game;
+    // only its starter can replace it during the active 120-second window.
     func startRoulette() {
+        startRoulette(replacing: nil)
+    }
+
+    func canRerollRoulette(_ payload: JamRoulettePayload) -> Bool {
+        payload.jamID == currentJam?.id && payload.starterID == myParticipantID
+    }
+
+    func rerollRoulette(_ payload: JamRoulettePayload) {
+        guard canRerollRoulette(payload) else { return }
+        startRoulette(replacing: payload)
+    }
+
+    private func startRoulette(replacing previous: JamRoulettePayload?) {
         guard let jam = currentJam else { return }
+        if let previous {
+            guard previous.jamID == jam.id, previous.starterID == myParticipantID else { return }
+        } else if let receivedAt = lastRouletteReceivedAt,
+                  Date().timeIntervalSince(receivedAt) <= 120 {
+            guard lastRouletteStarterID == myParticipantID else { return }
+        }
         let names = jam.participants.map(\.displayName)
         guard names.count >= 2 else { return }
         let winner = Int.random(in: 0..<names.count)
         let starter = supabase.myProfile?.displayName ?? "Jemand"
         let payload = JamRoulettePayload(
-            jamID: jam.id, participants: names, winnerIndex: winner, starterName: starter
+            jamID: jam.id, participants: names, winnerIndex: winner,
+            starterName: starter, starterID: myParticipantID
         )
         multipeer.broadcastRoulette(payload)
         presentRoulette(payload)     // show it locally too (and record the draw id)
@@ -254,6 +277,8 @@ final class JamService {
         guard payload.jamID == currentJam?.id else { return }
         guard payload.id != lastRouletteID else { return }
         lastRouletteID = payload.id
+        lastRouletteStarterID = payload.starterID
+        lastRouletteReceivedAt = Date()
         incomingRoulette = payload
     }
 
@@ -419,6 +444,8 @@ final class JamService {
         waterScores.removeAll()        // games are per-jam; do not leak into the next
         incomingRoulette = nil
         lastRouletteID = nil
+        lastRouletteStarterID = nil
+        lastRouletteReceivedAt = nil
         amHost = false
         confirmedOnServer = false
         currentJam = nil               // immediate: UI transitions to lobby right away

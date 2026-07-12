@@ -41,17 +41,21 @@ struct JamRoulettePayload: Codable, Identifiable {
     let participants: [String]
     let winnerIndex: Int
     let starterName: String
+    /// Stable participant identity of the person who started this draw.
+    /// Nil only for payloads produced by older app versions.
+    let starterID: UUID?
 
-    init(id: UUID = UUID(), jamID: UUID, participants: [String], winnerIndex: Int, starterName: String) {
+    init(id: UUID = UUID(), jamID: UUID, participants: [String], winnerIndex: Int, starterName: String, starterID: UUID?) {
         self.id = id
         self.jamID = jamID
         self.participants = participants
         self.winnerIndex = winnerIndex
         self.starterName = starterName
+        self.starterID = starterID
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, jamID, participants, winnerIndex, starterName
+        case id, jamID, participants, winnerIndex, starterName, starterID
     }
 
     init(from decoder: Decoder) throws {
@@ -61,6 +65,7 @@ struct JamRoulettePayload: Codable, Identifiable {
         self.participants = try c.decode([String].self, forKey: .participants)
         self.winnerIndex  = try c.decode(Int.self, forKey: .winnerIndex)
         self.starterName  = try c.decode(String.self, forKey: .starterName)
+        self.starterID    = try c.decodeIfPresent(UUID.self, forKey: .starterID)
     }
 }
 

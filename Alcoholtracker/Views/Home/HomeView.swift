@@ -129,7 +129,7 @@ struct HomeView: View {
             if isDrunkMode {
                 DrunkHomeView(
                     session: session,
-                    skin: profile?.statusSkin ?? .standard,
+                    profile: profile,
                     showAddDrink: $showAddDrink,
                     onExit: {
                         if profile?.largeText == true {
@@ -255,7 +255,9 @@ struct HomeView: View {
                 onBottleDrink: { template, size, start, current in
                     session.addBottleDrink(template: template, bottleSize: size,
                                            startLevel: start, currentLevel: current)
-                    pingCityTrend(name: template.name, category: template.category.rawValue)
+                    if let latest = session.drinks.max(by: { $0.timestamp < $1.timestamp }) {
+                        pingCityTrend(drink: latest)
+                    }
                 },
                 onStartSipCounter: { template in
                     session.startSipCounter(for: template)
@@ -345,12 +347,21 @@ struct HomeView: View {
     }
 
     private func pingCityTrend(drink: Drink) {
-        pingCityTrend(name: drink.name, category: drink.categoryRaw)
-    }
-
-    private func pingCityTrend(name: String, category: String) {
+        guard UserDefaults.standard.bool(forKey: "shareAnonymousCityInsights") else { return }
         guard let city = locationService.currentCity else { return }
-        Task { await supabase.pingCityDrink(city: city, drinkName: name, category: category) }
+        let sessionMinutes = Int(Date().timeIntervalSince(
+            session.drinks.map(\.timestamp).min() ?? drink.timestamp
+        ) / 60)
+        Task {
+            await supabase.pingCityDrink(
+                city: city,
+                drinkName: drink.name,
+                category: drink.categoryRaw,
+                currentBAC: session.currentBAC,
+                sessionDurationMinutes: sessionMinutes,
+                drinkDurationMinutes: Int(drink.effectiveDrinkDurationMinutes.rounded())
+            )
+        }
     }
 }
 
@@ -407,6 +418,7 @@ private struct DetailedHomeView: View {
     @State private var sectionFrames: [String: CGRect] = [:]
     @State private var draggingSection: String? = nil
     @State private var dragSectionFrames: [String: CGRect] = [:]
+    @State private var dragInitialOrder: [String] = []
     @State private var dragTranslation: CGFloat = 0
     @State private var dragCompensation: CGFloat = 0
 
@@ -544,8 +556,8 @@ private struct DetailedHomeView: View {
                             .padding(.top, 16)
                     }
 
-                    ForEach(Array(sectionOrder.enumerated()), id: \.element) { index, id in
-                        sectionView(for: id, index: index)
+                    ForEach(sectionOrder, id: \.self) { id in
+                        sectionView(for: id)
                     }
 
                     Text("Widmark-Schätzwert. Müdigkeit, Medikamente und individuelle Faktoren können stark abweichen. Kein Ersatz für einen Atemtest. Im Zweifel nicht fahren.")
@@ -558,8 +570,10 @@ private struct DetailedHomeView: View {
                 }
             }
             .coordinateSpace(name: "homeScroll")
+            .scrollDisabled(draggingSection != nil)
             .animation(.appSpring, value: session.pacingWarning)
             .onPreferenceChange(QAScrollOffsetPreferenceKey.self) { y in
+                guard draggingSection == nil else { return }
                 // y starts near 0 and goes negative as the content scrolls up.
                 let t = min(max(-y / 150, 0), 1)
                 withAnimation(.easeOut(duration: 0.12)) { heroCollapse = t }
@@ -612,9 +626,9 @@ private struct DetailedHomeView: View {
     }
 
     @ViewBuilder
-    private func sectionView(for id: String, index: Int) -> some View {
+    private func sectionView(for id: String) -> some View {
         if widgetEditMode {
-            editableSection(id: id, index: index)
+            editableSection(id: id)
         } else if isSectionActive(id) && sectionHasContent(id) {
             sectionContent(id)
         }
@@ -726,7 +740,7 @@ private struct DetailedHomeView: View {
     }
 
     @ViewBuilder
-    private func editableSection(id: String, index: Int) -> some View {
+    private func editableSection(id: String) -> some View {
         Group {
             if sectionHasContent(id) {
                 sectionContent(id)
@@ -738,7 +752,7 @@ private struct DetailedHomeView: View {
         .opacity(isSectionActive(id) ? 1 : 0.35)
         .overlay(alignment: .topLeading) { dragHandle(id) }
         .overlay(alignment: .topTrailing) { sectionToggle(id) }
-        .rotationEffect(.degrees(jiggleAngle(index)))
+        .rotationEffect(.degrees(jiggleAngle(id)))
         .offset(y: draggingSection == id ? dragTranslation + dragCompensation : 0)
         .scaleEffect(draggingSection == id ? 1.02 : 1)
         .zIndex(draggingSection == id ? 10 : 0)
@@ -750,43 +764,57 @@ private struct DetailedHomeView: View {
                 )
             }
         )
-        .animation(.snappy(duration: 0.25), value: sectionOrder)
+        // The dragged section changes layout slots immediately while the other
+        // sections animate out of its way. Its inverse offset keeps it locked to
+        // the finger, avoiding the visible snap caused by animating both values.
+        .transaction { transaction in
+            if draggingSection == id { transaction.animation = nil }
+        }
     }
 
-    private func jiggleAngle(_ index: Int) -> Double {
+    private func jiggleAngle(_ id: String) -> Double {
         guard widgetEditMode else { return 0 }
+        if draggingSection == id { return 0 }
         let base = jiggle ? 0.7 : -0.7
-        return index.isMultiple(of: 2) ? base : -base
+        let phase = id.unicodeScalars.reduce(0) { $0 + Int($1.value) }
+        return phase.isMultiple(of: 2) ? base : -base
     }
 
     private func dragHandle(_ id: String) -> some View {
         Image(systemName: "line.3.horizontal")
-            .font(.system(size: 11, weight: .semibold))
+            .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(Color.appTextDim)
-            .frame(width: 28, height: 28)
+            .frame(width: 30, height: 30)
             .background(Color.appCard)
             .clipShape(Circle())
             .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
-            .padding(.leading, 8)
-            .padding(.top, 4)
-            .gesture(
-                DragGesture(minimumDistance: 2, coordinateSpace: .named("homeScroll"))
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
+            .padding(.leading, 2)
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 3, coordinateSpace: .named("homeScroll"))
                     .onChanged { value in
                         if draggingSection != id {
                             draggingSection = id
                             dragSectionFrames = sectionFrames
+                            dragInitialOrder = sectionOrder
                             dragCompensation = 0
+                            UISelectionFeedbackGenerator().selectionChanged()
                         }
                         dragTranslation = value.translation.height
                         reorderIfNeeded(id)
                     }
-                    .onEnded { _ in
+                    .onEnded { value in
+                        dragTranslation = value.translation.height
+                        reorderIfNeeded(id)
                         withAnimation(.snappy(duration: 0.3)) {
                             draggingSection = nil
-                            dragSectionFrames = [:]
                             dragTranslation = 0
                             dragCompensation = 0
                         }
+                        dragSectionFrames = [:]
+                        dragInitialOrder = []
+                        persistWidgetOrder()
                     }
             )
     }
@@ -824,41 +852,42 @@ private struct DetailedHomeView: View {
     }
 
     private func reorderIfNeeded(_ id: String) {
-        guard let fromIdx = sectionOrder.firstIndex(of: id) else { return }
+        let initialOrder = dragInitialOrder.isEmpty ? sectionOrder : dragInitialOrder
         let frames = dragSectionFrames.isEmpty ? sectionFrames : dragSectionFrames
-        guard let draggedFrame = frames[id], draggedFrame.height > 0 else { return }
+        guard initialOrder.contains(id),
+              let originFrame = frames[id],
+              originFrame.height > 0
+        else { return }
 
-        let draggedMidY = draggedFrame.midY + dragTranslation + dragCompensation
-
-        if fromIdx < sectionOrder.index(before: sectionOrder.endIndex) {
-            let nextID = sectionOrder[fromIdx + 1]
-            if let nextFrame = frames[nextID], draggedMidY > nextFrame.midY {
-                moveDraggingSection(from: fromIdx, to: fromIdx + 1, crossedFrame: nextFrame, draggedFrame: draggedFrame)
-                return
+        // Frames are frozen at drag start, so a fast movement can cross any
+        // number of sections without depending on in-flight layout animation.
+        guard initialOrder.allSatisfy({ frames[$0] != nil }) else { return }
+        let fingerMidY = originFrame.midY + dragTranslation
+        let remainingOrder = initialOrder.filter { $0 != id }
+        let targetIndex = remainingOrder.reduce(into: 0) { insertionIndex, sectionID in
+            if let frame = frames[sectionID], fingerMidY > frame.midY {
+                insertionIndex += 1
             }
         }
 
-        if fromIdx > sectionOrder.startIndex {
-            let previousID = sectionOrder[fromIdx - 1]
-            if let previousFrame = frames[previousID], draggedMidY < previousFrame.midY {
-                moveDraggingSection(from: fromIdx, to: fromIdx - 1, crossedFrame: previousFrame, draggedFrame: draggedFrame)
-            }
-        }
-    }
+        var reordered = remainingOrder
+        reordered.insert(id, at: targetIndex)
 
-    private func moveDraggingSection(from fromIdx: Int, to toIdx: Int, crossedFrame: CGRect, draggedFrame: CGRect) {
-        let visualDelta = crossedFrame.midY - draggedFrame.midY
-        withAnimation(.snappy(duration: 0.22)) {
-            sectionOrder.move(
-                fromOffsets: IndexSet(integer: fromIdx),
-                toOffset: toIdx > fromIdx ? toIdx + 1 : toIdx
-            )
+        // Widgets have very different heights. Calculate the dragged widget's
+        // real center in its new VStack slot instead of borrowing another
+        // widget's midpoint, then invert that layout movement.
+        let stackTop = initialOrder.compactMap { frames[$0]?.minY }.min() ?? originFrame.minY
+        let precedingHeight = reordered.prefix(targetIndex).reduce(CGFloat.zero) { total, sectionID in
+            total + (frames[sectionID]?.height ?? 0)
         }
-        // After the order changes, SwiftUI gives the dragged section a new
-        // resting slot. Offset it by the inverse slot delta so it stays under
-        // the finger instead of snapping back and forth during slow drags.
-        dragCompensation = -visualDelta
-        persistWidgetOrder()
+        let targetLayoutMidY = stackTop + precedingHeight + originFrame.height / 2
+        dragCompensation = originFrame.midY - targetLayoutMidY
+
+        guard reordered != sectionOrder else { return }
+        withAnimation(.snappy(duration: 0.2)) {
+            sectionOrder = reordered
+        }
+        UISelectionFeedbackGenerator().selectionChanged()
     }
 
     private func resolvedSectionOrder() -> [String] {
@@ -886,6 +915,7 @@ private struct DetailedHomeView: View {
         jiggle = false
         draggingSection = nil
         dragSectionFrames = [:]
+        dragInitialOrder = []
         dragTranslation = 0
         dragCompensation = 0
         persistWidgetOrder()
@@ -898,8 +928,21 @@ private struct DetailedHomeView: View {
     }
 
     private func pingCityTrend(drink: Drink) {
+        guard UserDefaults.standard.bool(forKey: "shareAnonymousCityInsights") else { return }
         guard let city = locationService.currentCity else { return }
-        Task { await supabase.pingCityDrink(city: city, drinkName: drink.name, category: drink.categoryRaw) }
+        let sessionMinutes = Int(Date().timeIntervalSince(
+            session.drinks.map(\.timestamp).min() ?? drink.timestamp
+        ) / 60)
+        Task {
+            await supabase.pingCityDrink(
+                city: city,
+                drinkName: drink.name,
+                category: drink.categoryRaw,
+                currentBAC: session.currentBAC,
+                sessionDurationMinutes: sessionMinutes,
+                drinkDurationMinutes: Int(drink.effectiveDrinkDurationMinutes.rounded())
+            )
+        }
     }
 }
 
@@ -980,104 +1023,566 @@ private struct MinimalHomeView: View {
 
 // MARK: - Drunk Mode Home
 
-// Stripped-down, oversized layout shown automatically above the careful
-// threshold (opt-in via Settings). Big numbers, one giant target, nothing else.
+// Oversized, low-complexity layout shown automatically above the careful
+// threshold. Important actions stay visible; secondary features open in focused
+// large-format sheets instead of disappearing entirely.
 private struct DrunkHomeView: View {
     let session: SessionViewModel
-    let skin: StatusSkin
+    let profile: UserProfile?
     @Binding var showAddDrink: Bool
     let onExit: () -> Void
 
     // Live water count so the big "+Wasser" button gives immediate feedback.
     @State private var waterGlasses: Int = WaterLog.glassesToday()
+    @State private var activePanel: DrunkHomePanel?
+
+    private var skin: StatusSkin { profile?.statusSkin ?? .standard }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Spacer()
-                Button(action: onExit) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "rectangle.expand.diagonal")
-                        Text("Normale Ansicht")
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("EINFACHE ANSICHT")
+                            .font(.appMicro)
+                            .foregroundStyle(Color.appAccent)
+                        Text("Alles Wichtige auf einen Blick")
+                            .font(.appCaption)
+                            .foregroundStyle(Color.appTextDim)
                     }
-                    .font(.appCaptionBold)
-                    .foregroundStyle(Color.appTextMuted)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(Color.appCard)
-                    .clipShape(Capsule())
-                    .overlay(Capsule().strokeBorder(Color.appBorder, lineWidth: 0.5))
+                    Spacer()
+                    Button(action: onExit) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "rectangle.expand.diagonal")
+                            Text("Normal")
+                        }
+                        .font(.appCaptionBold)
+                        .foregroundStyle(Color.appTextMuted)
+                        .padding(.horizontal, 13)
+                        .padding(.vertical, 10)
+                        .background(Color.appCard)
+                        .clipShape(Capsule())
+                        .overlay(Capsule().strokeBorder(Color.appBorder, lineWidth: 0.5))
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
 
-            Spacer()
+                HStack(alignment: .center, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(alignment: .lastTextBaseline, spacing: 5) {
+                            Text(session.currentBAC.bacFormatted)
+                                .font(.system(size: 112, weight: .ultraLight, design: .serif))
+                                .foregroundStyle(session.bacStatus.color)
+                                .monospacedDigit()
+                                .minimumScaleFactor(0.72)
+                                .lineLimit(1)
+                            Text("‰")
+                                .font(.system(size: 32, weight: .ultraLight, design: .serif))
+                                .foregroundStyle(Color.appTextDim)
+                        }
+                        StatusPill(status: session.bacStatus, skin: skin)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-            VStack(spacing: 20) {
-                HStack(alignment: .lastTextBaseline, spacing: 6) {
-                    Text(session.currentBAC.bacFormatted)
-                        .font(.system(size: 150, weight: .ultraLight, design: .serif))
-                        .foregroundStyle(session.bacStatus.color)
-                        .monospacedDigit()
-                    Text("‰")
-                        .font(.system(size: 40, weight: .ultraLight, design: .serif))
-                        .foregroundStyle(Color.appTextDim)
+                    VStack(spacing: 10) {
+                        DrunkQuickButton(
+                            icon: "list.bullet",
+                            title: "Drinks",
+                            badge: "\(session.drinks.count)",
+                            color: Color.appAccent
+                        ) { activePanel = .drinks }
+
+                        DrunkQuickButton(
+                            icon: "arrow.up.heart.fill",
+                            title: "Übergeben",
+                            badge: session.vomitEvents.isEmpty ? nil : "\(session.vomitEvents.count)",
+                            color: Color.statusOrange
+                        ) { activePanel = .vomit }
+
+                        DrunkQuickButton(
+                            icon: "square.grid.2x2.fill",
+                            title: "Mehr",
+                            badge: nil,
+                            color: Color.appTextDim
+                        ) { activePanel = .more }
+                    }
                 }
-                StatusPill(status: session.bacStatus, skin: skin)
+                .padding(.horizontal, 20)
+                .padding(.top, 22)
 
                 if let soberCountdown = session.drunkModeSoberCountdown {
                     Text(soberCountdown)
-                        .font(.appBody)
+                        .font(.appBodyBold)
                         .foregroundStyle(Color.appTextDim)
                         .monospacedDigit()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
                 }
-            }
 
-            Spacer()
-
-            VStack(spacing: 14) {
-                // Big water button - hydration matters most exactly here, so it's
-                // one oversized tap with the running glass count.
-                Button {
-                    WaterLog.addGlassToday()
-                    withAnimation(.easeInOut(duration: 0.2)) { waterGlasses = WaterLog.glassesToday() }
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "drop.fill")
-                        Text(waterGlasses == 0 ? "Wasser trinken" : "Wasser (\(waterGlasses))")
+                VStack(spacing: 14) {
+                    // Hydration and logging remain the two largest direct actions.
+                    Button {
+                        WaterLog.addGlassToday()
+                        withAnimation(.easeInOut(duration: 0.2)) { waterGlasses = WaterLog.glassesToday() }
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "drop.fill")
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Wasser trinken")
+                                Text("Heute \(waterGlasses) \(waterGlasses == 1 ? "Glas" : "Gläser")")
+                                    .font(.appCaption)
+                                    .opacity(0.72)
+                            }
+                            Spacer()
+                            Image(systemName: "plus.circle.fill")
+                        }
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(Color.statusGreen)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 18)
+                        .background(Color.statusGreen.opacity(0.14))
+                        .clipShape(RoundedRectangle(cornerRadius: 22))
+                        .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(Color.statusGreen.opacity(0.4), lineWidth: 1))
                     }
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(Color.statusGreen)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 20)
-                    .background(Color.statusGreen.opacity(0.14))
-                    .clipShape(RoundedRectangle(cornerRadius: 22))
-                    .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(Color.statusGreen.opacity(0.4), lineWidth: 1))
-                }
-                .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
 
-                Button { showAddDrink = true } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "plus")
-                        Text("Drink hinzufügen")
+                    Button { showAddDrink = true } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "plus.circle.fill")
+                            Text("Drink hinzufügen")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                        }
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(Color.appBackground)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 22)
+                        .background(Color.appAccent)
+                        .clipShape(RoundedRectangle(cornerRadius: 24))
                     }
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundStyle(Color.appBackground)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 28)
-                    .background(Color.appAccent)
-                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .buttonStyle(.pressable)
                 }
-                .buttonStyle(.plain)
+                .padding(.horizontal, 20)
+                .padding(.top, 24)
+                .padding(.bottom, 110)
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 48)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear { waterGlasses = WaterLog.glassesToday() }
+        .sheet(item: $activePanel) { panel in
+            switch panel {
+            case .drinks:
+                DrunkDrinksPanel(
+                    session: session,
+                    profile: profile,
+                    onAdd: { openAddDrinkAfterClosingPanel() }
+                )
+            case .vomit:
+                DrunkVomitPanel(session: session)
+            case .more:
+                DrunkMorePanel(session: session, profile: profile, onNormalView: onExit)
+            }
+        }
+    }
+
+    private func openAddDrinkAfterClosingPanel() {
+        activePanel = nil
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(320))
+            showAddDrink = true
+        }
+    }
+}
+
+private enum DrunkHomePanel: String, Identifiable {
+    case drinks, vomit, more
+    var id: String { rawValue }
+}
+
+private struct DrunkQuickButton: View {
+    let icon: String
+    let title: String
+    let badge: String?
+    let color: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: icon)
+                        .font(.system(size: 21, weight: .semibold))
+                        .frame(width: 30, height: 26)
+                    if let badge {
+                        Text(badge)
+                            .font(.system(size: 9, weight: .black, design: .rounded))
+                            .foregroundStyle(Color.appBackground)
+                            .padding(.horizontal, 5)
+                            .frame(minWidth: 17, minHeight: 17)
+                            .background(color)
+                            .clipShape(Capsule())
+                            .offset(x: 9, y: -7)
+                    }
+                }
+                Text(title)
+                    .font(.system(size: 10, weight: .bold))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(color)
+            .frame(width: 76, height: 58)
+            .background(color.opacity(0.11))
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+            .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(color.opacity(0.30), lineWidth: 0.8))
+        }
+        .buttonStyle(.pressable)
+        .accessibilityLabel(badge.map { "\(title), \($0)" } ?? title)
+    }
+}
+
+private struct DrunkPanelHeader: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(Color.appAccent)
+                .frame(width: 48, height: 48)
+                .background(Color.appAccent.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 15))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(Color.appText)
+                Text(subtitle)
+                    .font(.appCaption)
+                    .foregroundStyle(Color.appTextDim)
+            }
+            Spacer()
+            Button { dismiss() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Color.appTextDim)
+                    .frame(width: 42, height: 42)
+                    .background(Color.appCard)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
+
+private struct DrunkDrinksPanel: View {
+    let session: SessionViewModel
+    let profile: UserProfile?
+    let onAdd: () -> Void
+
+    @State private var editingDrink: Drink?
+
+    var body: some View {
+        ZStack {
+            Color.appBackground.ignoresSafeArea()
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 16) {
+                    DrunkPanelHeader(
+                        icon: "list.bullet",
+                        title: "Deine Getränke",
+                        subtitle: "\(session.drinks.count) heute eingetragen"
+                    )
+
+                    if session.drinks.isEmpty {
+                        ContentUnavailableView(
+                            "Noch keine Getränke",
+                            systemImage: "mug",
+                            description: Text("Füge deinen ersten Drink hinzu.")
+                        )
+                        .foregroundStyle(Color.appTextDim)
+                        .padding(.vertical, 44)
+                    } else {
+                        ForEach(Array(session.drinks.reversed())) { drink in
+                            DrunkDrinkManageCard(
+                                drink: drink,
+                                onEdit: { editingDrink = drink },
+                                onDuplicate: { session.duplicateDrink(drink) },
+                                onFinish: { session.finishDrinkNow(drink) }
+                            )
+                        }
+                    }
+
+                    PrimaryButton(title: "Drink hinzufügen", icon: "plus", action: onAdd)
+                        .padding(.top, 4)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
+                .padding(.bottom, 36)
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.hidden)
+        .sheet(item: $editingDrink) { drink in
+            DrinkEditSheet(
+                drink: drink,
+                profile: profile,
+                onSave: { volume, timestamp, duration in
+                    session.updateDrink(
+                        drink,
+                        volume: volume,
+                        timestamp: timestamp,
+                        durationMinutes: duration
+                    )
+                },
+                onDelete: { session.removeDrink(drink, recordUndo: true) }
+            )
+        }
+    }
+}
+
+private struct DrunkDrinkManageCard: View {
+    let drink: Drink
+    let onEdit: () -> Void
+    let onDuplicate: () -> Void
+    let onFinish: () -> Void
+
+    var body: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 14) {
+                DrinkIconView(drink: drink, size: 22)
+                    .frame(width: 50, height: 50)
+                    .background(Color.appAccent.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 15))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(drink.name)
+                        .font(.appBodyBold)
+                        .foregroundStyle(Color.appText)
+                        .lineLimit(1)
+                    Text("\(Int(drink.volume)) ml · \(String(format: "%.1f", locale: germanLocale, drink.abv)) % · \(drink.timestamp.formatted(.dateTime.hour().minute()))")
+                        .font(.appCaption)
+                        .foregroundStyle(Color.appTextDim)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
+                Spacer()
+            }
+
+            HStack(spacing: 10) {
+                DrunkDrinkAction(icon: "pencil", title: "Bearbeiten", color: Color.appAccent, action: onEdit)
+                DrunkDrinkAction(icon: "plus.square.on.square", title: "Doppeln", color: Color.appTextDim, action: onDuplicate)
+                DrunkDrinkAction(icon: "checkmark.circle.fill", title: "Fertig", color: Color.statusGreen, action: onFinish)
+            }
+        }
+        .padding(16)
+        .background(Color.appCard)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Color.appBorder, lineWidth: 0.6))
+    }
+}
+
+private struct DrunkDrinkAction: View {
+    let icon: String
+    let title: String
+    let color: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 17, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 10, weight: .bold))
+            }
+            .foregroundStyle(color)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 11)
+            .background(color.opacity(0.10))
+            .clipShape(RoundedRectangle(cornerRadius: 13))
+        }
+        .buttonStyle(.pressable)
+    }
+}
+
+private struct DrunkVomitPanel: View {
+    let session: SessionViewModel
+    @State private var showConfirmation = false
+
+    var body: some View {
+        ZStack {
+            Color.appBackground.ignoresSafeArea()
+            VStack(spacing: 24) {
+                DrunkPanelHeader(
+                    icon: "arrow.up.heart.fill",
+                    title: "Übergeben",
+                    subtitle: "Einfach und sicher protokollieren"
+                )
+
+                Spacer()
+
+                Image(systemName: "arrow.up.heart.fill")
+                    .font(.system(size: 52, weight: .semibold))
+                    .foregroundStyle(Color.statusOrange)
+                    .frame(width: 112, height: 112)
+                    .background(Color.statusOrange.opacity(0.13))
+                    .clipShape(Circle())
+
+                VStack(spacing: 8) {
+                    Text(session.vomitEvents.isEmpty
+                         ? "Noch nicht protokolliert"
+                         : "Heute \(session.vomitEvents.count)× protokolliert")
+                        .font(.system(size: 25, weight: .bold))
+                        .foregroundStyle(Color.appText)
+                    Text("Es wird nur noch nicht aufgenommener Alkohol berücksichtigt. Der aktuelle Blutalkoholwert fällt dadurch nicht sofort.")
+                        .font(.appBody)
+                        .foregroundStyle(Color.appTextDim)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+
+                Button { showConfirmation = true } label: {
+                    Label("Jetzt Übergeben protokollieren", systemImage: "plus.circle.fill")
+                        .font(.system(size: 19, weight: .bold))
+                        .foregroundStyle(Color.appBackground)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 20)
+                        .background(Color.statusOrange)
+                        .clipShape(RoundedRectangle(cornerRadius: 22))
+                }
+                .buttonStyle(.pressable)
+
+                if !session.vomitEvents.isEmpty {
+                    Button { session.removeLastVomit() } label: {
+                        Label("Letzten Eintrag rückgängig", systemImage: "arrow.uturn.backward")
+                            .font(.appBodyBold)
+                            .foregroundStyle(Color.appTextDim)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Color.appCard)
+                            .clipShape(RoundedRectangle(cornerRadius: 18))
+                    }
+                    .buttonStyle(.pressable)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 18)
+            .padding(.bottom, 32)
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.hidden)
+        .confirmationDialog("Übergeben jetzt protokollieren?", isPresented: $showConfirmation, titleVisibility: .visible) {
+            Button("Protokollieren") { session.logVomit() }
+            Button("Abbrechen", role: .cancel) {}
+        }
+    }
+}
+
+private struct DrunkMorePanel: View {
+    let session: SessionViewModel
+    let profile: UserProfile?
+    let onNormalView: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    private var driveReadyText: String {
+        guard session.currentBAC > session.drivingLimit + 0.005 else { return "Unter Grenzwert" }
+        guard let hours = session.hoursUntil(session.drivingLimit) else { return "> 72 h" }
+        return hours.asHoursMinutes
+    }
+
+    var body: some View {
+        ZStack {
+            Color.appBackground.ignoresSafeArea()
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 20) {
+                    DrunkPanelHeader(
+                        icon: "square.grid.2x2.fill",
+                        title: "Mehr Funktionen",
+                        subtitle: "Groß, klar und direkt erreichbar"
+                    )
+
+                    HStack(spacing: 12) {
+                        DrunkStatTile(icon: "car.fill", value: driveReadyText, label: "Fahrbereit", color: Color.statusOrange)
+                        DrunkStatTile(icon: "flame.fill", value: "\(session.totalCalories)", label: "kcal", color: Color.appAccent)
+                    }
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("MAGENSTATUS")
+                            .font(.appCaptionBold)
+                            .foregroundStyle(Color.appTextDim)
+                        HStack(spacing: 10) {
+                            ForEach(StomachStatus.allCases, id: \.self) { status in
+                                StomachChip(
+                                    status: status,
+                                    isSelected: session.stomachStatus == status,
+                                    onSelect: { session.stomachStatus = status }
+                                )
+                            }
+                        }
+                    }
+
+                    SafetyActionsCard(profile: profile)
+
+                    Button {
+                        dismiss()
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .milliseconds(250))
+                            onNormalView()
+                        }
+                    } label: {
+                        Label("Alle Details in normaler Ansicht", systemImage: "rectangle.expand.diagonal")
+                            .font(.appBodyBold)
+                            .foregroundStyle(Color.appText)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 17)
+                            .background(Color.appCard)
+                            .clipShape(RoundedRectangle(cornerRadius: 18))
+                            .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(Color.appBorder, lineWidth: 0.7))
+                    }
+                    .buttonStyle(.pressable)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
+                .padding(.bottom, 36)
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.hidden)
+    }
+}
+
+private struct DrunkStatTile: View {
+    let icon: String
+    let value: String
+    let label: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 7) {
+            Image(systemName: icon)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(color)
+            Text(value)
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.appText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(label)
+                .font(.appCaption)
+                .foregroundStyle(Color.appTextDim)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 18)
+        .background(color.opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(color.opacity(0.25), lineWidth: 0.7))
     }
 }
 
@@ -1745,9 +2250,13 @@ private struct FlyUpPlusOne: View {
 private struct DrinkHistorySection: View {
     let session: SessionViewModel
     let onEdit: (Drink) -> Void
+    @State private var showsAllDrinks = false
 
     private var recent: [Drink] {
-        Array(session.drinks.suffix(4).reversed())
+        let newestFirst = session.drinks.reversed()
+        return showsAllDrinks
+            ? Array(newestFirst)
+            : Array(newestFirst.prefix(4))
     }
 
     var body: some View {
@@ -1770,6 +2279,36 @@ private struct DrinkHistorySection: View {
                     onFinish: { session.finishDrinkNow(drink) },
                     onEdit: { onEdit(drink) }
                 )
+            }
+
+            if session.drinks.count > 4 {
+                Button {
+                    withAnimation(.snappy(duration: 0.28)) {
+                        showsAllDrinks.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 7) {
+                        Text(showsAllDrinks
+                             ? "Weniger anzeigen"
+                             : "Noch \(session.drinks.count - 4) anzeigen")
+                        Image(systemName: showsAllDrinks ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .font(.appCaptionBold)
+                    .foregroundStyle(Color.appAccent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .background(Color.appAccent.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(Color.appAccent.opacity(0.18), lineWidth: 0.5)
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(showsAllDrinks
+                                    ? "Weniger Drinks anzeigen"
+                                    : "Alle Drinks von heute anzeigen")
             }
         }
     }

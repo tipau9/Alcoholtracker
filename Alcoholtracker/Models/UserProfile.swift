@@ -79,8 +79,11 @@ enum BodyDataValidation {
 
     static func birthDateRange(now: Date = Date()) -> ClosedRange<Date> {
         let calendar = Calendar.current
-        let oldest = calendar.date(byAdding: .year, value: -ageRange.upperBound, to: now) ?? now
-        let youngest = calendar.date(byAdding: .year, value: -ageRange.lowerBound, to: now) ?? now
+        // Normalize to calendar days so someone whose 18th or 100th birthday is
+        // today remains selectable regardless of the current time of day.
+        let today = calendar.startOfDay(for: now)
+        let oldest = calendar.date(byAdding: .year, value: -ageRange.upperBound, to: today) ?? today
+        let youngest = calendar.date(byAdding: .year, value: -ageRange.lowerBound, to: today) ?? today
         return oldest...youngest
     }
 }
@@ -232,11 +235,9 @@ final class UserProfile {
     // Inline default required for SwiftData lightweight migration.
     var drunkModeAuto: Bool = false
 
-    // Konservativ rechnen (Worst-Case): when on, the safety-critical figures
-    // (the Sicherheit timers and the Vorausschau) drop the resorption deficit
-    // and the absorption ramp, so they show the highest BAC the body could
-    // plausibly reach (ADAC-style) instead of the realistic peak. The rest of
-    // the app (Home, charts) keeps the realistic model.
+    // Konservativ rechnen (Worst-Case): safety figures assume full alcohol
+    // bioavailability and the cautious base elimination rate, while retaining
+    // physical absorption timing. The rest of the app keeps the realistic model.
     // Inline default required for SwiftData lightweight migration.
     var conservativeSafety: Bool = false
 

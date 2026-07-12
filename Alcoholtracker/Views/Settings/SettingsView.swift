@@ -27,6 +27,7 @@ struct SettingsView: View {
     @State private var exportFile: ExportFile? = nil
     @State private var showDeleteAccountConfirm = false
     @State private var saveDebouncer = SaveDebouncer()
+    @AppStorage("shareAnonymousCityInsights") private var shareAnonymousCityInsights = false
 
     private var profile: UserProfile? { profiles.first }
 
@@ -424,6 +425,28 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionLabel(text: "DATENSCHUTZ")
             VStack(spacing: 0) {
+                Toggle(isOn: $shareAnonymousCityInsights) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "building.2.crop.circle")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.appAccent)
+                            .frame(width: 22)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Anonyme Stadtstatistiken beitragen")
+                                .font(.appBody)
+                                .foregroundStyle(Color.appText)
+                            Text("Getränk, lokale Stunde sowie begrenzte BAC- und Dauerwerte teilen")
+                                .font(.appCaption)
+                                .foregroundStyle(Color.appTextDim)
+                        }
+                    }
+                }
+                .tint(Color.appAccent)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+
+                Divider().background(Color.appBorder).padding(.leading, 16)
+
                 STDestructiveRow(
                     icon: "photo.on.rectangle",
                     label: "Alle Erinnerungsfotos löschen",
@@ -437,7 +460,7 @@ struct SettingsView: View {
                     .strokeBorder(Color.appBorder, lineWidth: 0.5)
             )
 
-            Text("Fotos werden lokal auf deinem Gerät im App-Ordner gespeichert und nirgendwo hochgeladen.")
+            Text("Persönliche Trends bleiben lokal. Stadtwerte werden nur nach deiner Zustimmung übertragen und erst ab mindestens fünf verschiedenen Beiträgern angezeigt. Fotos bleiben ausschließlich auf deinem Gerät.")
                 .font(.appMicro)
                 .foregroundStyle(Color.appTextMuted)
                 .multilineTextAlignment(.leading)

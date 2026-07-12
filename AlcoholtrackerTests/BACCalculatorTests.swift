@@ -48,6 +48,15 @@ final class BACCalculatorTests: XCTestCase {
         XCTAssertEqual(raw, 0.356, accuracy: 0.025)
     }
 
+    func testAutomaticDrinkDurationScalesWithEditedVolume() {
+        let original = DrinkDurationEstimator.baseEstimate(category: .spirits, volumeML: 200)
+        let enlarged = DrinkDurationEstimator.baseEstimate(category: .spirits, volumeML: 1000)
+
+        XCTAssertEqual(original, 8, accuracy: 0.001)
+        XCTAssertEqual(enlarged, 40, accuracy: 0.001)
+        XCTAssertGreaterThan(enlarged, original)
+    }
+
     func testInvalidStoredBodyWeightIsClampedForSafetyMath() {
         let p = profile(weight: 700)
 
@@ -145,6 +154,38 @@ final class BACCalculatorTests: XCTestCase {
         )
 
         XCTAssertGreaterThanOrEqual(conservative, realistic)
+    }
+
+    func testConservativeCurrentBACStillRisesThroughAbsorption() {
+        let p = profile()
+        let start = Date()
+        let beer = drink(timestamp: start)
+
+        let early = BACCalculator.currentBAC(
+            drinks: [beer],
+            profile: p,
+            at: start.addingTimeInterval(10 * 60),
+            stomachStatus: .light,
+            conservative: true
+        )
+        let later = BACCalculator.currentBAC(
+            drinks: [beer],
+            profile: p,
+            at: start.addingTimeInterval(70 * 60),
+            stomachStatus: .light,
+            conservative: true
+        )
+        let realisticEarly = BACCalculator.currentBAC(
+            drinks: [beer],
+            profile: p,
+            at: start.addingTimeInterval(10 * 60),
+            stomachStatus: .light,
+            conservative: false
+        )
+
+        XCTAssertGreaterThan(early, 0)
+        XCTAssertGreaterThan(later, early)
+        XCTAssertGreaterThanOrEqual(early, realisticEarly)
     }
 
     func testHoursUntilWaitsThroughFutureAbsorptionRise() {
@@ -248,5 +289,48 @@ final class BACCalculatorTests: XCTestCase {
         XCTAssertNotNil(BodyDataValidation.heightError(70))
         XCTAssertNil(BodyDataValidation.ageError(30))
         XCTAssertNotNil(BodyDataValidation.ageError(12))
+    }
+
+    func testAgeFromBirthDateChangesOnBirthday() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let now = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2026, month: 7, day: 12, hour: 12
+        )))
+        let birthdayWasYesterday = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2001, month: 7, day: 11
+        )))
+        let birthdayIsTomorrow = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2001, month: 7, day: 13
+        )))
+
+        XCTAssertEqual(BodyDataValidation.age(from: birthdayWasYesterday, now: now), 25)
+        XCTAssertEqual(BodyDataValidation.age(from: birthdayIsTomorrow, now: now), 24)
+    }
+
+    func testPersonalInsightsBuildsRankingsAndTimePatterns() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let now = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 12, hour: 18)))
+        let first = drink(timestamp: try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 11, hour: 20))))
+        first.name = "Bier"
+        let second = drink(timestamp: try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 11, hour: 21))))
+        second.name = "Bier"
+        let third = drink(volume: 200, abv: 12, category: .wine,
+                          timestamp: try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 12, hour: 10))))
+        third.name = "Wein"
+
+        let insights = PersonalInsights.build(
+            drinks: [first, second, third],
+            profile: profile(),
+            cutoff: nil,
+            now: now
+        )
+
+        XCTAssertEqual(insights.totalDrinks, 3)
+        XCTAssertEqual(insights.drinkingDays, 2)
+        XCTAssertEqual(insights.averageDrinksPerDrinkingDay, 1.5, accuracy: 0.001)
+        XCTAssertEqual(insights.topDrinks.first?.name, "Bier")
+        XCTAssertEqual(insights.topDrinks.first?.count, 2)
+        XCTAssertEqual(insights.hourly.first(where: { $0.value == 20 })?.count, 1)
+        XCTAssertEqual(insights.hourly.first(where: { $0.value == 10 })?.count, 1)
     }
 }

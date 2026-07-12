@@ -809,13 +809,15 @@ final class SupabaseService {
     }
 
     func setJamRoulette(_ payload: JamRoulettePayload) async throws {
+        guard let starterID = payload.starterID else { return }
         try await refreshIfNeeded()
         _ = try await restRPC("jam_set_roulette", body: [
             "p_jam_id":       payload.jamID.uuidString,
             "p_draw_id":      payload.id.uuidString,
             "p_participants": payload.participants,
             "p_winner_index": payload.winnerIndex,
-            "p_starter_name": payload.starterName
+            "p_starter_name": payload.starterName,
+            "p_starter_id":   starterID.uuidString
         ])
     }
 
@@ -942,12 +944,23 @@ final class SupabaseService {
     // Fire-and-forget ping: records that the user drank p_drink_name in p_city.
     // Silently skips if not configured or not signed in. The server-side RPC
     // (SECURITY DEFINER) inserts without exposing user_id -- fully anonymous.
-    func pingCityDrink(city: String, drinkName: String, category: String) async {
+    func pingCityDrink(
+        city: String,
+        drinkName: String,
+        category: String,
+        currentBAC: Double,
+        sessionDurationMinutes: Int,
+        drinkDurationMinutes: Int
+    ) async {
         guard isConfigured, isSignedIn, !city.isEmpty else { return }
         try? await communityPOST("/rest/v1/rpc/ping_city_drink", body: [
             "p_city":       city,
             "p_drink_name": drinkName,
-            "p_category":   category
+            "p_category":   category,
+            "p_current_bac": min(5, max(0, currentBAC)),
+            "p_session_duration_minutes": min(1440, max(0, sessionDurationMinutes)),
+            "p_drink_duration_minutes": min(480, max(1, drinkDurationMinutes)),
+            "p_local_hour": Calendar.current.component(.hour, from: Date())
         ])
     }
 
@@ -956,6 +969,12 @@ final class SupabaseService {
         guard isConfigured else { throw SupabaseError.notConfigured }
         let data = try await publicRPC("city_drink_trends", body: ["p_city": city, "p_hours": hours])
         return try Self.decoder.decode([CityDrinkTrend].self, from: data)
+    }
+
+    func fetchCityInsights(city: String, hours: Int = 168) async throws -> CityDrinkInsights {
+        guard isConfigured else { throw SupabaseError.notConfigured }
+        let data = try await publicRPC("city_drink_insights", body: ["p_city": city, "p_hours": hours])
+        return try Self.decoder.decode(CityDrinkInsights.self, from: data)
     }
 
     // MARK: Jam Invitations
@@ -1326,19 +1345,22 @@ private struct JamRouletteRow: Decodable {
     let participants: [String]
     let winnerIndex: Int
     let starterName: String?
+    let starterID: String?
 
     enum CodingKeys: String, CodingKey {
         case drawID = "draw_id"
         case participants
         case winnerIndex = "winner_index"
         case starterName = "starter_name"
+        case starterID = "starter_id"
     }
 
     func toPayload(jamID: UUID) -> JamRoulettePayload? {
         guard let id = UUID(uuidString: drawID) else { return nil }
         return JamRoulettePayload(
             id: id, jamID: jamID, participants: participants,
-            winnerIndex: winnerIndex, starterName: starterName ?? "Jemand"
+            winnerIndex: winnerIndex, starterName: starterName ?? "Jemand",
+            starterID: starterID.flatMap { UUID(uuidString: $0) }
         )
     }
 }
@@ -1552,6 +1574,66 @@ struct CityDrinkTrend: Decodable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case drinkName = "drink_name"
+        case category
+        case pingCount = "ping_count"
+    }
+}
+
+struct CityDrinkInsights: Decodable {
+    let sampleSufficient: Bool
+    let minimumContributors: Int
+    let contributorCount: Int?
+    let totalDrinks: Int
+    let averageBAC: Double?
+    let averageSessionMinutes: Double?
+    let averageDrinkMinutes: Double?
+    let topDrinks: [CityRankedDrink]
+    let hourly: [CityHourlyTrend]
+    let categories: [CityCategoryTrend]
+
+    enum CodingKeys: String, CodingKey {
+        case sampleSufficient = "sample_sufficient"
+        case minimumContributors = "minimum_contributors"
+        case contributorCount = "contributor_count"
+        case totalDrinks = "total_drinks"
+        case averageBAC = "average_bac"
+        case averageSessionMinutes = "average_session_minutes"
+        case averageDrinkMinutes = "average_drink_minutes"
+        case topDrinks = "top_drinks"
+        case hourly, categories
+    }
+}
+
+struct CityRankedDrink: Decodable, Identifiable {
+    var id: String { drinkName + "|" + category }
+    let drinkName: String
+    let category: String
+    let pingCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case drinkName = "drink_name"
+        case category
+        case pingCount = "ping_count"
+    }
+}
+
+struct CityHourlyTrend: Decodable, Identifiable {
+    var id: Int { hour }
+    let hour: Int
+    let pingCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case hour
+        case pingCount = "ping_count"
+    }
+}
+
+struct CityCategoryTrend: Decodable, Identifiable {
+    var id: String { category }
+    let category: String
+    let pingCount: Int
+
+    enum CodingKeys: String, CodingKey {
         case category
         case pingCount = "ping_count"
     }

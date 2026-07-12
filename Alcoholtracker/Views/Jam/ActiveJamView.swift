@@ -88,15 +88,11 @@ struct ActiveJamView: View {
                 onTransferHost: { jamService.transferHost(to: p) }
             )
         }
-        .sheet(item: Binding(
-            get: { jamService.incomingRoulette },
-            set: { if $0 == nil { jamService.incomingRoulette = nil } }
-        )) { payload in
-            RoundRouletteSheet(
-                payload: payload,
-                onReroll: { jamService.startRoulette() },
-                onClose: { jamService.incomingRoulette = nil }
-            )
+        .sheet(isPresented: Binding(
+            get: { jamService.incomingRoulette != nil },
+            set: { if !$0 { jamService.incomingRoulette = nil } }
+        )) {
+            RoulettePresentationHost()
         }
         .sheet(isPresented: $showWaterContest) {
             WaterContestSheet()
@@ -393,6 +389,23 @@ struct ActiveJamView: View {
 //
 // Decodes the JPEG once per photo in .task instead of in every body pass;
 // with a dozen 200 KB photos the inline decode caused visible scroll jank.
+
+/// Keeps one stable sheet presentation while a reroll replaces the draw payload.
+/// The wheel observes the new draw id and starts its animation in place.
+private struct RoulettePresentationHost: View {
+    @Environment(JamService.self) private var jamService
+
+    var body: some View {
+        if let payload = jamService.incomingRoulette {
+            RoundRouletteSheet(
+                payload: payload,
+                canReroll: jamService.canRerollRoulette(payload),
+                onReroll: { jamService.rerollRoulette(payload) },
+                onClose: { jamService.incomingRoulette = nil }
+            )
+        }
+    }
+}
 
 private struct JamPhotoThumb: View {
     let photo: JamPhotoPayload

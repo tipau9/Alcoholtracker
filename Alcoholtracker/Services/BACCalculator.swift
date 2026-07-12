@@ -73,17 +73,17 @@ enum BACCalculator {
         drinkDurationMinutes: Double = 0,
         conservative: Bool = false
     ) -> Double {
-        // Worst-case (conservative) mode drops the resorption deficit (peakFactor
-        // 1.0) and collapses the absorption ramp to ~instant, so no elimination is
-        // subtracted before the peak; the highest BAC the body could reach, the
-        // way ADAC-style calculators present it. The individualised Watson r is kept.
+        // Conservative mode drops the resorption deficit (peakFactor 1.0), but
+        // keeps the drink's physical absorption window. Treating absorption as
+        // instantaneous made a live BAC jump straight to the theoretical peak.
+        // The individualised Watson r and conservative elimination rate are kept.
         let factor = conservative ? 1.0 : stomachStatus.peakFactor
         let rawPeak = bacContribution(
             volume: volume, abv: abv,
             weight: profile.validatedWeight,
             distributionFactor: profile.distributionFactor
         ) * factor
-        let window = conservative ? 1.0 : absorptionWindowMinutes(
+        let window = absorptionWindowMinutes(
             category: category,
             volumeML: volume,
             drinkDurationMinutes: drinkDurationMinutes,
@@ -167,8 +167,8 @@ enum BACCalculator {
 
         let r          = profile.distributionFactor
         let elimPerMin = profile.resolvedEliminationRate(conservative: conservative) / 60.0   // ‰/min, zero-order
-        // Worst-case mode: no resorption deficit and an ~instant absorption ramp,
-        // so the curve jumps to the raw Widmark peak before elimination bites.
+        // Conservative mode assumes no resorption deficit, but alcohol still has
+        // to enter the blood over the drink's physical absorption window.
         let factor     = conservative ? 1.0 : stomachStatus.peakFactor  // empty stomach peaks higher
         let gastric    = stomachStatus.absorptionMinutes
 
@@ -193,9 +193,9 @@ enum BACCalculator {
             ) * factor
             // Alcohol enters gradually; the window ends at gastric emptying (or
             // later if the drink is sipped longer). See absorptionWindowMinutes.
-            // Worst-case mode collapses this to ~instant so the peak isn't shaved
-            // by elimination during absorption.
-            let window = conservative ? 1.0 : absorptionWindowMinutes(
+            // Conservative mode changes bioavailability and elimination, not the
+            // passage of time: never collapse a current-value curve to its peak.
+            let window = absorptionWindowMinutes(
                 category: drink.category,
                 volumeML: drink.volume,
                 drinkDurationMinutes: drink.drinkDurationMinutes,

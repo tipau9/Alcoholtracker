@@ -61,7 +61,8 @@ enum RuntimeSelfCheck {
 
         check("durationShotDefault", DrinkDurationEstimator.baseEstimate(category: .shot, volumeML: 40), 1, 1)
         check("durationBeerDefault", DrinkDurationEstimator.baseEstimate(category: .beer, volumeML: 500), 19.5, 20.0)
-        check("durationBeerCap", DrinkDurationEstimator.baseEstimate(category: .beer, volumeML: 1000), 19.5, 20.0)
+        check("durationBeerLargeVolume", DrinkDurationEstimator.baseEstimate(category: .beer, volumeML: 1000), 39.5, 40.5)
+        check("durationSpiritsScales", DrinkDurationEstimator.baseEstimate(category: .spirits, volumeML: 1000), 39.5, 40.5)
         check("durationWineDefault",
               DrinkDurationEstimator.baseEstimate(category: .wine, volumeML: 200), 9.5, 10.5)
         #if DEBUG
@@ -164,12 +165,15 @@ enum RuntimeSelfCheck {
         //     round-trip, so every member dedups on the same draw and the wheel
         //     lands on the same person (the "visible for all users" guarantee).
         do {
+            let starterID = UUID()
             let payload = JamRoulettePayload(
-                jamID: UUID(), participants: ["A", "B", "C"], winnerIndex: 2, starterName: "Max")
+                jamID: UUID(), participants: ["A", "B", "C"], winnerIndex: 2,
+                starterName: "Max", starterID: starterID)
             let data = try JSONEncoder().encode(payload)
             let decoded = try JSONDecoder().decode(JamRoulettePayload.self, from: data)
             let ok = decoded.id == payload.id && decoded.winnerIndex == 2
                 && decoded.participants.count == 3 && decoded.jamID == payload.jamID
+                && decoded.starterID == starterID
             checkInt("jamRouletteCodecRoundTrip", ok ? 1 : 0, 1)
         } catch {
             checkInt("jamRouletteCodecRoundTrip", 0, 1)
@@ -217,9 +221,9 @@ enum RuntimeSelfCheck {
         let curveOK = readBack.count == 2 && abs((readBack.last?.bac ?? 0) - 0.51) < 0.001
         checkInt("widgetCurveRoundTrip", curveOK ? 1 : 0, 1)
 
-        // 17) Konservativ/Worst-Case mode: dropping the resorption deficit and the
-        //     absorption ramp returns the raw Widmark peak (~1.01 for 200 ml/40% rum)
-        //     and must sit well above the realistic peak (~0.63 light stomach).
+        // 17) Konservativ/Worst-Case mode drops the resorption deficit but retains
+        //     physical absorption timing, so the cautious peak remains above the
+        //     realistic peak without making the live value jump there instantly.
         let consProfile = UserProfile(weight: 87, height: 196, age: 25, gender: .male)
         let consPeak = BACCalculator.projectedPeak(
             volume: 200, abv: 40, category: .spirits, profile: consProfile,
@@ -227,7 +231,7 @@ enum RuntimeSelfCheck {
         let realPeak = BACCalculator.projectedPeak(
             volume: 200, abv: 40, category: .spirits, profile: consProfile,
             stomachStatus: .light, conservative: false)
-        check("conservativeRumPeak", consPeak, 0.98, 1.02)
+        check("conservativeRumPeak", consPeak, 0.70, 0.85)
         checkInt("conservativeAboveRealistic", consPeak > realPeak ? 1 : 0, 1)
         //     A worst-case sobriety time must also be >= the realistic one.
         let consDrink = Drink.from(template: DrinkTemplate(

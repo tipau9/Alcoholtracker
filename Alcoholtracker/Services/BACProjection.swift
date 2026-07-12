@@ -100,7 +100,9 @@ struct DrinkTimingModel {
     init(drink: Drink, stomachStatus: StomachStatus, conservative: Bool = false) {
         drinkingStartedAt = drink.timestamp
         drinkingFinishedAt = drink.estimatedFinishedAt
-        absorptionWindowMinutes = conservative ? 1.0 : BACCalculator.absorptionWindowMinutes(
+        // Conservative projections retain the physical absorption duration; only
+        // bioavailability and elimination assumptions become more cautious.
+        absorptionWindowMinutes = BACCalculator.absorptionWindowMinutes(
             category: drink.category,
             volumeML: drink.volume,
             drinkDurationMinutes: drink.drinkDurationMinutes,

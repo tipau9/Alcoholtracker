@@ -3,7 +3,7 @@ import SwiftData
 
 // MARK: - OnboardingView
 // 5-page first-launch flow in question style: welcome, weight (ruler picker),
-// biological gender, age + height (wheels), favourite drinks (searchable over
+// biological gender, birth date + height, favourite drinks (searchable over
 // the full template catalog). Finishing inserts a UserProfile with
 // hasCompletedOnboarding = true and seeds usageCount on the four chosen
 // templates so they surface as quick-add chips on the Home screen.
@@ -19,7 +19,11 @@ struct OnboardingView: View {
     // Staged profile fields
     @State private var weightKg: Int = 75
     @State private var gender: Gender? = nil
-    @State private var age: Int = 25
+    @State private var birthDate: Date = Calendar.current.date(
+        byAdding: .year,
+        value: -25,
+        to: Calendar.current.startOfDay(for: Date())
+    ) ?? Date()
     @State private var heightCm: Int = 180
     @State private var favoriteIDs: [UUID] = []
 
@@ -34,7 +38,13 @@ struct OnboardingView: View {
                 case 0: ONWelcomePage(onNext: { advance() })
                 case 1: ONWeightPage(weightKg: $weightKg, errorText: weightError, onNext: { advance() })
                 case 2: ONGenderPage(gender: $gender, onNext: { advance() })
-                case 3: ONBodyPage(age: $age, heightCm: $heightCm, ageError: ageError, heightError: heightError, onNext: { advance() })
+                case 3: ONBodyPage(
+                    birthDate: $birthDate,
+                    heightCm: $heightCm,
+                    birthDateError: birthDateError,
+                    heightError: heightError,
+                    onNext: { advance() }
+                )
                 default: ONFavoritesPage(
                     templates: templates,
                     favoriteIDs: $favoriteIDs,
@@ -104,7 +114,7 @@ struct OnboardingView: View {
     private func canLeave(_ p: Int) -> Bool {
         if p == 1 { return weightError == nil }
         if p == 2 { return gender != nil }
-        if p == 3 { return ageError == nil && heightError == nil }
+        if p == 3 { return birthDateError == nil && heightError == nil }
         return true
     }
 
@@ -116,8 +126,8 @@ struct OnboardingView: View {
         BodyDataValidation.heightError(Double(heightCm))
     }
 
-    private var ageError: String? {
-        BodyDataValidation.ageError(age)
+    private var birthDateError: String? {
+        BodyDataValidation.ageError(BodyDataValidation.age(from: birthDate))
     }
 
     private func advance() {
@@ -135,10 +145,10 @@ struct OnboardingView: View {
     // MARK: Finish
 
     private func finish() {
-        guard weightError == nil, heightError == nil, ageError == nil else { return }
+        guard weightError == nil, heightError == nil, birthDateError == nil else { return }
         let w = Double(weightKg)
         let h = Double(heightCm)
-        let a = age
+        let a = BodyDataValidation.age(from: birthDate)
         let profile = UserProfile(
             weight: w,
             height: h,
@@ -148,7 +158,7 @@ struct OnboardingView: View {
             emergencyContactPhone: nil,
             hasCompletedOnboarding: true
         )
-        profile.birthDate = Calendar.current.date(byAdding: .year, value: -a, to: Date()) ?? Date()
+        profile.birthDate = birthDate
         profile.onboardingStepsCompleted = ["welcome", "weight", "gender", "body", "favorites"]
         context.insert(profile)
 
@@ -469,12 +479,12 @@ private struct ONGenderCard: View {
     }
 }
 
-// MARK: - Page 3: Age + height (wheels)
+// MARK: - Page 3: Birth date + height
 
 private struct ONBodyPage: View {
-    @Binding var age: Int
+    @Binding var birthDate: Date
     @Binding var heightCm: Int
-    let ageError: String?
+    let birthDateError: String?
     let heightError: String?
     let onNext: () -> Void
 
@@ -482,28 +492,40 @@ private struct ONBodyPage: View {
     @State private var heightUnit: HeightUnit = .cm
     @State private var heightInch: Int = 71
 
+    private var currentAge: Int {
+        BodyDataValidation.age(from: birthDate)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ONQuestionHeader(
-                title: "Alter & Größe",
-                subtitle: "Beides verfeinert die Schätzung deines Körperwassers (Watson-Formel)."
+                title: "Geburtsdatum & Größe",
+                subtitle: "Dein Alter aktualisiert sich damit an jedem Geburtstag automatisch."
             )
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("Alter")
-                    .font(.appCaptionBold)
-                    .foregroundStyle(Color.appTextDim)
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Geburtsdatum")
+                        .font(.appCaptionBold)
+                        .foregroundStyle(Color.appTextDim)
+                    Spacer()
+                    Text("Aktuell \(currentAge) Jahre")
+                        .font(.appMicro)
+                        .foregroundStyle(Color.appAccent)
+                }
                 ONWheelCard {
-                    Picker("Alter", selection: $age) {
-                        ForEach(18...99, id: \.self) { a in
-                            Text("\(a)").tag(a)
-                        }
-                    }
-                    .pickerStyle(.wheel)
+                    DatePicker(
+                        "Geburtsdatum",
+                        selection: $birthDate,
+                        in: BodyDataValidation.birthDateRange(),
+                        displayedComponents: .date
+                    )
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
                 }
             }
             .padding(.top, 12)
-            InlineValidationMessage(text: ageError)
+            InlineValidationMessage(text: birthDateError)
                 .padding(.horizontal, 24)
                 .padding(.top, 8)
 
@@ -554,7 +576,12 @@ private struct ONBodyPage: View {
 
             Spacer()
 
-            PrimaryButton(title: "Weiter", icon: "arrow.right", isDisabled: ageError != nil || heightError != nil, action: onNext)
+            PrimaryButton(
+                title: "Weiter",
+                icon: "arrow.right",
+                isDisabled: birthDateError != nil || heightError != nil,
+                action: onNext
+            )
                 .padding(.horizontal, 24)
                 .padding(.bottom, 40)
         }

@@ -205,7 +205,7 @@ struct SettingsDisplaySection: View {
                 STToggleRow(
                     icon: "exclamationmark.shield.fill",
                     label: "Konservativ rechnen",
-                    subtitle: "Fahrbereit-Zeiten & Vorausschau im Worst-Case (ADAC-nah)",
+                    subtitle: "Vorsichtige Annahmen für Fahrbereit-Zeiten & Vorausschau",
                     isOn: Binding(get: { p.conservativeForSafety }, set: {
                         p.conservativeSafety = $0
                         if !$0 { p.conservativeEverywhere = false }
@@ -216,7 +216,7 @@ struct SettingsDisplaySection: View {
                 STToggleRow(
                     icon: "exclamationmark.shield",
                     label: "Konservativ in ganzer App",
-                    subtitle: "Worst-Case auch für Startseite, Kurven & Badges, nicht nur Sicherheit",
+                    subtitle: "Vorsichtige Annahmen auch für Startseite, Kurven & Badges",
                     isOn: Binding(get: { p.conservativeEverywhere }, set: {
                         p.conservativeEverywhere = $0
                         if $0 { p.conservativeSafety = true }

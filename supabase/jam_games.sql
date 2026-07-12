@@ -41,6 +41,11 @@ create table if not exists public.jam_roulette (
     created_at    timestamptz default now()
 );
 
+-- Existing installations receive the stable starter identity without losing
+-- their current draw. Legacy rows remain null and cannot be rerolled.
+alter table public.jam_roulette
+    add column if not exists starter_id uuid;
+
 -- =========================================================================
 -- 1. Lock both tables: RLS on, drop EVERY existing policy, add none. Only the
 --    SECURITY DEFINER functions below (which run as the table owner and bypass
@@ -72,6 +77,7 @@ drop function if exists public.jam_submit_water(uuid, text, integer);
 drop function if exists public.jam_reset_water(uuid);
 drop function if exists public.jam_water_board(uuid);
 drop function if exists public.jam_set_roulette(uuid, uuid, jsonb, integer, text);
+drop function if exists public.jam_set_roulette(uuid, uuid, jsonb, integer, text, uuid);
 drop function if exists public.jam_roulette(uuid);
 
 -- True when the caller is a member of, or hosts, the given jam. Used as the gate
@@ -163,18 +169,42 @@ $$;
 -- the same draw so the wheel lands on the same person everywhere.
 create or replace function public.jam_set_roulette(
     p_jam_id uuid, p_draw_id uuid, p_participants jsonb,
-    p_winner_index integer, p_starter_name text
+    p_winner_index integer, p_starter_name text, p_starter_id uuid
 )
 returns void
 language plpgsql
 security definer
 set search_path = public
 as $$
-declare n integer;
+declare
+    n integer;
+    v_existing_starter uuid;
+    v_existing_created timestamptz;
 begin
-    if not public.is_jam_member(p_jam_id) then
-        raise exception 'not a member of this jam';
+    if p_starter_id is null or not exists (
+        select 1
+        from public.jam_participants me
+        where me.id = p_starter_id
+          and me.jam_id = p_jam_id
+          and me.user_id = auth.uid()::text
+    ) then
+        raise exception 'starter does not belong to the caller';
     end if;
+
+    -- Serialize competing first draws as well as updates by locking the parent
+    -- jam row. During the 120-second active window only the original starter
+    -- may replace the draw.
+    perform 1 from public.jams where id = p_jam_id for update;
+    select r.starter_id, r.created_at
+      into v_existing_starter, v_existing_created
+      from public.jam_roulette r
+     where r.jam_id = p_jam_id;
+    if found
+       and v_existing_created > now() - interval '120 seconds'
+       and v_existing_starter is distinct from p_starter_id then
+        raise exception 'only the roulette starter may reroll';
+    end if;
+
     n := jsonb_array_length(p_participants);
     if n is null or n < 2 or n > 50 then
         raise exception 'invalid participant count';
@@ -182,13 +212,19 @@ begin
     if p_winner_index < 0 or p_winner_index >= n then
         raise exception 'winner index out of range';
     end if;
-    insert into public.jam_roulette (jam_id, draw_id, participants, winner_index, starter_name, created_at)
-    values (p_jam_id, p_draw_id, p_participants, p_winner_index, left(coalesce(p_starter_name, ''), 40), now())
+    insert into public.jam_roulette (
+        jam_id, draw_id, participants, winner_index, starter_name, starter_id, created_at
+    )
+    values (
+        p_jam_id, p_draw_id, p_participants, p_winner_index,
+        left(coalesce(p_starter_name, ''), 40), p_starter_id, now()
+    )
     on conflict (jam_id) do update
         set draw_id      = excluded.draw_id,
             participants = excluded.participants,
             winner_index = excluded.winner_index,
             starter_name = excluded.starter_name,
+            starter_id   = excluded.starter_id,
             created_at   = now();
 end $$;
 
@@ -198,14 +234,15 @@ end $$;
 create or replace function public.jam_roulette(p_jam_id uuid)
 returns table (
     draw_id uuid, participants jsonb, winner_index integer,
-    starter_name text, created_at timestamptz
+    starter_name text, starter_id uuid, created_at timestamptz
 )
 language sql
 security definer
 set search_path = public
 stable
 as $$
-    select r.draw_id, r.participants, r.winner_index, r.starter_name, r.created_at
+    select r.draw_id, r.participants, r.winner_index,
+           r.starter_name, r.starter_id, r.created_at
     from public.jam_roulette r
     where r.jam_id = p_jam_id
       and r.created_at > now() - interval '120 seconds'
@@ -221,12 +258,12 @@ revoke all on function public.is_jam_member(uuid)                              f
 revoke all on function public.jam_submit_water(uuid, text, integer)            from public, anon;
 revoke all on function public.jam_reset_water(uuid)                            from public, anon;
 revoke all on function public.jam_water_board(uuid)                            from public, anon;
-revoke all on function public.jam_set_roulette(uuid, uuid, jsonb, integer, text) from public, anon;
+revoke all on function public.jam_set_roulette(uuid, uuid, jsonb, integer, text, uuid) from public, anon;
 revoke all on function public.jam_roulette(uuid)                               from public, anon;
 
 grant execute on function public.is_jam_member(uuid)                              to authenticated;
 grant execute on function public.jam_submit_water(uuid, text, integer)            to authenticated;
 grant execute on function public.jam_reset_water(uuid)                            to authenticated;
 grant execute on function public.jam_water_board(uuid)                            to authenticated;
-grant execute on function public.jam_set_roulette(uuid, uuid, jsonb, integer, text) to authenticated;
+grant execute on function public.jam_set_roulette(uuid, uuid, jsonb, integer, text, uuid) to authenticated;
 grant execute on function public.jam_roulette(uuid)                               to authenticated;

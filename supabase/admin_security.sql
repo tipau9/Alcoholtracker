@@ -419,6 +419,11 @@ begin
 end;
 $$;
 
+-- PostgreSQL cannot change the row type of an existing RETURNS TABLE function
+-- via CREATE OR REPLACE. Drop the no-argument overload first so this script can
+-- be rerun after the feature-flag result columns have changed.
+drop function if exists public.admin_feature_flags_list();
+
 create or replace function public.admin_feature_flags_list()
 returns table(key text, enabled boolean, is_public boolean, value jsonb, description text, updated_at timestamptz)
 language plpgsql
@@ -531,6 +536,8 @@ begin
 end;
 $$;
 
+drop function if exists public.admin_audit_log_list();
+
 create or replace function public.admin_audit_log_list()
 returns table (
     id uuid,
@@ -558,6 +565,8 @@ begin
     limit 200;
 end;
 $$;
+
+drop function if exists public.admin_users_list();
 
 create or replace function public.admin_users_list()
 returns table(user_id uuid, role text, created_at timestamptz)
@@ -617,6 +626,8 @@ begin
     perform public.admin_log('admin_role_set', 'admin_user', p_user_id, v_before, v_after, p_role);
 end;
 $$;
+
+drop function if exists public.admin_blocked_voters_list();
 
 create or replace function public.admin_blocked_voters_list()
 returns table(voter text, reason text, created_at timestamptz)
@@ -876,6 +887,8 @@ begin
     limit v_limit offset v_offset;
 end;
 $$;
+
+drop function if exists public.public_feature_flags();
 
 create or replace function public.public_feature_flags()
 returns table(key text, value jsonb)
