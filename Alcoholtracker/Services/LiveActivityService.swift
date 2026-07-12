@@ -6,7 +6,7 @@ final class LiveActivityService {
     static let shared = LiveActivityService()
     private init() {}
 
-    func syncActivity(bac: Double, eliminationRate: Double, drinkCount: Int, soberThreshold: Double = 0.01, warningThreshold: Double = 0.5) {
+    func syncActivity(bac: Double, eliminationRate: Double, drinkCount: Int, soberThreshold: Double = 0.01, warningThreshold: Double = 0.5, drivingLimit: Double = 0.5, soberAt: Date? = nil, driveReadyAt: Date? = nil) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
 
         if bac <= soberThreshold {
@@ -23,7 +23,10 @@ final class LiveActivityService {
             eliminationRate: eliminationRate,
             lastUpdated: Date(),
             drinkCount: drinkCount,
-            warningThreshold: warningThreshold
+            warningThreshold: warningThreshold,
+            drivingLimit: drivingLimit,
+            soberAt: soberAt,
+            driveReadyAt: driveReadyAt
         )
         // Stale after BAC reaches zero plus a 10-min buffer, capped at 12 hours.
         let hoursToSober = eliminationRate > 0

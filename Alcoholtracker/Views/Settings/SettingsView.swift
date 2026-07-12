@@ -26,6 +26,7 @@ struct SettingsView: View {
     @State private var showNotifyDeniedAlert = false
     @State private var exportFile: ExportFile? = nil
     @State private var showDeleteAccountConfirm = false
+    @State private var saveDebouncer = SaveDebouncer()
 
     private var profile: UserProfile? { profiles.first }
 
@@ -70,6 +71,11 @@ struct SettingsView: View {
         }
         .task {
             drinkCount = (try? context.fetchCount(FetchDescriptor<Drink>())) ?? 0
+        }
+        .onDisappear {
+            saveDebouncer.flush(context: context) {
+                AppTheme.shared.sync(from: profile)
+            }
         }
     }
 
@@ -126,7 +132,11 @@ struct SettingsView: View {
 
     // MARK: - Save helper
 
-    private func save() { try? context.save() }
+    private func save() {
+        saveDebouncer.schedule(context: context) {
+            AppTheme.shared.sync(from: profile)
+        }
+    }
 
     // MARK: - Notifications section
 

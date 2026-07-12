@@ -7,29 +7,48 @@ import Foundation
 // entered a custom estimate.
 enum DrinkDurationEstimator {
     static func estimate(category: DrinkCategory, volumeML: Double) -> Double {
+        return DrinkPaceMemory.adjustedEstimate(
+            category: category,
+            baseMinutes: baseEstimate(category: category, volumeML: volumeML)
+        )
+    }
+
+    static func baseEstimate(category: DrinkCategory, volumeML: Double) -> Double {
         let minutesPerML: Double
+        let maxMinutes: Double
+
         switch category {
         case .shot:
             return 1
         case .spirits:
-            minutesPerML = 0.35
-        case .liqueur:
-            minutesPerML = 0.30
-        case .beer, .cider:
-            minutesPerML = 0.16   // 500 ml ~ 80 min
-        case .wine, .sparkling:
-            minutesPerML = 0.18   // 200 ml ~ 36 min
-        case .cocktail:
-            minutesPerML = 0.12
-        case .mixed:
-            minutesPerML = 0.14
-        case .fortified:
-            minutesPerML = 0.15
-        case .water, .softDrink, .juice, .coffeeTea, .milk:
-            minutesPerML = 0.04
-        case .other:
             minutesPerML = 0.08
+            maxMinutes = 8
+        case .liqueur:
+            minutesPerML = 0.07
+            maxMinutes = 8
+        case .beer, .cider:
+            minutesPerML = 0.04 // 500 ml ~ 20 min
+            maxMinutes = 20
+        case .wine, .sparkling:
+            minutesPerML = 0.05 // 200 ml ~ 10 min
+            maxMinutes = 12
+        case .cocktail:
+            minutesPerML = 0.05
+            maxMinutes = 15
+        case .mixed:
+            minutesPerML = 0.045
+            maxMinutes = 15
+        case .fortified:
+            minutesPerML = 0.06
+            maxMinutes = 10
+        case .water, .softDrink, .juice, .coffeeTea, .milk:
+            minutesPerML = 0.02
+            maxMinutes = 10
+        case .other:
+            minutesPerML = 0.04
+            maxMinutes = 12
         }
-        return max(1, min(120, volumeML * minutesPerML))
+
+        return max(1, min(maxMinutes, volumeML * minutesPerML))
     }
 }

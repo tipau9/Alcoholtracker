@@ -24,18 +24,21 @@ struct ForecastView: View {
         max(0, targetTime.timeIntervalSinceNow / 3600)
     }
 
-    // Full curve evaluation at the target moment so drinks still in the
-    // absorption phase are counted; a linear decay from the current value
-    // would underestimate the BAC and overestimate the allowed drinks.
-    private var projectedBACAtTarget: Double {
-        BACCalculator.currentBAC(
+    private var projectionInput: BACProjectionInput {
+        BACProjectionInput(
             drinks: drinks,
             profile: profile,
-            at: targetTime,
             stomachStatus: profile.defaultStomachStatus,
             conservative: profile.conservativeForSafety,
             vomitTimes: vomitTimes
         )
+    }
+
+    // Full curve evaluation at the target moment so drinks still in the
+    // absorption phase are counted; a linear decay from the current value
+    // would underestimate the BAC and overestimate the allowed drinks.
+    private var projectedBACAtTarget: Double {
+        projectionInput.currentBAC(at: targetTime)
     }
 
     private var allowedAdditionalBAC: Double {
@@ -51,7 +54,7 @@ struct ForecastView: View {
     private var budgetPerDrinkBAC: Double {
         max(0.01, BACCalculator.bacContribution(
             volume: 330, abv: 5.0,
-            weight: profile.weight,
+            weight: profile.validatedWeight,
             distributionFactor: profile.distributionFactor
         ))
     }
@@ -153,9 +156,10 @@ struct ForecastView: View {
     private var planningTargets: [(Double, String)] {
         let limit = profile.drivingLimit
         if limit <= 0.0 {
-            return [(0.0, "Fahrbereit (0,0 ‰)")]
+            return [(0.0, "Unter 0,0 ‰")]
         }
-        return [(0.0, "Nüchtern"), (limit, "Fahrbereit")]
+        let limitLabel = "Unter \(String(format: "%.1f", locale: germanLocale, limit)) ‰"
+        return [(0.0, "Nüchtern"), (limit, limitLabel)]
     }
 
     private var targetBACPicker: some View {

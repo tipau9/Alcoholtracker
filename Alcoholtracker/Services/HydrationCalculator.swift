@@ -140,6 +140,24 @@ enum HydrationCalculator {
         return Int(ceil(ml / glassML))
     }
 
+    static func dynamicWaterTargetMl(
+        for drinks: [Drink],
+        profile: UserProfile? = nil,
+        extraSweatML: Double = 0,
+        vomitCount: Int = 0
+    ) -> Int {
+        let alcoholic = drinks.filter { $0.abv > 0 }
+        let alcoholGrams = alcoholic.reduce(0) { $0 + $1.alcoholGrams }
+        let vomitLoss = Double(vomitCount) * 300.0
+        let netTarget = compensationWaterMl(
+            netML: sessionNetHydration(drinks: drinks) - extraSweatML - vomitLoss
+        )
+        let bodyScale = profile.map { min(1.25, max(0.85, $0.weight / 75.0)) } ?? 1.0
+        let alcoholSupport = alcoholGrams * 4.0 * bodyScale
+        let supportTarget = Int((alcoholSupport + extraSweatML + vomitLoss).rounded())
+        return max(netTarget, supportTarget)
+    }
+
     // MARK: Weather-driven sweat loss (Wetter-Korrelation)
 
     // Extra sweat water loss (ml) on a warm night, on top of the alcohol diuresis.

@@ -58,6 +58,16 @@ struct DrinkEditSheet: View {
         timestamp.addingTimeInterval(effectiveDurationMinutes * 60)
     }
 
+    private var absorptionEndTime: Date {
+        let window = BACCalculator.absorptionWindowMinutes(
+            category: drink.category,
+            volumeML: volume,
+            drinkDurationMinutes: durationMinutes,
+            gastric: profile?.defaultStomachStatus.absorptionMinutes ?? StomachStatus.light.absorptionMinutes
+        )
+        return timestamp.addingTimeInterval(window * 60)
+    }
+
     var body: some View {
         ZStack {
             Color.appBackground.ignoresSafeArea()
@@ -141,11 +151,14 @@ struct DrinkEditSheet: View {
                             Text("Start \(timestamp.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute())) · fertig ca. \(estimatedEndTime.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute()))")
                                 .font(.appMicro)
                                 .foregroundStyle(Color.appTextMuted)
+                            Text("Aufnahme ca. bis \(absorptionEndTime.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute()))")
+                                .font(.appMicro)
+                                .foregroundStyle(Color.appTextMuted)
                         }
 
                         VStack(alignment: .leading, spacing: 8) {
                             SectionLabel(text: "UHRZEIT")
-                            DatePicker("", selection: $timestamp, displayedComponents: [.hourAndMinute])
+                            DatePicker("", selection: $timestamp, in: Date.distantPast...Date(), displayedComponents: [.hourAndMinute])
                                 .datePickerStyle(.wheel)
                                 .labelsHidden()
                                 .frame(maxWidth: .infinity)

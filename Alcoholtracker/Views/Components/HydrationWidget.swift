@@ -15,6 +15,7 @@ struct HydrationWidget: View {
     // Extra fluid lost to sweat on a warm night (from the weather model). Surfaced
     // so the "trink mehr bei Wärme" adjustment is visible rather than silent.
     var extraSweatML: Double = 0
+    var vomitCount: Int = 0
 
     // Real logged water glasses (counts into net + hangover prediction).
     @State private var loggedGlasses: Int = WaterLog.glassesToday()
@@ -25,8 +26,17 @@ struct HydrationWidget: View {
 
     private var loggedML: Double  { Double(loggedGlasses) * WaterLog.glassML }
     private var net: Double       { HydrationCalculator.sessionNetHydration(drinks: drinks) + loggedML - extraSweatML }
-    // Exact compensation (grossed up for ADH pass-through), not the bare deficit.
-    private var extraWater: Int   { HydrationCalculator.compensationWaterMl(netML: net) }
+    private var dynamicTargetML: Int {
+        HydrationCalculator.dynamicWaterTargetMl(
+            for: drinks,
+            profile: profile,
+            extraSweatML: extraSweatML,
+            vomitCount: vomitCount
+        )
+    }
+    private var remainingTargetML: Int { max(0, dynamicTargetML - Int(loggedML.rounded())) }
+    // Exact compensation (grossed up for ADH pass-through), plus the dynamic session target.
+    private var extraWater: Int   { max(HydrationCalculator.compensationWaterMl(netML: net), remainingTargetML) }
 
     private var status: HydrationStatus {
         if let p = profile { return HydrationCalculator.hydrationStatus(netML: net, profile: p) }

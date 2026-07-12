@@ -42,6 +42,7 @@ struct HomeView: View {
     @State private var showUnlockToast = false
     @State private var showMoodPrompt = false
     @State private var undoDismissTask: Task<Void, Never>? = nil
+    @State private var configureTask: Task<Void, Never>? = nil
     // Lets the user drop back to the normal home for this session even while the
     // BAC is still high; re-arms once they sober back under the threshold.
     @State private var drunkModeDismissed = false
@@ -50,20 +51,14 @@ struct HomeView: View {
 
     // Drunk-Mode: auto-simplify the home above the "careful" threshold.
     private var isDrunkMode: Bool {
-        guard profile?.drunkModeAuto == true, !drunkModeDismissed else { return false }
-        return session.currentBAC >= (profile?.carefulThreshold ?? 0.8)
+        session.isDrunkModeActive(profile: profile, dismissed: drunkModeDismissed)
     }
 
     // Composite key of BAC-relevant fields -- configure() only re-runs when one of these changes.
     private var bacConfigureKey: String {
         guard let p = profile else { return "" }
         return [
-            p.weight.description,
-            p.height.description,
-            p.genderRaw,
-            p.eliminationRate.description,
-            p.toleranceMode.description,
-            p.birthDate.timeIntervalSinceReferenceDate.description,
+            p.bacProjectionKey,
             p.stomachStatusRaw,
             p.conservativeEverywhere.description
         ].joined(separator: "|")
@@ -114,6 +109,17 @@ struct HomeView: View {
         UserDefaults.standard.set(true, forKey: moodPromptDismissKey)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         withAnimation(.appSpring) { showMoodPrompt = false }
+    }
+
+    private func configureSession(profile: UserProfile, debounce: Bool) {
+        configureTask?.cancel()
+        configureTask = Task { @MainActor in
+            if debounce {
+                try? await Task.sleep(for: .milliseconds(250))
+                guard !Task.isCancelled else { return }
+            }
+            session.configure(profile: profile, context: context)
+        }
     }
 
     var body: some View {
@@ -213,7 +219,7 @@ struct HomeView: View {
         .task {
             if let p = profile {
                 session.healthKit = health
-                session.configure(profile: p, context: context)
+                configureSession(profile: p, debounce: false)
             }
             evaluateMoodPrompt()
         }
@@ -229,7 +235,7 @@ struct HomeView: View {
         .onChange(of: bacConfigureKey) { _, _ in
             if let p = profile {
                 session.healthKit = health
-                session.configure(profile: p, context: context)
+                configureSession(profile: p, debounce: true)
             }
         }
         .alert("Sitzung zurücksetzen?", isPresented: $showResetAlert) {
@@ -284,7 +290,9 @@ struct HomeView: View {
             guard supabase.isSignedIn else { return }
             publishBACThrottled(bac)
         }
-        .task(id: recentDrinks.map(\.id)) {
+        .task(id: recentDrinks.map {
+            "\($0.id.uuidString)|\($0.timestamp.timeIntervalSinceReferenceDate)|\($0.volume)|\($0.abv)|\($0.drinkDurationMinutes)|\($0.categoryRaw)"
+        }) {
             // Keep the session in sync with edits made outside it (history tab,
             // widget quick-add) so home BAC never shows stale data.
             session.loadTodaysDrinks()
@@ -419,17 +427,13 @@ private struct DetailedHomeView: View {
     private static let gridTiles: [WidgetType] = [.timeToLimit, .water, .calories, .drinkCount]
 
     private func computeBACTrend() -> BACTrend {
-        guard session.currentBAC > 0.01, let p = profile else { return .stable }
-        let fiveMinutesAgo = BACCalculator.currentBAC(
+        HomeBACTrendResolver.trend(
+            currentBAC: session.currentBAC,
             drinks: session.drinks,
-            profile: p,
-            at: Date().addingTimeInterval(-300),
+            profile: profile,
             stomachStatus: session.stomachStatus,
-            conservative: p.conservativeForApp
+            vomitTimes: session.vomitTimes
         )
-        if session.currentBAC > fiveMinutesAgo + 0.005 { return .rising }
-        if session.currentBAC < fiveMinutesAgo - 0.005 { return .falling }
-        return .stable
     }
 
     var body: some View {
@@ -644,7 +648,12 @@ private struct DetailedHomeView: View {
                 .padding(.top, 16)
 
         case WidgetType.hydration.rawValue:
-            HydrationWidget(drinks: session.drinks, profile: profile, extraSweatML: weatherSweatML)
+                HydrationWidget(
+                    drinks: session.drinks,
+                    profile: profile,
+                    extraSweatML: weatherSweatML,
+                    vomitCount: session.vomitEvents.count
+                )
                 .padding(.horizontal, 16)
                 .padding(.top, 20)
 
@@ -982,18 +991,6 @@ private struct DrunkHomeView: View {
     // Live water count so the big "+Wasser" button gives immediate feedback.
     @State private var waterGlasses: Int = WaterLog.glassesToday()
 
-    // "noch ca. Xh Ym bis nüchtern" - the one piece of forward info a drunk user wants.
-    private var soberCountdown: String? {
-        guard session.currentBAC > 0.01 else { return nil }
-        guard let hours = session.hoursUntil(0.0) else { return "> 72 h bis nüchtern" }
-        guard hours > 0 else { return nil }
-        let totalMinutes = Int((hours * 60).rounded())
-        let h = totalMinutes / 60
-        let m = totalMinutes % 60
-        if h > 0 { return "noch ca. \(h) h \(m) min bis nüchtern" }
-        return "noch ca. \(m) min bis nüchtern"
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -1030,7 +1027,7 @@ private struct DrunkHomeView: View {
                 }
                 StatusPill(status: session.bacStatus, skin: skin)
 
-                if let soberCountdown {
+                if let soberCountdown = session.drunkModeSoberCountdown {
                     Text(soberCountdown)
                         .font(.appBody)
                         .foregroundStyle(Color.appTextDim)
@@ -1162,7 +1159,7 @@ private struct CrewAlertBanner: View {
 
 // MARK: - BAC Trend
 
-private enum BACTrend: Equatable {
+enum BACTrend: Equatable {
     case rising, stable, falling
 
     var symbol: String {
@@ -1582,10 +1579,10 @@ private struct HomeWidgetGrid: View {
     private var untilLimitText: String {
         let limit = session.drivingLimit
         guard session.currentBAC > limit + 0.005 else {
-            return session.currentBAC > 0.01 ? "Fahrbereit" : "Nüchtern"
+            return session.currentBAC > 0.01 ? "Unter Grenzwert" : "Nüchtern"
         }
         guard let h = session.hoursUntil(limit) else { return "> 72 h" }
-        return h <= 0 ? "Fahrbereit" : h.asHoursMinutes
+        return h <= 0 ? "Unter Grenzwert" : h.asHoursMinutes
     }
 
     private var waterText: String {
@@ -1767,6 +1764,7 @@ private struct DrinkHistorySection: View {
             ForEach(recent) { drink in
                 DrinkRowView(
                     drink: drink,
+                    stomachStatus: session.stomachStatus,
                     onDelete: { session.removeDrink(drink, recordUndo: true) },
                     onDuplicate: { session.duplicateDrink(drink) },
                     onFinish: { session.finishDrinkNow(drink) },
@@ -1779,6 +1777,7 @@ private struct DrinkHistorySection: View {
 
 private struct DrinkRowView: View {
     let drink: Drink
+    let stomachStatus: StomachStatus
     let onDelete: () -> Void
     let onDuplicate: () -> Void
     let onFinish: () -> Void
@@ -1789,6 +1788,9 @@ private struct DrinkRowView: View {
     // the action fires on release past the threshold (no persistent open state).
     @State private var offset: CGFloat = 0
     private let threshold: CGFloat = 72
+    private var timing: DrinkTimingModel {
+        DrinkTimingModel(drink: drink, stomachStatus: stomachStatus)
+    }
 
     private var card: some View {
         HStack(spacing: 12) {
@@ -1819,6 +1821,11 @@ private struct DrinkRowView: View {
                     Text("bis \(drink.estimatedFinishedAt.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute()))")
                         .font(.appMicro)
                         .foregroundStyle(Color.appTextMuted)
+                    if timing.absorptionFinishedAt.timeIntervalSince(drink.estimatedFinishedAt) > 60 {
+                        Text("Aufnahme bis \(timing.absorptionFinishedAt.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute()))")
+                            .font(.appMicro)
+                            .foregroundStyle(Color.appTextMuted)
+                    }
                 }
 
                 if Date() < drink.estimatedFinishedAt {
@@ -2102,7 +2109,7 @@ private struct MilestoneCard: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10))
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(isProbation ? "Fahrbereit (0,0 ‰)" : "Fahrbereit (0,5 ‰)")
+                    Text(isProbation ? "Unter 0,0 ‰" : "Unter 0,5 ‰")
                         .font(.appCaptionBold)
                         .foregroundStyle(Color.appText)
                     Text(subtitle(hours: hours, now: context.date))

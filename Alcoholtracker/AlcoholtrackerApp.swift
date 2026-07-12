@@ -65,6 +65,7 @@ struct PromilleApp: App {
                 .task {
                     RuntimeSelfCheck.runIfRequested()
                     seedDrinkDatabase()
+                    CompatibilityCheckService.normalizeStoredData(in: persistence.container.mainContext)
                     await syncCommunityDrinks()
                     syncThemeFromProfile()
                     await historySync.sync()

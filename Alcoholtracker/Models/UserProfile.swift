@@ -47,6 +47,44 @@ enum HomeStyle: String, Codable, CaseIterable {
     }
 }
 
+enum BodyDataValidation {
+    static let weightRange: ClosedRange<Double> = 35...250
+    static let heightRange: ClosedRange<Double> = 120...230
+    static let ageRange: ClosedRange<Int> = 18...100
+
+    static func weightError(_ value: Double) -> String? {
+        guard value.isFinite, weightRange.contains(value) else {
+            return "Gewicht muss zwischen 35 und 250 kg liegen."
+        }
+        return nil
+    }
+
+    static func heightError(_ value: Double) -> String? {
+        guard value.isFinite, heightRange.contains(value) else {
+            return "Größe muss zwischen 120 und 230 cm liegen."
+        }
+        return nil
+    }
+
+    static func ageError(_ value: Int) -> String? {
+        guard ageRange.contains(value) else {
+            return "Alter muss zwischen 18 und 100 Jahren liegen."
+        }
+        return nil
+    }
+
+    static func age(from birthDate: Date, now: Date = Date()) -> Int {
+        Calendar.current.dateComponents([.year], from: birthDate, to: now).year ?? 0
+    }
+
+    static func birthDateRange(now: Date = Date()) -> ClosedRange<Date> {
+        let calendar = Calendar.current
+        let oldest = calendar.date(byAdding: .year, value: -ageRange.upperBound, to: now) ?? now
+        let youngest = calendar.date(byAdding: .year, value: -ageRange.lowerBound, to: now) ?? now
+        return oldest...youngest
+    }
+}
+
 enum WidgetType: String, Codable, CaseIterable {
     // Info-Kacheln (2x2 grid on home screen)
     case timeToLimit      = "timeToLimit"
@@ -77,6 +115,8 @@ enum WidgetType: String, Codable, CaseIterable {
     static var preWidgetDefault: [WidgetType] {
         allCases.filter { !newerAdditions.contains($0) }
     }
+
+    static let explicitNoneRaw = "__none__"
 
     var localizedName: String {
         switch self {
@@ -244,6 +284,7 @@ final class UserProfile {
 
     var activeWidgets: [WidgetType] {
         get {
+            if activeWidgetsRaw == WidgetType.explicitNoneRaw { return [] }
             let stored = _parseRawList(activeWidgetsRaw)
             // An empty stored list means "all active" (the default for a fresh
             // profile, which is initialised with every case). A NON-empty list is
@@ -257,7 +298,9 @@ final class UserProfile {
             return stored.compactMap { WidgetType(rawValue: $0) }
         }
         set {
-            activeWidgetsRaw = newValue.map(\.rawValue).joined(separator: ",")
+            activeWidgetsRaw = newValue.isEmpty
+                ? WidgetType.explicitNoneRaw
+                : newValue.map(\.rawValue).joined(separator: ",")
         }
     }
 
@@ -276,10 +319,34 @@ final class UserProfile {
         return fromBirth > 0 ? fromBirth : age
     }
 
+    var validatedWeight: Double {
+        // Keep UI validation at 35 kg, but use the engine's 30 kg floor for old or
+        // malformed stored profiles so the safety calculation never raises a real
+        // low weight and thereby understates BAC.
+        min(max(weight, 30), BodyDataValidation.weightRange.upperBound)
+    }
+
+    var validatedHeight: Double {
+        min(max(height, BodyDataValidation.heightRange.lowerBound), BodyDataValidation.heightRange.upperBound)
+    }
+
+    var validatedAge: Int {
+        min(max(currentAge, BodyDataValidation.ageRange.lowerBound), BodyDataValidation.ageRange.upperBound)
+    }
+
     // FIX BUG1: when toleranceMode is active, enforce minimum elimination rate of 0.20
     // (regular drinkers metabolise at 0.17-0.25 vs 0.10-0.20 for occasional drinkers)
     var effectiveEliminationRate: Double {
         toleranceMode ? max(eliminationRate, 0.20) : eliminationRate
+    }
+
+    // Worst-case (conservative) safety math must NOT assume the faster metabolism of
+    // tolerance mode: a higher elimination rate shortens the "nüchtern"/"fahrbereit"
+    // times and errs optimistic, which is the opposite of what a worst-case readout
+    // should do. Conservative callers therefore drop the tolerance floor and use the
+    // user's base rate; everyone else keeps the tolerance-adjusted rate.
+    func resolvedEliminationRate(conservative: Bool) -> Double {
+        conservative ? eliminationRate : effectiveEliminationRate
     }
 
     // MARK: Driving limit
@@ -304,7 +371,7 @@ final class UserProfile {
     // line with the Watson-Widmark / German forensic values (men ~0.70, women
     // ~0.60). Clamp is the physiological blood-r range.
     var distributionFactor: Double {
-        min(max((totalBodyWater / weight) / 0.806, 0.50), 0.90)
+        min(max((totalBodyWater / validatedWeight) / 0.806, 0.50), 0.90)
     }
 
     // MARK: Total body water (Watson 1980)
@@ -314,15 +381,15 @@ final class UserProfile {
     // person with little body water than for a large one, so the hydration status
     // is scaled against this rather than an absolute ml threshold.
     var totalBodyWater: Double {
-        let a = Double(currentAge)
+        let a = Double(validatedAge)
         switch gender {
         case .male:
-            return 2.447 - 0.09516 * a + 0.1074 * height + 0.3362 * weight
+            return 2.447 - 0.09516 * a + 0.1074 * validatedHeight + 0.3362 * validatedWeight
         case .female:
-            return -2.097 + 0.1069 * height + 0.2466 * weight
+            return -2.097 + 0.1069 * validatedHeight + 0.2466 * validatedWeight
         case .diverse:
-            let m = 2.447 - 0.09516 * a + 0.1074 * height + 0.3362 * weight
-            let f = -2.097 + 0.1069 * height + 0.2466 * weight
+            let m = 2.447 - 0.09516 * a + 0.1074 * validatedHeight + 0.3362 * validatedWeight
+            let f = -2.097 + 0.1069 * validatedHeight + 0.2466 * validatedWeight
             return (m + f) / 2.0
         }
     }

@@ -59,6 +59,64 @@ enum RuntimeSelfCheck {
             drinks: [beer], profile: profile, stomachStatus: .light)
         check("sessionPeakBeer", sessionPeak, 0.08, 0.20)
 
+        check("durationShotDefault", DrinkDurationEstimator.baseEstimate(category: .shot, volumeML: 40), 1, 1)
+        check("durationBeerDefault", DrinkDurationEstimator.baseEstimate(category: .beer, volumeML: 500), 19.5, 20.0)
+        check("durationBeerCap", DrinkDurationEstimator.baseEstimate(category: .beer, volumeML: 1000), 19.5, 20.0)
+        check("durationWineDefault",
+              DrinkDurationEstimator.baseEstimate(category: .wine, volumeML: 200), 9.5, 10.5)
+        #if DEBUG
+        DrinkPaceMemory.resetForTesting(category: .cider)
+        let ciderBase = DrinkDurationEstimator.baseEstimate(category: .cider, volumeML: 500)
+        let paceDrink = Drink.from(template: DrinkTemplate(
+            name: "Pace-Cider", category: .cider, volume: 500, abv: 5, calories: 215))
+        let paceKeyBefore = BACProjectionInput(
+            drinks: [paceDrink], profile: profile, stomachStatus: .light,
+            conservative: false, vomitTimes: []
+        ).stableKey
+        DrinkPaceMemory.recordEarlyFinish(category: .cider, baseEstimate: ciderBase, actualMinutes: 10)
+        DrinkPaceMemory.recordEarlyFinish(category: .cider, baseEstimate: ciderBase, actualMinutes: 10)
+        DrinkPaceMemory.recordEarlyFinish(category: .cider, baseEstimate: ciderBase, actualMinutes: 10)
+        let learnedCider = DrinkDurationEstimator.estimate(category: .cider, volumeML: 500)
+        check("durationLearnsEarlyFinish", learnedCider, 9.5, 19.0)
+        let paceKeyAfter = BACProjectionInput(
+            drinks: [paceDrink], profile: profile, stomachStatus: .light,
+            conservative: false, vomitTimes: []
+        ).stableKey
+        checkInt("projectionKeyTracksLearnedPace", paceKeyBefore == paceKeyAfter ? 0 : 1, 1)
+        DrinkPaceMemory.resetForTesting(category: .cider)
+        #endif
+
+        let projection = BACProjectionInput(
+            drinks: [beer],
+            profile: profile,
+            stomachStatus: .light,
+            conservative: false,
+            vomitTimes: []
+        )
+        let projectionSampleTime = beer.timestamp.addingTimeInterval(64 * 60)
+        let projectedAtPeak = projection.currentBAC(at: projectionSampleTime)
+        let directAtPeak = BACCalculator.currentBAC(
+            drinks: [beer], profile: profile, at: projectionSampleTime, stomachStatus: .light)
+        checkInt("projectionMatchesCalculator", abs(projectedAtPeak - directAtPeak) < 0.0001 ? 1 : 0, 1)
+
+        check("barcodeABVClampHigh", BarcodeService.sanitizedABV(240), 80, 80)
+        check("barcodeABVClampLow", BarcodeService.sanitizedABV(-4), 0, 0)
+        check("barcodeVolumeClampLow", BarcodeService.sanitizedVolumeML(0), 5, 5)
+        check("barcodeVolumeClampHigh", BarcodeService.sanitizedVolumeML(5000), 3000, 3000)
+        checkInt("barcodeAlcoholicWaterFallback",
+                 BarcodeService.sanitizedCategory(.water, abv: 5) == .mixed ? 1 : 0, 1)
+        check("barcodePackSingleBottleML", BarcodeService.parseVolumeML(from: "6 x 330 ml") ?? 0, 330, 330)
+        check("barcodePackSingleBottleL", BarcodeService.parseVolumeML(from: "4x0.5l") ?? 0, 500, 500)
+        let localCandidate = DrinkTemplateCandidate(
+            name: "Local Beer", abv: 5, barcode: "123", volume: 500, category: .beer, source: .local
+        )
+        checkInt("barcodeCandidateSourceLocal", localCandidate.source == .local ? 1 : 0, 1)
+
+        let dynamicWater = HydrationCalculator.dynamicWaterTargetMl(
+            for: [beer], profile: profile, extraSweatML: 200, vomitCount: 1
+        )
+        check("dynamicWaterTargetAddsHeatVomit", Double(dynamicWater), 450, 700)
+
         // 5) Status banding at a known BAC.
         checkInt("statusAt_0_9", BACStatus(bac: 0.9, profile: profile).level,
                  BACStatus.careful.level)
@@ -181,6 +239,9 @@ enum RuntimeSelfCheck {
             0.5, drinks: [consDrink], profile: consProfile,
             from: consDrink.timestamp, stomachStatus: .light, conservative: true) ?? -1
         checkInt("conservativeSoberTimeLonger", consHrs >= realHrs ? 1 : 0, 1)
+        consProfile.toleranceMode = true
+        check("conservativeWidgetRateUsesBase", consProfile.resolvedEliminationRate(conservative: true),
+              consProfile.eliminationRate, consProfile.eliminationRate)
 
         // 18) Exact dehydration compensation: three 40 ml vodka shots (40%) leave a
         //     net deficit; the compensation must gross that up for ADH pass-through
@@ -264,6 +325,11 @@ enum RuntimeSelfCheck {
             drinks: [beer], profile: appCons, at: afterPeak, stomachStatus: .light)
         checkInt("appConservativeAboveRealistic", appConsBeer > realBeerNow ? 1 : 0, 1)
 
+        // Low legacy weights remain invalid in the UI, but their BAC math must not
+        // raise them to the 35 kg form-validation floor and underestimate exposure.
+        let lowWeightProfile = UserProfile(weight: 32, height: 150, age: 25, gender: .female)
+        check("legacyLowWeightPreservedForSafety", lowWeightProfile.validatedWeight, 32, 32)
+
         // DIAGNOSTIC: 200 ml rum (40%) for an 87 kg / 196 cm male, the user's case.
         // Prints (does not assert) the real values the engine produces so we can see
         // exactly why the shown peak is what it is and how the assumptions move it.
@@ -337,6 +403,47 @@ enum RuntimeSelfCheck {
                 timestamp: Date().addingTimeInterval(-20 * 60)))
             let peak2 = vm24.bacCurve.map(\.bac).max() ?? 0
             checkInt("curveCacheInvalidatesOnAdd", (peak1 > 0.001 && peak2 > peak1) ? 1 : 0, 1)
+        }
+
+        // 25) History edits mutate an existing SwiftData object in place. A normal
+        // reload must compare BAC input values, not only object ids, so Home updates
+        // immediately without waiting for the 30 s timer.
+        if let box25 = try? ModelContainer(
+            for: Schema([Drink.self, DrinkTemplate.self, VomitEvent.self]),
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        ) {
+            let ctx25 = box25.mainContext
+            let p25 = UserProfile(weight: 75, height: 180, age: 25, gender: .male)
+            let vm25 = SessionViewModel()
+            vm25.configure(profile: p25, context: ctx25)
+            let d25 = Drink.from(
+                template: DrinkTemplate(name: "selfcheck-history-edit", category: .beer,
+                                        volume: 500, abv: 5, calories: 215),
+                timestamp: Date().addingTimeInterval(-75 * 60))
+            vm25.addDrink(d25)
+            let bacBeforeEdit = vm25.currentBAC
+            d25.volume *= 2
+            try? ctx25.save()
+            vm25.loadTodaysDrinks()
+            checkInt("nonForceReloadDetectsEdit",
+                     (bacBeforeEdit > 0.001 && vm25.currentBAC > bacBeforeEdit) ? 1 : 0, 1)
+        }
+
+        // 26) Probezeit changes the legal target without changing any drinks. Its
+        // value must be part of the reload signature so the App Group, widget and
+        // Live Activity immediately switch from 0,5 to the 0,0 target.
+        if let box26 = try? ModelContainer(
+            for: Schema([Drink.self, DrinkTemplate.self, VomitEvent.self]),
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        ) {
+            let ctx26 = box26.mainContext
+            let p26 = UserProfile(weight: 75, height: 180, age: 25, gender: .male)
+            let vm26 = SessionViewModel()
+            vm26.configure(profile: p26, context: ctx26)
+            check("normalDrivingLimitWritten", UserDefaults.widgetShared.double(forKey: UserDefaults.keyDrivingLimit), 0.5, 0.5)
+            p26.isProbationaryDriver = true
+            vm26.configure(profile: p26, context: ctx26)
+            check("probationaryDrivingLimitWritten", UserDefaults.widgetShared.double(forKey: UserDefaults.keyDrivingLimit), 0, 0)
         }
 
         print("SELFCHECK SUMMARY pass=\(pass) fail=\(fail)")

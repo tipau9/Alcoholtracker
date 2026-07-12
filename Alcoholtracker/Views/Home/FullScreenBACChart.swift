@@ -20,14 +20,7 @@ struct FullScreenBACChart: View {
     private var drivingLimit: Double { profile?.drivingLimit ?? 0.5 }
 
     private var limitDate: Date? {
-        guard let p = profile else { return nil }
-        return BACCalculator.hoursUntilBAC(
-            drivingLimit,
-            drinks: session.drinks,
-            profile: p,
-            stomachStatus: session.stomachStatus,
-            conservative: p.conservativeForApp
-        ).map { Date().addingTimeInterval($0 * 3600) }
+        session.hoursUntil(drivingLimit).map { Date().addingTimeInterval($0 * 3600) }
     }
 
     var body: some View {

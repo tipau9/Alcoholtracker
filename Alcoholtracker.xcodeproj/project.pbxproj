@@ -11,6 +11,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		A10A0000000000000000000A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7AC825C82FCD8600008F7173 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7AC825CF2FCD8600008F7173;
+			remoteInfo = Alcoholtracker;
+		};
 		9ED62C08CBE0402AAFB9721E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 7AC825C82FCD8600008F7173 /* Project object */;
@@ -37,6 +44,7 @@
 /* Begin PBXFileReference section */
 		47ED21CBF7A1476D90BBF871 /* PromilleWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PromilleWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		7AC825D02FCD8600008F7173 /* Alcoholtracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Alcoholtracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10100000000000000000001 /* AlcoholtrackerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AlcoholtrackerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -64,6 +72,11 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		A10200000000000000000002 /* AlcoholtrackerTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AlcoholtrackerTests;
+			sourceTree = "<group>";
+		};
 		7AC825D22FCD8600008F7173 /* Alcoholtracker */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -98,6 +111,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A10300000000000000000003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -105,6 +125,7 @@
 			isa = PBXGroup;
 			children = (
 				7AC825D22FCD8600008F7173 /* Alcoholtracker */,
+				A10200000000000000000002 /* AlcoholtrackerTests */,
 				90BC0A0715534EBAB59406D2 /* PromilleWidgetExtension */,
 				7AC825D12FCD8600008F7173 /* Products */,
 			);
@@ -115,6 +136,7 @@
 			children = (
 				7AC825D02FCD8600008F7173 /* Alcoholtracker.app */,
 				47ED21CBF7A1476D90BBF871 /* PromilleWidgetExtension.appex */,
+				A10100000000000000000001 /* AlcoholtrackerTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -122,6 +144,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		A10600000000000000000006 /* AlcoholtrackerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10900000000000000000009 /* Build configuration list for PBXNativeTarget "AlcoholtrackerTests" */;
+			buildPhases = (
+				A10400000000000000000004 /* Sources */,
+				A10300000000000000000003 /* Frameworks */,
+				A10500000000000000000005 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A10B0000000000000000000B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A10200000000000000000002 /* AlcoholtrackerTests */,
+			);
+			name = AlcoholtrackerTests;
+			packageProductDependencies = (
+			);
+			productName = AlcoholtrackerTests;
+			productReference = A10100000000000000000001 /* AlcoholtrackerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		36EFACAF009D495FB9CF3498 /* PromilleWidgetExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = AB4C2EF6989E439D9E20194F /* Build configuration list for PBXNativeTarget "PromilleWidgetExtension" */;
@@ -184,6 +229,10 @@
 					7AC825CF2FCD8600008F7173 = {
 						CreatedOnToolsVersion = 26.5;
 					};
+					A10600000000000000000006 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = 7AC825CF2FCD8600008F7173;
+					};
 				};
 			};
 			buildConfigurationList = 7AC825CB2FCD8600008F7173 /* Build configuration list for PBXProject "Alcoholtracker" */;
@@ -203,6 +252,7 @@
 			targets = (
 				7AC825CF2FCD8600008F7173 /* Alcoholtracker */,
 				36EFACAF009D495FB9CF3498 /* PromilleWidgetExtension */,
+				A10600000000000000000006 /* AlcoholtrackerTests */,
 			);
 		};
 /* End PBXProject section */
@@ -216,6 +266,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		914C851A41394BEA83DDBE05 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10500000000000000000005 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -239,9 +296,21 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A10400000000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		A10B0000000000000000000B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7AC825CF2FCD8600008F7173 /* Alcoholtracker */;
+			targetProxy = A10A0000000000000000000A /* PBXContainerItemProxy */;
+		};
 		FA2B2F3D85B044EFB60CB96F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 36EFACAF009D495FB9CF3498 /* PromilleWidgetExtension */;
@@ -250,6 +319,62 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		A10700000000000000000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.2.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tipau.AlcoholtrackerTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Alcoholtracker.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Alcoholtracker";
+			};
+			name = Debug;
+		};
+		A10800000000000000000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.2.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tipau.AlcoholtrackerTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Alcoholtracker.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Alcoholtracker";
+			};
+			name = Release;
+		};
 		35798D6AA00442FFA1B91512 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -528,6 +653,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		A10900000000000000000009 /* Build configuration list for PBXNativeTarget "AlcoholtrackerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10700000000000000000007 /* Debug */,
+				A10800000000000000000008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		7AC825CB2FCD8600008F7173 /* Build configuration list for PBXProject "Alcoholtracker" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

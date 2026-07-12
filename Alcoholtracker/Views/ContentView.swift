@@ -34,6 +34,7 @@ struct ContentView: View {
 
 struct MainTabView: View {
     @SceneStorage("mainTabSelection") private var selectedTab = "home"
+    @Environment(SupabaseService.self) private var supabase
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -56,9 +57,21 @@ struct MainTabView: View {
             SettingsView()
                 .tabItem { Label("Profil", systemImage: "person.fill") }
                 .tag("settings")
+
+            if supabase.isAdmin {
+                AdminView()
+                    .tabItem { Label("Admin", systemImage: "lock.shield.fill") }
+                    .tag("admin")
+            }
         }
         .tint(Color.appAccent)
         .preferredColorScheme(.dark)
+        .task {
+            try? await supabase.refreshAdminStatus()
+        }
+        .onChange(of: supabase.isSignedIn) { _, _ in
+            Task { try? await supabase.refreshAdminStatus() }
+        }
     }
 }
 

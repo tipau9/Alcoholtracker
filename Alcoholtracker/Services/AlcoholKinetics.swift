@@ -11,7 +11,11 @@ import Foundation
 
 // nonisolated: pure math, called from AppIntents outside the main actor.
 nonisolated enum AlcoholKinetics {
-    // BAC threshold below which first-order kinetics dominate (g/100 mL).
+    // BAC threshold (in ‰, i.e. g per kg) below which elimination crosses from
+    // zero-order into first-order kinetics. This is NOT g/100 mL: the whole engine
+    // works in Promille, and 0.10 ‰ matches the physiological Michaelis constant
+    // for ethanol (~0.08 to 0.18 ‰). Rescaling it to g/100 mL (which would make it
+    // 1.0 ‰) would break every tail/sober time, so keep it in ‰.
     static let km: Double = 0.10
 
     // BAC at time t hours after peak, using mixed-order kinetics.

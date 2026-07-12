@@ -133,8 +133,10 @@ enum BACStatus: Equatable, Hashable, CaseIterable {
         case .sober:   return "Nüchtern"
         case .tipsy:   return "Leicht beschwipst"
         case .drunk:   return "Beschwipst"
-        case .careful: return "Aufpassen"
-        case .danger:  return "Fahruntauglich"
+        // 0,8 bis 1,5 ‰ liegt bereits klar über dem 0,5-Grenzwert; "Aufpassen"
+        // verharmloste das. Ab 1,5 ‰ dann die deutliche Warnung.
+        case .careful: return "Fahruntüchtig"
+        case .danger:  return "Gefährlich"
         }
     }
 

@@ -77,6 +77,16 @@ struct AmountInputSheet: View {
         startTime.addingTimeInterval(effectiveDurationMinutes * 60)
     }
 
+    private var absorptionEndTime: Date {
+        let window = BACCalculator.absorptionWindowMinutes(
+            category: template.category,
+            volumeML: volume,
+            drinkDurationMinutes: durationMinutes,
+            gastric: profile?.defaultStomachStatus.absorptionMinutes ?? StomachStatus.light.absorptionMinutes
+        )
+        return startTime.addingTimeInterval(window * 60)
+    }
+
     var body: some View {
         ZStack {
             Color.appBackground.ignoresSafeArea()
@@ -236,6 +246,9 @@ struct AmountInputSheet: View {
                                 estimatedMinutes: autoDurationMinutes
                             )
                             Text("Fertig ca. \(estimatedEndTime.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute()))")
+                                .font(.appMicro)
+                                .foregroundStyle(Color.appTextMuted)
+                            Text("Aufnahme ca. bis \(absorptionEndTime.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute()))")
                                 .font(.appMicro)
                                 .foregroundStyle(Color.appTextMuted)
                         }

@@ -1,159 +1,314 @@
 -- Profiles privacy hardening
---
--- Run this once in the Supabase SQL Editor (New query -> paste -> Run).
---
--- THE PROBLEM this fixes
--- ----------------------
--- The Crew/Jam features need to read *other* users' profiles (a friend's live
--- BAC, SOS flag, display name) by their friend_code. Until now the app did that
--- with a direct table read:
---     GET /rest/v1/profiles?friend_code=in.(...)&is_sharing=eq.true&select=*
--- For that to work, the profiles RLS policy has to let an authenticated user
--- SELECT other people's rows. But RLS predicates are row-level, not
--- query-level: any logged-in user could simply DROP the friend_code filter and
--- dump EVERY sharing user's current_bac / sos_active / friend_code / name. The
--- anon key ships inside the IPA, so RLS is the only real protection.
---
--- THE FIX
--- -------
--- 1. Lock the base table down to "you can only read/write your OWN row".
--- 2. Expose friends' data ONLY through SECURITY DEFINER functions that REQUIRE
---    the exact friend_code(s) or user id(s) as an argument and return just a
---    safe column projection. friend_code is a random secret you only have for
---    people you deliberately added, and user ids are unguessable UUIDs, so
---    there is no way to enumerate strangers anymore.
--- 3. Continuously-shared live data (current_bac / bac_updated_at) is nulled out
---    for users who turned sharing off; identity + the explicitly user-triggered
---    SOS flag are still returned to people who hold the code.
+-- Run once in Supabase SQL Editor.
 
--- =========================================================================
--- 0. Make sure every column the app uses actually exists, so the functions
---    below compile even on a fresh project.
--- =========================================================================
-
-alter table public.profiles add column if not exists display_name    text;
-alter table public.profiles add column if not exists friend_code     text;
-alter table public.profiles add column if not exists current_bac     double precision;
-alter table public.profiles add column if not exists bac_updated_at  timestamptz;
-alter table public.profiles add column if not exists is_sharing      boolean not null default true;
-alter table public.profiles add column if not exists achievements    jsonb   not null default '[]'::jsonb;
-alter table public.profiles add column if not exists sos_active      boolean not null default false;
-alter table public.profiles add column if not exists sos_updated_at  timestamptz;
+-- Base columns used by the app.
+alter table public.profiles add column if not exists display_name text not null default '';
+alter table public.profiles add column if not exists friend_code text;
+alter table public.profiles add column if not exists current_bac double precision not null default 0;
+alter table public.profiles add column if not exists bac_updated_at timestamptz not null default now();
+alter table public.profiles add column if not exists is_sharing boolean not null default true;
+alter table public.profiles add column if not exists achievements jsonb not null default '[]'::jsonb;
+alter table public.profiles add column if not exists sos_active boolean not null default false;
+alter table public.profiles add column if not exists sos_updated_at timestamptz;
 alter table public.profiles add column if not exists is_probationary boolean not null default false;
 
--- =========================================================================
--- 1. Base-table RLS: self-only. Drop EVERY existing policy on profiles first
---    (we cannot know their names), then recreate exactly the intended set.
---    Reading other users' rows now goes exclusively through the functions in
---    section 2 (SECURITY DEFINER bypasses these policies in a controlled way).
--- =========================================================================
+create table if not exists public.friendships (
+    follower_id uuid not null references public.profiles(id) on delete cascade,
+    friend_id   uuid not null references public.profiles(id) on delete cascade,
+    created_at  timestamptz not null default now(),
+    primary key (follower_id, friend_id)
+);
+
+create table if not exists public.profile_lookup_events (
+    caller_id  uuid not null,
+    kind       text not null,
+    created_at timestamptz not null default now()
+);
+
+create index if not exists profile_lookup_events_caller_idx
+    on public.profile_lookup_events (caller_id, kind, created_at);
+
+create or replace function public.generate_friend_code(p_length integer default 10)
+returns text
+language sql
+security definer
+set search_path = public
+as $$
+    select upper(substr(replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''), 1, greatest(8, least(p_length, 16))));
+$$;
+
+update public.profiles
+set friend_code = public.generate_friend_code(10)
+where friend_code is null or length(trim(friend_code)) < 8;
+
+with duplicate_codes as (
+    select
+        id,
+        row_number() over (partition by upper(friend_code) order by id) as rn
+    from public.profiles
+    where friend_code is not null
+)
+update public.profiles p
+set friend_code = public.generate_friend_code(10)
+from duplicate_codes d
+where p.id = d.id
+  and d.rn > 1;
+
+create unique index if not exists profiles_friend_code_upper_idx
+    on public.profiles (upper(friend_code))
+    where friend_code is not null;
 
 alter table public.profiles enable row level security;
+alter table public.friendships enable row level security;
+alter table public.profile_lookup_events enable row level security;
 
 do $$
-declare pol record;
+declare
+    pol record;
 begin
     for pol in
-        select policyname from pg_policies
+        select policyname
+        from pg_policies
         where schemaname = 'public' and tablename = 'profiles'
     loop
         execute format('drop policy if exists %I on public.profiles', pol.policyname);
     end loop;
+
+    for pol in
+        select policyname
+        from pg_policies
+        where schemaname = 'public' and tablename = 'friendships'
+    loop
+        execute format('drop policy if exists %I on public.friendships', pol.policyname);
+    end loop;
+
+    for pol in
+        select policyname
+        from pg_policies
+        where schemaname = 'public' and tablename = 'profile_lookup_events'
+    loop
+        execute format('drop policy if exists %I on public.profile_lookup_events', pol.policyname);
+    end loop;
 end $$;
 
-create policy "profiles_select_own" on public.profiles
-    for select using (auth.uid() = id);
-create policy "profiles_insert_own" on public.profiles
-    for insert with check (auth.uid() = id);
-create policy "profiles_update_own" on public.profiles
-    for update using (auth.uid() = id) with check (auth.uid() = id);
+create policy "profiles_select_own"
+    on public.profiles
+    for select
+    to authenticated
+    using (auth.uid() = id);
 
--- =========================================================================
--- 2. Friend-facing projection. Same column shape the client's FriendProfile
---    decodes. current_bac / bac_updated_at are hidden unless the user shares.
--- =========================================================================
+create policy "profiles_insert_own"
+    on public.profiles
+    for insert
+    to authenticated
+    with check (auth.uid() = id);
 
--- By exact friend code(s): used for friend lookup ("add by code") and the
--- friends' BAC poll. Codes are normalised (uppercase, alnum only) to match how
--- they are stored, so client-side and server-side sanitising agree.
+create policy "profiles_update_own"
+    on public.profiles
+    for update
+    to authenticated
+    using (auth.uid() = id)
+    with check (auth.uid() = id);
+
+create policy "friendships_read_own"
+    on public.friendships
+    for select
+    to authenticated
+    using (auth.uid() = follower_id or auth.uid() = friend_id);
+
+create policy "friendships_insert_own"
+    on public.friendships
+    for insert
+    to authenticated
+    with check (auth.uid() = follower_id and follower_id <> friend_id);
+
+create policy "friendships_delete_own"
+    on public.friendships
+    for delete
+    to authenticated
+    using (auth.uid() = follower_id);
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    v_code text;
+begin
+    loop
+        v_code := public.generate_friend_code(10);
+        exit when not exists (
+            select 1 from public.profiles p where upper(p.friend_code) = upper(v_code)
+        );
+    end loop;
+
+    insert into public.profiles (id, display_name, friend_code)
+    values (
+        new.id,
+        coalesce(new.raw_user_meta_data->>'display_name', ''),
+        v_code
+    )
+    on conflict (id) do nothing;
+
+    return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+    after insert on auth.users
+    for each row execute function public.handle_new_user();
+
+create or replace function public.profile_lookup_rate_limit(p_kind text, p_max_per_hour integer)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    v_recent integer;
+begin
+    if auth.uid() is null then
+        raise exception 'not_signed_in';
+    end if;
+
+    select count(*) into v_recent
+    from public.profile_lookup_events e
+    where e.caller_id = auth.uid()
+      and e.kind = p_kind
+      and e.created_at > now() - interval '1 hour';
+
+    if v_recent >= p_max_per_hour then
+        raise exception 'profile_lookup_rate_limited';
+    end if;
+
+    insert into public.profile_lookup_events(caller_id, kind)
+    values (auth.uid(), p_kind);
+end;
+$$;
+
+create or replace function public.is_mutual_friend(p_other uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+    select exists (
+        select 1
+        from public.friendships a
+        join public.friendships b
+          on b.follower_id = a.friend_id
+         and b.friend_id = a.follower_id
+        where a.follower_id = auth.uid()
+          and a.friend_id = p_other
+    );
+$$;
+
 create or replace function public.friend_profiles_by_codes(p_codes text[])
 returns table (
-    id              uuid,
-    display_name    text,
-    friend_code     text,
-    current_bac     double precision,
-    bac_updated_at  timestamptz,
-    is_sharing      boolean,
-    achievements    jsonb,
-    sos_active      boolean,
+    id uuid,
+    display_name text,
+    friend_code text,
+    current_bac double precision,
+    bac_updated_at timestamptz,
+    is_sharing boolean,
+    achievements jsonb,
+    sos_active boolean,
     is_probationary boolean
 )
-language sql
+language plpgsql
 security definer
 set search_path = public
-stable
 as $$
+begin
+    if p_codes is null or coalesce(array_length(p_codes, 1), 0) = 0 then
+        return;
+    end if;
+
+    if array_length(p_codes, 1) > 50 then
+        raise exception 'too_many_friend_codes';
+    end if;
+
+    perform public.profile_lookup_rate_limit('friend_code', 120);
+
+    return query
+    with clean(code) as (
+        select distinct upper(regexp_replace(c, '[^A-Za-z0-9]', '', 'g'))
+        from unnest(p_codes) as c
+        where length(regexp_replace(c, '[^A-Za-z0-9]', '', 'g')) between 6 and 16
+    )
     select
         p.id,
         p.display_name,
         p.friend_code,
-        case when p.is_sharing then p.current_bac    end,
+        case when p.is_sharing then p.current_bac end,
         case when p.is_sharing then p.bac_updated_at end,
         p.is_sharing,
-        p.achievements,
-        p.sos_active,
-        p.is_probationary
+        case when public.is_mutual_friend(p.id) then p.achievements else '[]'::jsonb end,
+        case when public.is_mutual_friend(p.id) then p.sos_active else false end,
+        case when public.is_mutual_friend(p.id) then p.is_probationary else false end
     from public.profiles p
-    where p.friend_code = any (
-        select upper(regexp_replace(c, '[^A-Za-z0-9]', '', 'g'))
-        from unnest(p_codes) c
-        where c is not null
-    )
+    join clean c on upper(p.friend_code) = c.code
+    limit 50;
+end;
 $$;
 
--- By user id(s): used for the mutual-friends display and friend-code lookup of
--- a known user id. UUIDs are unguessable, so this is safe without a code.
 create or replace function public.friend_profiles_by_ids(p_ids uuid[])
 returns table (
-    id              uuid,
-    display_name    text,
-    friend_code     text,
-    current_bac     double precision,
-    bac_updated_at  timestamptz,
-    is_sharing      boolean,
-    achievements    jsonb,
-    sos_active      boolean,
+    id uuid,
+    display_name text,
+    friend_code text,
+    current_bac double precision,
+    bac_updated_at timestamptz,
+    is_sharing boolean,
+    achievements jsonb,
+    sos_active boolean,
     is_probationary boolean
 )
-language sql
+language plpgsql
 security definer
 set search_path = public
-stable
 as $$
+begin
+    if p_ids is null or coalesce(array_length(p_ids, 1), 0) = 0 then
+        return;
+    end if;
+
+    if array_length(p_ids, 1) > 50 then
+        raise exception 'too_many_profile_ids';
+    end if;
+
+    perform public.profile_lookup_rate_limit('profile_id', 240);
+
+    return query
     select
         p.id,
         p.display_name,
-        p.friend_code,
-        case when p.is_sharing then p.current_bac    end,
+        case when public.is_mutual_friend(p.id) then p.friend_code end,
+        case when p.is_sharing then p.current_bac end,
         case when p.is_sharing then p.bac_updated_at end,
         p.is_sharing,
-        p.achievements,
-        p.sos_active,
-        p.is_probationary
+        case when public.is_mutual_friend(p.id) then p.achievements else '[]'::jsonb end,
+        case when public.is_mutual_friend(p.id) then p.sos_active else false end,
+        case when public.is_mutual_friend(p.id) then p.is_probationary else false end
     from public.profiles p
     where p.id = any (p_ids)
+    limit 50;
+end;
 $$;
 
--- Only signed-in users may call these; never the anon role.
-revoke all on function public.friend_profiles_by_codes(text[]) from public, anon;
-revoke all on function public.friend_profiles_by_ids(uuid[])  from public, anon;
-grant execute on function public.friend_profiles_by_codes(text[]) to authenticated;
-grant execute on function public.friend_profiles_by_ids(uuid[])  to authenticated;
+revoke all on function public.generate_friend_code(integer) from public, anon, authenticated;
+revoke all on function public.handle_new_user() from public, anon, authenticated;
+revoke all on function public.profile_lookup_rate_limit(text, integer) from public, anon, authenticated;
+revoke all on function public.is_mutual_friend(uuid) from public, anon, authenticated;
+revoke all on function public.friend_profiles_by_codes(text[]) from public, anon, authenticated;
+revoke all on function public.friend_profiles_by_ids(uuid[]) from public, anon, authenticated;
+revoke all on table public.profile_lookup_events from public, anon, authenticated;
 
--- =========================================================================
--- NOTE on jam_participants
--- =========================================================================
--- jam_participants also stores current_bac / has_sos_active per member. It is
--- now locked down the same way in supabase/jams_security.sql ("a participant may
--- read rows of a jam they are themselves a member of" via a SECURITY DEFINER
--- helper). Run that file too.
+grant select, insert, update on public.profiles to authenticated;
+grant select, insert, delete on public.friendships to authenticated;
+grant execute on function public.friend_profiles_by_codes(text[]) to authenticated;
+grant execute on function public.friend_profiles_by_ids(uuid[]) to authenticated;

@@ -65,6 +65,28 @@ alter table public.jam_participants add column if not exists has_sos_active bool
 alter table public.jam_participants add column if not exists joined_at      timestamptz default now();
 alter table public.jam_participants add column if not exists last_updated   timestamptz default now();
 
+delete from public.jam_participants a
+using public.jam_participants b
+where a.jam_id = b.jam_id
+  and a.user_id = b.user_id
+  and (
+      a.joined_at > b.joined_at
+      or (a.joined_at = b.joined_at and a.ctid > b.ctid)
+  );
+
+create unique index if not exists jam_participants_one_row_per_user
+    on public.jam_participants (jam_id, user_id)
+    where user_id is not null;
+
+create table if not exists public.jam_lookup_events (
+    caller_id  uuid not null,
+    kind       text not null,
+    created_at timestamptz not null default now()
+);
+
+create index if not exists jam_lookup_events_caller_idx
+    on public.jam_lookup_events (caller_id, kind, created_at);
+
 -- =========================================================================
 -- 1. Base-table RLS: self-only writes + host-kick. Drop EVERY existing policy
 --    first (we cannot know their names), then recreate the intended set.
@@ -229,17 +251,41 @@ returns table (
     settings      jsonb,
     created_at    timestamptz
 )
-language sql
+language plpgsql
 security definer
 set search_path = public
-stable
 as $$
+declare
+    v_recent integer;
+begin
+    if auth.uid() is null then
+        return;
+    end if;
+
+    delete from public.jam_lookup_events
+    where created_at < now() - interval '7 days';
+
+    select count(*) into v_recent
+    from public.jam_lookup_events e
+    where e.caller_id = auth.uid()
+      and e.kind = 'code'
+      and e.created_at > now() - interval '1 hour';
+
+    if v_recent >= 120 then
+        raise exception 'jam_lookup_rate_limited';
+    end if;
+
+    insert into public.jam_lookup_events(caller_id, kind)
+    values (auth.uid(), 'code');
+
+    return query
     select c.id, c.code, c.host_user_id, c.host_name, c.visibility, c.settings, c.created_at
     from public.jams c
     where c.ended_at is null
       and upper(regexp_replace(c.code,   '[^A-Za-z0-9]', '', 'g'))
         = upper(regexp_replace(p_code,   '[^A-Za-z0-9]', '', 'g'))
-    limit 1
+    limit 1;
+end;
 $$;
 
 -- Friends-only feed: returns active "Nur Freunde" jams hosted by one of the
@@ -273,5 +319,6 @@ $$;
 -- Only signed-in users may call these; never the anon role.
 revoke all on function public.jam_by_code(text)    from public, anon;
 revoke all on function public.friend_jams(uuid[])  from public, anon;
+revoke all on table public.jam_lookup_events from public, anon, authenticated;
 grant execute on function public.jam_by_code(text)   to authenticated;
 grant execute on function public.friend_jams(uuid[]) to authenticated;

@@ -218,7 +218,13 @@ final class HistoryViewModel {
         var bacsByMood: [Int: [Double]] = [:]
         for note in notes where note.mood != .neutral {
             if let dayDrinks = drinksByDay[note.dayStart] {
-                let peakBAC = BACCalculator.peakBAC(drinks: dayDrinks, profile: profile, stomachStatus: profile.defaultStomachStatus, conservative: profile.conservativeForApp)
+                let peakBAC = BACProjectionInput(
+                    drinks: dayDrinks,
+                    profile: profile,
+                    stomachStatus: profile.defaultStomachStatus,
+                    conservative: profile.conservativeForApp,
+                    vomitTimes: []
+                ).peakBAC()
                 bacsByMood[note.moodRaw, default: []].append(peakBAC)
             }
         }

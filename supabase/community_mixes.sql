@@ -27,22 +27,36 @@ create table if not exists public.community_mixes (
     total_abv       double precision not null default 0,
     calories        integer not null default 0,
     status          text not null default 'pending',   -- pending | approved | rejected
+    admin_locked    boolean not null default false,
     confirmed_count integer not null default 0,
     created_at      timestamptz not null default now()
 );
 
 alter table public.community_mixes add column if not exists status          text    not null default 'pending';
+alter table public.community_mixes add column if not exists admin_locked    boolean not null default false;
 alter table public.community_mixes add column if not exists confirmed_count integer not null default 0;
 
 create table if not exists public.community_mix_votes (
     name_key   text not null,
     voter      text not null,
+    is_authenticated boolean not null default false,
     created_at timestamptz not null default now(),
     primary key (name_key, voter)
 );
 
+alter table public.community_mix_votes add column if not exists is_authenticated boolean not null default false;
+
 create index if not exists community_mix_votes_voter_idx
     on public.community_mix_votes (voter, created_at);
+
+create table if not exists public.admin_blocked_voters (
+    voter      text primary key,
+    reason     text not null default '',
+    created_at timestamptz not null default now(),
+    created_by uuid references auth.users(id) on delete set null
+);
+
+alter table public.admin_blocked_voters enable row level security;
 
 -- Server-derived voter identity (signed-in user id, else request IP, else the
 -- client fallback). Same definition as in community_drinks.sql; create or
@@ -65,6 +79,26 @@ as $$
     );
 $$;
 
+create or replace function public.community_mix_key(
+    p_name text,
+    p_ingredients jsonb,
+    p_total_volume double precision,
+    p_total_abv double precision
+) returns text
+language sql
+security definer
+set search_path = public
+stable
+as $$
+    select lower(trim(coalesce(p_name, '')))
+           || ':' ||
+           md5(
+               coalesce(p_ingredients, '[]'::jsonb)::text
+               || '|v=' || round(coalesce(p_total_volume, 0)::numeric, 1)::text
+               || '|a=' || round(coalesce(p_total_abv, 0)::numeric, 2)::text
+           );
+$$;
+
 create or replace function public.contribute_mix(
     p_name         text,
     p_ingredients  jsonb,
@@ -78,15 +112,26 @@ security definer
 set search_path = public
 as $$
 declare
-    v_threshold  constant integer := 3;
+    v_threshold  constant integer := 5;
     v_hourly_cap constant integer := 40;
-    v_key        text := lower(trim(coalesce(p_name, '')));
+    v_key        text;
     v_count      integer;
     v_recent     integer;
     v_voter      text;
+    v_is_authenticated boolean;
 begin
+    delete from public.community_mix_votes v
+    using public.community_mixes m
+    where m.name_key = v.name_key
+      and m.status = 'pending'
+      and m.created_at < now() - interval '30 days';
+
+    delete from public.community_mixes
+    where status = 'pending'
+      and created_at < now() - interval '30 days';
+
     -- --- Validate the payload (never trust the anon caller) -----------------
-    if v_key is null or length(v_key) = 0 or length(v_key) > 80 then
+    if p_name is null or length(trim(p_name)) = 0 or length(trim(p_name)) > 80 then
         return;
     end if;
     if p_ingredients is null
@@ -105,8 +150,14 @@ begin
         return;
     end if;
 
+    v_key := public.community_mix_key(p_name, p_ingredients, p_total_volume, p_total_abv);
+
     -- --- Trusted voter + flood control -------------------------------------
     v_voter := public.community_voter_id(p_voter);
+    v_is_authenticated := auth.uid() is not null;
+    if exists (select 1 from public.admin_blocked_voters where voter = v_voter) then
+        return;
+    end if;
 
     select count(*) into v_recent
         from public.community_mix_votes
@@ -123,21 +174,28 @@ begin
         (trim(p_name), v_key, p_ingredients, p_total_volume, p_total_abv, p_calories, 'pending', 0)
     on conflict (name_key) do nothing;
 
-    insert into public.community_mix_votes (name_key, voter)
-    values (v_key, v_voter)
-    on conflict (name_key, voter) do nothing;
+    insert into public.community_mix_votes (name_key, voter, is_authenticated)
+    values (v_key, v_voter, v_is_authenticated)
+    on conflict (name_key, voter) do update
+        set is_authenticated = community_mix_votes.is_authenticated or excluded.is_authenticated;
 
     select count(*) into v_count
-        from public.community_mix_votes where name_key = v_key;
+        from public.community_mix_votes v
+        left join public.admin_blocked_voters b on b.voter = v.voter
+        where v.name_key = v_key
+          and v.is_authenticated = true
+          and b.voter is null;
 
     update public.community_mixes
         set confirmed_count = v_count
-        where name_key = v_key;
+        where name_key = v_key
+          and status <> 'rejected';
 
     update public.community_mixes
         set status = 'approved'
         where name_key = v_key
           and status = 'pending'
+          and admin_locked = false
           and v_count >= v_threshold;
 end;
 $$;
@@ -153,6 +211,8 @@ create policy "community_mixes read approved"
     using (status = 'approved');
 
 revoke all on function public.community_voter_id(text) from public, anon;
+revoke all on function public.community_mix_key(text, jsonb, double precision, double precision) from public, anon, authenticated;
+revoke all on table public.admin_blocked_voters from anon, authenticated;
 -- Anon may contribute; signed-in users contribute with their own token (vote
 -- keys on a real account id, harder to sybil than an IP). See community_drinks.
 grant execute on function public.contribute_mix(

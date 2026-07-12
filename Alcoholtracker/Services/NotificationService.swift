@@ -59,7 +59,12 @@ enum NotificationService {
     }
 
     @MainActor
-    static func reschedule(drinks: [Drink], profile: UserProfile, stomachStatus: StomachStatus) async {
+    static func reschedule(
+        drinks: [Drink],
+        profile: UserProfile,
+        stomachStatus: StomachStatus,
+        vomitTimes: [Date] = []
+    ) async {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [soberID, driveID])
 
@@ -72,17 +77,15 @@ enum NotificationService {
 
         // Safety-relevant times honour the "Konservativ rechnen" switch (or the
         // app-wide one), matching the Fahrbereit/Nüchtern timers in the Safety tab.
-        let conservative = profile.conservativeForSafety
-        let currentBAC = BACCalculator.currentBAC(
-            drinks: drinks, profile: profile, stomachStatus: stomachStatus, conservative: conservative
+        let input = BACProjectionInput(
+            drinks: drinks,
+            profile: profile,
+            stomachStatus: stomachStatus,
+            conservative: profile.conservativeForSafety,
+            vomitTimes: vomitTimes
         )
-        guard currentBAC > profile.tipsyThreshold else { return }
-
         // Sober notification
-        if let hours = BACCalculator.hoursUntilBAC(
-            profile.tipsyThreshold, drinks: drinks, profile: profile,
-            stomachStatus: stomachStatus, conservative: conservative
-        ), hours > 0.05 {
+        if let hours = input.hoursUntil(profile.tipsyThreshold), hours > 0.05 {
             schedule(
                 id: soberID,
                 after: hours * 3600,
@@ -92,12 +95,9 @@ enum NotificationService {
             )
         }
 
-        // Drive-ready notification (only if currently above the warning threshold)
-        if currentBAC > profile.warningThreshold,
-           let hours = BACCalculator.hoursUntilBAC(
-               profile.warningThreshold, drinks: drinks, profile: profile,
-               stomachStatus: stomachStatus, conservative: conservative
-           ), hours > 0.05 {
+        // Drive-ready notification. `hoursUntil` handles still-rising absorption:
+        // it returns a future crossing if this drink will rise above the threshold.
+        if let hours = input.hoursUntil(profile.warningThreshold), hours > 0.05 {
             schedule(
                 id: driveID,
                 after: hours * 3600,

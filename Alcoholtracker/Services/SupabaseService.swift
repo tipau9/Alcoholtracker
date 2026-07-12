@@ -60,6 +60,7 @@ final class SupabaseService {
 
     private(set) var session: AccountSession?
     private(set) var myProfile: FriendProfile?
+    private(set) var isAdmin: Bool = false
 
     var isSignedIn: Bool { session != nil }
     var isConfigured: Bool { SupabaseConfig.isReady }
@@ -112,6 +113,7 @@ final class SupabaseService {
         let data = try await authPOST("/auth/v1/signup", body: body)
         applySession(try decodeGoTrue(data))
         try await syncMyProfile()
+        try? await refreshAdminStatus()
     }
 
     func signIn(email: String, password: String) async throws {
@@ -120,6 +122,7 @@ final class SupabaseService {
         let data = try await authPOST("/auth/v1/token?grant_type=password", body: body)
         applySession(try decodeGoTrue(data))
         try await syncMyProfile()
+        try? await refreshAdminStatus()
     }
 
     func signOut() async {
@@ -362,11 +365,14 @@ final class SupabaseService {
         try await refreshIfNeeded()
         let cleaned = codes.map { Self.sanitizeCode($0) }.filter { !$0.isEmpty }
         guard !cleaned.isEmpty else { return [] }
-        let data = try await restRPC("friend_profiles_by_codes", body: ["p_codes": cleaned])
+        var profiles: [FriendProfile] = []
+        for batch in cleaned.chunked(into: 50) {
+            let data = try await restRPC("friend_profiles_by_codes", body: ["p_codes": batch])
+            profiles += try Self.decoder.decode([FriendProfile].self, from: data)
+        }
         // The function returns non-sharing friends too (with BAC nulled out);
         // keep the old behaviour of surfacing only the ones actively sharing.
-        return try Self.decoder.decode([FriendProfile].self, from: data)
-            .filter { $0.isSharing }
+        return profiles.filter { $0.isSharing }
     }
 
     // Friend code of a single user id, used to verify friends-only jam access.
@@ -382,8 +388,12 @@ final class SupabaseService {
         let valid = ids.filter { UUID(uuidString: $0) != nil }
         guard !valid.isEmpty else { return [] }
         try await refreshIfNeeded()
-        let data = try await restRPC("friend_profiles_by_ids", body: ["p_ids": valid])
-        return try Self.decoder.decode([FriendProfile].self, from: data)
+        var profiles: [FriendProfile] = []
+        for batch in valid.chunked(into: 50) {
+            let data = try await restRPC("friend_profiles_by_ids", body: ["p_ids": batch])
+            profiles += try Self.decoder.decode([FriendProfile].self, from: data)
+        }
+        return profiles
     }
 
     // MARK: Friendships (server-side follow model)
@@ -479,6 +489,191 @@ final class SupabaseService {
         participantBody["current_bac"] = me?.currentBAC ?? NSNull()
         
         try await restPOST("/rest/v1/jam_participants", body: participantBody, ignoreDuplicates: true)
+    }
+
+    // MARK: Admin
+    //
+    // The admin UI is only a convenience. Every method below calls SECURITY
+    // DEFINER RPCs that verify auth.uid() server-side against admin_users.
+
+    func refreshAdminStatus() async throws {
+        guard isConfigured, isSignedIn else {
+            isAdmin = false
+            return
+        }
+        let data = try await restRPC("is_admin", body: [:])
+        isAdmin = (try? JSONDecoder().decode(Bool.self, from: data)) ?? false
+    }
+
+    func fetchAdminMetrics() async throws -> [AdminMetric] {
+        try await refreshIfNeeded()
+        let data = try await restRPC("admin_metrics", body: [:])
+        return try Self.decoder.decode([AdminMetric].self, from: data)
+    }
+
+    func fetchAdminQueue() async throws -> [AdminQueueItem] {
+        try await refreshIfNeeded()
+        let data = try await restRPC("admin_moderation_queue", body: [:])
+        return try Self.decoder.decode([AdminQueueItem].self, from: data)
+    }
+
+    func fetchAdminContent(status: String? = "approved", search: String = "", limit: Int = 200, offset: Int = 0) async throws -> [AdminQueueItem] {
+        try await refreshIfNeeded()
+        let data = try await restRPC("admin_content_list", body: [
+            "p_status": status ?? NSNull(),
+            "p_search": search,
+            "p_limit":  limit,
+            "p_offset": offset
+        ])
+        return try Self.decoder.decode([AdminQueueItem].self, from: data)
+    }
+
+    func setAdminModerationStatus(itemType: String, id: UUID, status: String, reason: String? = nil) async throws {
+        try await refreshIfNeeded()
+        _ = try await restRPC("admin_set_moderation_status", body: [
+            "p_item_type": itemType,
+            "p_id":        id.uuidString.lowercased(),
+            "p_status":    status,
+            "p_reason":    reason ?? NSNull()
+        ])
+    }
+
+    func updateAdminDrink(
+        id: UUID,
+        name: String,
+        category: String,
+        volume: Double,
+        abv: Double,
+        calories: Int,
+        iconName: String?
+    ) async throws {
+        try await refreshIfNeeded()
+        _ = try await restRPC("admin_update_drink", body: [
+            "p_id":        id.uuidString.lowercased(),
+            "p_name":      name,
+            "p_category":  category,
+            "p_volume":    volume,
+            "p_abv":       abv,
+            "p_calories":  calories,
+            "p_icon_name": iconName ?? NSNull()
+        ])
+    }
+
+    func updateAdminMix(
+        id: UUID,
+        name: String,
+        ingredients: Any,
+        totalVolume: Double,
+        totalABV: Double,
+        calories: Int
+    ) async throws {
+        try await refreshIfNeeded()
+        _ = try await restRPC("admin_update_mix", body: [
+            "p_id":           id.uuidString.lowercased(),
+            "p_name":         name,
+            "p_ingredients":  ingredients,
+            "p_total_volume": totalVolume,
+            "p_total_abv":    totalABV,
+            "p_calories":     calories
+        ])
+    }
+
+    func fetchAdminReports() async throws -> [AdminReport] {
+        try await refreshIfNeeded()
+        let data = try await restRPC("admin_reports_list", body: [:])
+        return try Self.decoder.decode([AdminReport].self, from: data)
+    }
+
+    func resolveAdminReport(id: UUID, status: String, note: String? = nil) async throws {
+        try await refreshIfNeeded()
+        _ = try await restRPC("admin_resolve_report", body: [
+            "p_id":     id.uuidString.lowercased(),
+            "p_status": status,
+            "p_note":   note ?? NSNull()
+        ])
+    }
+
+    func submitReport(
+        itemType: String,
+        itemID: UUID? = nil,
+        reason: String,
+        details: [String: Any] = [:]
+    ) async throws {
+        try await refreshIfNeeded()
+        _ = try await restRPC("submit_report", body: [
+            "p_item_type": itemType,
+            "p_reason":    reason,
+            "p_item_id":   itemID?.uuidString.lowercased() ?? NSNull(),
+            "p_details":   details
+        ])
+    }
+
+    func fetchAdminFeatureFlags() async throws -> [AdminFeatureFlag] {
+        try await refreshIfNeeded()
+        let data = try await restRPC("admin_feature_flags_list", body: [:])
+        return try Self.decoder.decode([AdminFeatureFlag].self, from: data)
+    }
+
+    func setAdminFeatureFlag(key: String, enabled: Bool, isPublic: Bool, value: String, description: String) async throws {
+        try await refreshIfNeeded()
+        let jsonValue: Any
+        if value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            jsonValue = [:]
+        } else if let data = value.data(using: .utf8),
+                  let object = try? JSONSerialization.jsonObject(with: data) {
+            jsonValue = object
+        } else {
+            jsonValue = ["value": value]
+        }
+
+        _ = try await restRPC("admin_set_feature_flag", body: [
+            "p_key":         key,
+            "p_enabled":     enabled,
+            "p_value":       jsonValue,
+            "p_description": description,
+            "p_is_public":   isPublic
+        ])
+    }
+
+    func fetchPublicFeatureFlags() async throws -> [PublicFeatureFlag] {
+        guard isConfigured else { throw SupabaseError.notConfigured }
+        let data = try await publicRPC("public_feature_flags", body: [:])
+        return try Self.decoder.decode([PublicFeatureFlag].self, from: data)
+    }
+
+    func fetchAdminAuditLog() async throws -> [AdminAuditEntry] {
+        try await refreshIfNeeded()
+        let data = try await restRPC("admin_audit_log_list", body: [:])
+        return try Self.decoder.decode([AdminAuditEntry].self, from: data)
+    }
+
+    func fetchAdminUsers() async throws -> [AdminUserRole] {
+        try await refreshIfNeeded()
+        let data = try await restRPC("admin_users_list", body: [:])
+        return try Self.decoder.decode([AdminUserRole].self, from: data)
+    }
+
+    func setAdminUserRole(userID: String, role: String) async throws {
+        try await refreshIfNeeded()
+        _ = try await restRPC("admin_set_user_role", body: [
+            "p_user_id": userID,
+            "p_role":    role
+        ])
+    }
+
+    func fetchAdminBlockedVoters() async throws -> [AdminBlockedVoter] {
+        try await refreshIfNeeded()
+        let data = try await restRPC("admin_blocked_voters_list", body: [:])
+        return try Self.decoder.decode([AdminBlockedVoter].self, from: data)
+    }
+
+    func setAdminVoterBlock(voter: String, blocked: Bool, reason: String) async throws {
+        try await refreshIfNeeded()
+        _ = try await restRPC("admin_set_voter_block", body: [
+            "p_voter":   voter,
+            "p_blocked": blocked,
+            "p_reason":  reason
+        ])
     }
 
     // Join-by-code goes through a SECURITY DEFINER function: the jams table is no
@@ -1001,6 +1196,7 @@ final class SupabaseService {
     private func clearSession() {
         session = nil
         myProfile = nil
+        isAdmin = false
         Keychain.deleteSession()
     }
 }
@@ -1147,6 +1343,166 @@ private struct JamRouletteRow: Decodable {
     }
 }
 
+// MARK: - Admin rows
+
+enum JSONValue: Codable, Hashable {
+    case string(String)
+    case number(Double)
+    case bool(Bool)
+    case object([String: JSONValue])
+    case array([JSONValue])
+    case null
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        if c.decodeNil() {
+            self = .null
+        } else if let v = try? c.decode(Bool.self) {
+            self = .bool(v)
+        } else if let v = try? c.decode(Double.self) {
+            self = .number(v)
+        } else if let v = try? c.decode(String.self) {
+            self = .string(v)
+        } else if let v = try? c.decode([JSONValue].self) {
+            self = .array(v)
+        } else {
+            self = .object(try c.decode([String: JSONValue].self))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        switch self {
+        case .string(let v): try c.encode(v)
+        case .number(let v): try c.encode(v)
+        case .bool(let v):   try c.encode(v)
+        case .object(let v): try c.encode(v)
+        case .array(let v):  try c.encode(v)
+        case .null:          try c.encodeNil()
+        }
+    }
+
+    var displayText: String {
+        switch self {
+        case .string(let v): return v
+        case .number(let v): return String(format: "%.2f", v)
+        case .bool(let v):   return v ? "true" : "false"
+        case .null:          return "null"
+        case .array, .object:
+            let data = try? JSONEncoder().encode(self)
+            return data.flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+        }
+    }
+}
+
+struct AdminMetric: Decodable, Identifiable {
+    var id: String { metric }
+    let metric: String
+    let value: Int
+}
+
+struct AdminQueueItem: Decodable, Identifiable {
+    let itemType: String
+    let id: UUID
+    let title: String
+    let subtitle: String
+    let status: String
+    let confirmedCount: Int
+    let createdAt: Date
+    let payload: JSONValue
+
+    enum CodingKeys: String, CodingKey {
+        case itemType       = "item_type"
+        case id, title, subtitle, status, payload
+        case confirmedCount = "confirmed_count"
+        case createdAt      = "created_at"
+    }
+}
+
+struct AdminReport: Decodable, Identifiable {
+    let id: UUID
+    let itemType: String
+    let itemID: UUID?
+    let reason: String
+    let status: String
+    let details: JSONValue
+    let createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id, reason, status, details
+        case itemType  = "item_type"
+        case itemID    = "item_id"
+        case createdAt = "created_at"
+    }
+}
+
+struct AdminFeatureFlag: Decodable, Identifiable {
+    var id: String { key }
+    let key: String
+    let enabled: Bool
+    let isPublic: Bool
+    let value: JSONValue
+    let description: String
+    let updatedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case key, enabled, value, description
+        case isPublic = "is_public"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct PublicFeatureFlag: Decodable, Identifiable {
+    var id: String { key }
+    let key: String
+    let value: JSONValue
+}
+
+struct AdminAuditEntry: Decodable, Identifiable {
+    let id: UUID
+    let actorID: UUID?
+    let action: String
+    let itemType: String?
+    let itemID: UUID?
+    let before: JSONValue?
+    let after: JSONValue?
+    let note: String?
+    let createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id, action, before, after, note
+        case actorID   = "actor_id"
+        case itemType  = "item_type"
+        case itemID    = "item_id"
+        case createdAt = "created_at"
+    }
+}
+
+struct AdminUserRole: Decodable, Identifiable {
+    var id: UUID { userID }
+    let userID: UUID
+    let role: String
+    let createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case userID    = "user_id"
+        case role
+        case createdAt = "created_at"
+    }
+}
+
+struct AdminBlockedVoter: Decodable, Identifiable {
+    var id: String { voter }
+    let voter: String
+    let reason: String
+    let createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case voter, reason
+        case createdAt = "created_at"
+    }
+}
+
 // MARK: - CommunityDrinkRow
 
 struct CommunityDrinkRow: Decodable, Identifiable {
@@ -1261,5 +1617,14 @@ private enum Keychain {
             kSecAttrAccount as String: account,
         ]
         SecItemDelete(query as CFDictionary)
+    }
+}
+
+private extension Array {
+    func chunked(into size: Int) -> [[Element]] {
+        guard size > 0, !isEmpty else { return [] }
+        return stride(from: 0, to: count, by: size).map {
+            Array(self[$0..<Swift.min($0 + size, count)])
+        }
     }
 }

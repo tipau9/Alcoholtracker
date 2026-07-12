@@ -193,14 +193,11 @@ final class SessionViewModel {
     var drivingLimit: Double { profile?.drivingLimit ?? 0.5 }
 
     var timeUntilSober: TimeInterval {
-        guard let p = profile, currentBAC > 0 else { return 0 }
+        guard let input = bacProjectionInput, currentBAC > 0 else { return 0 }
         // Use the same forward-scan engine as the Safety "Nüchtern" timer rather than
         // a linear currentBAC / rate line, so alcohol still being absorbed and the
         // Michaelis-Menten low-end tail are accounted for and every screen agrees.
-        if let hours = BACCalculator.hoursUntilBAC(
-            0.0, drinks: drinks, profile: p,
-            stomachStatus: stomachStatus, conservative: conservative, vomitTimes: vomitTimes
-        ) {
+        if let hours = input.hoursUntil(0.0) {
             return hours * 3600
         }
         return 72 * 3600   // target not reached within the scan horizon
@@ -224,6 +221,22 @@ final class SessionViewModel {
         return Date().addingTimeInterval(timeUntilSober)
     }
 
+    func isDrunkModeActive(profile: UserProfile?, dismissed: Bool) -> Bool {
+        guard let profile, profile.drunkModeAuto, !dismissed else { return false }
+        return currentBAC >= profile.carefulThreshold
+    }
+
+    var drunkModeSoberCountdown: String? {
+        guard currentBAC > 0.01 else { return nil }
+        guard let hours = hoursUntil(0.0) else { return "> 72 h bis nüchtern" }
+        guard hours > 0 else { return nil }
+        let totalMinutes = Int((hours * 60).rounded())
+        let h = totalMinutes / 60
+        let m = totalMinutes % 60
+        if h > 0 { return "noch ca. \(h) h \(m) min bis nüchtern" }
+        return "noch ca. \(m) min bis nüchtern"
+    }
+
     var weeklyLimitWarning: String? {
         guard let limit = profile?.weeklyDrinkLimit, limit > 0 else { return nil }
         if currentWeekDrinkCount >= limit {
@@ -241,6 +254,22 @@ final class SessionViewModel {
     private var timer: AnyCancellable?
     var healthKit: HealthKitService?
     private var isConfiguring = false
+    private var lastCurrentBACInputKey = ""
+    private var lastCurrentBACUpdateAt: Date?
+    // The last value signature loaded from SwiftData. Object identity is not enough
+    // here: History can edit an existing @Model in place without changing its id.
+    private var lastLoadedProjectionKey = ""
+
+    private var bacProjectionInput: BACProjectionInput? {
+        guard let profile else { return nil }
+        return BACProjectionInput(
+            drinks: drinks,
+            profile: profile,
+            stomachStatus: stomachStatus,
+            conservative: conservative,
+            vomitTimes: vomitTimes
+        )
+    }
 
     // MARK: Setup
 
@@ -273,17 +302,27 @@ final class SessionViewModel {
             )
             context.insert(drink)
         }
-        try? context.save()
-        SharedStateStore.clearPendingDrinks()
+        do {
+            try context.save()
+            SharedStateStore.clearPendingDrinks()
+        } catch {
+            context.rollback()
+        }
     }
 
     // MARK: Drink management
 
     func addDrink(_ drink: Drink) {
-        modelContext?.insert(drink)
-        try? modelContext?.save()
+        guard let context = modelContext else { return }
+        context.insert(drink)
+        do {
+            try context.save()
+        } catch {
+            context.rollback()
+            return
+        }
         // Increment template usage count after the drink is committed to disk.
-        if let tid = drink.templateID, let context = modelContext {
+        if let tid = drink.templateID {
             let pred = #Predicate<DrinkTemplate> { $0.id == tid }
             if let t = try? context.fetch(FetchDescriptor<DrinkTemplate>(predicate: pred)).first {
                 t.usageCount += 1
@@ -361,6 +400,18 @@ final class SessionViewModel {
     }
 
     func finishDrinkNow(_ drink: Drink) {
+        let baseEstimate = DrinkDurationEstimator.baseEstimate(
+            category: drink.category,
+            volumeML: drink.volume
+        )
+        let actualMinutes = max(1, Date().timeIntervalSince(drink.timestamp) / 60)
+        if drink.drinkDurationMinutes == 0 {
+            DrinkPaceMemory.recordEarlyFinish(
+                category: drink.category,
+                baseEstimate: baseEstimate,
+                actualMinutes: actualMinutes
+            )
+        }
         drink.finish()
         try? modelContext?.save()
         loadTodaysDrinks(force: true)
@@ -480,6 +531,11 @@ final class SessionViewModel {
             sortBy: [SortDescriptor(\.timestamp)]
         )
         let recentDrinks = (try? context.fetch(descriptor)) ?? []
+        let vomitDescriptor = FetchDescriptor<VomitEvent>(
+            predicate: #Predicate { $0.timestamp >= lookback },
+            sortBy: [SortDescriptor(\.timestamp)]
+        )
+        let recentVomitEvents = (try? context.fetch(vomitDescriptor)) ?? []
         
         guard let p = profile else {
             self.drinks = recentDrinks.filter { $0.timestamp >= logicalStart }
@@ -490,7 +546,16 @@ final class SessionViewModel {
         // 3. Rolling Session: Wenn um 06:00 Uhr noch Restalkohol vorhanden war,
         // wird die Sitzung rückwirkend bis zum ersten Drink dieser ununterbrochenen Phase verlängert!
         let drinksBefore6AM = recentDrinks.filter { $0.timestamp <= logicalStart }
-        let bacAt6AM = BACCalculator.currentBAC(drinks: drinksBefore6AM, profile: p, at: logicalStart, stomachStatus: p.defaultStomachStatus)
+        let vomitTimesBefore6AM = recentVomitEvents
+            .map(\.timestamp)
+            .filter { $0 <= logicalStart }
+        let bacAt6AM = BACProjectionInput(
+            drinks: drinksBefore6AM,
+            profile: p,
+            stomachStatus: p.defaultStomachStatus,
+            conservative: p.conservativeForApp,
+            vomitTimes: vomitTimesBefore6AM
+        ).currentBAC(at: logicalStart)
         
         var sessionStart = logicalStart
         
@@ -503,7 +568,14 @@ final class SessionViewModel {
                 // Promillewert genau 1 Minute VOR diesem Drink prüfen
                 let beforeTime = d.timestamp.addingTimeInterval(-60)
                 let pastDrinks = Array(drinksBefore6AM[0..<i])
-                let bacBefore = BACCalculator.currentBAC(drinks: pastDrinks, profile: p, at: beforeTime, stomachStatus: p.defaultStomachStatus)
+                let vomitTimesBeforeDrink = vomitTimesBefore6AM.filter { $0 <= beforeTime }
+                let bacBefore = BACProjectionInput(
+                    drinks: pastDrinks,
+                    profile: p,
+                    stomachStatus: p.defaultStomachStatus,
+                    conservative: p.conservativeForApp,
+                    vomitTimes: vomitTimesBeforeDrink
+                ).currentBAC(at: beforeTime)
                 
                 // Wenn wir vor diesem Drink nüchtern waren, ist hier der Start der Session
                 if bacBefore <= 0.001 {
@@ -514,16 +586,28 @@ final class SessionViewModel {
         }
         
         let sessionDrinks = recentDrinks.filter { $0.timestamp >= sessionStart }
+        let sessionVomitEvents = recentVomitEvents.filter { $0.timestamp >= sessionStart }
         // The @Query in HomeView re-fires this right after a local addDrink/removeDrink,
         // which already recalculated and rescheduled. Skip the expensive BAC recompute +
-        // notification reschedule when the session set is unchanged; the cheap weekly
-        // counter below still refreshes either way.
-        let unchanged = !force && sessionDrinks.map(\.id) == drinks.map(\.id)
+        // notification reschedule only when every BAC-relevant input is unchanged;
+        // an in-place SwiftData edit retains object identity but changes this key.
+        let sessionKey = BACProjectionInput(
+            drinks: sessionDrinks,
+            profile: p,
+            stomachStatus: stomachStatus,
+            conservative: conservative,
+            vomitTimes: sessionVomitEvents.map(\.timestamp)
+        ).stableKey
+        let unchanged = !force && sessionKey == lastLoadedProjectionKey
         self.drinks = sessionDrinks
         if !unchanged {
-            loadVomitEvents(since: sessionStart)
+            vomitEvents = sessionVomitEvents
             recalculate()
             rescheduleNotifications()
+            // This path handles external model mutations such as History edits
+            // and Settings/profile changes. The App Group snapshot is current after
+            // recalculate(), but WidgetKit also needs an explicit timeline reload.
+            pushBACToWidget()
         }
         
         // Aktuelle Woche berechnen (für das Wochenlimit)
@@ -578,31 +662,25 @@ final class SessionViewModel {
     // MARK: Projections
 
     func hoursUntil(_ target: Double) -> Double? {
-        guard let profile else { return nil }
-        return BACCalculator.hoursUntilBAC(target, drinks: drinks, profile: profile,
-                                           stomachStatus: stomachStatus,
-                                           conservative: conservative, vomitTimes: vomitTimes)
+        bacProjectionInput?.hoursUntil(target)
     }
 
     var hangoverForecast: HangoverLevel {
-        guard let profile else { return .none }
+        guard let input = bacProjectionInput else { return .none }
         // Gate on the session peak, not the live BAC: the forecast would
         // otherwise vanish while sobering down, exactly when it matters.
-        let peak = BACCalculator.peakBAC(drinks: drinks, profile: profile,
-                                         stomachStatus: stomachStatus,
-                                         conservative: conservative,
-                                         vomitTimes: vomitTimes)
+        let peak = input.peakBAC()
         guard peak > 0.3 else { return .none }
         let water = WaterLog.loggedGlasses(
             forDay: Calendar.current.logicalDay(for: Date())
         ).map(Double.init)
         return HangoverPredictor.predict(
             drinks: drinks,
-            profile: profile,
+            profile: input.profile,
             waterGlasses: water,
-            stomachStatus: stomachStatus,
-            conservative: conservative,
-            vomitTimes: vomitTimes
+            stomachStatus: input.stomachStatus,
+            conservative: input.conservative,
+            vomitTimes: input.vomitTimes
         )
     }
 
@@ -623,41 +701,44 @@ final class SessionViewModel {
     // mutation path ever skips recalculate(). At 15/30 min curve resolution a
     // <= 60s stale start point is invisible.
 
-    @ObservationIgnored private var curveCache: [Int: (generation: Int, bucket: Int, points: [BACCalculator.BACPoint])] = [:]
+    private struct CurveCacheKey: Hashable {
+        let hours: Int
+        let intervalMinutes: Int
+        let bucket: Int
+        let inputKey: String
+
+        init(hours: Double, intervalMinutes: Double, bucket: Int, inputKey: String) {
+            self.hours = Int((hours * 100).rounded())
+            self.intervalMinutes = Int((intervalMinutes * 100).rounded())
+            self.bucket = bucket
+            self.inputKey = inputKey
+        }
+    }
+
+    @ObservationIgnored private var curveCache: [CurveCacheKey: (generation: Int, points: [BACCalculator.BACPoint])] = [:]
     @ObservationIgnored private var curveGeneration = 0
 
     private func cachedCurve(hours: Double, intervalMinutes: Double) -> [BACCalculator.BACPoint] {
-        guard let profile else { return [] }
+        guard let input = bacProjectionInput else { return [] }
         // Touch the observed inputs even on a cache hit so views that only
         // read the curve still re-render when drinks or settings change.
         _ = (drinks.count, stomachStatus, conservative)
 
         let bucket = Int(Date().timeIntervalSinceReferenceDate / 60)
-        let key = Int(hours)
-        if let hit = curveCache[key], hit.generation == curveGeneration, hit.bucket == bucket {
+        let key = CurveCacheKey(hours: hours, intervalMinutes: intervalMinutes, bucket: bucket, inputKey: input.stableKey)
+        if let hit = curveCache[key], hit.generation == curveGeneration {
             return hit.points
         }
-        let points = BACCalculator.bacCurve(drinks: drinks, profile: profile, hours: hours,
-                                            intervalMinutes: intervalMinutes,
-                                            stomachStatus: stomachStatus,
-                                            conservative: conservative, vomitTimes: vomitTimes)
-        curveCache[key] = (curveGeneration, bucket, points)
+        let points = input.curve(hours: hours, intervalMinutes: intervalMinutes)
+        curveCache[key] = (curveGeneration, points)
         return points
     }
 
     func projectedBAC(hours: Double = 8) -> [(Date, Double)] {
-        guard let profile else { return [] }
+        guard let input = bacProjectionInput else { return [] }
         let now = Date()
-        return BACCalculator.bacCurve(
-            drinks: drinks,
-            profile: profile,
-            from: now,
-            hours: hours,
-            intervalMinutes: (hours * 60) / 30,
-            stomachStatus: stomachStatus,
-            conservative: conservative,
-            vomitTimes: vomitTimes
-        ).map { ($0.date, $0.bac) }
+        return input.curve(from: now, hours: hours, intervalMinutes: (hours * 60) / 30)
+            .map { ($0.date, $0.bac) }
     }
 
     // MARK: Private
@@ -667,23 +748,28 @@ final class SessionViewModel {
     // session does not recompute the 12h curve twice a minute for hours.
     private func recalculate(refreshCurve: Bool = true) {
         curveGeneration &+= 1
-        guard let profile else {
+        guard let input = bacProjectionInput else {
             currentBAC = 0
             bacStatus  = .sober
+            lastLoadedProjectionKey = ""
             return
         }
-        currentBAC = BACCalculator.currentBAC(drinks: drinks, profile: profile,
-                                              stomachStatus: stomachStatus,
-                                              conservative: conservative, vomitTimes: vomitTimes)
+        let profile = input.profile
+        let inputKey = input.stableKey
+        lastLoadedProjectionKey = inputKey
+        let now = Date()
+        let computedBAC = input.currentBAC(at: now)
+        currentBAC = filteredCurrentBAC(computedBAC, inputKey: inputKey, at: now)
         bacStatus  = BACStatus(bac: currentBAC, profile: profile)
         UserDefaults.widgetShared.set(currentBAC, forKey: UserDefaults.keyCurrentBAC)
-        UserDefaults.widgetShared.set(profile.effectiveEliminationRate, forKey: UserDefaults.keyEliminationRate)
+        let resolvedEliminationRate = profile.resolvedEliminationRate(conservative: conservative)
+        UserDefaults.widgetShared.set(resolvedEliminationRate, forKey: UserDefaults.keyEliminationRate)
         UserDefaults.widgetShared.set(Date(), forKey: UserDefaults.keyLastUpdated)
         UserDefaults.widgetShared.set(profile.warningThreshold, forKey: UserDefaults.keyWarningThreshold)
         UserDefaults.widgetShared.set(profile.drivingLimit, forKey: UserDefaults.keyDrivingLimit)
         let perDrink = BACCalculator.bacContribution(
             volume: 330, abv: 5.0,
-            weight: profile.weight,
+            weight: profile.validatedWeight,
             distributionFactor: profile.distributionFactor
         )
         UserDefaults.widgetShared.set(perDrink, forKey: UserDefaults.keyPerDrinkBAC)
@@ -695,7 +781,7 @@ final class SessionViewModel {
         let stomachCopy  = stomachStatus
         let vomitCopy    = vomitTimes
         let conservativeCopy = conservative
-        let elimRate     = profile.effectiveEliminationRate
+        let elimRate     = resolvedEliminationRate
         let drinkCount   = drinks.count
         let skin         = profile.statusSkin
         let forceCurve   = refreshCurve
@@ -710,11 +796,14 @@ final class SessionViewModel {
             // (>= 5 min). The live-BAC writes below always run per tick.
             let curveStale = lastSharedCurveWrite.map { Date().timeIntervalSince($0) >= 300 } ?? true
             if forceCurve || curveStale {
-                let curvePoints = BACCalculator.bacCurve(
-                    drinks: drinksCopy, profile: profile,
-                    hours: 12, intervalMinutes: 15,
-                    stomachStatus: stomachCopy, conservative: conservativeCopy, vomitTimes: vomitCopy
-                ).map { SharedBACPoint(date: $0.date, bac: $0.bac) }
+                let curvePoints = BACProjectionInput(
+                    drinks: drinksCopy,
+                    profile: profile,
+                    stomachStatus: stomachCopy,
+                    conservative: conservativeCopy,
+                    vomitTimes: vomitCopy
+                ).curve(hours: 12, intervalMinutes: 15)
+                    .map { SharedBACPoint(date: $0.date, bac: $0.bac) }
                 guard !Task.isCancelled else { return }
                 SharedStateStore.writeBACCurve(curvePoints)
                 SharedStateStore.writeStatusConfig(SharedStatusConfig(
@@ -734,13 +823,31 @@ final class SessionViewModel {
             }
 
             guard !Task.isCancelled else { return }
-            writeSharedSession(profile: profile)
+            writeSharedSession(profile: profile, eliminationRate: elimRate)
+            // Precompute the sober / driving-limit crossing times with the full BAC
+            // engine so the Live Activity uses the Probezeit-aware legal limit and
+            // reflects the still-rising absorption phase, instead of a linear
+            // extrapolation off the warning threshold.
+            let safetyInput = BACProjectionInput(
+                drinks: drinksCopy,
+                profile: profile,
+                stomachStatus: stomachCopy,
+                conservative: conservativeCopy,
+                vomitTimes: vomitCopy
+            )
+            let soberAt = safetyInput.hoursUntil(profile.tipsyThreshold, from: now)
+                .map { now.addingTimeInterval($0 * 3600) }
+            let driveReadyAt = safetyInput.hoursUntil(profile.drivingLimit, from: now)
+                .map { now.addingTimeInterval($0 * 3600) }
             LiveActivityService.shared.syncActivity(
                 bac: bacAtCall,
                 eliminationRate: elimRate,
                 drinkCount: drinkCount,
                 soberThreshold: profile.tipsyThreshold,
-                warningThreshold: profile.warningThreshold
+                warningThreshold: profile.warningThreshold,
+                drivingLimit: profile.drivingLimit,
+                soberAt: soberAt,
+                driveReadyAt: driveReadyAt
             )
             if profile.healthKitEnabled, shouldLogHealthKitBAC(bacAtCall) {
                 await healthKit?.logBAC(bacAtCall)
@@ -748,7 +855,7 @@ final class SessionViewModel {
         }
     }
 
-    private func writeSharedSession(profile: UserProfile) {
+    private func writeSharedSession(profile: UserProfile, eliminationRate: Double) {
         let sharedDrinks = drinks.map { d in
             SharedDrink(id: d.id, name: d.name, volume: d.volume, abv: d.abv,
                         timestamp: d.timestamp, iconName: d.iconName,
@@ -770,7 +877,7 @@ final class SessionViewModel {
 
         let session = SharedSessionData(
             currentBAC: currentBAC,
-            eliminationRate: profile.effectiveEliminationRate,
+            eliminationRate: eliminationRate,
             lastUpdated: Date(),
             drinks: sharedDrinks,
             favoriteDrinks: favorites,
@@ -795,6 +902,7 @@ final class SessionViewModel {
     }
 
     private func startTimer() {
+        timer?.cancel()
         timer = Timer.publish(every: 30, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
@@ -808,6 +916,26 @@ final class SessionViewModel {
             }
     }
 
+    private func filteredCurrentBAC(_ computedBAC: Double, inputKey: String, at now: Date) -> Double {
+        defer {
+            lastCurrentBACInputKey = inputKey
+            lastCurrentBACUpdateAt = now
+        }
+
+        guard lastCurrentBACInputKey == inputKey,
+              let lastUpdate = lastCurrentBACUpdateAt,
+              computedBAC > currentBAC
+        else { return computedBAC }
+
+        // If a settings/UI rebuild recomputes the same session instantly, do not
+        // let the displayed live BAC jump to a future curve peak for one frame.
+        // Real drink edits/additions change inputKey and bypass this guard.
+        let elapsed = max(0, now.timeIntervalSince(lastUpdate))
+        let maxPlausibleRise = max(0.05, elapsed * 0.02)
+        guard computedBAC > currentBAC + maxPlausibleRise else { return computedBAC }
+        return currentBAC
+    }
+
     private func pushBACToWidget() {
         Task.detached(priority: .utility) {
             WidgetCenter.shared.reloadAllTimelines()
@@ -819,11 +947,13 @@ final class SessionViewModel {
     func rescheduleNotifications() {
         guard let profile else { return }
         let drinksSnapshot = drinks
+        let vomitSnapshot = vomitTimes
         Task {
             await NotificationService.reschedule(
                 drinks: drinksSnapshot,
                 profile: profile,
-                stomachStatus: stomachStatus
+                stomachStatus: stomachStatus,
+                vomitTimes: vomitSnapshot
             )
         }
     }

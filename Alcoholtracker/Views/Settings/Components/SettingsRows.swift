@@ -15,43 +15,63 @@ struct STNumericRow: View {
     let unit: String
     let format: String
     let range: ClosedRange<Double>
+    var validationMessage: String? = nil
     @Binding var value: Double
 
     @State private var text = ""
+    @State private var errorText: String?
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        HStack(spacing: 12) {
-            Text(label)
-                .font(.appBody)
-                .foregroundStyle(Color.appText)
-            Spacer()
-            TextField("", text: $text)
-                .keyboardType(.decimalPad)
-                .font(.appBodyBold)
-                .foregroundStyle(Color.appAccent)
-                .multilineTextAlignment(.trailing)
-                .frame(width: 64)
-                .focused($isFocused)
-                .onSubmit { commit() }
-            Text(unit)
-                .font(.appCaption)
-                .foregroundStyle(Color.appTextDim)
-                .frame(width: 36, alignment: .leading)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 12) {
+                Text(label)
+                    .font(.appBody)
+                    .foregroundStyle(Color.appText)
+                Spacer()
+                TextField("", text: $text)
+                    .keyboardType(.decimalPad)
+                    .font(.appBodyBold)
+                    .foregroundStyle(errorText == nil ? Color.appAccent : Color.statusRed)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 74)
+                    .focused($isFocused)
+                    .onSubmit { commit() }
+                Text(unit)
+                    .font(.appCaption)
+                    .foregroundStyle(Color.appTextDim)
+                    .frame(width: 36, alignment: .leading)
+            }
+            if let errorText {
+                Label(errorText, systemImage: "exclamationmark.triangle.fill")
+                    .font(.appMicro)
+                    .foregroundStyle(Color.statusYellow)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.vertical, errorText == nil ? 14 : 10)
         .onAppear { text = String(format: format, value) }
-        .onChange(of: value) { _, v in text = String(format: format, v) }
+        .onChange(of: value) { _, v in
+            guard !isFocused else { return }
+            text = String(format: format, v)
+            errorText = nil
+        }
         .onChange(of: isFocused) { _, focused in if !focused { commit() } }
     }
 
     private func commit() {
         guard let v = Double(text.replacingOccurrences(of: ",", with: ".")) else {
-            text = String(format: format, value)
+            errorText = "Bitte gib eine Zahl ein."
             return
         }
-        value = max(range.lowerBound, min(range.upperBound, v))
+        guard range.contains(v) else {
+            errorText = validationMessage ?? "Wert muss zwischen \(range.lowerBound) und \(range.upperBound) \(unit) liegen."
+            return
+        }
+        errorText = nil
+        value = v
+        text = String(format: format, v)
     }
 }
 

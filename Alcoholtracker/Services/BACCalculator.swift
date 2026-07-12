@@ -5,7 +5,7 @@ import Foundation
 // Uses the Widmark formula with Watson (1980) body-water estimation for the
 // distribution factor (TBW / (0.806 x weight) for blood Promille, clamped
 // 0.50-0.90; see UserProfile.distributionFactor). Absorption is modelled
-// as a linear ramp (duration = stomachStatus.absorptionMinutes x category.absorptionModifier)
+// as a linear ramp (duration = max(drinking duration, stomach absorption window))
 // followed by linear elimination at profile.effectiveEliminationRate ‰/h (respects toleranceMode).
 //
 // DISCLAIMER: Estimates only. No substitute for a certified breath test.
@@ -27,7 +27,12 @@ enum BACCalculator {
         distributionFactor: Double
     ) -> Double {
         let alcoholGrams = (volume * abv / 100.0) * 0.789
-        return alcoholGrams / (weight * distributionFactor)
+        // Guard against corrupt/zero profile weight (bad onboarding data): a weight
+        // near 0 would divide the dose into an absurd BAC. 30 kg is below the
+        // accepted onboarding range and avoids underestimating BAC for legacy data
+        // that legitimately falls below the current 35 kg validation threshold.
+        let safeWeight = max(weight, 30.0)
+        return alcoholGrams / (safeWeight * distributionFactor)
     }
 
     /// Minutes over which a drink's alcohol enters the blood.
@@ -70,12 +75,12 @@ enum BACCalculator {
     ) -> Double {
         // Worst-case (conservative) mode drops the resorption deficit (peakFactor
         // 1.0) and collapses the absorption ramp to ~instant, so no elimination is
-        // subtracted before the peak — the highest BAC the body could reach, the
+        // subtracted before the peak; the highest BAC the body could reach, the
         // way ADAC-style calculators present it. The individualised Watson r is kept.
         let factor = conservative ? 1.0 : stomachStatus.peakFactor
         let rawPeak = bacContribution(
             volume: volume, abv: abv,
-            weight: profile.weight,
+            weight: profile.validatedWeight,
             distributionFactor: profile.distributionFactor
         ) * factor
         let window = conservative ? 1.0 : absorptionWindowMinutes(
@@ -84,7 +89,7 @@ enum BACCalculator {
             drinkDurationMinutes: drinkDurationMinutes,
             gastric: stomachStatus.absorptionMinutes
         )
-        let elimPerMin = profile.effectiveEliminationRate / 60.0
+        let elimPerMin = profile.resolvedEliminationRate(conservative: conservative) / 60.0
         return max(0, rawPeak - elimPerMin * window)
     }
 
@@ -110,7 +115,8 @@ enum BACCalculator {
     /// based on stomach fullness.
     ///
     /// Alcohol from each drink enters the blood linearly across that drink's
-    /// absorption window (drinking duration + a stomach-dependent gastric phase).
+    /// absorption window. That window is the longer of the actual drinking
+    /// duration and the stomach-dependent gastric phase, not both added together.
     /// Elimination is zero-order: the body clears a *constant* `rate` ‰/h from the
     /// aggregate blood-alcohol pool, independent of how many drinks are present.
     ///
@@ -160,7 +166,7 @@ enum BACCalculator {
         }
 
         let r          = profile.distributionFactor
-        let elimPerMin = profile.effectiveEliminationRate / 60.0   // ‰/min, zero-order
+        let elimPerMin = profile.resolvedEliminationRate(conservative: conservative) / 60.0   // ‰/min, zero-order
         // Worst-case mode: no resorption deficit and an ~instant absorption ramp,
         // so the curve jumps to the raw Widmark peak before elimination bites.
         let factor     = conservative ? 1.0 : stomachStatus.peakFactor  // empty stomach peaks higher
@@ -182,7 +188,7 @@ enum BACCalculator {
             let peak = bacContribution(
                 volume: drink.volume,
                 abv: drink.abv,
-                weight: profile.weight,
+                weight: profile.validatedWeight,
                 distributionFactor: r
             ) * factor
             // Alcohol enters gradually; the window ends at gastric emptying (or
@@ -303,24 +309,25 @@ enum BACCalculator {
         maxHours: Double = 72.0
     ) -> Double? {
         // Sample the forecast horizon in one integration (2-minute grid) and return the
-        // first crossing, linearly interpolated between the bracketing samples.
-        // A forward scan handles a still-rising curve correctly, unlike the old
-        // monotonicity-assuming binary search, and costs one pass instead of ~60.
+        // final crossing, linearly interpolated between the bracketing samples. A later
+        // drink can create another rise after an earlier dip, so the first crossing is
+        // unsafe for a sobriety or driving forecast. A forward scan also handles a
+        // still-rising curve correctly, unlike the old monotonicity-assuming binary search.
         let stepMin = 2.0
         let steps = max(1, Int(max(0, maxHours) * 60.0 / stepMin))
         let dates = (0...steps).map { now.addingTimeInterval(Double($0) * stepMin * 60.0) }
         let bacs = sampledBAC(drinks: drinks, profile: profile, at: dates,
                               stomachStatus: stomachStatus, conservative: conservative,
                               vomitTimes: vomitTimes)
-        guard let first = bacs.first, first > targetBAC else { return 0 }
-
-        for i in 1...steps where bacs[i] <= targetBAC {
-            let above = bacs[i - 1], below = bacs[i]
-            let frac  = above > below ? (above - targetBAC) / (above - below) : 0
-            let crossMinutes = (Double(i - 1) + frac) * stepMin
-            return crossMinutes / 60.0
+        guard !bacs.isEmpty else { return nil }
+        guard bacs.contains(where: { $0 > targetBAC }) else {
+            return 0
         }
-        return nil
+        guard let lastAbove = bacs.lastIndex(where: { $0 > targetBAC }) else { return 0 }
+        guard lastAbove < steps else { return nil }
+        let above = bacs[lastAbove], below = bacs[lastAbove + 1]
+        let frac = above > below ? (above - targetBAC) / (above - below) : 0
+        return (Double(lastAbove) + frac) * stepMin / 60.0
     }
 
     // MARK: - Chart data

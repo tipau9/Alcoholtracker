@@ -312,18 +312,31 @@ struct QuickAddSheet: View {
                     Task {
                         defer { isLookingUpBarcode = false }
                         do {
-                            // 1. Check community DB first (faster + grows with each scan)
+                            // 1. Prefer locally learned/corrected products.
+                            if let local = localBarcodeTemplate(code) {
+                                barcodeCandidate = DrinkTemplateCandidate(
+                                    name: local.name,
+                                    abv: local.abv,
+                                    barcode: local.barcode,
+                                    volume: local.volume,
+                                    category: local.category,
+                                    source: .local
+                                )
+                                return
+                            }
+                            // 2. Check community DB (grows with each scan)
                             if let row = try? await supabase.lookupCommunityBarcode(code) {
                                 barcodeCandidate = DrinkTemplateCandidate(
                                     name:     row.name,
                                     abv:      row.abv,
                                     barcode:  row.barcode,
                                     volume:   row.volume,
-                                    category: DrinkCategory(rawValue: row.category) ?? (row.abv > 0 ? .beer : .softDrink)
+                                    category: DrinkCategory(rawValue: row.category) ?? (row.abv > 0 ? .beer : .softDrink),
+                                    source: .community
                                 )
                                 return
                             }
-                            // 2. Fall back to Open Food Facts
+                            // 3. Fall back to Open Food Facts
                             if let candidate = try await BarcodeService.lookup(barcode: code) {
                                 barcodeCandidate = candidate
                             } else {
@@ -334,7 +347,8 @@ struct QuickAddSheet: View {
                                 barcodeCandidate = DrinkTemplateCandidate(
                                     name: "", abv: 0, barcode: code,
                                     volume: 330, category: .softDrink,
-                                    foundInDatabase: false
+                                    foundInDatabase: false,
+                                    source: .manual
                                 )
                             }
                         } catch {
@@ -351,10 +365,13 @@ struct QuickAddSheet: View {
         )) {
             if let candidate = barcodeCandidate {
                 BarcodeCandidateSheet(candidate: candidate, profile: profile) { name, vol, abv, category in
-                    let cal = Int(vol * abv / 100.0 * 0.789 * 7.1)
+                    let safeVolume = BarcodeService.sanitizedVolumeML(vol)
+                    let safeABV = BarcodeService.sanitizedABV(abv)
+                    let safeCategory = BarcodeService.sanitizedCategory(category, abv: safeABV)
+                    let cal = Int(safeVolume * safeABV / 100.0 * 0.789 * 7.1)
                     let template = DrinkTemplate(
-                        name: name, category: category,
-                        volume: vol, abv: abv, calories: cal, isCustom: true
+                        name: name, category: safeCategory,
+                        volume: safeVolume, abv: safeABV, calories: cal, isCustom: true
                     )
                     template.barcode = candidate.barcode
                     context.insert(template)
@@ -366,11 +383,11 @@ struct QuickAddSheet: View {
                     Task {
                         try? await supabase.contributeDrink(
                             name:     name,
-                            category: category,
-                            volume:   vol,
-                            abv:      abv,
+                            category: safeCategory,
+                            volume:   safeVolume,
+                            abv:      safeABV,
                             calories: cal,
-                            iconName: category.symbolName,
+                            iconName: safeCategory.symbolName,
                             barcode:  capturedBarcode
                         )
                     }
@@ -393,6 +410,10 @@ struct QuickAddSheet: View {
         let drink = Drink.from(template: template)
         onAdd(drink)
         dismiss()
+    }
+
+    private func localBarcodeTemplate(_ barcode: String) -> DrinkTemplate? {
+        allTemplates.first { $0.barcode == barcode }
     }
 }
 
@@ -1068,6 +1089,16 @@ struct BarcodeCandidateSheet: View {
     private var volume: Double { Double(volumeText.replacingOccurrences(of: ",", with: ".")) ?? 0 }
     private var abv: Double { Double(abvText.replacingOccurrences(of: ",", with: ".")) ?? 0 }
     private var isValid: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty && volume > 0 && abv >= 0 }
+    private var sourceColor: Color {
+        candidate.foundInDatabase ? Color.statusGreen : Color.appAccent
+    }
+    private var sourceMessage: String {
+        if !candidate.foundInDatabase {
+            return "Nicht in der Datenbank. Trag die Werte ein, dann lernt die App diesen Barcode."
+        }
+        let suffix = candidate.adjustedBySanitizer ? " · Werte plausibilisiert" : ""
+        return "\(candidate.source.label)\(suffix)"
+    }
 
     private var bacPreview: Double? {
         guard let p = profile, volume > 0, abv > 0 else { return nil }
@@ -1092,12 +1123,10 @@ struct BarcodeCandidateSheet: View {
                         HStack(spacing: 8) {
                             Image(systemName: candidate.foundInDatabase ? "barcode.viewfinder" : "plus.viewfinder")
                                 .font(.system(size: 13))
-                                .foregroundStyle(candidate.foundInDatabase ? Color.statusGreen : Color.appAccent)
-                            Text(candidate.foundInDatabase
-                                 ? "Gefunden bei Open Food Facts"
-                                 : "Nicht in der Datenbank. Trag die Werte ein, dann lernt die App diesen Barcode.")
+                                .foregroundStyle(sourceColor)
+                            Text(sourceMessage)
                                 .font(.appCaption)
-                                .foregroundStyle(candidate.foundInDatabase ? Color.statusGreen : Color.appTextDim)
+                                .foregroundStyle(candidate.foundInDatabase ? sourceColor : Color.appTextDim)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
 

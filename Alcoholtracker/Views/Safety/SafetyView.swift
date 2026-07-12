@@ -48,15 +48,24 @@ struct SafetyView: View {
     }
 
     private var currentBAC: Double {
-        guard let p = profile else { return 0 }
+        guard let projectionInput else { return 0 }
         // Use the same conservative setting as the readiness timers below so the big
         // headline pegel and the Nüchtern/Fahrbereit times are derived from one curve.
-        return BACCalculator.currentBAC(drinks: todaysDrinks, profile: p, at: now,
-                                        stomachStatus: stomachStatus, conservative: p.conservativeForSafety,
-                                        vomitTimes: todaysVomitTimes)
+        return projectionInput.currentBAC(at: now)
     }
 
     private var stomachStatus: StomachStatus { profile?.defaultStomachStatus ?? .light }
+    private var projectionInput: BACProjectionInput? {
+        guard let p = profile else { return nil }
+        return BACProjectionInput(
+            drinks: todaysDrinks,
+            profile: p,
+            stomachStatus: stomachStatus,
+            conservative: p.conservativeForSafety,
+            vomitTimes: todaysVomitTimes
+        )
+    }
+
     private var bacStatus: BACStatus {
         guard let p = profile else { return BACStatus(bac: currentBAC) }
         return BACStatus(bac: currentBAC, profile: p)
@@ -64,13 +73,10 @@ struct SafetyView: View {
     private var skin: StatusSkin { profile?.statusSkin ?? .standard }
 
     private func hoursUntil(_ target: Double) -> Double? {
-        guard let p = profile else { return nil }
+        guard let projectionInput else { return nil }
         // The readiness timers respect the "Konservativ rechnen" switch so the
         // Fahrbereit/Nüchtern times are worst-case when the user wants them safe.
-        return BACCalculator.hoursUntilBAC(
-            target, drinks: todaysDrinks, profile: p, from: now,
-            stomachStatus: stomachStatus, conservative: p.conservativeForSafety,
-            vomitTimes: todaysVomitTimes)
+        return projectionInput.hoursUntil(target, from: now)
     }
 
     // MARK: Body
@@ -134,11 +140,13 @@ struct SafetyView: View {
                     .background(Color.appBorder)
                     .padding(.leading, 54)
                 SFTimerRow(
-                    label: isProbation ? "Fahrbereit (0,0 ‰)" : "Fahrbereit (0,5 ‰)",
+                    label: isProbation ? "Unter 0,0 ‰" : "Unter 0,5 ‰",
                     icon: "car.fill",
                     iconColor: Color.appAccent,
                     hours: hoursUntil(driveTarget),
-                    readyLabel: "Fahrbereit"
+                    // Kein "Fahrbereit"-Versprechen: die App sagt nur, wann der Wert
+                    // rechnerisch unter dem Grenzwert liegt, nicht dass man fahren darf.
+                    readyLabel: "Unter Grenzwert"
                 )
             }
             .background(Color.appCard)
@@ -305,10 +313,10 @@ private struct SFTimerRow: View {
     let label: String
     let icon: String
     let iconColor: Color
-    // hoursUntilBAC returns 0 when the BAC is ALREADY at/below the target and
-    // nil when it will NOT be reached within the forecast window (still far
-    // off, e.g. a very high current BAC). Those two must read differently: only
-    // 0 means "ready"; nil must show it is more than a day away so the safety
+    // hoursUntilBAC returns 0 only when BAC is at/below the target and will not
+    // rise above it later from still-active absorption. nil means the target is
+    // not reached within the forecast window. Those two must read differently:
+    // only 0 means "ready"; nil must show more than a day away so the safety
     // screen never tells an intoxicated user they are already nüchtern.
     let hours: Double?
     let readyLabel: String

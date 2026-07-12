@@ -325,14 +325,16 @@ enum AchievementCatalog {
         }
 
         if let p = profile {
-            return grouped.values.map { dayDrinks in
-                BACCalculator.peakBAC(
-                    drinks: dayDrinks,
-                    profile: p,
-                    stomachStatus: p.defaultStomachStatus
-                )
-            }.max() ?? 0.0
-        }
+        return grouped.values.map { dayDrinks in
+            BACProjectionInput(
+                drinks: dayDrinks,
+                profile: p,
+                stomachStatus: p.defaultStomachStatus,
+                conservative: p.conservativeForApp,
+                vomitTimes: []
+            ).peakBAC()
+        }.max() ?? 0.0
+    }
 
         return grouped.values.map { dayDrinks in
             let sorted = dayDrinks.sorted { $0.timestamp < $1.timestamp }

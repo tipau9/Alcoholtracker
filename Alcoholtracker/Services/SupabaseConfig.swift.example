@@ -7,7 +7,7 @@ import Foundation
 // 3. Trage deine Werte ein:
 //    Project Settings -> API -> Project URL  -> projectURL
 //    Project Settings -> API -> anon/public  -> anonKey
-// 4. Fuehre das Schema aus: SQL Editor -> New query -> Inhalt von supabase/community_drinks.sql einfuegen
+// 4. Fuehre die SQL-Dateien aus supabase/ im SQL Editor aus.
 //
 // SupabaseConfig.swift ist in .gitignore — niemals echte Credentials committen.
 

@@ -49,13 +49,13 @@ struct DayDetailSheet: View {
     private var peakBAC: Double {
         guard let p = profile, !dayDrinks.isEmpty else { return 0 }
         // Same computation as the calendar cell color so both always agree.
-        return BACCalculator.peakBAC(
+        return BACProjectionInput(
             drinks: dayDrinks,
             profile: p,
             stomachStatus: p.defaultStomachStatus,
             conservative: p.conservativeForApp,
             vomitTimes: dayVomitTimes
-        )
+        ).peakBAC()
     }
 
     private var bacStatusForDay: BACStatus {

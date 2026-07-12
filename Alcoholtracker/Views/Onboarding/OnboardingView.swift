@@ -32,9 +32,9 @@ struct OnboardingView: View {
             Group {
                 switch page {
                 case 0: ONWelcomePage(onNext: { advance() })
-                case 1: ONWeightPage(weightKg: $weightKg, onNext: { advance() })
+                case 1: ONWeightPage(weightKg: $weightKg, errorText: weightError, onNext: { advance() })
                 case 2: ONGenderPage(gender: $gender, onNext: { advance() })
-                case 3: ONBodyPage(age: $age, heightCm: $heightCm, onNext: { advance() })
+                case 3: ONBodyPage(age: $age, heightCm: $heightCm, ageError: ageError, heightError: heightError, onNext: { advance() })
                 default: ONFavoritesPage(
                     templates: templates,
                     favoriteIDs: $favoriteIDs,
@@ -102,8 +102,22 @@ struct OnboardingView: View {
     // MARK: Navigation
 
     private func canLeave(_ p: Int) -> Bool {
+        if p == 1 { return weightError == nil }
         if p == 2 { return gender != nil }
+        if p == 3 { return ageError == nil && heightError == nil }
         return true
+    }
+
+    private var weightError: String? {
+        BodyDataValidation.weightError(Double(weightKg))
+    }
+
+    private var heightError: String? {
+        BodyDataValidation.heightError(Double(heightCm))
+    }
+
+    private var ageError: String? {
+        BodyDataValidation.ageError(age)
     }
 
     private func advance() {
@@ -121,9 +135,10 @@ struct OnboardingView: View {
     // MARK: Finish
 
     private func finish() {
-        let w = Double(max(30, min(250, weightKg)))
-        let h = Double(max(100, min(250, heightCm)))
-        let a = max(18, min(99, age))
+        guard weightError == nil, heightError == nil, ageError == nil else { return }
+        let w = Double(weightKg)
+        let h = Double(heightCm)
+        let a = age
         let profile = UserProfile(
             weight: w,
             height: h,
@@ -208,6 +223,7 @@ private struct ONWelcomePage: View {
 
 private struct ONWeightPage: View {
     @Binding var weightKg: Int
+    let errorText: String?
     let onNext: () -> Void
 
     private enum WeightUnit: String { case kg, lbs }
@@ -259,9 +275,13 @@ private struct ONWeightPage: View {
                         : Int((Double(newValue) * 0.45359237).rounded())
                 }
 
+            InlineValidationMessage(text: errorText)
+                .padding(.horizontal, 24)
+                .padding(.top, 14)
+
             Spacer()
 
-            PrimaryButton(title: "Weiter", icon: "arrow.right", action: onNext)
+            PrimaryButton(title: "Weiter", icon: "arrow.right", isDisabled: errorText != nil, action: onNext)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 40)
         }
@@ -454,6 +474,8 @@ private struct ONGenderCard: View {
 private struct ONBodyPage: View {
     @Binding var age: Int
     @Binding var heightCm: Int
+    let ageError: String?
+    let heightError: String?
     let onNext: () -> Void
 
     private enum HeightUnit: String { case cm, ftin = "ft/in" }
@@ -481,6 +503,9 @@ private struct ONBodyPage: View {
                 }
             }
             .padding(.top, 12)
+            InlineValidationMessage(text: ageError)
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .firstTextBaseline) {
@@ -523,10 +548,13 @@ private struct ONBodyPage: View {
                 }
             }
             .padding(.top, 16)
+            InlineValidationMessage(text: heightError)
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
 
             Spacer()
 
-            PrimaryButton(title: "Weiter", icon: "arrow.right", action: onNext)
+            PrimaryButton(title: "Weiter", icon: "arrow.right", isDisabled: ageError != nil || heightError != nil, action: onNext)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 40)
         }
@@ -548,6 +576,20 @@ private struct ONWheelCard<Content: View>: View {
                 RoundedRectangle(cornerRadius: 20)
                     .strokeBorder(Color.appBorder, lineWidth: 0.5)
             )
+    }
+}
+
+private struct InlineValidationMessage: View {
+    let text: String?
+
+    var body: some View {
+        if let text {
+            Label(text, systemImage: "exclamationmark.triangle.fill")
+                .font(.appCaption)
+                .foregroundStyle(Color.statusYellow)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }
 

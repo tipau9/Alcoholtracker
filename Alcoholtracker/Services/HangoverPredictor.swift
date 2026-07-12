@@ -3,13 +3,19 @@ import SwiftUI
 
 // MARK: - HangoverLevel
 
-enum HangoverLevel {
+enum HangoverLevel: Int, Comparable {
     case none
     case mild
     case moderate
     case strong
     case severe
     case lethal   // medically dangerous peak BAC, not just a hangover
+
+    // Ascending severity order (declared low to high) drives the peak-BAC floor
+    // in the predictor, so `max(level, .moderate)` reads as "at least moderate".
+    static func < (lhs: HangoverLevel, rhs: HangoverLevel) -> Bool {
+        lhs.rawValue < rhs.rawValue
+    }
 
     var label: String {
         switch self {
@@ -65,31 +71,41 @@ enum HangoverPredictor {
         waterGlasses: Double,
         drinksCount: Int
     ) -> HangoverLevel {
-        // A peak this high is a medical emergency, not a hangover. 3‰ is very
-        // dangerous, but the explicit "Lebensgefahr" alarm is reserved for the
-        // range where coma/respiratory failure become a realistic acute concern.
-        if peakBAC >= 4.0 { return .lethal }
+        // A peak this high is a medical emergency, not a hangover. Respiratory
+        // depression and aspiration become a realistic acute risk from ~3‰ upward
+        // (earlier in less tolerant drinkers), so the explicit "Lebensgefahr" alarm
+        // starts there rather than only at 4‰, which understated the 3-4‰ range.
+        if peakBAC >= 3.0 { return .lethal }
 
         var score: Double = 0
         score += peakBAC * 2.0
         score += durationHours * 0.10
         score += Double(drinksCount) * 0.08
 
-        // Hydration matters, but should not erase a high BAC completely. Cap the
-        // benefit around 1.5 glasses per alcoholic drink so "good hydration"
-        // noticeably lowers the forecast without making heavy sessions harmless.
+        // Hydration eases symptoms but must not erase a high BAC. Cap the benefit
+        // both per amount (~1.5 glasses per alcoholic drink) AND in total (1.5
+        // score points), so "good hydration" lowers the forecast by roughly a tier
+        // without ever making a heavy night read as harmless.
         let usefulWater = min(waterGlasses, max(2.0, Double(drinksCount) * 1.5))
-        score -= usefulWater * 0.35
+        score -= min(usefulWater * 0.35, 1.5)
 
         // Calibrated so that 1.5-2.0‰ is usually a hard/severe hangover signal,
         // not a medical death warning, and water can move it down by a tier.
+        let scored: HangoverLevel
         switch score {
-        case ..<1.2:       return .none
-        case 1.2..<2.0:    return .mild
-        case 2.0..<3.0:    return .moderate
-        case 3.0..<4.4:    return .strong
-        default:           return .severe
+        case ..<1.2:       scored = .none
+        case 1.2..<2.0:    scored = .mild
+        case 2.0..<3.0:    scored = .moderate
+        case 3.0..<4.4:    scored = .strong
+        default:           scored = .severe
         }
+
+        // Floor by the raw peak: a genuinely high blood-alcohol peak is toxic and
+        // dehydrating on its own, so neither water nor a short session may downgrade
+        // it below a matching minimum tier.
+        if peakBAC >= 2.0 { return max(scored, .moderate) }
+        if peakBAC >= 1.2 { return max(scored, .mild) }
+        return scored
     }
 
     // Convenience variant. waterGlasses: real logged glasses from WaterLog;
@@ -113,16 +129,16 @@ enum HangoverPredictor {
         let duration = lastDrink.timeIntervalSince(firstDrink) / 3600
 
         // Tatsächlichen Spitzen-BAC durch Abtasten der Kurve (inkl. Abbau) ermitteln
-        let curve = BACCalculator.bacCurve(
+        let curve = BACProjectionInput(
             drinks: alcoholic,
             profile: profile,
-            from: firstDrink,
-            hours: duration + 6.0,
-            intervalMinutes: 15,
             stomachStatus: stomachStatus ?? profile.defaultStomachStatus,
-            conservative: conservative ?? profile.conservativeForApp,
+            // Danger classification should use the same worst-case peak the Safety
+            // tab shows, not the app-wide realistic one, so the Kater/Lebensgefahr
+            // tier is never systematically below what the user sees under Sicherheit.
+            conservative: conservative ?? profile.conservativeForSafety,
             vomitTimes: vomitTimes
-        )
+        ).curve(from: firstDrink, hours: duration + 6.0, intervalMinutes: 15)
         let peakBAC = curve.map { $0.bac }.max() ?? 0.0
 
         // Real logged water when available; otherwise rough heuristic
