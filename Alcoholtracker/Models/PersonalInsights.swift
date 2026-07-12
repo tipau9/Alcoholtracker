@@ -141,16 +141,21 @@ struct PersonalInsights {
         let drinkMinutes = average(alcohol.map(\.effectiveDrinkDurationMinutes))
         let peakAverage = average(peaks.map(\.1))
 
-        let topDrinks: [RankedItem] = drinkCounts
-            .map { RankedItem(name: $0.key, subtitle: $0.value.category, count: $0.value.count) }
-            .sorted { $0.count == $1.count ? $0.name < $1.name : $0.count > $1.count }
-            .prefix(5)
-            .map { $0 }
-        let topCategories: [RankedItem] = categoryCounts
-            .map { RankedItem(name: $0.key, subtitle: "Kategorie", count: $0.value) }
-            .sorted { $0.count == $1.count ? $0.name < $1.name : $0.count > $1.count }
-            .prefix(5)
-            .map { $0 }
+        func topFive(_ items: [RankedItem]) -> [RankedItem] {
+            let sorted = items.sorted { a, b in
+                if a.count != b.count { return a.count > b.count }
+                return a.name < b.name
+            }
+            return Array(sorted.prefix(5))
+        }
+        let drinkItems: [RankedItem] = drinkCounts.map { entry in
+            RankedItem(name: entry.key, subtitle: entry.value.category, count: entry.value.count)
+        }
+        let categoryItems: [RankedItem] = categoryCounts.map { entry in
+            RankedItem(name: entry.key, subtitle: "Kategorie", count: entry.value)
+        }
+        let topDrinks = topFive(drinkItems)
+        let topCategories = topFive(categoryItems)
         let hourly = (0..<24).map { TimeBucket(value: $0, count: hourCounts[$0, default: 0]) }
         let weekdays = (0..<7).map { TimeBucket(value: $0, count: weekdayCounts[$0, default: 0]) }
 
