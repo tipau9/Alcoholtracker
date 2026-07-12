@@ -63,7 +63,8 @@ enum NotificationService {
         drinks: [Drink],
         profile: UserProfile,
         stomachStatus: StomachStatus,
-        vomitTimes: [Date] = []
+        vomitTimes: [Date] = [],
+        mealEvents: [MealEventValue] = []
     ) async {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [soberID, driveID])
@@ -82,7 +83,8 @@ enum NotificationService {
             profile: profile,
             stomachStatus: stomachStatus,
             conservative: profile.conservativeForSafety,
-            vomitTimes: vomitTimes
+            vomitTimes: vomitTimes,
+            mealEvents: mealEvents
         )
         // Sober notification
         if let hours = input.hoursUntil(profile.tipsyThreshold), hours > 0.05 {

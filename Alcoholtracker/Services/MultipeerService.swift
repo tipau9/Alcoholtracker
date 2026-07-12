@@ -87,6 +87,58 @@ struct WaterScore: Identifiable, Equatable {
     let ms: Int
 }
 
+enum JamArcadeGame: String, Codable, CaseIterable, Identifiable {
+    case perfectSecond
+    case balanceBattle
+    case reactionRoyale
+
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .perfectSecond: return "Perfect Second"
+        case .balanceBattle: return "Balance Battle"
+        case .reactionRoyale: return "Reaction Royale"
+        }
+    }
+    var subtitle: String {
+        switch self {
+        case .perfectSecond: return "Triff genau 5,000 Sekunden"
+        case .balanceBattle: return "Halte dein Handy möglichst ruhig"
+        case .reactionRoyale: return "Reagiere schnell – aber nicht zu früh"
+        }
+    }
+    var icon: String {
+        switch self {
+        case .perfectSecond: return "stopwatch.fill"
+        case .balanceBattle: return "gyroscope"
+        case .reactionRoyale: return "bolt.fill"
+        }
+    }
+}
+
+struct JamArcadeRoundPayload: Codable, Identifiable {
+    let id: UUID
+    let jamID: UUID
+    let game: JamArcadeGame
+    let starterID: UUID
+    let starterName: String
+    let startAt: Date
+    let signalAt: Date?
+    let durationSeconds: Double
+}
+
+struct JamArcadeResultPayload: Codable, Identifiable, Equatable {
+    var id: String { "\(roundID.uuidString)|\(participantID.uuidString)" }
+    let jamID: UUID
+    let roundID: UUID
+    let participantID: UUID
+    let participantName: String
+    /// Milliseconds for timing/reaction games; normalized wobble score for balance.
+    let value: Double
+    let disqualified: Bool
+    let submittedAt: Date
+}
+
 // Wraps a status broadcast, a photo, a control message, a roulette draw, or a
 // water-contest update so a single send path handles them all.
 //
@@ -103,6 +155,8 @@ struct JamEnvelope: Codable {
         case control(JamControl)
         case roulette(JamRoulettePayload)
         case water(WaterPayload)
+        case arcadeRound(JamArcadeRoundPayload)
+        case arcadeResult(JamArcadeResultPayload)
     }
     let payload: Payload
     var messageID: UUID?
@@ -154,6 +208,8 @@ final class MultipeerService: NSObject {
     var onControlReceived: ((JamControl) -> Void)?
     var onRouletteReceived: ((JamRoulettePayload) -> Void)?
     var onWaterReceived: ((WaterPayload) -> Void)?
+    var onArcadeRoundReceived: ((JamArcadeRoundPayload) -> Void)?
+    var onArcadeResultReceived: ((JamArcadeResultPayload) -> Void)?
 
     // The jam the local user is actually in. Connections are only initiated
     // and accepted for this jam: without the gate, every browsing device
@@ -291,6 +347,20 @@ final class MultipeerService: NSObject {
         try? s.send(data, toPeers: s.connectedPeers, with: .reliable)
     }
 
+    func broadcastArcadeRound(_ payload: JamArcadeRoundPayload) {
+        guard let s = mcSession, !s.connectedPeers.isEmpty else { return }
+        let envelope = JamEnvelope(payload: .arcadeRound(payload))
+        guard let data = try? JSONEncoder().encode(envelope) else { return }
+        try? s.send(data, toPeers: s.connectedPeers, with: .reliable)
+    }
+
+    func broadcastArcadeResult(_ payload: JamArcadeResultPayload) {
+        guard let s = mcSession, !s.connectedPeers.isEmpty else { return }
+        let envelope = JamEnvelope(payload: .arcadeResult(payload))
+        guard let data = try? JSONEncoder().encode(envelope) else { return }
+        try? s.send(data, toPeers: s.connectedPeers, with: .reliable)
+    }
+
     // Compresses image to JPEG (max 200 KB) and broadcasts to all connected peers.
     func broadcastPhoto(_ image: UIImage, senderName: String, senderBAC: Double?) {
         guard let s = mcSession, !s.connectedPeers.isEmpty else { return }
@@ -399,6 +469,8 @@ extension MultipeerService: MCSessionDelegate {
         case .control(let control):  onControlReceived?(control)
         case .roulette(let r):       onRouletteReceived?(r)
         case .water(let w):          onWaterReceived?(w)
+        case .arcadeRound(let round): onArcadeRoundReceived?(round)
+        case .arcadeResult(let result): onArcadeResultReceived?(result)
         }
     }
 

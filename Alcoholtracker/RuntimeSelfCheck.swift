@@ -362,7 +362,7 @@ enum RuntimeSelfCheck {
         //     loadTodaysDrinks idempotency guard skipped recalculate() because the
         //     session ID set was unchanged after an in-place volume edit.
         if let box = try? ModelContainer(
-            for: Schema([Drink.self, DrinkTemplate.self, VomitEvent.self]),
+            for: Schema([Drink.self, DrinkTemplate.self, VomitEvent.self, MealEvent.self, BreathalyzerReading.self]),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         ) {
             let ctx = box.mainContext
@@ -384,7 +384,7 @@ enum RuntimeSelfCheck {
         //     and adding a drink invalidates it immediately (a mutation must
         //     never serve a stale curve out of the 60s time bucket).
         if let box24 = try? ModelContainer(
-            for: Schema([Drink.self, DrinkTemplate.self, VomitEvent.self]),
+            for: Schema([Drink.self, DrinkTemplate.self, VomitEvent.self, MealEvent.self, BreathalyzerReading.self]),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         ) {
             let ctx24 = box24.mainContext
@@ -413,7 +413,7 @@ enum RuntimeSelfCheck {
         // reload must compare BAC input values, not only object ids, so Home updates
         // immediately without waiting for the 30 s timer.
         if let box25 = try? ModelContainer(
-            for: Schema([Drink.self, DrinkTemplate.self, VomitEvent.self]),
+            for: Schema([Drink.self, DrinkTemplate.self, VomitEvent.self, MealEvent.self, BreathalyzerReading.self]),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         ) {
             let ctx25 = box25.mainContext
@@ -437,7 +437,7 @@ enum RuntimeSelfCheck {
         // value must be part of the reload signature so the App Group, widget and
         // Live Activity immediately switch from 0,5 to the 0,0 target.
         if let box26 = try? ModelContainer(
-            for: Schema([Drink.self, DrinkTemplate.self, VomitEvent.self]),
+            for: Schema([Drink.self, DrinkTemplate.self, VomitEvent.self, MealEvent.self, BreathalyzerReading.self]),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         ) {
             let ctx26 = box26.mainContext

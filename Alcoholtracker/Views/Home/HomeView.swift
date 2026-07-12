@@ -444,7 +444,8 @@ private struct DetailedHomeView: View {
             drinks: session.drinks,
             profile: profile,
             stomachStatus: session.stomachStatus,
-            vomitTimes: session.vomitTimes
+            vomitTimes: session.vomitTimes,
+            mealEvents: session.mealEventValues
         )
     }
 
@@ -551,6 +552,14 @@ private struct DetailedHomeView: View {
                     }
 
                     if !session.drinks.isEmpty {
+                        MealActionCard(session: session)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 16)
+
+                        BreathalyzerCard(session: session)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 16)
+
                         VomitActionCard(session: session)
                             .padding(.horizontal, 16)
                             .padding(.top, 16)
@@ -1528,6 +1537,9 @@ private struct DrunkMorePanel: View {
                         }
                     }
 
+                    MealActionCard(session: session)
+                    BreathalyzerCard(session: session)
+
                     SafetyActionsCard(profile: profile)
 
                     Button {
@@ -1994,6 +2006,215 @@ private struct StomachChip: View {
         }
         .buttonStyle(.pressable)
         .animation(.appSnappy, value: isSelected)
+    }
+}
+
+// MARK: - Meal and breathalyser session events
+
+private struct MealActionCard: View {
+    let session: SessionViewModel
+    @State private var showSheet = false
+
+    private var latest: MealEvent? { session.mealEvents.last }
+
+    var body: some View {
+        Button { showSheet = true } label: {
+            HStack(spacing: 13) {
+                Image(systemName: "fork.knife.circle.fill")
+                    .font(.system(size: 25))
+                    .foregroundStyle(Color.statusGreen)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Essen protokollieren")
+                        .font(.appBodyBold)
+                        .foregroundStyle(Color.appText)
+                    Text(latest.map { "Zuletzt: \($0.name.isEmpty ? $0.impact.title : $0.name) · \($0.timestamp.formatted(date: .omitted, time: .shortened))" }
+                         ?? "Wirkt nur auf noch nicht aufgenommenen Alkohol")
+                        .font(.appCaption)
+                        .foregroundStyle(Color.appTextDim)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer()
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Color.appAccent)
+            }
+            .padding(15)
+            .background(Color.appCard)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.appBorder, lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showSheet) { MealLoggingSheet(session: session) }
+    }
+}
+
+private struct MealLoggingSheet: View {
+    let session: SessionViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var impact: MealImpact = .lightMeal
+    @State private var customName = ""
+    @State private var timestamp = Date()
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Was hast du gegessen?") {
+                    ForEach(MealImpact.allCases) { item in
+                        Button {
+                            impact = item
+                        } label: {
+                            HStack {
+                                Label(item.title, systemImage: item.icon)
+                                Spacer()
+                                if impact == item { Image(systemName: "checkmark").foregroundStyle(Color.appAccent) }
+                            }
+                        }
+                        .foregroundStyle(Color.appText)
+                    }
+                    TextField("Eigener Name, optional", text: $customName)
+                }
+                Section("Zeitpunkt") {
+                    DatePicker("Gegessen um", selection: $timestamp, in: ...Date(), displayedComponents: [.date, .hourAndMinute])
+                }
+                Section {
+                    Text("Essen senkt keinen bereits aufgenommenen Alkohol. Die App verlängert ausschließlich die verbleibende Aufnahmezeit und berechnet Peak und Fahrbereit-Zeit neu.")
+                        .font(.appCaption)
+                        .foregroundStyle(Color.appTextDim)
+                }
+                if !session.mealEvents.isEmpty {
+                    Section {
+                        Button("Letzten Eintrag entfernen", role: .destructive) {
+                            session.removeLastMeal()
+                            dismiss()
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Mahlzeit")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Speichern") {
+                        session.logMeal(impact: impact, name: customName, at: timestamp)
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+}
+
+private struct BreathalyzerCard: View {
+    let session: SessionViewModel
+    @State private var showSheet = false
+
+    private var estimateRange: String {
+        let uncertainty = 0.10 + session.currentBAC * 0.18
+        let lower = max(0, session.currentBAC - uncertainty)
+        let upper = session.currentBAC + uncertainty
+        return "\(lower.permilleString)–\(upper.permilleString)"
+    }
+
+    var body: some View {
+        Button { showSheet = true } label: {
+            HStack(spacing: 13) {
+                Image(systemName: "wind")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(Color.statusOrange)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Breathalyser-Messung")
+                        .font(.appBodyBold)
+                        .foregroundStyle(Color.appText)
+                    if let reading = session.latestBreathalyzerReading {
+                        Text("Gemessen \(reading.measuredBAC.permilleString) · Schätzung \(reading.estimatedBAC.permilleString)")
+                            .font(.appCaption)
+                            .foregroundStyle(Color.appTextDim)
+                    } else {
+                        Text("Orientierungsbereich der Schätzung: \(estimateRange)")
+                            .font(.appCaption)
+                            .foregroundStyle(Color.appTextDim)
+                    }
+                }
+                Spacer()
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Color.appAccent)
+            }
+            .padding(15)
+            .background(Color.appCard)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.appBorder, lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showSheet) { BreathalyzerLoggingSheet(session: session) }
+    }
+}
+
+private struct BreathalyzerLoggingSheet: View {
+    let session: SessionViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var valueText = ""
+    @State private var note = ""
+    @State private var timestamp = Date()
+
+    private var value: Double? {
+        Double(valueText.replacingOccurrences(of: ",", with: "."))
+    }
+
+    private var estimateRange: String {
+        let uncertainty = 0.10 + session.currentBAC * 0.18
+        return "\(max(0, session.currentBAC - uncertainty).permilleString)–\((session.currentBAC + uncertainty).permilleString)"
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Gemessener Wert") {
+                    HStack {
+                        TextField("0,00", text: $valueText)
+                            .keyboardType(.decimalPad)
+                            .font(.system(.title2, design: .rounded, weight: .bold))
+                        Text("‰").foregroundStyle(Color.appTextDim)
+                    }
+                    DatePicker("Gemessen um", selection: $timestamp, in: ...Date(), displayedComponents: [.date, .hourAndMinute])
+                    TextField("Notiz oder Gerät, optional", text: $note)
+                }
+                Section("Vergleich") {
+                    LabeledContent("Aktuelle App-Schätzung", value: session.currentBAC.permilleString)
+                    LabeledContent("Orientierungsbereich", value: estimateRange)
+                    Text("Der Messwert ersetzt die Schätzung nicht und wird niemals automatisch als Nachweis der Fahrtüchtigkeit verwendet.")
+                        .font(.appCaption)
+                        .foregroundStyle(Color.appTextDim)
+                }
+                if let latest = session.latestBreathalyzerReading {
+                    Section("Letzte Messung") {
+                        LabeledContent("Gemessen", value: latest.measuredBAC.permilleString)
+                        LabeledContent("Damals geschätzt", value: latest.estimatedBAC.permilleString)
+                        Button("Messung entfernen", role: .destructive) {
+                            session.removeBreathalyzerReading(latest)
+                            dismiss()
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Breathalyser")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Speichern") {
+                        guard let value else { return }
+                        session.logBreathalyzerReading(measuredBAC: value, note: note, at: timestamp)
+                        dismiss()
+                    }
+                    .disabled(value.map { $0 < 0 || $0 > 5 } ?? true)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 }
 

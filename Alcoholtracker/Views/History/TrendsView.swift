@@ -10,6 +10,7 @@ struct TrendsView: View {
     // computed once at view creation; reopening the sheet rebuilds it.
     @Query(sort: \Drink.timestamp) private var drinks: [Drink]
     @Query private var notes: [DayNote]
+    @Query(sort: \BreathalyzerReading.timestamp) private var breathalyzerReadings: [BreathalyzerReading]
     @Query private var profiles: [UserProfile]
     @Environment(\.dismiss) private var dismiss
     @Environment(SupabaseService.self) private var supabase
@@ -38,7 +39,11 @@ struct TrendsView: View {
         let drinkKey = drinks.map {
             "\($0.id.uuidString)|\($0.timestamp.timeIntervalSinceReferenceDate)|\($0.volume)|\($0.abv)|\($0.drinkDurationMinutes)"
         }.joined(separator: "#")
-        return "\(period.rawValue)|\(profile?.bacProjectionKey ?? "")|\(drinkKey)"
+        let readingKey = breathalyzerReadings.map {
+            "\($0.id.uuidString)|\($0.timestamp.timeIntervalSinceReferenceDate)|\($0.measuredBAC)|\($0.estimatedBAC)"
+        }.joined(separator: "#")
+        let noteKey = notes.map { "\($0.dayStart.timeIntervalSinceReferenceDate)|\($0.moodRaw)" }.joined(separator: "#")
+        return "\(period.rawValue)|\(profile?.bacProjectionKey ?? "")|\(drinkKey)|\(readingKey)|\(noteKey)"
     }
     
     var body: some View {
@@ -54,6 +59,7 @@ struct TrendsView: View {
                         periodPicker
                         personalOverview
                         consumptionProfileCard
+                        personalDiscoveriesCard
                         personalTopDrinksCard
                         timeOfDayCard
                         weekdayCard
@@ -112,7 +118,9 @@ struct TrendsView: View {
             personalInsights = PersonalInsights.build(
                 drinks: drinks,
                 profile: profile,
-                cutoff: periodCutoff
+                cutoff: periodCutoff,
+                notes: notes,
+                breathalyzerReadings: breathalyzerReadings
             )
         }
     }
@@ -182,6 +190,47 @@ struct TrendsView: View {
                 let maximum = personalInsights.topDrinks.first?.count ?? 1
                 ForEach(Array(personalInsights.topDrinks.enumerated()), id: \.element.id) { index, item in
                     InsightsRankingRow(index: index, name: item.name, subtitle: item.subtitle, count: item.count, maximum: maximum)
+                }
+            }
+        }
+        .insightsCard()
+    }
+
+    private var personalDiscoveriesCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            InsightsSectionHeader(
+                icon: "sparkles",
+                title: "Persönliche Entdeckungen",
+                subtitle: "Nur aus ausreichend vielen vergleichbaren Daten"
+            )
+            if personalInsights.discoveries.isEmpty {
+                InsightsEmptyState(
+                    icon: "chart.line.text.clipboard",
+                    text: "Noch nicht genug Daten. Entdeckungen erscheinen frühestens nach fünf vergleichbaren Sessions oder Messungen."
+                )
+            } else {
+                ForEach(personalInsights.discoveries) { discovery in
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: discovery.icon)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.appAccent)
+                            .frame(width: 34, height: 34)
+                            .background(Color.appAccent.opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(discovery.title)
+                                .font(.appBodyBold)
+                                .foregroundStyle(Color.appText)
+                            Text(discovery.detail)
+                                .font(.appCaption)
+                                .foregroundStyle(Color.appTextDim)
+                            Text(discovery.evidence)
+                                .font(.appMicro)
+                                .foregroundStyle(Color.appTextMuted)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 4)
                 }
             }
         }

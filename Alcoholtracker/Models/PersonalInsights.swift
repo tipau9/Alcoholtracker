@@ -14,6 +14,14 @@ struct PersonalInsights {
         var id: Int { value }
     }
 
+    struct Discovery: Identifiable {
+        let title: String
+        let detail: String
+        let evidence: String
+        let icon: String
+        var id: String { title + "|" + evidence }
+    }
+
     let totalDrinks: Int
     let drinkingDays: Int
     let alcoholFreeDays: Int
@@ -33,6 +41,7 @@ struct PersonalInsights {
     let topCategories: [RankedItem]
     let hourly: [TimeBucket]
     let weekdays: [TimeBucket]
+    let discoveries: [Discovery]
 
     static let empty = PersonalInsights(
         totalDrinks: 0, drinkingDays: 0, alcoholFreeDays: 0,
@@ -41,13 +50,15 @@ struct PersonalInsights {
         averageDrinkMinutes: 0, averageSessionMinutes: 0,
         averageDrinksPerHour: 0, averagePeakBAC: 0, highestPeakBAC: 0,
         highestPeakDate: nil, typicalStartMinutesAfterMidnight: nil,
-        topDrinks: [], topCategories: [], hourly: [], weekdays: []
+        topDrinks: [], topCategories: [], hourly: [], weekdays: [], discoveries: []
     )
 
     static func build(
         drinks: [Drink],
         profile: UserProfile?,
         cutoff: Date?,
+        notes: [DayNote] = [],
+        breathalyzerReadings: [BreathalyzerReading] = [],
         now: Date = Date()
     ) -> PersonalInsights {
         let calendar = Calendar.current
@@ -159,6 +170,124 @@ struct PersonalInsights {
         let hourly = (0..<24).map { TimeBucket(value: $0, count: hourCounts[$0, default: 0]) }
         let weekdays = (0..<7).map { TimeBucket(value: $0, count: weekdayCounts[$0, default: 0]) }
 
+        var discoveries: [Discovery] = []
+        if sessions.count >= 5 {
+            let firstGaps = sessionValues.compactMap { session -> Double? in
+                guard session.count >= 2 else { return nil }
+                return session[1].timestamp.timeIntervalSince(session[0].timestamp) / 60
+            }.sorted()
+            if firstGaps.count >= 5 {
+                let medianGap = firstGaps[firstGaps.count / 2]
+                if medianGap < 30 {
+                    discoveries.append(Discovery(
+                        title: "Schneller Einstieg",
+                        detail: "Zwischen deinem ersten und zweiten Drink liegen typischerweise nur \(Int(medianGap.rounded())) Minuten.",
+                        evidence: "Median aus \(firstGaps.count) vergleichbaren Sessions",
+                        icon: "bolt.fill"
+                    ))
+                }
+            }
+
+            let orderedSessions = sessions.sorted { $0.key < $1.key }
+            if orderedSessions.count >= 8 {
+                func shiftedEndMinute(_ drinks: [Drink]) -> Double {
+                    guard let end = drinks.map(\.estimatedFinishedAt).max() else { return 0 }
+                    let h = calendar.component(.hour, from: end)
+                    let m = calendar.component(.minute, from: end)
+                    let raw = Double(h * 60 + m)
+                    return raw < 360 ? raw + 1440 : raw
+                }
+                let endMinutes = orderedSessions.map { shiftedEndMinute($0.value) }
+                let split = endMinutes.count / 2
+                let older = average(Array(endMinutes[..<split]))
+                let newer = average(Array(endMinutes[split...]))
+                let shift = newer - older
+                if abs(shift) >= 30 {
+                    discoveries.append(Discovery(
+                        title: shift > 0 ? "Deine Abende enden später" : "Deine Abende enden früher",
+                        detail: "Im jüngeren Zeitraum lag dein letzter Drink im Schnitt \(Int(abs(shift).rounded())) Minuten \(shift > 0 ? "später" : "früher").",
+                        evidence: "Vergleich von je \(split) Sessions",
+                        icon: shift > 0 ? "moon.stars.fill" : "sunrise.fill"
+                    ))
+                }
+            }
+
+            if let favorite = topDrinks.first, alcohol.count >= 10 {
+                let share = Double(favorite.count) / Double(alcohol.count)
+                if share >= 0.4 {
+                    discoveries.append(Discovery(
+                        title: "Dein klarer Favorit",
+                        detail: "\(favorite.name) macht \(Int((share * 100).rounded())) % deiner Einträge in diesem Zeitraum aus.",
+                        evidence: "\(favorite.count) von \(alcohol.count) Drinks",
+                        icon: "star.fill"
+                    ))
+                }
+            }
+        }
+
+        let relevantReadings = breathalyzerReadings.filter {
+            $0.timestamp <= now && (cutoff == nil || $0.timestamp >= cutoff!)
+        }
+        if relevantReadings.count >= 5 {
+            let differences = relevantReadings.map { $0.measuredBAC - $0.estimatedBAC }
+            let bias = average(differences)
+            let meanAbsoluteError = average(differences.map(abs))
+            discoveries.append(Discovery(
+                title: "Messung und Schätzung",
+                detail: "Deine Breathalyser-Werte lagen im Mittel \(abs(bias).permilleString) \(bias >= 0 ? "über" : "unter") der App-Schätzung.",
+                evidence: "Ø absolute Abweichung \(meanAbsoluteError.permilleString) aus \(relevantReadings.count) Messungen",
+                icon: "wind"
+            ))
+        }
+
+        if notes.count >= 6 {
+            let drinksByCalendarDay = Dictionary(grouping: alcohol) {
+                calendar.startOfDay(for: calendar.logicalDay(for: $0.timestamp))
+            }
+            let positive = notes.filter { $0.mood == .happy || $0.mood == .proud }
+                .compactMap { drinksByCalendarDay[calendar.startOfDay(for: $0.dayStart)]?.count }
+            let negative = notes.filter { $0.mood == .regret || $0.mood == .terrible }
+                .compactMap { drinksByCalendarDay[calendar.startOfDay(for: $0.dayStart)]?.count }
+            if positive.count >= 3, negative.count >= 3 {
+                let positiveAverage = average(positive.map(Double.init))
+                let negativeAverage = average(negative.map(Double.init))
+                if negativeAverage - positiveAverage >= 1 {
+                    discoveries.append(Discovery(
+                        title: "Morgenstimmung und Drinkzahl",
+                        detail: "Abende mit negativer Morgenbewertung hatten im Mittel \(oneDecimalForInsight(negativeAverage - positiveAverage)) mehr Drinks.",
+                        evidence: "\(positive.count + negative.count) bewertete Abende · Zusammenhang, keine Ursache",
+                        icon: "face.dashed.fill"
+                    ))
+                }
+            }
+
+            var hydratedMoods: [Bool] = []
+            var lessHydratedMoods: [Bool] = []
+            for note in notes where note.mood != .neutral {
+                let day = calendar.startOfDay(for: note.dayStart)
+                guard let session = drinksByCalendarDay[day], !session.isEmpty,
+                      let glasses = WaterLog.loggedGlasses(forDay: day) else { continue }
+                let wasNegative = note.mood == .regret || note.mood == .terrible
+                if glasses * 2 >= session.count {
+                    hydratedMoods.append(wasNegative)
+                } else {
+                    lessHydratedMoods.append(wasNegative)
+                }
+            }
+            if hydratedMoods.count >= 3, lessHydratedMoods.count >= 3 {
+                let hydratedNegativeRate = Double(hydratedMoods.filter { $0 }.count) / Double(hydratedMoods.count)
+                let lessHydratedNegativeRate = Double(lessHydratedMoods.filter { $0 }.count) / Double(lessHydratedMoods.count)
+                if lessHydratedNegativeRate - hydratedNegativeRate >= 0.2 {
+                    discoveries.append(Discovery(
+                        title: "Wasser und Morgenstimmung",
+                        detail: "An Abenden mit mindestens einem Glas Wasser je zwei Drinks hast du den Morgen seltener negativ bewertet.",
+                        evidence: "\(hydratedMoods.count + lessHydratedMoods.count) bewertete Abende · Zusammenhang, keine Ursache",
+                        icon: "drop.fill"
+                    ))
+                }
+            }
+        }
+
         return PersonalInsights(
             totalDrinks: alcohol.count,
             drinkingDays: sessions.count,
@@ -178,7 +307,12 @@ struct PersonalInsights {
             topDrinks: topDrinks,
             topCategories: topCategories,
             hourly: hourly,
-            weekdays: weekdays
+            weekdays: weekdays,
+            discoveries: Array(discoveries.prefix(5))
         )
     }
+}
+
+private func oneDecimalForInsight(_ value: Double) -> String {
+    String(format: "%.1f", value).replacingOccurrences(of: ".", with: ",")
 }

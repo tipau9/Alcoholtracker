@@ -12,6 +12,7 @@ struct BACProjectionInput {
     let stomachStatus: StomachStatus
     let conservative: Bool
     let vomitTimes: [Date]
+    var mealEvents: [MealEventValue] = []
 
     var stableKey: String {
         let drinkKey = drinks.map {
@@ -29,9 +30,13 @@ struct BACProjectionInput {
         let vomitKey = vomitTimes
             .map { $0.timeIntervalSinceReferenceDate.description }
             .joined(separator: "|")
+        let mealKey = mealEvents.map {
+            "\($0.id.uuidString):\($0.timestamp.timeIntervalSinceReferenceDate):\($0.impact.rawValue):\($0.name)"
+        }.joined(separator: "|")
         return [
             drinkKey,
             vomitKey,
+            mealKey,
             profile.bacProjectionKey,
             stomachStatus.rawValue,
             conservative.description
@@ -45,7 +50,8 @@ struct BACProjectionInput {
             at: date,
             stomachStatus: stomachStatus,
             conservative: conservative,
-            vomitTimes: vomitTimes
+            vomitTimes: vomitTimes,
+            mealEvents: mealEvents
         )
     }
 
@@ -57,7 +63,8 @@ struct BACProjectionInput {
             from: date,
             stomachStatus: stomachStatus,
             conservative: conservative,
-            vomitTimes: vomitTimes
+            vomitTimes: vomitTimes,
+            mealEvents: mealEvents
         )
     }
 
@@ -68,7 +75,8 @@ struct BACProjectionInput {
             intervalMinutes: intervalMinutes,
             stomachStatus: stomachStatus,
             conservative: conservative,
-            vomitTimes: vomitTimes
+            vomitTimes: vomitTimes,
+            mealEvents: mealEvents
         )
     }
 
@@ -81,7 +89,8 @@ struct BACProjectionInput {
             intervalMinutes: intervalMinutes,
             stomachStatus: stomachStatus,
             conservative: conservative,
-            vomitTimes: vomitTimes
+            vomitTimes: vomitTimes,
+            mealEvents: mealEvents
         )
     }
 }

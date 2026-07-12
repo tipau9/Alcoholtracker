@@ -13,6 +13,7 @@ struct SafetyView: View {
     @Query private var profiles: [UserProfile]
     @Query private var allDrinks: [Drink]
     @Query private var allVomitEvents: [VomitEvent]
+    @Query private var allMealEvents: [MealEvent]
     @State private var now = Date()
     @State private var locationService = LocationService()
     @State private var showRidePicker = false
@@ -28,6 +29,10 @@ struct SafetyView: View {
             sort: \.timestamp
         )
         _allVomitEvents = Query(
+            filter: #Predicate { $0.timestamp >= cutoff },
+            sort: \.timestamp
+        )
+        _allMealEvents = Query(
             filter: #Predicate { $0.timestamp >= cutoff },
             sort: \.timestamp
         )
@@ -47,6 +52,11 @@ struct SafetyView: View {
             .map(\.timestamp)
     }
 
+    private var todaysMeals: [MealEventValue] {
+        let logicalStart = Calendar.current.logicalDayStart(for: now)
+        return allMealEvents.filter { $0.timestamp >= logicalStart }.map(\.value)
+    }
+
     private var currentBAC: Double {
         guard let projectionInput else { return 0 }
         // Use the same conservative setting as the readiness timers below so the big
@@ -62,7 +72,8 @@ struct SafetyView: View {
             profile: p,
             stomachStatus: stomachStatus,
             conservative: p.conservativeForSafety,
-            vomitTimes: todaysVomitTimes
+            vomitTimes: todaysVomitTimes,
+            mealEvents: todaysMeals
         )
     }
 
@@ -98,7 +109,10 @@ struct SafetyView: View {
                         timersSection
                         driveModeSection
                         if let p = profile {
-                            ForecastView(drinks: todaysDrinks, profile: p, vomitTimes: todaysVomitTimes)
+                            ForecastView(
+                                drinks: todaysDrinks, profile: p,
+                                vomitTimes: todaysVomitTimes, mealEvents: todaysMeals
+                            )
                         }
                         actionsSection
                         SFDisclaimer()

@@ -827,6 +827,47 @@ final class SupabaseService {
         return try Self.decoder.decode([JamRouletteRow].self, from: data).first?.toPayload(jamID: jamID)
     }
 
+    func setJamArcadeRound(_ round: JamArcadeRoundPayload) async throws {
+        try await refreshIfNeeded()
+        _ = try await restRPC("jam_set_arcade_round", body: [
+            "p_jam_id": round.jamID.uuidString,
+            "p_round_id": round.id.uuidString,
+            "p_game_type": round.game.rawValue,
+            "p_starter_id": round.starterID.uuidString,
+            "p_starter_name": round.starterName,
+            "p_start_at": Self.iso8601WithFractional.string(from: round.startAt),
+            "p_signal_at": (round.signalAt.map { Self.iso8601WithFractional.string(from: $0) } as Any?) ?? NSNull(),
+            "p_duration_seconds": round.durationSeconds
+        ])
+    }
+
+    func fetchJamArcadeRound(_ jamID: UUID) async throws -> JamArcadeRoundPayload? {
+        try await refreshIfNeeded()
+        let data = try await restRPC("jam_arcade_round", body: ["p_jam_id": jamID.uuidString])
+        return try Self.decoder.decode([JamArcadeRoundRow].self, from: data).first?.toPayload(jamID: jamID)
+    }
+
+    func submitJamArcadeResult(_ result: JamArcadeResultPayload) async throws {
+        try await refreshIfNeeded()
+        _ = try await restRPC("jam_submit_arcade_result", body: [
+            "p_jam_id": result.jamID.uuidString,
+            "p_round_id": result.roundID.uuidString,
+            "p_name": result.participantName,
+            "p_value": result.value,
+            "p_disqualified": result.disqualified
+        ])
+    }
+
+    func fetchJamArcadeResults(jamID: UUID, roundID: UUID) async throws -> [JamArcadeResultPayload] {
+        try await refreshIfNeeded()
+        let data = try await restRPC("jam_arcade_board", body: [
+            "p_jam_id": jamID.uuidString,
+            "p_round_id": roundID.uuidString
+        ])
+        return try Self.decoder.decode([JamArcadeResultRow].self, from: data)
+            .compactMap { $0.toPayload(jamID: jamID, roundID: roundID) }
+    }
+
     // "Von Freunden" means exactly that: only jams whose host is one of the
     // locally stored friends are returned. The codes are resolved to user ids
     // first; without that filter every signed-in user would see every
@@ -1361,6 +1402,61 @@ private struct JamRouletteRow: Decodable {
             id: id, jamID: jamID, participants: participants,
             winnerIndex: winnerIndex, starterName: starterName ?? "Jemand",
             starterID: starterID.flatMap { UUID(uuidString: $0) }
+        )
+    }
+}
+
+private struct JamArcadeRoundRow: Decodable {
+    let roundID: String
+    let gameType: String
+    let starterID: String
+    let starterName: String?
+    let startAt: Date
+    let signalAt: Date?
+    let durationSeconds: Double
+
+    enum CodingKeys: String, CodingKey {
+        case roundID = "round_id"
+        case gameType = "game_type"
+        case starterID = "starter_id"
+        case starterName = "starter_name"
+        case startAt = "start_at"
+        case signalAt = "signal_at"
+        case durationSeconds = "duration_seconds"
+    }
+
+    func toPayload(jamID: UUID) -> JamArcadeRoundPayload? {
+        guard let id = UUID(uuidString: roundID),
+              let starter = UUID(uuidString: starterID),
+              let game = JamArcadeGame(rawValue: gameType) else { return nil }
+        return JamArcadeRoundPayload(
+            id: id, jamID: jamID, game: game, starterID: starter,
+            starterName: starterName ?? "Jemand", startAt: startAt,
+            signalAt: signalAt, durationSeconds: durationSeconds
+        )
+    }
+}
+
+private struct JamArcadeResultRow: Decodable {
+    let participantID: String
+    let participantName: String?
+    let value: Double
+    let disqualified: Bool
+    let submittedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case participantID = "participant_id"
+        case participantName = "participant_name"
+        case value, disqualified
+        case submittedAt = "submitted_at"
+    }
+
+    func toPayload(jamID: UUID, roundID: UUID) -> JamArcadeResultPayload? {
+        guard let participantID = UUID(uuidString: participantID) else { return nil }
+        return JamArcadeResultPayload(
+            jamID: jamID, roundID: roundID, participantID: participantID,
+            participantName: participantName ?? "Anonym", value: value,
+            disqualified: disqualified, submittedAt: submittedAt
         )
     }
 }

@@ -116,7 +116,8 @@ enum HangoverPredictor {
         waterGlasses: Double? = nil,
         stomachStatus: StomachStatus? = nil,
         conservative: Bool? = nil,
-        vomitTimes: [Date] = []
+        vomitTimes: [Date] = [],
+        mealEvents: [MealEventValue] = []
     ) -> HangoverLevel {
         // Only alcoholic drinks drive a hangover: a Cola or water logged late
         // must not stretch the session duration or inflate the drink count (and
@@ -137,7 +138,8 @@ enum HangoverPredictor {
             // tab shows, not the app-wide realistic one, so the Kater/Lebensgefahr
             // tier is never systematically below what the user sees under Sicherheit.
             conservative: conservative ?? profile.conservativeForSafety,
-            vomitTimes: vomitTimes
+            vomitTimes: vomitTimes,
+            mealEvents: mealEvents
         ).curve(from: firstDrink, hours: duration + 6.0, intervalMinutes: 15)
         let peakBAC = curve.map { $0.bac }.max() ?? 0.0
 

@@ -19,10 +19,14 @@ final class SessionViewModel {
     // Logged "Übergeben" events in the current session. Each truncates the
     // absorption of drinks still in the stomach (see BACCalculator / VomitEvent).
     var vomitEvents: [VomitEvent] = []
+    var mealEvents: [MealEvent] = []
+    var breathalyzerReadings: [BreathalyzerReading] = []
     var currentWeekDrinkCount: Int = 0
 
     // Timestamps handed to the BAC engine so still-absorbing drinks are cut short.
     var vomitTimes: [Date] { vomitEvents.map(\.timestamp) }
+    var mealEventValues: [MealEventValue] { mealEvents.map(\.value) }
+    var latestBreathalyzerReading: BreathalyzerReading? { breathalyzerReadings.last }
 
     // Worst-case model applied app-wide (home BAC, curves, badges) when the user
     // enabled "Konservativ in ganzer App". The safety screens have their own gate.
@@ -267,7 +271,8 @@ final class SessionViewModel {
             profile: profile,
             stomachStatus: stomachStatus,
             conservative: conservative,
-            vomitTimes: vomitTimes
+            vomitTimes: vomitTimes,
+            mealEvents: mealEventValues
         )
     }
 
@@ -435,6 +440,10 @@ final class SessionViewModel {
         drinks = []
         vomitEvents.forEach { modelContext?.delete($0) }
         vomitEvents = []
+        mealEvents.forEach { modelContext?.delete($0) }
+        mealEvents = []
+        breathalyzerReadings.forEach { modelContext?.delete($0) }
+        breathalyzerReadings = []
         try? modelContext?.save()
         if !snapshots.isEmpty {
             undoAction = .reset(snapshots)
@@ -536,9 +545,21 @@ final class SessionViewModel {
             sortBy: [SortDescriptor(\.timestamp)]
         )
         let recentVomitEvents = (try? context.fetch(vomitDescriptor)) ?? []
+        let mealDescriptor = FetchDescriptor<MealEvent>(
+            predicate: #Predicate { $0.timestamp >= lookback },
+            sortBy: [SortDescriptor(\.timestamp)]
+        )
+        let recentMealEvents = (try? context.fetch(mealDescriptor)) ?? []
+        let breathDescriptor = FetchDescriptor<BreathalyzerReading>(
+            predicate: #Predicate { $0.timestamp >= lookback },
+            sortBy: [SortDescriptor(\.timestamp)]
+        )
+        let recentBreathReadings = (try? context.fetch(breathDescriptor)) ?? []
         
         guard let p = profile else {
             self.drinks = recentDrinks.filter { $0.timestamp >= logicalStart }
+            self.mealEvents = recentMealEvents.filter { $0.timestamp >= logicalStart }
+            self.breathalyzerReadings = recentBreathReadings.filter { $0.timestamp >= logicalStart }
             recalculate()
             return
         }
@@ -549,12 +570,16 @@ final class SessionViewModel {
         let vomitTimesBefore6AM = recentVomitEvents
             .map(\.timestamp)
             .filter { $0 <= logicalStart }
+        let mealsBefore6AM = recentMealEvents
+            .filter { $0.timestamp <= logicalStart }
+            .map(\.value)
         let bacAt6AM = BACProjectionInput(
             drinks: drinksBefore6AM,
             profile: p,
             stomachStatus: p.defaultStomachStatus,
             conservative: p.conservativeForApp,
-            vomitTimes: vomitTimesBefore6AM
+            vomitTimes: vomitTimesBefore6AM,
+            mealEvents: mealsBefore6AM
         ).currentBAC(at: logicalStart)
         
         var sessionStart = logicalStart
@@ -569,12 +594,14 @@ final class SessionViewModel {
                 let beforeTime = d.timestamp.addingTimeInterval(-60)
                 let pastDrinks = Array(drinksBefore6AM[0..<i])
                 let vomitTimesBeforeDrink = vomitTimesBefore6AM.filter { $0 <= beforeTime }
+                let mealsBeforeDrink = mealsBefore6AM.filter { $0.timestamp <= beforeTime }
                 let bacBefore = BACProjectionInput(
                     drinks: pastDrinks,
                     profile: p,
                     stomachStatus: p.defaultStomachStatus,
                     conservative: p.conservativeForApp,
-                    vomitTimes: vomitTimesBeforeDrink
+                    vomitTimes: vomitTimesBeforeDrink,
+                    mealEvents: mealsBeforeDrink
                 ).currentBAC(at: beforeTime)
                 
                 // Wenn wir vor diesem Drink nüchtern waren, ist hier der Start der Session
@@ -587,6 +614,8 @@ final class SessionViewModel {
         
         let sessionDrinks = recentDrinks.filter { $0.timestamp >= sessionStart }
         let sessionVomitEvents = recentVomitEvents.filter { $0.timestamp >= sessionStart }
+        let sessionMealEvents = recentMealEvents.filter { $0.timestamp >= sessionStart }
+        let sessionBreathReadings = recentBreathReadings.filter { $0.timestamp >= sessionStart }
         // The @Query in HomeView re-fires this right after a local addDrink/removeDrink,
         // which already recalculated and rescheduled. Skip the expensive BAC recompute +
         // notification reschedule only when every BAC-relevant input is unchanged;
@@ -596,12 +625,15 @@ final class SessionViewModel {
             profile: p,
             stomachStatus: stomachStatus,
             conservative: conservative,
-            vomitTimes: sessionVomitEvents.map(\.timestamp)
+            vomitTimes: sessionVomitEvents.map(\.timestamp),
+            mealEvents: sessionMealEvents.map(\.value)
         ).stableKey
         let unchanged = !force && sessionKey == lastLoadedProjectionKey
         self.drinks = sessionDrinks
+        breathalyzerReadings = sessionBreathReadings
         if !unchanged {
             vomitEvents = sessionVomitEvents
+            mealEvents = sessionMealEvents
             recalculate()
             rescheduleNotifications()
             // This path handles external model mutations such as History edits
@@ -659,6 +691,60 @@ final class SessionViewModel {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
+    // MARK: Meals & breathalyser readings
+
+    func logMeal(impact: MealImpact, name: String = "", at timestamp: Date = Date()) {
+        guard let context = modelContext else { return }
+        let event = MealEvent(timestamp: timestamp, impact: impact, name: name)
+        context.insert(event)
+        try? context.save()
+        mealEvents.append(event)
+        mealEvents.sort { $0.timestamp < $1.timestamp }
+        recalculate()
+        pushBACToWidget()
+        rescheduleNotifications()
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+
+    func removeLastMeal() {
+        guard let event = mealEvents.last else { return }
+        mealEvents.removeLast()
+        modelContext?.delete(event)
+        try? modelContext?.save()
+        recalculate()
+        pushBACToWidget()
+        rescheduleNotifications()
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    func logBreathalyzerReading(
+        measuredBAC: Double,
+        note: String = "",
+        at timestamp: Date = Date(),
+        source: BreathalyzerSource = .manual
+    ) {
+        guard let context = modelContext else { return }
+        let estimated = bacProjectionInput?.currentBAC(at: timestamp) ?? currentBAC
+        let reading = BreathalyzerReading(
+            timestamp: timestamp,
+            measuredBAC: measuredBAC,
+            estimatedBAC: estimated,
+            source: source,
+            note: note
+        )
+        context.insert(reading)
+        try? context.save()
+        breathalyzerReadings.append(reading)
+        breathalyzerReadings.sort { $0.timestamp < $1.timestamp }
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+
+    func removeBreathalyzerReading(_ reading: BreathalyzerReading) {
+        breathalyzerReadings.removeAll { $0.id == reading.id }
+        modelContext?.delete(reading)
+        try? modelContext?.save()
+    }
+
     // MARK: Projections
 
     func hoursUntil(_ target: Double) -> Double? {
@@ -680,7 +766,8 @@ final class SessionViewModel {
             waterGlasses: water,
             stomachStatus: input.stomachStatus,
             conservative: input.conservative,
-            vomitTimes: input.vomitTimes
+            vomitTimes: input.vomitTimes,
+            mealEvents: input.mealEvents
         )
     }
 
@@ -780,6 +867,7 @@ final class SessionViewModel {
         let bacAtCall    = currentBAC
         let stomachCopy  = stomachStatus
         let vomitCopy    = vomitTimes
+        let mealCopy     = mealEventValues
         let conservativeCopy = conservative
         let elimRate     = resolvedEliminationRate
         let drinkCount   = drinks.count
@@ -801,7 +889,8 @@ final class SessionViewModel {
                     profile: profile,
                     stomachStatus: stomachCopy,
                     conservative: conservativeCopy,
-                    vomitTimes: vomitCopy
+                    vomitTimes: vomitCopy,
+                    mealEvents: mealCopy
                 ).curve(hours: 12, intervalMinutes: 15)
                     .map { SharedBACPoint(date: $0.date, bac: $0.bac) }
                 guard !Task.isCancelled else { return }
@@ -833,7 +922,8 @@ final class SessionViewModel {
                 profile: profile,
                 stomachStatus: stomachCopy,
                 conservative: conservativeCopy,
-                vomitTimes: vomitCopy
+                vomitTimes: vomitCopy,
+                mealEvents: mealCopy
             )
             let soberAt = safetyInput.hoursUntil(profile.tipsyThreshold, from: now)
                 .map { now.addingTimeInterval($0 * 3600) }
@@ -948,12 +1038,14 @@ final class SessionViewModel {
         guard let profile else { return }
         let drinksSnapshot = drinks
         let vomitSnapshot = vomitTimes
+        let mealSnapshot = mealEventValues
         Task {
             await NotificationService.reschedule(
                 drinks: drinksSnapshot,
                 profile: profile,
                 stomachStatus: stomachStatus,
-                vomitTimes: vomitSnapshot
+                vomitTimes: vomitSnapshot,
+                mealEvents: mealSnapshot
             )
         }
     }

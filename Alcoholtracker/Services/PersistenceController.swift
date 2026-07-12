@@ -21,6 +21,8 @@ final class PersistenceController {
         DayNote.self,
         PendingSyncOperation.self,
         VomitEvent.self,
+        MealEvent.self,
+        BreathalyzerReading.self,
     ])
 
     let container: ModelContainer

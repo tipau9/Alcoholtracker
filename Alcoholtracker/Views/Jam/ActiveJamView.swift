@@ -22,6 +22,7 @@ struct ActiveJamView: View {
     @State private var photoShareError: String?
     @State private var showWaterContest = false
     @State private var showInviteSheet  = false
+    @State private var showArcadePicker = false
     @State private var showRouletteHint = false
 
     // Friends whose display name is not yet among the jam participants.
@@ -80,6 +81,14 @@ struct ActiveJamView: View {
         .sheet(isPresented: $showInviteSheet) {
             InviteFriendsSheet(jam: jam, friends: uninvitedFriends)
         }
+        .sheet(isPresented: $showArcadePicker) {
+            JamArcadePickerSheet { game in
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(250))
+                    jamService.startArcade(game)
+                }
+            }
+        }
         .sheet(item: $longPressParticipant) { p in
             ParticipantPrivacySheet(
                 participant: p,
@@ -94,6 +103,12 @@ struct ActiveJamView: View {
             set: { if !$0 { jamService.incomingRoulette = nil } }
         )) {
             RoulettePresentationHost()
+        }
+        .sheet(isPresented: Binding(
+            get: { jamService.incomingArcadeRound != nil },
+            set: { if !$0 { jamService.closeArcade() } }
+        )) {
+            ArcadePresentationHost(participantCount: jam.participants.count)
         }
         .sheet(isPresented: $showWaterContest) {
             WaterContestSheet()
@@ -371,6 +386,9 @@ struct ActiveJamView: View {
                 jamService.mySOSActive.toggle()
             }
         }
+        ActionChip(icon: "gamecontroller.fill", label: "Jam Arcade") {
+            showArcadePicker = true
+        }
         ActionChip(icon: "person.badge.plus", label: "Freunde einladen") {
             showInviteSheet = true
         }
@@ -412,6 +430,27 @@ private struct RoulettePresentationHost: View {
                 canReroll: jamService.canRerollRoulette(payload),
                 onReroll: { jamService.rerollRoulette(payload) },
                 onClose: { jamService.incomingRoulette = nil }
+            )
+        }
+    }
+}
+
+private struct ArcadePresentationHost: View {
+    let participantCount: Int
+    @Environment(JamService.self) private var jamService
+
+    var body: some View {
+        if let round = jamService.incomingArcadeRound {
+            JamArcadeSheet(
+                round: round,
+                results: jamService.arcadeResults,
+                participantCount: participantCount,
+                canRestart: jamService.canRestartArcade(round),
+                onSubmit: { value, disqualified in
+                    jamService.submitArcadeResult(value: value, disqualified: disqualified)
+                },
+                onRestart: { jamService.startArcade(round.game, replacing: round) },
+                onClose: { jamService.closeArcade() }
             )
         }
     }

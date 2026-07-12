@@ -7,6 +7,7 @@ enum HomeBACTrendResolver {
         profile: UserProfile?,
         stomachStatus: StomachStatus,
         vomitTimes: [Date],
+        mealEvents: [MealEventValue] = [],
         at now: Date = Date()
     ) -> BACTrend {
         guard currentBAC > 0.01, let profile else { return .stable }
@@ -15,7 +16,8 @@ enum HomeBACTrendResolver {
             profile: profile,
             stomachStatus: stomachStatus,
             conservative: profile.conservativeForApp,
-            vomitTimes: vomitTimes
+            vomitTimes: vomitTimes,
+            mealEvents: mealEvents
         ).currentBAC(at: now.addingTimeInterval(-300))
         if currentBAC > fiveMinutesAgo + 0.005 { return .rising }
         if currentBAC < fiveMinutesAgo - 0.005 { return .falling }

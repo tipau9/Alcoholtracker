@@ -238,7 +238,7 @@ final class BACCalculatorTests: XCTestCase {
 
     func testNonForceReloadRecalculatesAfterInPlaceEdit() throws {
         let container = try ModelContainer(
-            for: Schema([Drink.self, DrinkTemplate.self, VomitEvent.self]),
+            for: Schema([Drink.self, DrinkTemplate.self, VomitEvent.self, MealEvent.self, BreathalyzerReading.self]),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let context = container.mainContext
@@ -259,7 +259,7 @@ final class BACCalculatorTests: XCTestCase {
 
     func testProbationaryChangeRefreshesSharedDrivingLimit() throws {
         let container = try ModelContainer(
-            for: Schema([Drink.self, DrinkTemplate.self, VomitEvent.self]),
+            for: Schema([Drink.self, DrinkTemplate.self, VomitEvent.self, MealEvent.self, BreathalyzerReading.self]),
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         let p = profile()
@@ -332,5 +332,58 @@ final class BACCalculatorTests: XCTestCase {
         XCTAssertEqual(insights.topDrinks.first?.count, 2)
         XCTAssertEqual(insights.hourly.first(where: { $0.value == 20 })?.count, 1)
         XCTAssertEqual(insights.hourly.first(where: { $0.value == 10 })?.count, 1)
+    }
+
+    func testMealOnlyChangesAlcoholNotYetAbsorbed() {
+        let p = profile()
+        let start = Date().addingTimeInterval(-20 * 60)
+        let spirit = drink(volume: 200, abv: 40, category: .spirits, timestamp: start)
+        let mealTime = start.addingTimeInterval(20 * 60)
+        let meal = MealEventValue(id: UUID(), timestamp: mealTime, impact: .fullMeal, name: "Abendessen")
+
+        let atMealWithoutFood = BACCalculator.currentBAC(
+            drinks: [spirit], profile: p, at: mealTime, stomachStatus: .light
+        )
+        let atMealWithFood = BACCalculator.currentBAC(
+            drinks: [spirit], profile: p, at: mealTime, stomachStatus: .light,
+            mealEvents: [meal]
+        )
+        let laterWithoutFood = BACCalculator.currentBAC(
+            drinks: [spirit], profile: p, at: mealTime.addingTimeInterval(40 * 60), stomachStatus: .light
+        )
+        let laterWithFood = BACCalculator.currentBAC(
+            drinks: [spirit], profile: p, at: mealTime.addingTimeInterval(40 * 60), stomachStatus: .light,
+            mealEvents: [meal]
+        )
+
+        XCTAssertEqual(atMealWithFood, atMealWithoutFood, accuracy: 0.0001)
+        XCTAssertLessThan(laterWithFood, laterWithoutFood)
+    }
+
+    func testArcadeRoundAndResultCodecPreserveSharedIdentity() throws {
+        let jamID = UUID()
+        let round = JamArcadeRoundPayload(
+            id: UUID(), jamID: jamID, game: .reactionRoyale,
+            starterID: UUID(), starterName: "Mia",
+            startAt: Date(), signalAt: Date().addingTimeInterval(4), durationSeconds: 5
+        )
+        let result = JamArcadeResultPayload(
+            jamID: jamID, roundID: round.id, participantID: UUID(),
+            participantName: "Noah", value: 241, disqualified: false, submittedAt: Date()
+        )
+
+        let decodedRound = try JSONDecoder().decode(
+            JamArcadeRoundPayload.self,
+            from: JSONEncoder().encode(round)
+        )
+        let decodedResult = try JSONDecoder().decode(
+            JamArcadeResultPayload.self,
+            from: JSONEncoder().encode(result)
+        )
+
+        XCTAssertEqual(decodedRound.id, round.id)
+        XCTAssertEqual(decodedRound.signalAt, round.signalAt)
+        XCTAssertEqual(decodedResult.roundID, round.id)
+        XCTAssertEqual(decodedResult.participantID, result.participantID)
     }
 }

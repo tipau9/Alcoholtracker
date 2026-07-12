@@ -69,6 +69,8 @@ final class JamService {
     // Latest round-roulette draw (locally started or received); the active jam
     // view presents the spin sheet for it and clears it on dismiss.
     var incomingRoulette: JamRoulettePayload?
+    var incomingArcadeRound: JamArcadeRoundPayload?
+    var arcadeResults: [JamArcadeResultPayload] = []
 
     // Water-chug leaderboard for the current jam (best time per participant).
     var waterScores: [WaterScore] = []
@@ -130,6 +132,7 @@ final class JamService {
 
     private var statusTimer: Timer?
     private var pollTimer: Timer?
+    private var arcadePollTimer: Timer?
     private var lastBroadcastTime: Date = .distantPast
     private var myJoinedAt: Date?
     // Draw id of the roulette already presented, so the same draw arriving over
@@ -137,6 +140,9 @@ final class JamService {
     private var lastRouletteID: UUID?
     private var lastRouletteStarterID: UUID?
     private var lastRouletteReceivedAt: Date?
+    private var lastArcadeRoundID: UUID?
+    private var lastArcadeReceivedAt: Date?
+    private var lastArcadeStarterID: UUID?
 
     // CRDT tombstones: participants who left/were kicked recently, so a stale
     // broadcast arriving late (e.g. after an offline peer reconnects) cannot
@@ -185,6 +191,12 @@ final class JamService {
             case .result: self.applyWaterScore(WaterScore(id: payload.participantID, name: payload.name, ms: payload.milliseconds))
             }
         }
+        multipeer.onArcadeRoundReceived = { [weak self] payload in
+            self?.presentArcadeRound(payload)
+        }
+        multipeer.onArcadeResultReceived = { [weak self] payload in
+            self?.applyArcadeResult(payload)
+        }
     }
 
     // MARK: Water leaderboard
@@ -226,6 +238,111 @@ final class JamService {
         ))
         if jam.visibility.usesServer {
             Task { try? await supabase.resetJamWater(jam.id) }
+        }
+    }
+
+    func canRestartArcade(_ round: JamArcadeRoundPayload) -> Bool {
+        round.jamID == currentJam?.id && round.starterID == myParticipantID
+    }
+
+    func startArcade(_ game: JamArcadeGame, replacing previous: JamArcadeRoundPayload? = nil) {
+        guard let jam = currentJam else { return }
+        if let previous {
+            guard canRestartArcade(previous) else { return }
+        } else if let receivedAt = lastArcadeReceivedAt,
+                  Date().timeIntervalSince(receivedAt) <= 180 {
+            guard lastArcadeStarterID == myParticipantID else { return }
+        }
+
+        let now = Date()
+        let startAt = now.addingTimeInterval(5)
+        let signalAt = game == .reactionRoyale
+            ? startAt.addingTimeInterval(Double.random(in: 2.5...5.5))
+            : nil
+        let round = JamArcadeRoundPayload(
+            id: UUID(),
+            jamID: jam.id,
+            game: game,
+            starterID: myParticipantID,
+            starterName: supabase.myProfile?.displayName ?? UIDevice.current.name,
+            startAt: startAt,
+            signalAt: signalAt,
+            durationSeconds: game == .balanceBattle ? 10 : 5
+        )
+        multipeer.broadcastArcadeRound(round)
+        presentArcadeRound(round)
+        if jam.visibility.usesServer {
+            Task { try? await supabase.setJamArcadeRound(round) }
+        }
+    }
+
+    func submitArcadeResult(value: Double, disqualified: Bool = false) {
+        guard let jam = currentJam, let round = incomingArcadeRound else { return }
+        guard !arcadeResults.contains(where: { $0.participantID == myParticipantID && $0.roundID == round.id }) else { return }
+        let result = JamArcadeResultPayload(
+            jamID: jam.id,
+            roundID: round.id,
+            participantID: myParticipantID,
+            participantName: supabase.myProfile?.displayName ?? UIDevice.current.name,
+            value: min(600_000, max(0, value)),
+            disqualified: disqualified,
+            submittedAt: Date()
+        )
+        applyArcadeResult(result)
+        multipeer.broadcastArcadeResult(result)
+        if jam.visibility.usesServer {
+            Task { try? await supabase.submitJamArcadeResult(result) }
+        }
+    }
+
+    func closeArcade() {
+        incomingArcadeRound = nil
+        arcadeResults.removeAll()
+        if currentJam?.visibility.usesServer != true { stopArcadePolling() }
+    }
+
+    private func presentArcadeRound(_ round: JamArcadeRoundPayload) {
+        guard round.jamID == currentJam?.id else { return }
+        guard round.id != lastArcadeRoundID else { return }
+        lastArcadeRoundID = round.id
+        lastArcadeStarterID = round.starterID
+        lastArcadeReceivedAt = Date()
+        arcadeResults.removeAll()
+        incomingArcadeRound = round
+        if currentJam?.visibility.usesServer == true { startArcadePolling() }
+    }
+
+    private func applyArcadeResult(_ result: JamArcadeResultPayload) {
+        guard result.jamID == currentJam?.id,
+              result.roundID == incomingArcadeRound?.id else { return }
+        if let index = arcadeResults.firstIndex(where: { $0.participantID == result.participantID }) {
+            if result.submittedAt >= arcadeResults[index].submittedAt { arcadeResults[index] = result }
+        } else {
+            arcadeResults.append(result)
+        }
+    }
+
+    private func startArcadePolling() {
+        arcadePollTimer?.invalidate()
+        arcadePollTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in await self?.syncArcadeGame() }
+        }
+        Task { await syncArcadeGame() }
+    }
+
+    private func stopArcadePolling() {
+        arcadePollTimer?.invalidate()
+        arcadePollTimer = nil
+    }
+
+    private func syncArcadeGame() async {
+        guard let jam = currentJam, jam.visibility.usesServer else { return }
+        if let round = try? await supabase.fetchJamArcadeRound(jam.id) {
+            presentArcadeRound(round)
+        }
+        guard let round = incomingArcadeRound else { return }
+        if let results = try? await supabase.fetchJamArcadeResults(jamID: jam.id, roundID: round.id) {
+            for result in results { applyArcadeResult(result) }
         }
     }
 
@@ -491,6 +608,11 @@ final class JamService {
         lastRouletteID = nil
         lastRouletteStarterID = nil
         lastRouletteReceivedAt = nil
+        incomingArcadeRound = nil
+        arcadeResults.removeAll()
+        lastArcadeRoundID = nil
+        lastArcadeStarterID = nil
+        lastArcadeReceivedAt = nil
         amHost = false
         confirmedOnServer = false
         currentJam = nil               // immediate: UI transitions to lobby right away
@@ -730,6 +852,9 @@ final class JamService {
                     await self?.syncJamGames()
                 }
             }
+            // Arcade rounds need to be discovered before their absolute startAt;
+            // the normal 12-second roster poll is intentionally too slow for that.
+            startArcadePolling()
         }
     }
 
@@ -738,6 +863,7 @@ final class JamService {
         statusTimer = nil
         pollTimer?.invalidate()
         pollTimer = nil
+        stopArcadePolling()
     }
 
     // MARK: Local Participant Update
@@ -865,6 +991,9 @@ final class JamService {
 
         if let draw = try? await supabase.fetchJamRoulette(jam.id) {
             presentRoulette(draw)
+        }
+        if let round = try? await supabase.fetchJamArcadeRound(jam.id) {
+            presentArcadeRound(round)
         }
         if let server = try? await supabase.fetchJamWaterScores(jam.id) {
             mergeServerWaterScores(server)
