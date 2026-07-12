@@ -276,39 +276,48 @@ private struct RouletteSpinParams {
         let segment = 360.0 / Double(count)
         var rng = SeededGenerator(seed: RouletteSpinParams.seed(from: payload.id))
 
-        duration = reduceMotion ? 0.9 : 5.4
+        duration = reduceMotion ? 0.9 : 6.6
         // The wheel stops at a random angle; the glowing pocket marks the
         // result, so no fixed pointer position is needed.
         let wheelTurns = reduceMotion ? 1.0 : (6.0 + rng.nextUnit() * 2.0).rounded()
         wheelTarget = wheelTurns * 360 + rng.nextUnit() * 360
         pocketAngle = Double(payload.winnerIndex) * segment
 
-        captureTime = reduceMotion ? 0.5 : duration * (0.68 + rng.nextUnit() * 0.06)
-        dropTime = reduceMotion ? 0.25 : captureTime - (1.0 + rng.nextUnit() * 0.4)
-        bounceFrequency = 8.0 + rng.nextUnit() * 4.0
+        // Rest a little off the pocket centre so the ball settles where it
+        // stops rolling instead of snapping to the middle of the segment.
+        // Kept within +/- 0.3 of a segment so it stays inside the winner.
+        let restOffset = reduceMotion ? 0 : (rng.nextUnit() - 0.5) * segment * 0.6
+        let landing = pocketAngle + restOffset
+
+        captureTime = reduceMotion ? 0.5 : duration * (0.70 + rng.nextUnit() * 0.05)
+        // Longer drop-to-capture window: the ball spends more time hopping
+        // across the pockets before it settles, stretching the suspense.
+        dropTime = reduceMotion ? 0.25 : captureTime - (2.2 + rng.nextUnit() * 0.7)
+        bounceFrequency = reduceMotion ? 8.0 : (11.0 + rng.nextUnit() * 5.0)
 
         // Angular scatter while hopping: each bounce kicks the ball a little
         // forward or back across neighbouring pockets before it settles.
-        scatterAmplitude = reduceMotion ? 0 : min(segment * 0.8, 14.0)
+        scatterAmplitude = reduceMotion ? 0 : min(segment * 0.9, 16.0)
         scatterPhase = rng.nextUnit() * 2 * .pi
 
-        // The ball must arrive exactly over the winning pocket at capture time,
-        // travelling in the opposite direction to the wheel. Pick the whole
-        // number of backward laps at random, then solve the fractional rest.
+        // The ball must arrive over the winning pocket (at the off-centre rest
+        // point) at capture time, travelling opposite to the wheel. Pick the
+        // whole number of backward laps at random, then solve the fractional
+        // rest.
         ballStart = rng.nextUnit() * 360
         let wheelAtCapture = wheelTarget * easeOutCubic(captureTime / duration)
-        let targetWorld = pocketAngle + wheelAtCapture
+        let targetWorld = landing + wheelAtCapture
         let laps = reduceMotion ? 1.0 : (3.0 + rng.nextUnit() * 2.0).rounded()
         var offset = (targetWorld - ballStart).truncatingRemainder(dividingBy: 360)
         if offset > 0 { offset -= 360 }
         ballTravel = offset - laps * 360
 
-        // Bounce haptics: a few taps spread across the pocket-hopping phase.
-        // Copy to locals so the map closure does not capture self before
+        // Bounce haptics: taps spread across the (now longer) pocket-hopping
+        // phase. Copy to locals so the map closure does not capture self before
         // bounceTimes is initialized.
         let hopStart = dropTime
         let hopWindow = captureTime - dropTime
-        bounceTimes = reduceMotion ? [] : (1...3).map { hopStart + hopWindow * Double($0) / 3.5 }
+        bounceTimes = reduceMotion ? [] : (1...5).map { hopStart + hopWindow * Double($0) / 5.5 }
     }
 
     func state(at t: Double) -> RouletteSpinState {
@@ -329,7 +338,7 @@ private struct RouletteSpinParams {
                 // Damped angular kicks off the pockets while the ball hops.
                 let span = max(captureTime - dropTime, 0.1)
                 let x = min((t - dropTime) / span, 1)
-                free += scatterAmplitude * exp(-3.0 * x) * sin(bounceFrequency * x + scatterPhase)
+                free += scatterAmplitude * exp(-2.2 * x) * sin(bounceFrequency * x + scatterPhase)
             }
             let blendStart = captureTime - 0.35
             if t > blendStart {
@@ -349,9 +358,9 @@ private struct RouletteSpinParams {
         } else {
             let span = max(captureTime - dropTime, 0.1)
             let x = (t - dropTime) / span
-            let decay = exp(-3.2 * x) * abs(cos(bounceFrequency * x))
+            let decay = exp(-2.4 * x) * abs(cos(bounceFrequency * x))
             radius = pocketRadiusFraction + (rimRadiusFraction - pocketRadiusFraction) * CGFloat(min(decay, 1))
-            lift = min(decay, 1) * 0.5
+            lift = min(decay, 1) * 0.6
         }
 
         return RouletteSpinState(
