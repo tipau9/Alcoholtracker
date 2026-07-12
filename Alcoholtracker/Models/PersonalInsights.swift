@@ -132,30 +132,48 @@ struct PersonalInsights {
             values.isEmpty ? 0 : values.reduce(0, +) / Double(values.count)
         }
 
+        // Broken into locals so the type-checker does not time out on one
+        // giant initializer expression.
+        let totalAlcoholGrams = alcohol.reduce(0.0) { $0 + $1.alcoholGrams }
+        let totalCalories = alcohol.reduce(0) { $0 + $1.calories }
+        let totalVolumeML = alcohol.reduce(0.0) { $0 + $1.volume }
+        let averagePerDrinkingDay = Double(alcohol.count) / Double(max(sessions.count, 1))
+        let drinkMinutes = average(alcohol.map(\.effectiveDrinkDurationMinutes))
+        let peakAverage = average(peaks.map(\.1))
+
+        let topDrinks: [RankedItem] = drinkCounts
+            .map { RankedItem(name: $0.key, subtitle: $0.value.category, count: $0.value.count) }
+            .sorted { $0.count == $1.count ? $0.name < $1.name : $0.count > $1.count }
+            .prefix(5)
+            .map { $0 }
+        let topCategories: [RankedItem] = categoryCounts
+            .map { RankedItem(name: $0.key, subtitle: "Kategorie", count: $0.value) }
+            .sorted { $0.count == $1.count ? $0.name < $1.name : $0.count > $1.count }
+            .prefix(5)
+            .map { $0 }
+        let hourly = (0..<24).map { TimeBucket(value: $0, count: hourCounts[$0, default: 0]) }
+        let weekdays = (0..<7).map { TimeBucket(value: $0, count: weekdayCounts[$0, default: 0]) }
+
         return PersonalInsights(
             totalDrinks: alcohol.count,
             drinkingDays: sessions.count,
             alcoholFreeDays: alcoholFreeDays,
             currentAlcoholFreeStreak: currentStreak,
-            totalAlcoholGrams: alcohol.reduce(0) { $0 + $1.alcoholGrams },
-            totalCalories: alcohol.reduce(0) { $0 + $1.calories },
-            totalVolumeML: alcohol.reduce(0) { $0 + $1.volume },
-            averageDrinksPerDrinkingDay: Double(alcohol.count) / Double(max(sessions.count, 1)),
-            averageDrinkMinutes: average(alcohol.map(\.effectiveDrinkDurationMinutes)),
+            totalAlcoholGrams: totalAlcoholGrams,
+            totalCalories: totalCalories,
+            totalVolumeML: totalVolumeML,
+            averageDrinksPerDrinkingDay: averagePerDrinkingDay,
+            averageDrinkMinutes: drinkMinutes,
             averageSessionMinutes: average(sessionMinutes),
             averageDrinksPerHour: average(sessionPaces),
-            averagePeakBAC: average(peaks.map(\.1)),
+            averagePeakBAC: peakAverage,
             highestPeakBAC: highest?.1 ?? 0,
             highestPeakDate: highest?.0,
             typicalStartMinutesAfterMidnight: typicalStart,
-            topDrinks: drinkCounts.map {
-                RankedItem(name: $0.key, subtitle: $0.value.category, count: $0.value.count)
-            }.sorted { $0.count == $1.count ? $0.name < $1.name : $0.count > $1.count }.prefix(5).map { $0 },
-            topCategories: categoryCounts.map {
-                RankedItem(name: $0.key, subtitle: "Kategorie", count: $0.value)
-            }.sorted { $0.count == $1.count ? $0.name < $1.name : $0.count > $1.count }.prefix(5).map { $0 },
-            hourly: (0..<24).map { TimeBucket(value: $0, count: hourCounts[$0, default: 0]) },
-            weekdays: (0..<7).map { TimeBucket(value: $0, count: weekdayCounts[$0, default: 0]) }
+            topDrinks: topDrinks,
+            topCategories: topCategories,
+            hourly: hourly,
+            weekdays: weekdays
         )
     }
 }

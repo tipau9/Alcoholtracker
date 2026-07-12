@@ -304,8 +304,11 @@ private struct RouletteSpinParams {
         ballTravel = offset - laps * 360
 
         // Bounce haptics: a few taps spread across the pocket-hopping phase.
+        // Copy to locals so the map closure does not capture self before
+        // bounceTimes is initialized.
+        let hopStart = dropTime
         let hopWindow = captureTime - dropTime
-        bounceTimes = reduceMotion ? [] : (1...3).map { dropTime + hopWindow * Double($0) / 3.5 }
+        bounceTimes = reduceMotion ? [] : (1...3).map { hopStart + hopWindow * Double($0) / 3.5 }
     }
 
     func state(at t: Double) -> RouletteSpinState {
