@@ -402,6 +402,8 @@ struct AdminView: View {
                     AdminAuditRow(entry: entry)
                 }
             }
+        case .debug:
+            AdminDebugSection()
         }
     }
 
@@ -428,6 +430,7 @@ struct AdminView: View {
         case .flags:      return flags.isEmpty
         case .security:   return adminUsers.isEmpty && blockedVoters.isEmpty
         case .audit:      return audit.isEmpty
+        case .debug:      return false
         }
     }
 
@@ -612,6 +615,7 @@ private enum AdminSection: CaseIterable, Hashable {
     case flags
     case security
     case audit
+    case debug
 
     var title: String {
         switch self {
@@ -621,6 +625,7 @@ private enum AdminSection: CaseIterable, Hashable {
         case .flags:      return "Flags"
         case .security:   return "Security"
         case .audit:      return "Audit"
+        case .debug:      return "Debug"
         }
     }
 
@@ -632,6 +637,7 @@ private enum AdminSection: CaseIterable, Hashable {
         case .flags:      return "switch.2"
         case .security:   return "person.badge.shield.checkmark"
         case .audit:      return "list.bullet.rectangle"
+        case .debug:      return "ladybug.fill"
         }
     }
 }
@@ -1590,7 +1596,7 @@ private struct AdminBlockEditor: View {
     }
 }
 
-private struct AdminActionButtonStyle: ButtonStyle {
+struct AdminActionButtonStyle: ButtonStyle {
     let tint: Color
 
     func makeBody(configuration: Configuration) -> some View {

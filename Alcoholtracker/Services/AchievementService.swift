@@ -86,4 +86,18 @@ final class AchievementService {
         unlockedIDs.remove(id)
         UserDefaults.standard.set(Array(unlockedIDs), forKey: defaultsKey)
     }
+
+    // MARK: Debug tooling (admin-only)
+
+    func debugUnlockAll() {
+        unlockedIDs = Set(AchievementCatalog.all.map(\.id))
+        UserDefaults.standard.set(Array(unlockedIDs), forKey: defaultsKey)
+        publishIfNeeded(didUnlock: true)
+    }
+
+    func debugReset() {
+        unlockedIDs = []
+        newlyUnlocked = []
+        UserDefaults.standard.set([String](), forKey: defaultsKey)
+    }
 }

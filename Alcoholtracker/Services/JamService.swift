@@ -282,6 +282,51 @@ final class JamService {
         incomingRoulette = payload
     }
 
+    // MARK: Debug tooling (admin-only)
+    //
+    // Injects synthetic participants into the local roster so social features
+    // (roulette, water contest, roster, kick) can be tested solo without a
+    // second device. Fakes use connectionType .proximity, which syncParticipants
+    // keeps across server polls, so they persist like anonymous Bluetooth peers.
+    // Their ids are tracked so removal never touches real proximity peers.
+    private static let debugFakeNames = ["Mia", "Ben", "Lena", "Tom", "Sara",
+                                         "Jonas", "Emma", "Paul", "Lisa", "Max"]
+    private var debugFakeIDs: Set<UUID> = []
+
+    var debugFakeParticipantCount: Int {
+        guard let jam = currentJam else { return 0 }
+        return jam.participants.filter { debugFakeIDs.contains($0.id) }.count
+    }
+
+    func addFakeParticipant() {
+        guard var jam = currentJam else { return }
+        let name = Self.debugFakeNames.randomElement() ?? "Testperson"
+        let id = UUID()
+        let fake = JamParticipant(
+            id: id,
+            userID: nil,
+            displayName: name,
+            avatar: String(name.prefix(1)).uppercased(),
+            joinedAt: Date(),
+            connectionType: .proximity,
+            currentBAC: Double.random(in: 0.0...1.6),
+            currentStatus: nil,
+            hasSOSActive: false,
+            lastUpdated: Date(),
+            sharedSettings: nil
+        )
+        debugFakeIDs.insert(id)
+        jam.participants.upsert(fake)
+        currentJam = jam
+    }
+
+    func removeFakeParticipants() {
+        guard var jam = currentJam else { return }
+        jam.participants.removeAll { debugFakeIDs.contains($0.id) }
+        debugFakeIDs.removeAll()
+        currentJam = jam
+    }
+
     private func appendPhoto(_ photo: JamPhotoPayload) {
         receivedPhotos.append(photo)
         if receivedPhotos.count > maxReceivedPhotos {
