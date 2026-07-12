@@ -22,6 +22,7 @@ struct ActiveJamView: View {
     @State private var photoShareError: String?
     @State private var showWaterContest = false
     @State private var showInviteSheet  = false
+    @State private var showRouletteHint = false
 
     // Friends whose display name is not yet among the jam participants.
     // Name-based match is pragmatic: we don't hold friend UUIDs locally.
@@ -150,6 +151,11 @@ struct ActiveJamView: View {
             Button("OK", role: .cancel) { photoShareError = nil }
         } message: {
             Text(photoShareError ?? "")
+        }
+        .alert("Noch niemand dabei", isPresented: $showRouletteHint) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Zum Auslosen einer Runde müssen mindestens 2 Leute im Jam sein. Lade zuerst jemanden ein.")
         }
         .confirmationDialog(
             "Jam verlassen?",
@@ -350,7 +356,11 @@ struct ActiveJamView: View {
         }
         HStack(spacing: 12) {
             ActionChip(icon: "dice.fill", label: "Runde") {
-                jamService.startRoulette()
+                if jam.participants.count >= 2 {
+                    jamService.startRoulette()
+                } else {
+                    showRouletteHint = true
+                }
             }
 
             ActionChip(
