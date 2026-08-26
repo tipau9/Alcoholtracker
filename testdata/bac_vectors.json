@@ -1,0 +1,3608 @@
+{
+  "constants": {
+    "ageClamp": [
+      18,
+      100
+    ],
+    "bodyWaterToBloodDivisor": 0.806,
+    "distributionFactorClamp": [
+      0.5,
+      0.9
+    ],
+    "ethanolDensity": 0.789,
+    "km": 0.1,
+    "soberFloor": 0.005,
+    "toleranceEliminationFloor": 0.2,
+    "weightClamp": [
+      30,
+      250
+    ]
+  },
+  "generator": "ios/BACVectorEmitter",
+  "originEpochSeconds": 1735763400,
+  "os": "Version 26.4.1 (Build 23E254a)",
+  "schema": 1,
+  "tolerance": 1e-06,
+  "vectors": [
+    {
+      "derived": {
+        "distributionFactor": 0.738047974,
+        "drivingLimit": 0.5,
+        "effectiveEliminationRate": 0.15,
+        "gastricMinutes": 75,
+        "peakFactor": 0.81,
+        "resolvedEliminationRate": 0.15,
+        "totalBodyWaterL": 44.615,
+        "validatedAge": 25,
+        "validatedHeight": 180,
+        "validatedWeight": 75
+      },
+      "expected": {
+        "hoursUntilDrivingLimit": 0,
+        "hoursUntilSober": 3.5,
+        "projectedPeakFirstDrink": 0.129264774,
+        "samples": [
+          {
+            "bac": 0,
+            "minute": 0
+          },
+          {
+            "bac": 0.055929219,
+            "minute": 15
+          },
+          {
+            "bac": 0.094368772,
+            "minute": 30
+          },
+          {
+            "bac": 0.124853709,
+            "minute": 45
+          },
+          {
+            "bac": 0.15526895,
+            "minute": 60
+          },
+          {
+            "bac": 0.13474776,
+            "minute": 75
+          },
+          {
+            "bac": 0.097285289,
+            "minute": 90
+          },
+          {
+            "bac": 0.066863136,
+            "minute": 105
+          },
+          {
+            "bac": 0.045954317,
+            "minute": 120
+          },
+          {
+            "bac": 0.031583909,
+            "minute": 135
+          },
+          {
+            "bac": 0.021707282,
+            "minute": 150
+          },
+          {
+            "bac": 0.014919182,
+            "minute": 165
+          },
+          {
+            "bac": 0.010253794,
+            "minute": 180
+          },
+          {
+            "bac": 0.007047323,
+            "minute": 195
+          },
+          {
+            "bac": 0,
+            "minute": 210
+          },
+          {
+            "bac": 0,
+            "minute": 225
+          },
+          {
+            "bac": 0,
+            "minute": 240
+          },
+          {
+            "bac": 0,
+            "minute": 255
+          },
+          {
+            "bac": 0,
+            "minute": 270
+          },
+          {
+            "bac": 0,
+            "minute": 285
+          },
+          {
+            "bac": 0,
+            "minute": 300
+          },
+          {
+            "bac": 0,
+            "minute": 315
+          },
+          {
+            "bac": 0,
+            "minute": 330
+          },
+          {
+            "bac": 0,
+            "minute": 345
+          },
+          {
+            "bac": 0,
+            "minute": 360
+          },
+          {
+            "bac": 0,
+            "minute": 375
+          },
+          {
+            "bac": 0,
+            "minute": 390
+          },
+          {
+            "bac": 0,
+            "minute": 405
+          },
+          {
+            "bac": 0,
+            "minute": 420
+          },
+          {
+            "bac": 0,
+            "minute": 435
+          },
+          {
+            "bac": 0,
+            "minute": 450
+          },
+          {
+            "bac": 0,
+            "minute": 465
+          },
+          {
+            "bac": 0,
+            "minute": 480
+          }
+        ],
+        "sessionPeak": 0.16224776
+      },
+      "id": "beer-500-light",
+      "input": {
+        "conservative": false,
+        "drinks": [
+          {
+            "absorptionWindowMinutes": 63.75,
+            "abv": 5,
+            "category": "beer",
+            "drinkDurationMinutes": 20,
+            "offsetMinutes": 0,
+            "rawContribution": 0.3563454,
+            "volumeML": 500
+          }
+        ],
+        "meals": [],
+        "profile": {
+          "age": 25,
+          "eliminationRate": 0.15,
+          "gender": "male",
+          "heightCm": 180,
+          "toleranceMode": false,
+          "weightKg": 75
+        },
+        "stomachStatus": "light",
+        "vomitOffsetMinutes": []
+      },
+      "note": "baseline single beer, light stomach"
+    },
+    {
+      "derived": {
+        "distributionFactor": 0.738047974,
+        "drivingLimit": 0.5,
+        "effectiveEliminationRate": 0.15,
+        "gastricMinutes": 45,
+        "peakFactor": 0.9,
+        "resolvedEliminationRate": 0.15,
+        "totalBodyWaterL": 44.615,
+        "validatedAge": 25,
+        "validatedHeight": 180,
+        "validatedWeight": 75
+      },
+      "expected": {
+        "hoursUntilDrivingLimit": 0,
+        "hoursUntilSober": 3.6,
+        "projectedPeakFirstDrink": 0.22508586,
+        "samples": [
+          {
+            "bac": 0,
+            "minute": 0
+          },
+          {
+            "bac": 0.103694982,
+            "minute": 15
+          },
+          {
+            "bac": 0.191963946,
+            "minute": 30
+          },
+          {
+            "bac": 0.223636877,
+            "minute": 45
+          },
+          {
+            "bac": 0.186136877,
+            "minute": 60
+          },
+          {
+            "bac": 0.148636877,
+            "minute": 75
+          },
+          {
+            "bac": 0.111136877,
+            "minute": 90
+          },
+          {
+            "bac": 0.076825679,
+            "minute": 105
+          },
+          {
+            "bac": 0.052801466,
+            "minute": 120
+          },
+          {
+            "bac": 0.036289881,
+            "minute": 135
+          },
+          {
+            "bac": 0.024941646,
+            "minute": 150
+          },
+          {
+            "bac": 0.017142126,
+            "minute": 165
+          },
+          {
+            "bac": 0.0117816,
+            "minute": 180
+          },
+          {
+            "bac": 0.008097367,
+            "minute": 195
+          },
+          {
+            "bac": 0.005565234,
+            "minute": 210
+          },
+          {
+            "bac": 0,
+            "minute": 225
+          },
+          {
+            "bac": 0,
+            "minute": 240
+          },
+          {
+            "bac": 0,
+            "minute": 255
+          },
+          {
+            "bac": 0,
+            "minute": 270
+          },
+          {
+            "bac": 0,
+            "minute": 285
+          },
+          {
+            "bac": 0,
+            "minute": 300
+          },
+          {
+            "bac": 0,
+            "minute": 315
+          },
+          {
+            "bac": 0,
+            "minute": 330
+          },
+          {
+            "bac": 0,
+            "minute": 345
+          },
+          {
+            "bac": 0,
+            "minute": 360
+          },
+          {
+            "bac": 0,
+            "minute": 375
+          },
+          {
+            "bac": 0,
+            "minute": 390
+          },
+          {
+            "bac": 0,
+            "minute": 405
+          },
+          {
+            "bac": 0,
+            "minute": 420
+          },
+          {
+            "bac": 0,
+            "minute": 435
+          },
+          {
+            "bac": 0,
+            "minute": 450
+          },
+          {
+            "bac": 0,
+            "minute": 465
+          },
+          {
+            "bac": 0,
+            "minute": 480
+          }
+        ],
+        "sessionPeak": 0.239040727
+      },
+      "id": "beer-500-empty",
+      "input": {
+        "conservative": false,
+        "drinks": [
+          {
+            "absorptionWindowMinutes": 38.25,
+            "abv": 5,
+            "category": "beer",
+            "drinkDurationMinutes": 20,
+            "offsetMinutes": 0,
+            "rawContribution": 0.3563454,
+            "volumeML": 500
+          }
+        ],
+        "meals": [],
+        "profile": {
+          "age": 25,
+          "eliminationRate": 0.15,
+          "gender": "male",
+          "heightCm": 180,
+          "toleranceMode": false,
+          "weightKg": 75
+        },
+        "stomachStatus": "empty",
+        "vomitOffsetMinutes": []
+      },
+      "note": "gastric 45 min"
+    },
+    {
+      "derived": {
+        "distributionFactor": 0.738047974,
+        "drivingLimit": 0.5,
+        "effectiveEliminationRate": 0.15,
+        "gastricMinutes": 90,
+        "peakFactor": 0.75,
+        "resolvedEliminationRate": 0.15,
+        "totalBodyWaterL": 44.615,
+        "validatedAge": 25,
+        "validatedHeight": 180,
+        "validatedWeight": 75
+      },
+      "expected": {
+        "hoursUntilDrivingLimit": 0,
+        "hoursUntilSober": 3.466666667,
+        "projectedPeakFirstDrink": 0.07600905,
+        "samples": [
+          {
+            "bac": 0,
+            "minute": 0
+          },
+          {
+            "bac": 0.043155262,
+            "minute": 15
+          },
+          {
+            "bac": 0.072815411,
+            "minute": 30
+          },
+          {
+            "bac": 0.093200513,
+            "minute": 45
+          },
+          {
+            "bac": 0.108406785,
+            "minute": 60
+          },
+          {
+            "bac": 0.12331052,
+            "minute": 75
+          },
+          {
+            "bac": 0.091439644,
+            "minute": 90
+          },
+          {
+            "bac": 0.062845487,
+            "minute": 105
+          },
+          {
+            "bac": 0.043193029,
+            "minute": 120
+          },
+          {
+            "bac": 0.029686106,
+            "minute": 135
+          },
+          {
+            "bac": 0.020402942,
+            "minute": 150
+          },
+          {
+            "bac": 0.014022724,
+            "minute": 165
+          },
+          {
+            "bac": 0.009637668,
+            "minute": 180
+          },
+          {
+            "bac": 0.006623866,
+            "minute": 195
+          },
+          {
+            "bac": 0,
+            "minute": 210
+          },
+          {
+            "bac": 0,
+            "minute": 225
+          },
+          {
+            "bac": 0,
+            "minute": 240
+          },
+          {
+            "bac": 0,
+            "minute": 255
+          },
+          {
+            "bac": 0,
+            "minute": 270
+          },
+          {
+            "bac": 0,
+            "minute": 285
+          },
+          {
+            "bac": 0,
+            "minute": 300
+          },
+          {
+            "bac": 0,
+            "minute": 315
+          },
+          {
+            "bac": 0,
+            "minute": 330
+          },
+          {
+            "bac": 0,
+            "minute": 345
+          },
+          {
+            "bac": 0,
+            "minute": 360
+          },
+          {
+            "bac": 0,
+            "minute": 375
+          },
+          {
+            "bac": 0,
+            "minute": 390
+          },
+          {
+            "bac": 0,
+            "minute": 405
+          },
+          {
+            "bac": 0,
+            "minute": 420
+          },
+          {
+            "bac": 0,
+            "minute": 435
+          },
+          {
+            "bac": 0,
+            "minute": 450
+          },
+          {
+            "bac": 0,
+            "minute": 465
+          },
+          {
+            "bac": 0,
+            "minute": 480
+          }
+        ],
+        "sessionPeak": 0.124304102
+      },
+      "id": "beer-500-full",
+      "input": {
+        "conservative": false,
+        "drinks": [
+          {
+            "absorptionWindowMinutes": 76.5,
+            "abv": 5,
+            "category": "beer",
+            "drinkDurationMinutes": 20,
+            "offsetMinutes": 0,
+            "rawContribution": 0.3563454,
+            "volumeML": 500
+          }
+        ],
+        "meals": [],
+        "profile": {
+          "age": 25,
+          "eliminationRate": 0.15,
+          "gender": "male",
+          "heightCm": 180,
+          "toleranceMode": false,
+          "weightKg": 75
+        },
+        "stomachStatus": "full",
+        "vomitOffsetMinutes": []
+      },
+      "note": "gastric 90 min, peakFactor 0.75"
+    },
+    {
+      "derived": {
+        "distributionFactor": 0.738047974,
+        "drivingLimit": 0.5,
+        "effectiveEliminationRate": 0.15,
+        "gastricMinutes": 75,
+        "peakFactor": 0.81,
+        "resolvedEliminationRate": 0.15,
+        "totalBodyWaterL": 44.615,
+        "validatedAge": 25,
+        "validatedHeight": 180,
+        "validatedWeight": 75
+      },
+      "expected": {
+        "hoursUntilDrivingLimit": 0,
+        "hoursUntilSober": 3.9,
+        "projectedPeakFirstDrink": 0.1969704,
+        "samples": [
+          {
+            "bac": 0,
+            "minute": 0
+          },
+          {
+            "bac": 0.069048419,
+            "minute": 15
+          },
+          {
+            "bac": 0.118186155,
+            "minute": 30
+          },
+          {
+            "bac": 0.164532131,
+            "minute": 45
+          },
+          {
+            "bac": 0.210878107,
+            "minute": 60
+          },
+          {
+            "bac": 0.194339601,
+            "minute": 75
+          },
+          {
+            "bac": 0.156839601,
+            "minute": 90
+          },
+          {
+            "bac": 0.119339601,
+            "minute": 105
+          },
+          {
+            "bac": 0.083393152,
+            "minute": 120
+          },
+          {
+            "bac": 0.05731522,
+            "minute": 135
+          },
+          {
+            "bac": 0.039392136,
+            "minute": 150
+          },
+          {
+            "bac": 0.027073793,
+            "minute": 165
+          },
+          {
+            "bac": 0.018607527,
+            "minute": 180
+          },
+          {
+            "bac": 0.012788754,
+            "minute": 195
+          },
+          {
+            "bac": 0.008789574,
+            "minute": 210
+          },
+          {
+            "bac": 0.00604098,
+            "minute": 225
+          },
+          {
+            "bac": 0,
+            "minute": 240
+          },
+          {
+            "bac": 0,
+            "minute": 255
+          },
+          {
+            "bac": 0,
+            "minute": 270
+          },
+          {
+            "bac": 0,
+            "minute": 285
+          },
+          {
+            "bac": 0,
+            "minute": 300
+          },
+          {
+            "bac": 0,
+            "minute": 315
+          },
+          {
+            "bac": 0,
+            "minute": 330
+          },
+          {
+            "bac": 0,
+            "minute": 345
+          },
+          {
+            "bac": 0,
+            "minute": 360
+          },
+          {
+            "bac": 0,
+            "minute": 375
+          },
+          {
+            "bac": 0,
+            "minute": 390
+          },
+          {
+            "bac": 0,
+            "minute": 405
+          },
+          {
+            "bac": 0,
+            "minute": 420
+          },
+          {
+            "bac": 0,
+            "minute": 435
+          },
+          {
+            "bac": 0,
+            "minute": 450
+          },
+          {
+            "bac": 0,
+            "minute": 465
+          },
+          {
+            "bac": 0,
+            "minute": 480
+          }
+        ],
+        "sessionPeak": 0.221839601
+      },
+      "id": "beer-500-conservative",
+      "input": {
+        "conservative": true,
+        "drinks": [
+          {
+            "absorptionWindowMinutes": 63.75,
+            "abv": 5,
+            "category": "beer",
+            "drinkDurationMinutes": 20,
+            "offsetMinutes": 0,
+            "rawContribution": 0.3563454,
+            "volumeML": 500
+          }
+        ],
+        "meals": [],
+        "profile": {
+          "age": 25,
+          "eliminationRate": 0.15,
+          "gender": "male",
+          "heightCm": 180,
+          "toleranceMode": false,
+          "weightKg": 75
+        },
+        "stomachStatus": "light",
+        "vomitOffsetMinutes": []
+      },
+      "note": "peakFactor 1.0, ignores the toleranceMode floor"
+    },
+    {
+      "derived": {
+        "distributionFactor": 0.738047974,
+        "drivingLimit": 0.5,
+        "effectiveEliminationRate": 0.2,
+        "gastricMinutes": 75,
+        "peakFactor": 0.81,
+        "resolvedEliminationRate": 0.2,
+        "totalBodyWaterL": 44.615,
+        "validatedAge": 25,
+        "validatedHeight": 180,
+        "validatedWeight": 75
+      },
+      "expected": {
+        "hoursUntilDrivingLimit": 0,
+        "hoursUntilSober": 2.7,
+        "projectedPeakFirstDrink": 0.076139774,
+        "samples": [
+          {
+            "bac": 0,
+            "minute": 0
+          },
+          {
+            "bac": 0.052559326,
+            "minute": 15
+          },
+          {
+            "bac": 0.084438169,
+            "minute": 30
+          },
+          {
+            "bac": 0.104355895,
+            "minute": 45
+          },
+          {
+            "bac": 0.122271136,
+            "minute": 60
+          },
+          {
+            "bac": 0.089807604,
+            "minute": 75
+          },
+          {
+            "bac": 0.054471065,
+            "minute": 90
+          },
+          {
+            "bac": 0.033038371,
+            "minute": 105
+          },
+          {
+            "bac": 0.020038785,
+            "minute": 120
+          },
+          {
+            "bac": 0.012154138,
+            "minute": 135
+          },
+          {
+            "bac": 0.007371857,
+            "minute": 150
+          },
+          {
+            "bac": 0,
+            "minute": 165
+          },
+          {
+            "bac": 0,
+            "minute": 180
+          },
+          {
+            "bac": 0,
+            "minute": 195
+          },
+          {
+            "bac": 0,
+            "minute": 210
+          },
+          {
+            "bac": 0,
+            "minute": 225
+          },
+          {
+            "bac": 0,
+            "minute": 240
+          },
+          {
+            "bac": 0,
+            "minute": 255
+          },
+          {
+            "bac": 0,
+            "minute": 270
+          },
+          {
+            "bac": 0,
+            "minute": 285
+          },
+          {
+            "bac": 0,
+            "minute": 300
+          },
+          {
+            "bac": 0,
+            "minute": 315
+          },
+          {
+            "bac": 0,
+            "minute": 330
+          },
+          {
+            "bac": 0,
+            "minute": 345
+          },
+          {
+            "bac": 0,
+            "minute": 360
+          },
+          {
+            "bac": 0,
+            "minute": 375
+          },
+          {
+            "bac": 0,
+            "minute": 390
+          },
+          {
+            "bac": 0,
+            "minute": 405
+          },
+          {
+            "bac": 0,
+            "minute": 420
+          },
+          {
+            "bac": 0,
+            "minute": 435
+          },
+          {
+            "bac": 0,
+            "minute": 450
+          },
+          {
+            "bac": 0,
+            "minute": 465
+          },
+          {
+            "bac": 0,
+            "minute": 480
+          }
+        ],
+        "sessionPeak": 0.125916613
+      },
+      "id": "beer-500-tolerance",
+      "input": {
+        "conservative": false,
+        "drinks": [
+          {
+            "absorptionWindowMinutes": 63.75,
+            "abv": 5,
+            "category": "beer",
+            "drinkDurationMinutes": 20,
+            "offsetMinutes": 0,
+            "rawContribution": 0.3563454,
+            "volumeML": 500
+          }
+        ],
+        "meals": [],
+        "profile": {
+          "age": 25,
+          "eliminationRate": 0.15,
+          "gender": "male",
+          "heightCm": 180,
+          "toleranceMode": true,
+          "weightKg": 75
+        },
+        "stomachStatus": "light",
+        "vomitOffsetMinutes": []
+      },
+      "note": "toleranceMode raises elimination to 0.20"
+    },
+    {
+      "derived": {
+        "distributionFactor": 0.738047974,
+        "drivingLimit": 0.5,
+        "effectiveEliminationRate": 0.15,
+        "gastricMinutes": 75,
+        "peakFactor": 0.81,
+        "resolvedEliminationRate": 0.15,
+        "totalBodyWaterL": 44.615,
+        "validatedAge": 25,
+        "validatedHeight": 180,
+        "validatedWeight": 75
+      },
+      "expected": {
+        "hoursUntilDrivingLimit": 2.663050743,
+        "hoursUntilSober": 7.333333333,
+        "projectedPeakFirstDrink": 0.129264774,
+        "samples": [
+          {
+            "bac": 0,
+            "minute": 0
+          },
+          {
+            "bac": 0.055929219,
+            "minute": 15
+          },
+          {
+            "bac": 0.094368772,
+            "minute": 30
+          },
+          {
+            "bac": 0.192699254,
+            "minute": 45
+          },
+          {
+            "bac": 0.291029736,
+            "minute": 60
+          },
+          {
+            "bac": 0.406339028,
+            "minute": 75
+          },
+          {
+            "bac": 0.504669509,
+            "minute": 90
+          },
+          {
+            "bac": 0.55206356,
+            "minute": 105
+          },
+          {
+            "bac": 0.582478801,
+            "minute": 120
+          },
+          {
+            "bac": 0.561957611,
+            "minute": 135
+          },
+          {
+            "bac": 0.524457611,
+            "minute": 150
+          },
+          {
+            "bac": 0.486957611,
+            "minute": 165
+          },
+          {
+            "bac": 0.449457611,
+            "minute": 180
+          },
+          {
+            "bac": 0.411957611,
+            "minute": 195
+          },
+          {
+            "bac": 0.374457611,
+            "minute": 210
+          },
+          {
+            "bac": 0.336957611,
+            "minute": 225
+          },
+          {
+            "bac": 0.299457611,
+            "minute": 240
+          },
+          {
+            "bac": 0.261957611,
+            "minute": 255
+          },
+          {
+            "bac": 0.224457611,
+            "minute": 270
+          },
+          {
+            "bac": 0.186957611,
+            "minute": 285
+          },
+          {
+            "bac": 0.149457611,
+            "minute": 300
+          },
+          {
+            "bac": 0.111957611,
+            "minute": 315
+          },
+          {
+            "bac": 0.077458809,
+            "minute": 330
+          },
+          {
+            "bac": 0.053236609,
+            "minute": 345
+          },
+          {
+            "bac": 0.036588951,
+            "minute": 360
+          },
+          {
+            "bac": 0.025147194,
+            "minute": 375
+          },
+          {
+            "bac": 0.017283396,
+            "minute": 390
+          },
+          {
+            "bac": 0.011878693,
+            "minute": 405
+          },
+          {
+            "bac": 0.008164098,
+            "minute": 420
+          },
+          {
+            "bac": 0.005611097,
+            "minute": 435
+          },
+          {
+            "bac": 0,
+            "minute": 450
+          },
+          {
+            "bac": 0,
+            "minute": 465
+          },
+          {
+            "bac": 0,
+            "minute": 480
+          }
+        ],
+        "sessionPeak": 0.589457611
+      },
+      "id": "multi-drink-overlap",
+      "input": {
+        "conservative": false,
+        "drinks": [
+          {
+            "absorptionWindowMinutes": 63.75,
+            "abv": 5,
+            "category": "beer",
+            "drinkDurationMinutes": 20,
+            "offsetMinutes": 0,
+            "rawContribution": 0.3563454,
+            "volumeML": 500
+          },
+          {
+            "absorptionWindowMinutes": 63.75,
+            "abv": 5,
+            "category": "beer",
+            "drinkDurationMinutes": 20,
+            "offsetMinutes": 30,
+            "rawContribution": 0.3563454,
+            "volumeML": 500
+          },
+          {
+            "absorptionWindowMinutes": 63.75,
+            "abv": 5,
+            "category": "beer",
+            "drinkDurationMinutes": 20,
+            "offsetMinutes": 60,
+            "rawContribution": 0.3563454,
+            "volumeML": 500
+          }
+        ],
+        "meals": [],
+        "profile": {
+          "age": 25,
+          "eliminationRate": 0.15,
+          "gender": "male",
+          "heightCm": 180,
+          "toleranceMode": false,
+          "weightKg": 75
+        },
+        "stomachStatus": "light",
+        "vomitOffsetMinutes": []
+      },
+      "note": "one beta applied to the pooled total"
+    },
+    {
+      "derived": {
+        "distributionFactor": 0.738047974,
+        "drivingLimit": 0.5,
+        "effectiveEliminationRate": 0.15,
+        "gastricMinutes": 75,
+        "peakFactor": 0.81,
+        "resolvedEliminationRate": 0.15,
+        "totalBodyWaterL": 44.615,
+        "validatedAge": 25,
+        "validatedHeight": 180,
+        "validatedWeight": 75
+      },
+      "expected": {
+        "hoursUntilDrivingLimit": 0,
+        "hoursUntilSober": 13.5,
+        "projectedPeakFirstDrink": 0.129264774,
+        "samples": [
+          {
+            "bac": 0,
+            "minute": 0
+          },
+          {
+            "bac": 0.055929219,
+            "minute": 15
+          },
+          {
+            "bac": 0.094368772,
+            "minute": 30
+          },
+          {
+            "bac": 0.124853709,
+            "minute": 45
+          },
+          {
+            "bac": 0.15526895,
+            "minute": 60
+          },
+          {
+            "bac": 0.13474776,
+            "minute": 75
+          },
+          {
+            "bac": 0.097285289,
+            "minute": 90
+          },
+          {
+            "bac": 0.066863136,
+            "minute": 105
+          },
+          {
+            "bac": 0.045954317,
+            "minute": 120
+          },
+          {
+            "bac": 0.031583909,
+            "minute": 135
+          },
+          {
+            "bac": 0.021707282,
+            "minute": 150
+          },
+          {
+            "bac": 0.014919182,
+            "minute": 165
+          },
+          {
+            "bac": 0.010253794,
+            "minute": 180
+          },
+          {
+            "bac": 0.007047323,
+            "minute": 195
+          },
+          {
+            "bac": 0,
+            "minute": 210
+          },
+          {
+            "bac": 0,
+            "minute": 225
+          },
+          {
+            "bac": 0,
+            "minute": 240
+          },
+          {
+            "bac": 0,
+            "minute": 255
+          },
+          {
+            "bac": 0,
+            "minute": 270
+          },
+          {
+            "bac": 0,
+            "minute": 285
+          },
+          {
+            "bac": 0,
+            "minute": 300
+          },
+          {
+            "bac": 0,
+            "minute": 315
+          },
+          {
+            "bac": 0,
+            "minute": 330
+          },
+          {
+            "bac": 0,
+            "minute": 345
+          },
+          {
+            "bac": 0,
+            "minute": 360
+          },
+          {
+            "bac": 0,
+            "minute": 375
+          },
+          {
+            "bac": 0,
+            "minute": 390
+          },
+          {
+            "bac": 0,
+            "minute": 405
+          },
+          {
+            "bac": 0,
+            "minute": 420
+          },
+          {
+            "bac": 0,
+            "minute": 435
+          },
+          {
+            "bac": 0,
+            "minute": 450
+          },
+          {
+            "bac": 0,
+            "minute": 465
+          },
+          {
+            "bac": 0,
+            "minute": 480
+          },
+          {
+            "bac": 0,
+            "minute": 495
+          },
+          {
+            "bac": 0,
+            "minute": 510
+          },
+          {
+            "bac": 0,
+            "minute": 525
+          },
+          {
+            "bac": 0,
+            "minute": 540
+          },
+          {
+            "bac": 0,
+            "minute": 555
+          },
+          {
+            "bac": 0,
+            "minute": 570
+          },
+          {
+            "bac": 0,
+            "minute": 585
+          },
+          {
+            "bac": 0,
+            "minute": 600
+          },
+          {
+            "bac": 0.055929219,
+            "minute": 615
+          },
+          {
+            "bac": 0.094368772,
+            "minute": 630
+          },
+          {
+            "bac": 0.124853709,
+            "minute": 645
+          },
+          {
+            "bac": 0.15526895,
+            "minute": 660
+          },
+          {
+            "bac": 0.13474776,
+            "minute": 675
+          },
+          {
+            "bac": 0.097285289,
+            "minute": 690
+          },
+          {
+            "bac": 0.066863136,
+            "minute": 705
+          },
+          {
+            "bac": 0.045954317,
+            "minute": 720
+          },
+          {
+            "bac": 0.031583909,
+            "minute": 735
+          },
+          {
+            "bac": 0.021707282,
+            "minute": 750
+          },
+          {
+            "bac": 0.014919182,
+            "minute": 765
+          },
+          {
+            "bac": 0.010253794,
+            "minute": 780
+          },
+          {
+            "bac": 0.007047323,
+            "minute": 795
+          },
+          {
+            "bac": 0,
+            "minute": 810
+          },
+          {
+            "bac": 0,
+            "minute": 825
+          },
+          {
+            "bac": 0,
+            "minute": 840
+          },
+          {
+            "bac": 0,
+            "minute": 855
+          },
+          {
+            "bac": 0,
+            "minute": 870
+          },
+          {
+            "bac": 0,
+            "minute": 885
+          },
+          {
+            "bac": 0,
+            "minute": 900
+          },
+          {
+            "bac": 0,
+            "minute": 915
+          },
+          {
+            "bac": 0,
+            "minute": 930
+          },
+          {
+            "bac": 0,
+            "minute": 945
+          },
+          {
+            "bac": 0,
+            "minute": 960
+          }
+        ],
+        "sessionPeak": 0.16224776
+      },
+      "id": "late-drink-after-sober",
+      "input": {
+        "conservative": false,
+        "drinks": [
+          {
+            "absorptionWindowMinutes": 63.75,
+            "abv": 5,
+            "category": "beer",
+            "drinkDurationMinutes": 20,
+            "offsetMinutes": 0,
+            "rawContribution": 0.3563454,
+            "volumeML": 500
+          },
+          {
+            "absorptionWindowMinutes": 63.75,
+            "abv": 5,
+            "category": "beer",
+            "drinkDurationMinutes": 20,
+            "offsetMinutes": 600,
+            "rawContribution": 0.3563454,
+            "volumeML": 500
+          }
+        ],
+        "meals": [],
+        "profile": {
+          "age": 25,
+          "eliminationRate": 0.15,
+          "gender": "male",
+          "heightCm": 180,
+          "toleranceMode": false,
+          "weightKg": 75
+        },
+        "stomachStatus": "light",
+        "vomitOffsetMinutes": []
+      },
+      "note": "second rise after the first curve hit the sober floor"
+    },
+    {
+      "derived": {
+        "distributionFactor": 0.738047974,
+        "drivingLimit": 0.5,
+        "effectiveEliminationRate": 0.15,
+        "gastricMinutes": 75,
+        "peakFactor": 0.81,
+        "resolvedEliminationRate": 0.15,
+        "totalBodyWaterL": 44.615,
+        "validatedAge": 25,
+        "validatedHeight": 180,
+        "validatedWeight": 75
+      },
+      "expected": {
+        "hoursUntilDrivingLimit": 0,
+        "hoursUntilSober": 2.1,
+        "projectedPeakFirstDrink": 0.129264774,
+        "samples": [
+          {
+            "bac": 0,
+            "minute": 0
+          },
+          {
+            "bac": 0.055929219,
+            "minute": 15
+          },
+          {
+            "bac": 0.054806651,
+            "minute": 30
+          },
+          {
+            "bac": 0.037668024,
+            "minute": 45
+          },
+          {
+            "bac": 0.025888829,
+            "minute": 60
+          },
+          {
+            "bac": 0.017793114,
+            "minute": 75
+          },
+          {
+            "bac": 0.012229017,
+            "minute": 90
+          },
+          {
+            "bac": 0.008404872,
+            "minute": 105
+          },
+          {
+            "bac": 0.005776578,
+            "minute": 120
+          },
+          {
+            "bac": 0,
+            "minute": 135
+          },
+          {
+            "bac": 0,
+            "minute": 150
+          },
+          {
+            "bac": 0,
+            "minute": 165
+          },
+          {
+            "bac": 0,
+            "minute": 180
+          },
+          {
+            "bac": 0,
+            "minute": 195
+          },
+          {
+            "bac": 0,
+            "minute": 210
+          },
+          {
+            "bac": 0,
+            "minute": 225
+          },
+          {
+            "bac": 0,
+            "minute": 240
+          },
+          {
+            "bac": 0,
+            "minute": 255
+          },
+          {
+            "bac": 0,
+            "minute": 270
+          },
+          {
+            "bac": 0,
+            "minute": 285
+          },
+          {
+            "bac": 0,
+            "minute": 300
+          },
+          {
+            "bac": 0,
+            "minute": 315
+          },
+          {
+            "bac": 0,
+            "minute": 330
+          },
+          {
+            "bac": 0,
+            "minute": 345
+          },
+          {
+            "bac": 0,
+            "minute": 360
+          },
+          {
+            "bac": 0,
+            "minute": 375
+          },
+          {
+            "bac": 0,
+            "minute": 390
+          },
+          {
+            "bac": 0,
+            "minute": 405
+          },
+          {
+            "bac": 0,
+            "minute": 420
+          },
+          {
+            "bac": 0,
+            "minute": 435
+          },
+          {
+            "bac": 0,
+            "minute": 450
+          },
+          {
+            "bac": 0,
+            "minute": 465
+          },
+          {
+            "bac": 0,
+            "minute": 480
+          }
+        ],
+        "sessionPeak": 0.070373133
+      },
+      "id": "vomit-mid-absorption",
+      "input": {
+        "conservative": false,
+        "drinks": [
+          {
+            "absorptionWindowMinutes": 63.75,
+            "abv": 5,
+            "category": "beer",
+            "drinkDurationMinutes": 20,
+            "offsetMinutes": 0,
+            "rawContribution": 0.3563454,
+            "volumeML": 500
+          }
+        ],
+        "meals": [],
+        "profile": {
+          "age": 25,
+          "eliminationRate": 0.15,
+          "gender": "male",
+          "heightCm": 180,
+          "toleranceMode": false,
+          "weightKg": 75
+        },
+        "stomachStatus": "light",
+        "vomitOffsetMinutes": [
+          20
+        ]
+      },
+      "note": "vomit truncates the absorption envelope"
+    },
+    {
+      "derived": {
+        "distributionFactor": 0.738047974,
+        "drivingLimit": 0.5,
+        "effectiveEliminationRate": 0.15,
+        "gastricMinutes": 75,
+        "peakFactor": 0.81,
+        "resolvedEliminationRate": 0.15,
+        "totalBodyWaterL": 44.615,
+        "validatedAge": 25,
+        "validatedHeight": 180,
+        "validatedWeight": 75
+      },
+      "expected": {
+        "hoursUntilDrivingLimit": 0,
+        "hoursUntilSober": 3.8,
+        "projectedPeakFirstDrink": 0.089594183,
+        "samples": [
+          {
+            "bac": 0,
+            "minute": 0
+          },
+          {
+            "bac": 0.045638243,
+            "minute": 15
+          },
+          {
+            "bac": 0.059026216,
+            "minute": 30
+          },
+          {
+            "bac": 0.068227627,
+            "minute": 45
+          },
+          {
+            "bac": 0.074551658,
+            "minute": 60
+          },
+          {
+            "bac": 0.078898096,
+            "minute": 75
+          },
+          {
+            "bac": 0.081885357,
+            "minute": 90
+          },
+          {
+            "bac": 0.083938469,
+            "minute": 105
+          },
+          {
+            "bac": 0.073029048,
+            "minute": 120
+          },
+          {
+            "bac": 0.050192082,
+            "minute": 135
+          },
+          {
+            "bac": 0.03449648,
+            "minute": 150
+          },
+          {
+            "bac": 0.023709061,
+            "minute": 165
+          },
+          {
+            "bac": 0.016294983,
+            "minute": 180
+          },
+          {
+            "bac": 0.011199367,
+            "minute": 195
+          },
+          {
+            "bac": 0.007697205,
+            "minute": 210
+          },
+          {
+            "bac": 0.005290206,
+            "minute": 225
+          },
+          {
+            "bac": 0,
+            "minute": 240
+          },
+          {
+            "bac": 0,
+            "minute": 255
+          },
+          {
+            "bac": 0,
+            "minute": 270
+          },
+          {
+            "bac": 0,
+            "minute": 285
+          },
+          {
+            "bac": 0,
+            "minute": 300
+          },
+          {
+            "bac": 0,
+            "minute": 315
+          },
+          {
+            "bac": 0,
+            "minute": 330
+          },
+          {
+            "bac": 0,
+            "minute": 345
+          },
+          {
+            "bac": 0,
+            "minute": 360
+          },
+          {
+            "bac": 0,
+            "minute": 375
+          },
+          {
+            "bac": 0,
+            "minute": 390
+          },
+          {
+            "bac": 0,
+            "minute": 405
+          },
+          {
+            "bac": 0,
+            "minute": 420
+          },
+          {
+            "bac": 0,
+            "minute": 435
+          },
+          {
+            "bac": 0,
+            "minute": 450
+          },
+          {
+            "bac": 0,
+            "minute": 465
+          },
+          {
+            "bac": 0,
+            "minute": 480
+          }
+        ],
+        "sessionPeak": 0.084847649
+      },
+      "id": "meal-mid-absorption",
+      "input": {
+        "conservative": false,
+        "drinks": [
+          {
+            "absorptionWindowMinutes": 75,
+            "abv": 12,
+            "category": "wine",
+            "drinkDurationMinutes": 30,
+            "offsetMinutes": 0,
+            "rawContribution": 0.342091584,
+            "volumeML": 200
+          }
+        ],
+        "meals": [
+          {
+            "impact": "fullMeal",
+            "offsetMinutes": 15
+          }
+        ],
+        "profile": {
+          "age": 25,
+          "eliminationRate": 0.15,
+          "gender": "male",
+          "heightCm": 180,
+          "toleranceMode": false,
+          "weightKg": 75
+        },
+        "stomachStatus": "light",
+        "vomitOffsetMinutes": []
+      },
+      "note": "meal stretches only the unabsorbed remainder"
+    },
+    {
+      "derived": {
+        "distributionFactor": 0.738047974,
+        "drivingLimit": 0.5,
+        "effectiveEliminationRate": 0.15,
+        "gastricMinutes": 75,
+        "peakFactor": 0.81,
+        "resolvedEliminationRate": 0.15,
+        "totalBodyWaterL": 44.615,
+        "validatedAge": 25,
+        "validatedHeight": 180,
+        "validatedWeight": 75
+      },
+      "expected": {
+        "hoursUntilDrivingLimit": 0,
+        "hoursUntilSober": 4.066666667,
+        "projectedPeakFirstDrink": 0.089594183,
+        "samples": [
+          {
+            "bac": 0,
+            "minute": 0
+          },
+          {
+            "bac": 0,
+            "minute": 15
+          },
+          {
+            "bac": 0,
+            "minute": 30
+          },
+          {
+            "bac": 0.039685429,
+            "minute": 45
+          },
+          {
+            "bac": 0.066960798,
+            "minute": 60
+          },
+          {
+            "bac": 0.085706868,
+            "minute": 75
+          },
+          {
+            "bac": 0.098597215,
+            "minute": 90
+          },
+          {
+            "bac": 0.109289883,
+            "minute": 105
+          },
+          {
+            "bac": 0.107932603,
+            "minute": 120
+          },
+          {
+            "bac": 0.074402996,
+            "minute": 135
+          },
+          {
+            "bac": 0.051136382,
+            "minute": 150
+          },
+          {
+            "bac": 0.035145487,
+            "minute": 165
+          },
+          {
+            "bac": 0.024155116,
+            "minute": 180
+          },
+          {
+            "bac": 0.016601552,
+            "minute": 195
+          },
+          {
+            "bac": 0.011410069,
+            "minute": 210
+          },
+          {
+            "bac": 0.007842018,
+            "minute": 225
+          },
+          {
+            "bac": 0.005389735,
+            "minute": 240
+          },
+          {
+            "bac": 0,
+            "minute": 255
+          },
+          {
+            "bac": 0,
+            "minute": 270
+          },
+          {
+            "bac": 0,
+            "minute": 285
+          },
+          {
+            "bac": 0,
+            "minute": 300
+          },
+          {
+            "bac": 0,
+            "minute": 315
+          },
+          {
+            "bac": 0,
+            "minute": 330
+          },
+          {
+            "bac": 0,
+            "minute": 345
+          },
+          {
+            "bac": 0,
+            "minute": 360
+          },
+          {
+            "bac": 0,
+            "minute": 375
+          },
+          {
+            "bac": 0,
+            "minute": 390
+          },
+          {
+            "bac": 0,
+            "minute": 405
+          },
+          {
+            "bac": 0,
+            "minute": 420
+          },
+          {
+            "bac": 0,
+            "minute": 435
+          },
+          {
+            "bac": 0,
+            "minute": 450
+          },
+          {
+            "bac": 0,
+            "minute": 465
+          },
+          {
+            "bac": 0,
+            "minute": 480
+          }
+        ],
+        "sessionPeak": 0.117129431
+      },
+      "id": "meal-snack-before-drink",
+      "input": {
+        "conservative": false,
+        "drinks": [
+          {
+            "absorptionWindowMinutes": 75,
+            "abv": 12,
+            "category": "wine",
+            "drinkDurationMinutes": 30,
+            "offsetMinutes": 30,
+            "rawContribution": 0.342091584,
+            "volumeML": 200
+          }
+        ],
+        "meals": [
+          {
+            "impact": "snack",
+            "offsetMinutes": 0
+          }
+        ],
+        "profile": {
+          "age": 25,
+          "eliminationRate": 0.15,
+          "gender": "male",
+          "heightCm": 180,
+          "toleranceMode": false,
+          "weightKg": 75
+        },
+        "stomachStatus": "light",
+        "vomitOffsetMinutes": []
+      },
+      "note": "meal predating the first sip affects the whole window"
+    },
+    {
+      "derived": {
+        "distributionFactor": 0.738047974,
+        "drivingLimit": 0.5,
+        "effectiveEliminationRate": 0.15,
+        "gastricMinutes": 75,
+        "peakFactor": 0.81,
+        "resolvedEliminationRate": 0.15,
+        "totalBodyWaterL": 44.615,
+        "validatedAge": 25,
+        "validatedHeight": 180,
+        "validatedWeight": 75
+      },
+      "expected": {
+        "hoursUntilDrivingLimit": 0,
+        "hoursUntilSober": 2.933333333,
+        "projectedPeakFirstDrink": 0.044104455,
+        "samples": [
+          {
+            "bac": 0,
+            "minute": 0
+          },
+          {
+            "bac": 0.040567327,
+            "minute": 15
+          },
+          {
+            "bac": 0.068448816,
+            "minute": 30
+          },
+          {
+            "bac": 0.087611465,
+            "minute": 45
+          },
+          {
+            "bac": 0.089179586,
+            "minute": 60
+          },
+          {
+            "bac": 0.061292173,
+            "minute": 75
+          },
+          {
+            "bac": 0.042125454,
+            "minute": 90
+          },
+          {
+            "bac": 0.028952373,
+            "minute": 105
+          },
+          {
+            "bac": 0.019898655,
+            "minute": 120
+          },
+          {
+            "bac": 0.013676132,
+            "minute": 135
+          },
+          {
+            "bac": 0.009399459,
+            "minute": 150
+          },
+          {
+            "bac": 0.006460148,
+            "minute": 165
+          },
+          {
+            "bac": 0,
+            "minute": 180
+          },
+          {
+            "bac": 0,
+            "minute": 195
+          },
+          {
+            "bac": 0,
+            "minute": 210
+          },
+          {
+            "bac": 0,
+            "minute": 225
+          },
+          {
+            "bac": 0,
+            "minute": 240
+          },
+          {
+            "bac": 0,
+            "minute": 255
+          },
+          {
+            "bac": 0,
+            "minute": 270
+          },
+          {
+            "bac": 0,
+            "minute": 285
+          },
+          {
+            "bac": 0,
+            "minute": 300
+          },
+          {
+            "bac": 0,
+            "minute": 315
+          },
+          {
+            "bac": 0,
+            "minute": 330
+          },
+          {
+            "bac": 0,
+            "minute": 345
+          },
+          {
+            "bac": 0,
+            "minute": 360
+          },
+          {
+            "bac": 0,
+            "minute": 375
+          },
+          {
+            "bac": 0,
+            "minute": 390
+          },
+          {
+            "bac": 0,
+            "minute": 405
+          },
+          {
+            "bac": 0,
+            "minute": 420
+          },
+          {
+            "bac": 0,
+            "minute": 435
+          },
+          {
+            "bac": 0,
+            "minute": 450
+          },
+          {
+            "bac": 0,
+            "minute": 465
+          },
+          {
+            "bac": 0,
+            "minute": 480
+          }
+        ],
+        "sessionPeak": 0.097737665
+      },
+      "id": "shot-40ml",
+      "input": {
+        "conservative": false,
+        "drinks": [
+          {
+            "absorptionWindowMinutes": 56.25,
+            "abv": 40,
+            "category": "shot",
+            "drinkDurationMinutes": 1,
+            "offsetMinutes": 0,
+            "rawContribution": 0.228061056,
+            "volumeML": 40
+          }
+        ],
+        "meals": [],
+        "profile": {
+          "age": 25,
+          "eliminationRate": 0.15,
+          "gender": "male",
+          "heightCm": 180,
+          "toleranceMode": false,
+          "weightKg": 75
+        },
+        "stomachStatus": "light",
+        "vomitOffsetMinutes": []
+      },
+      "note": "absorptionModifier 0.75"
+    },
+    {
+      "derived": {
+        "distributionFactor": 0.623377091,
+        "drivingLimit": 0.5,
+        "effectiveEliminationRate": 0.15,
+        "gastricMinutes": 75,
+        "peakFactor": 0.81,
+        "resolvedEliminationRate": 0.15,
+        "totalBodyWaterL": 31.1514,
+        "validatedAge": 30,
+        "validatedHeight": 168,
+        "validatedWeight": 62
+      },
+      "expected": {
+        "hoursUntilDrivingLimit": 0,
+        "hoursUntilSober": 4.166666667,
+        "projectedPeakFirstDrink": 0.209353976,
+        "samples": [
+          {
+            "bac": 0,
+            "minute": 0
+          },
+          {
+            "bac": 0.06536304,
+            "minute": 15
+          },
+          {
+            "bac": 0.111096976,
+            "minute": 30
+          },
+          {
+            "bac": 0.152967771,
+            "minute": 45
+          },
+          {
+            "bac": 0.194838567,
+            "minute": 60
+          },
+          {
+            "bac": 0.236709362,
+            "minute": 75
+          },
+          {
+            "bac": 0.199209362,
+            "minute": 90
+          },
+          {
+            "bac": 0.161709362,
+            "minute": 105
+          },
+          {
+            "bac": 0.124209362,
+            "minute": 120
+          },
+          {
+            "bac": 0.087554706,
+            "minute": 135
+          },
+          {
+            "bac": 0.06017541,
+            "minute": 150
+          },
+          {
+            "bac": 0.041357914,
+            "minute": 165
+          },
+          {
+            "bac": 0.028424851,
+            "minute": 180
+          },
+          {
+            "bac": 0.019536095,
+            "minute": 195
+          },
+          {
+            "bac": 0.013426949,
+            "minute": 210
+          },
+          {
+            "bac": 0.009228198,
+            "minute": 225
+          },
+          {
+            "bac": 0.006342442,
+            "minute": 240
+          },
+          {
+            "bac": 0,
+            "minute": 255
+          },
+          {
+            "bac": 0,
+            "minute": 270
+          },
+          {
+            "bac": 0,
+            "minute": 285
+          },
+          {
+            "bac": 0,
+            "minute": 300
+          },
+          {
+            "bac": 0,
+            "minute": 315
+          },
+          {
+            "bac": 0,
+            "minute": 330
+          },
+          {
+            "bac": 0,
+            "minute": 345
+          },
+          {
+            "bac": 0,
+            "minute": 360
+          },
+          {
+            "bac": 0,
+            "minute": 375
+          },
+          {
+            "bac": 0,
+            "minute": 390
+          },
+          {
+            "bac": 0,
+            "minute": 405
+          },
+          {
+            "bac": 0,
+            "minute": 420
+          },
+          {
+            "bac": 0,
+            "minute": 435
+          },
+          {
+            "bac": 0,
+            "minute": 450
+          },
+          {
+            "bac": 0,
+            "minute": 465
+          },
+          {
+            "bac": 0,
+            "minute": 480
+          }
+        ],
+        "sessionPeak": 0.236709362
+      },
+      "id": "female-62kg",
+      "input": {
+        "conservative": false,
+        "drinks": [
+          {
+            "absorptionWindowMinutes": 75,
+            "abv": 12,
+            "category": "wine",
+            "drinkDurationMinutes": 30,
+            "offsetMinutes": 0,
+            "rawContribution": 0.489943181,
+            "volumeML": 200
+          }
+        ],
+        "meals": [],
+        "profile": {
+          "age": 30,
+          "eliminationRate": 0.15,
+          "gender": "female",
+          "heightCm": 168,
+          "toleranceMode": false,
+          "weightKg": 62
+        },
+        "stomachStatus": "light",
+        "vomitOffsetMinutes": []
+      },
+      "note": "Watson female body-water formula"
+    },
+    {
+      "derived": {
+        "distributionFactor": 0.675908366,
+        "drivingLimit": 0.5,
+        "effectiveEliminationRate": 0.15,
+        "gastricMinutes": 75,
+        "peakFactor": 0.81,
+        "resolvedEliminationRate": 0.15,
+        "totalBodyWaterL": 38.13475,
+        "validatedAge": 25,
+        "validatedHeight": 175,
+        "validatedWeight": 70
+      },
+      "expected": {
+        "hoursUntilDrivingLimit": 0,
+        "hoursUntilSober": 3.766666667,
+        "projectedPeakFirstDrink": 0.178313421,
+        "samples": [
+          {
+            "bac": 0,
+            "minute": 0
+          },
+          {
+            "bac": 0.065433289,
+            "minute": 15
+          },
+          {
+            "bac": 0.111229788,
+            "minute": 30
+          },
+          {
+            "bac": 0.153185887,
+            "minute": 45
+          },
+          {
+            "bac": 0.195141986,
+            "minute": 60
+          },
+          {
+            "bac": 0.177506011,
+            "minute": 75
+          },
+          {
+            "bac": 0.140006011,
+            "minute": 90
+          },
+          {
+            "bac": 0.102506011,
+            "minute": 105
+          },
+          {
+            "bac": 0.070473045,
+            "minute": 120
+          },
+          {
+            "bac": 0.048435368,
+            "minute": 135
+          },
+          {
+            "bac": 0.033289109,
+            "minute": 150
+          },
+          {
+            "bac": 0.022879248,
+            "minute": 165
+          },
+          {
+            "bac": 0.015724662,
+            "minute": 180
+          },
+          {
+            "bac": 0.010807391,
+            "minute": 195
+          },
+          {
+            "bac": 0.007427804,
+            "minute": 210
+          },
+          {
+            "bac": 0.00510505,
+            "minute": 225
+          },
+          {
+            "bac": 0,
+            "minute": 240
+          },
+          {
+            "bac": 0,
+            "minute": 255
+          },
+          {
+            "bac": 0,
+            "minute": 270
+          },
+          {
+            "bac": 0,
+            "minute": 285
+          },
+          {
+            "bac": 0,
+            "minute": 300
+          },
+          {
+            "bac": 0,
+            "minute": 315
+          },
+          {
+            "bac": 0,
+            "minute": 330
+          },
+          {
+            "bac": 0,
+            "minute": 345
+          },
+          {
+            "bac": 0,
+            "minute": 360
+          },
+          {
+            "bac": 0,
+            "minute": 375
+          },
+          {
+            "bac": 0,
+            "minute": 390
+          },
+          {
+            "bac": 0,
+            "minute": 405
+          },
+          {
+            "bac": 0,
+            "minute": 420
+          },
+          {
+            "bac": 0,
+            "minute": 435
+          },
+          {
+            "bac": 0,
+            "minute": 450
+          },
+          {
+            "bac": 0,
+            "minute": 465
+          },
+          {
+            "bac": 0,
+            "minute": 480
+          }
+        ],
+        "sessionPeak": 0.205006011
+      },
+      "id": "diverse-70kg",
+      "input": {
+        "conservative": false,
+        "drinks": [
+          {
+            "absorptionWindowMinutes": 63.75,
+            "abv": 5,
+            "category": "beer",
+            "drinkDurationMinutes": 20,
+            "offsetMinutes": 0,
+            "rawContribution": 0.416899285,
+            "volumeML": 500
+          }
+        ],
+        "meals": [],
+        "profile": {
+          "age": 25,
+          "eliminationRate": 0.15,
+          "gender": "diverse",
+          "heightCm": 175,
+          "toleranceMode": false,
+          "weightKg": 70
+        },
+        "stomachStatus": "light",
+        "vomitOffsetMinutes": []
+      },
+      "note": "mean of the male and female formulas"
+    },
+    {
+      "derived": {
+        "distributionFactor": 0.9,
+        "drivingLimit": 0.5,
+        "effectiveEliminationRate": 0.15,
+        "gastricMinutes": 75,
+        "peakFactor": 0.81,
+        "resolvedEliminationRate": 0.15,
+        "totalBodyWaterL": 26.9364,
+        "validatedAge": 25,
+        "validatedHeight": 150,
+        "validatedWeight": 32
+      },
+      "expected": {
+        "hoursUntilDrivingLimit": 0,
+        "hoursUntilSober": 5.133333333,
+        "projectedPeakFirstDrink": 0.395390625,
+        "samples": [
+          {
+            "bac": 0,
+            "minute": 0
+          },
+          {
+            "bac": 0.107787094,
+            "minute": 15
+          },
+          {
+            "bac": 0.200820182,
+            "minute": 30
+          },
+          {
+            "bac": 0.29385327,
+            "minute": 45
+          },
+          {
+            "bac": 0.386886359,
+            "minute": 60
+          },
+          {
+            "bac": 0.382019631,
+            "minute": 75
+          },
+          {
+            "bac": 0.344519631,
+            "minute": 90
+          },
+          {
+            "bac": 0.307019631,
+            "minute": 105
+          },
+          {
+            "bac": 0.269519631,
+            "minute": 120
+          },
+          {
+            "bac": 0.232019631,
+            "minute": 135
+          },
+          {
+            "bac": 0.194519631,
+            "minute": 150
+          },
+          {
+            "bac": 0.157019631,
+            "minute": 165
+          },
+          {
+            "bac": 0.119519631,
+            "minute": 180
+          },
+          {
+            "bac": 0.08354342,
+            "minute": 195
+          },
+          {
+            "bac": 0.057418497,
+            "minute": 210
+          },
+          {
+            "bac": 0.039463117,
+            "minute": 225
+          },
+          {
+            "bac": 0.027122577,
+            "minute": 240
+          },
+          {
+            "bac": 0.018641057,
+            "minute": 255
+          },
+          {
+            "bac": 0.012811798,
+            "minute": 270
+          },
+          {
+            "bac": 0.008805412,
+            "minute": 285
+          },
+          {
+            "bac": 0.006051865,
+            "minute": 300
+          },
+          {
+            "bac": 0,
+            "minute": 315
+          },
+          {
+            "bac": 0,
+            "minute": 330
+          },
+          {
+            "bac": 0,
+            "minute": 345
+          },
+          {
+            "bac": 0,
+            "minute": 360
+          },
+          {
+            "bac": 0,
+            "minute": 375
+          },
+          {
+            "bac": 0,
+            "minute": 390
+          },
+          {
+            "bac": 0,
+            "minute": 405
+          },
+          {
+            "bac": 0,
+            "minute": 420
+          },
+          {
+            "bac": 0,
+            "minute": 435
+          },
+          {
+            "bac": 0,
+            "minute": 450
+          },
+          {
+            "bac": 0,
+            "minute": 465
+          },
+          {
+            "bac": 0,
+            "minute": 480
+          }
+        ],
+        "sessionPeak": 0.409519631
+      },
+      "id": "clamp-weight-low",
+      "input": {
+        "conservative": false,
+        "drinks": [
+          {
+            "absorptionWindowMinutes": 63.75,
+            "abv": 5,
+            "category": "beer",
+            "drinkDurationMinutes": 20,
+            "offsetMinutes": 0,
+            "rawContribution": 0.684895833,
+            "volumeML": 500
+          }
+        ],
+        "meals": [],
+        "profile": {
+          "age": 25,
+          "eliminationRate": 0.15,
+          "gender": "male",
+          "heightCm": 150,
+          "toleranceMode": false,
+          "weightKg": 32
+        },
+        "stomachStatus": "light",
+        "vomitOffsetMinutes": []
+      },
+      "note": "32 kg passes validatedWeight (floor 30) untouched"
+    },
+    {
+      "derived": {
+        "distributionFactor": 0.524059553,
+        "drivingLimit": 0.5,
+        "effectiveEliminationRate": 0.15,
+        "gastricMinutes": 75,
+        "peakFactor": 0.81,
+        "resolvedEliminationRate": 0.15,
+        "totalBodyWaterL": 105.598,
+        "validatedAge": 25,
+        "validatedHeight": 200,
+        "validatedWeight": 250
+      },
+      "expected": {
+        "hoursUntilDrivingLimit": 0,
+        "hoursUntilSober": 2.733333333,
+        "projectedPeakFirstDrink": 0,
+        "samples": [
+          {
+            "bac": 0,
+            "minute": 0
+          },
+          {
+            "bac": 0.023630013,
+            "minute": 15
+          },
+          {
+            "bac": 0.039870668,
+            "minute": 30
+          },
+          {
+            "bac": 0.051032696,
+            "minute": 45
+          },
+          {
+            "bac": 0.058704238,
+            "minute": 60
+          },
+          {
+            "bac": 0.045454568,
+            "minute": 75
+          },
+          {
+            "bac": 0.031240437,
+            "minute": 90
+          },
+          {
+            "bac": 0.021471217,
+            "minute": 105
+          },
+          {
+            "bac": 0.014756938,
+            "minute": 120
+          },
+          {
+            "bac": 0.010142285,
+            "minute": 135
+          },
+          {
+            "bac": 0.006970684,
+            "minute": 150
+          },
+          {
+            "bac": 0,
+            "minute": 165
+          },
+          {
+            "bac": 0,
+            "minute": 180
+          },
+          {
+            "bac": 0,
+            "minute": 195
+          },
+          {
+            "bac": 0,
+            "minute": 210
+          },
+          {
+            "bac": 0,
+            "minute": 225
+          },
+          {
+            "bac": 0,
+            "minute": 240
+          },
+          {
+            "bac": 0,
+            "minute": 255
+          },
+          {
+            "bac": 0,
+            "minute": 270
+          },
+          {
+            "bac": 0,
+            "minute": 285
+          },
+          {
+            "bac": 0,
+            "minute": 300
+          },
+          {
+            "bac": 0,
+            "minute": 315
+          },
+          {
+            "bac": 0,
+            "minute": 330
+          },
+          {
+            "bac": 0,
+            "minute": 345
+          },
+          {
+            "bac": 0,
+            "minute": 360
+          },
+          {
+            "bac": 0,
+            "minute": 375
+          },
+          {
+            "bac": 0,
+            "minute": 390
+          },
+          {
+            "bac": 0,
+            "minute": 405
+          },
+          {
+            "bac": 0,
+            "minute": 420
+          },
+          {
+            "bac": 0,
+            "minute": 435
+          },
+          {
+            "bac": 0,
+            "minute": 450
+          },
+          {
+            "bac": 0,
+            "minute": 465
+          },
+          {
+            "bac": 0,
+            "minute": 480
+          }
+        ],
+        "sessionPeak": 0.059922544
+      },
+      "id": "clamp-weight-high",
+      "input": {
+        "conservative": false,
+        "drinks": [
+          {
+            "absorptionWindowMinutes": 63.75,
+            "abv": 5,
+            "category": "beer",
+            "drinkDurationMinutes": 20,
+            "offsetMinutes": 0,
+            "rawContribution": 0.150555408,
+            "volumeML": 500
+          }
+        ],
+        "meals": [],
+        "profile": {
+          "age": 25,
+          "eliminationRate": 0.15,
+          "gender": "male",
+          "heightCm": 200,
+          "toleranceMode": false,
+          "weightKg": 300
+        },
+        "stomachStatus": "light",
+        "vomitOffsetMinutes": []
+      },
+      "note": "300 kg clamps to 250"
+    },
+    {
+      "derived": {
+        "distributionFactor": 0.749067328,
+        "drivingLimit": 0.5,
+        "effectiveEliminationRate": 0.15,
+        "gastricMinutes": 75,
+        "peakFactor": 0.81,
+        "resolvedEliminationRate": 0.15,
+        "totalBodyWaterL": 45.28112,
+        "validatedAge": 18,
+        "validatedHeight": 180,
+        "validatedWeight": 75
+      },
+      "expected": {
+        "hoursUntilDrivingLimit": 0,
+        "hoursUntilSober": 3.466666667,
+        "projectedPeakFirstDrink": 0.125018661,
+        "samples": [
+          {
+            "bac": 0,
+            "minute": 0
+          },
+          {
+            "bac": 0.055106458,
+            "minute": 15
+          },
+          {
+            "bac": 0.092980535,
+            "minute": 30
+          },
+          {
+            "bac": 0.122539233,
+            "minute": 45
+          },
+          {
+            "bac": 0.151955389,
+            "minute": 60
+          },
+          {
+            "bac": 0.131184427,
+            "minute": 75
+          },
+          {
+            "bac": 0.093879727,
+            "minute": 90
+          },
+          {
+            "bac": 0.06452253,
+            "minute": 105
+          },
+          {
+            "bac": 0.044345643,
+            "minute": 120
+          },
+          {
+            "bac": 0.030478285,
+            "minute": 135
+          },
+          {
+            "bac": 0.020947398,
+            "minute": 150
+          },
+          {
+            "bac": 0.014396922,
+            "minute": 165
+          },
+          {
+            "bac": 0.00989485,
+            "minute": 180
+          },
+          {
+            "bac": 0.006800625,
+            "minute": 195
+          },
+          {
+            "bac": 0,
+            "minute": 210
+          },
+          {
+            "bac": 0,
+            "minute": 225
+          },
+          {
+            "bac": 0,
+            "minute": 240
+          },
+          {
+            "bac": 0,
+            "minute": 255
+          },
+          {
+            "bac": 0,
+            "minute": 270
+          },
+          {
+            "bac": 0,
+            "minute": 285
+          },
+          {
+            "bac": 0,
+            "minute": 300
+          },
+          {
+            "bac": 0,
+            "minute": 315
+          },
+          {
+            "bac": 0,
+            "minute": 330
+          },
+          {
+            "bac": 0,
+            "minute": 345
+          },
+          {
+            "bac": 0,
+            "minute": 360
+          },
+          {
+            "bac": 0,
+            "minute": 375
+          },
+          {
+            "bac": 0,
+            "minute": 390
+          },
+          {
+            "bac": 0,
+            "minute": 405
+          },
+          {
+            "bac": 0,
+            "minute": 420
+          },
+          {
+            "bac": 0,
+            "minute": 435
+          },
+          {
+            "bac": 0,
+            "minute": 450
+          },
+          {
+            "bac": 0,
+            "minute": 465
+          },
+          {
+            "bac": 0,
+            "minute": 480
+          }
+        ],
+        "sessionPeak": 0.158684427
+      },
+      "id": "clamp-age-low",
+      "input": {
+        "conservative": false,
+        "drinks": [
+          {
+            "absorptionWindowMinutes": 63.75,
+            "abv": 5,
+            "category": "beer",
+            "drinkDurationMinutes": 20,
+            "offsetMinutes": 0,
+            "rawContribution": 0.351103285,
+            "volumeML": 500
+          }
+        ],
+        "meals": [],
+        "profile": {
+          "age": 16,
+          "eliminationRate": 0.15,
+          "gender": "male",
+          "heightCm": 180,
+          "toleranceMode": false,
+          "weightKg": 75
+        },
+        "stomachStatus": "light",
+        "vomitOffsetMinutes": []
+      },
+      "note": "age 16 clamps to 18"
+    },
+    {
+      "derived": {
+        "distributionFactor": 0.9,
+        "drivingLimit": 0.5,
+        "effectiveEliminationRate": 0.15,
+        "gastricMinutes": 75,
+        "peakFactor": 0.81,
+        "resolvedEliminationRate": 0.15,
+        "totalBodyWaterL": 33.98112,
+        "validatedAge": 18,
+        "validatedHeight": 200,
+        "validatedWeight": 35
+      },
+      "expected": {
+        "hoursUntilDrivingLimit": 0,
+        "hoursUntilSober": 4.833333333,
+        "projectedPeakFirstDrink": 0.347839286,
+        "samples": [
+          {
+            "bac": 0,
+            "minute": 0
+          },
+          {
+            "bac": 0.098284916,
+            "minute": 15
+          },
+          {
+            "bac": 0.180129454,
+            "minute": 30
+          },
+          {
+            "bac": 0.261973991,
+            "minute": 45
+          },
+          {
+            "bac": 0.343818529,
+            "minute": 60
+          },
+          {
+            "bac": 0.336154664,
+            "minute": 75
+          },
+          {
+            "bac": 0.298654664,
+            "minute": 90
+          },
+          {
+            "bac": 0.261154664,
+            "minute": 105
+          },
+          {
+            "bac": 0.223654664,
+            "minute": 120
+          },
+          {
+            "bac": 0.186154664,
+            "minute": 135
+          },
+          {
+            "bac": 0.148654664,
+            "minute": 150
+          },
+          {
+            "bac": 0.111154664,
+            "minute": 165
+          },
+          {
+            "bac": 0.076839346,
+            "minute": 180
+          },
+          {
+            "bac": 0.052810858,
+            "minute": 195
+          },
+          {
+            "bac": 0.036296337,
+            "minute": 210
+          },
+          {
+            "bac": 0.024946083,
+            "minute": 225
+          },
+          {
+            "bac": 0.017145176,
+            "minute": 240
+          },
+          {
+            "bac": 0.011783695,
+            "minute": 255
+          },
+          {
+            "bac": 0.008098807,
+            "minute": 270
+          },
+          {
+            "bac": 0.005566224,
+            "minute": 285
+          },
+          {
+            "bac": 0,
+            "minute": 300
+          },
+          {
+            "bac": 0,
+            "minute": 315
+          },
+          {
+            "bac": 0,
+            "minute": 330
+          },
+          {
+            "bac": 0,
+            "minute": 345
+          },
+          {
+            "bac": 0,
+            "minute": 360
+          },
+          {
+            "bac": 0,
+            "minute": 375
+          },
+          {
+            "bac": 0,
+            "minute": 390
+          },
+          {
+            "bac": 0,
+            "minute": 405
+          },
+          {
+            "bac": 0,
+            "minute": 420
+          },
+          {
+            "bac": 0,
+            "minute": 435
+          },
+          {
+            "bac": 0,
+            "minute": 450
+          },
+          {
+            "bac": 0,
+            "minute": 465
+          },
+          {
+            "bac": 0,
+            "minute": 480
+          }
+        ],
+        "sessionPeak": 0.363654664
+      },
+      "id": "clamp-r-upper",
+      "input": {
+        "conservative": false,
+        "drinks": [
+          {
+            "absorptionWindowMinutes": 63.75,
+            "abv": 5,
+            "category": "beer",
+            "drinkDurationMinutes": 20,
+            "offsetMinutes": 0,
+            "rawContribution": 0.626190476,
+            "volumeML": 500
+          }
+        ],
+        "meals": [],
+        "profile": {
+          "age": 18,
+          "eliminationRate": 0.15,
+          "gender": "male",
+          "heightCm": 200,
+          "toleranceMode": false,
+          "weightKg": 35
+        },
+        "stomachStatus": "light",
+        "vomitOffsetMinutes": []
+      },
+      "note": "light tall body drives r toward the 0.90 clamp"
+    },
+    {
+      "derived": {
+        "distributionFactor": 0.738047974,
+        "drivingLimit": 0.5,
+        "effectiveEliminationRate": 0.15,
+        "gastricMinutes": 75,
+        "peakFactor": 0.81,
+        "resolvedEliminationRate": 0.15,
+        "totalBodyWaterL": 44.615,
+        "validatedAge": 25,
+        "validatedHeight": 180,
+        "validatedWeight": 75
+      },
+      "expected": {
+        "hoursUntilDrivingLimit": 1.83758666,
+        "hoursUntilSober": 6.533333333,
+        "projectedPeakFirstDrink": 0.044104455,
+        "samples": [
+          {
+            "bac": 0,
+            "minute": 0
+          },
+          {
+            "bac": 0.040567327,
+            "minute": 15
+          },
+          {
+            "bac": 0.109503743,
+            "minute": 30
+          },
+          {
+            "bac": 0.219787307,
+            "minute": 45
+          },
+          {
+            "bac": 0.367016762,
+            "minute": 60
+          },
+          {
+            "bac": 0.464985029,
+            "minute": 75
+          },
+          {
+            "bac": 0.513692108,
+            "minute": 90
+          },
+          {
+            "bac": 0.513137999,
+            "minute": 105
+          },
+          {
+            "bac": 0.475637999,
+            "minute": 120
+          },
+          {
+            "bac": 0.438137999,
+            "minute": 135
+          },
+          {
+            "bac": 0.400637999,
+            "minute": 150
+          },
+          {
+            "bac": 0.363137999,
+            "minute": 165
+          },
+          {
+            "bac": 0.325637999,
+            "minute": 180
+          },
+          {
+            "bac": 0.288137999,
+            "minute": 195
+          },
+          {
+            "bac": 0.250637999,
+            "minute": 210
+          },
+          {
+            "bac": 0.213137999,
+            "minute": 225
+          },
+          {
+            "bac": 0.175637999,
+            "minute": 240
+          },
+          {
+            "bac": 0.138137999,
+            "minute": 255
+          },
+          {
+            "bac": 0.100637999,
+            "minute": 270
+          },
+          {
+            "bac": 0.06916882,
+            "minute": 285
+          },
+          {
+            "bac": 0.047538988,
+            "minute": 300
+          },
+          {
+            "bac": 0.032673037,
+            "minute": 315
+          },
+          {
+            "bac": 0.022455828,
+            "minute": 330
+          },
+          {
+            "bac": 0.01543365,
+            "minute": 345
+          },
+          {
+            "bac": 0.010607382,
+            "minute": 360
+          },
+          {
+            "bac": 0.00729034,
+            "minute": 375
+          },
+          {
+            "bac": 0.005010572,
+            "minute": 390
+          },
+          {
+            "bac": 0,
+            "minute": 405
+          },
+          {
+            "bac": 0,
+            "minute": 420
+          },
+          {
+            "bac": 0,
+            "minute": 435
+          },
+          {
+            "bac": 0,
+            "minute": 450
+          },
+          {
+            "bac": 0,
+            "minute": 465
+          },
+          {
+            "bac": 0,
+            "minute": 480
+          },
+          {
+            "bac": 0,
+            "minute": 495
+          },
+          {
+            "bac": 0,
+            "minute": 510
+          },
+          {
+            "bac": 0,
+            "minute": 525
+          },
+          {
+            "bac": 0,
+            "minute": 540
+          },
+          {
+            "bac": 0,
+            "minute": 555
+          },
+          {
+            "bac": 0,
+            "minute": 570
+          },
+          {
+            "bac": 0,
+            "minute": 585
+          },
+          {
+            "bac": 0,
+            "minute": 600
+          },
+          {
+            "bac": 0,
+            "minute": 615
+          },
+          {
+            "bac": 0,
+            "minute": 630
+          },
+          {
+            "bac": 0,
+            "minute": 645
+          },
+          {
+            "bac": 0,
+            "minute": 660
+          },
+          {
+            "bac": 0,
+            "minute": 675
+          },
+          {
+            "bac": 0,
+            "minute": 690
+          },
+          {
+            "bac": 0,
+            "minute": 705
+          },
+          {
+            "bac": 0,
+            "minute": 720
+          },
+          {
+            "bac": 0,
+            "minute": 735
+          },
+          {
+            "bac": 0,
+            "minute": 750
+          },
+          {
+            "bac": 0,
+            "minute": 765
+          },
+          {
+            "bac": 0,
+            "minute": 780
+          },
+          {
+            "bac": 0,
+            "minute": 795
+          },
+          {
+            "bac": 0,
+            "minute": 810
+          },
+          {
+            "bac": 0,
+            "minute": 825
+          },
+          {
+            "bac": 0,
+            "minute": 840
+          },
+          {
+            "bac": 0,
+            "minute": 855
+          },
+          {
+            "bac": 0,
+            "minute": 870
+          },
+          {
+            "bac": 0,
+            "minute": 885
+          },
+          {
+            "bac": 0,
+            "minute": 900
+          },
+          {
+            "bac": 0,
+            "minute": 915
+          },
+          {
+            "bac": 0,
+            "minute": 930
+          },
+          {
+            "bac": 0,
+            "minute": 945
+          },
+          {
+            "bac": 0,
+            "minute": 960
+          }
+        ],
+        "sessionPeak": 0.522316979
+      },
+      "id": "long-tail-first-order",
+      "input": {
+        "conservative": false,
+        "drinks": [
+          {
+            "absorptionWindowMinutes": 56.25,
+            "abv": 40,
+            "category": "shot",
+            "drinkDurationMinutes": 1,
+            "offsetMinutes": 0,
+            "rawContribution": 0.228061056,
+            "volumeML": 40
+          },
+          {
+            "absorptionWindowMinutes": 56.25,
+            "abv": 40,
+            "category": "shot",
+            "drinkDurationMinutes": 1,
+            "offsetMinutes": 15,
+            "rawContribution": 0.228061056,
+            "volumeML": 40
+          },
+          {
+            "absorptionWindowMinutes": 56.25,
+            "abv": 40,
+            "category": "shot",
+            "drinkDurationMinutes": 1,
+            "offsetMinutes": 30,
+            "rawContribution": 0.228061056,
+            "volumeML": 40
+          },
+          {
+            "absorptionWindowMinutes": 56.25,
+            "abv": 40,
+            "category": "shot",
+            "drinkDurationMinutes": 1,
+            "offsetMinutes": 45,
+            "rawContribution": 0.228061056,
+            "volumeML": 40
+          }
+        ],
+        "meals": [],
+        "profile": {
+          "age": 25,
+          "eliminationRate": 0.15,
+          "gender": "male",
+          "heightCm": 180,
+          "toleranceMode": false,
+          "weightKg": 75
+        },
+        "stomachStatus": "light",
+        "vomitOffsetMinutes": []
+      },
+      "note": "crosses km = 0.10 into first-order and hits the sober floor"
+    }
+  ]
+}
