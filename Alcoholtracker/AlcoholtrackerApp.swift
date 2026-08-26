@@ -64,6 +64,7 @@ struct PromilleApp: App {
                 .preferredColorScheme(.dark)
                 .task {
                     RuntimeSelfCheck.runIfRequested()
+                    BACVectorEmitter.runIfRequested()
                     seedDrinkDatabase()
                     CompatibilityCheckService.normalizeStoredData(in: persistence.container.mainContext)
                     await syncCommunityDrinks()

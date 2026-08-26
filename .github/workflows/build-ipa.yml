@@ -157,3 +157,114 @@ jobs:
           name: selfcheck-log
           path: selfcheck.log
           retention-days: 14
+
+  bac-vectors:
+    # Regenerates the shared BAC golden vectors from the live Swift implementation.
+    # The JSON artifact is committed to testdata/bac_vectors.json and is what the
+    # planned Android/Kotlin port gets pinned against.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app
+
+      - name: Create SupabaseConfig
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          cat > Alcoholtracker/Services/SupabaseConfig.swift <<EOF
+          import Foundation
+          enum SupabaseConfig {
+              static let projectURL = "$SUPABASE_URL"
+              static let anonKey    = "$SUPABASE_ANON_KEY"
+              static var isReady: Bool {
+                  !projectURL.contains("YOUR_PROJECT") && !anonKey.contains("YOUR_ANON")
+              }
+          }
+          EOF
+
+      - name: Build for simulator
+        run: |
+          xcodebuild \
+            -project Alcoholtracker.xcodeproj \
+            -scheme Alcoholtracker \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Boot a simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; u=[v['udid'] for rt in d for v in d[rt] if v.get('isAvailable') and 'iPhone' in v['name']]; print(u[0])")
+          echo "Booting simulator $UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Install + emit vectors
+        run: |
+          UDID=${{ steps.sim.outputs.udid }}
+          APP=build/Build/Products/Debug-iphonesimulator/Alcoholtracker.app
+          xcrun simctl install "$UDID" "$APP"
+          echo "=== launching with -emitBACVectors ==="
+          ( xcrun simctl launch --console-pty "$UDID" com.tipau.Alcoholtracker -emitBACVectors > emit.log 2>&1 ) &
+          for i in $(seq 1 90); do
+            grep -q "===BAC_VECTORS_END===" emit.log && break
+            sleep 1
+          done
+          xcrun simctl terminate "$UDID" com.tipau.Alcoholtracker 2>/dev/null || true
+
+      - name: Assemble and validate JSON
+        run: |
+          if ! grep -q "===BAC_VECTORS_END===" emit.log; then
+            echo "No end marker; the emitter did not complete."; tail -40 emit.log; exit 1
+          fi
+          tr -d '\r' < emit.log > emit.clean
+          grep '^BACVEC_META '  emit.clean | sed 's/^BACVEC_META //'  > meta.json
+          grep '^BACVEC '       emit.clean | sed 's/^BACVEC //'       > vectors.ndjson
+          grep '^BACVEC_COUNT ' emit.clean | sed 's/^BACVEC_COUNT //' > count.txt
+          python3 - <<'PY'
+          import json, sys
+          d = json.load(open("meta.json"))
+          v = [json.loads(line) for line in open("vectors.ndjson") if line.strip()]
+          announced = int(open("count.txt").read().strip())
+          # A line dropped by the pty has to fail here, not silently ship a short file.
+          if len(v) != announced:
+              sys.exit(f"got {len(v)} vectors, emitter announced {announced}")
+          d["vectors"] = v
+          print(f"{len(v)} vectors, schema {d['schema']}, {d['os']}")
+          lo, hi = d["constants"]["ageClamp"]
+          for x in v:
+              age_in  = x["input"]["profile"]["age"]
+              age_out = x["derived"]["validatedAge"]
+              # currentAge must resolve from the pinned int, never the wall clock.
+              if age_out != min(max(age_in, lo), hi):
+                  sys.exit(f"{x['id']}: validatedAge {age_out} does not follow from age {age_in}")
+              if not x["expected"]["samples"]:
+                  sys.exit(f"{x['id']}: no samples")
+              if max(s["bac"] for s in x["expected"]["samples"]) <= 0:
+                  sys.exit(f"{x['id']}: curve never rises above zero")
+          # Python owns the formatting, so the committed file stays byte stable even
+          # if a future Xcode changes how Swift serializes.
+          with open("bac_vectors.json", "w", newline="\n") as f:
+              json.dump(d, f, indent=2, sort_keys=True)
+              f.write("\n")
+          print("ok")
+          PY
+
+      - name: Upload BAC vectors
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: bac-vectors
+          path: |
+            bac_vectors.json
+            emit.log
+          retention-days: 14
