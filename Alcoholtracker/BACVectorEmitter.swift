@@ -562,7 +562,7 @@ enum BACVectorEmitter {
         case "first_crew":
             crew = isEarned ? [CrewMember(name: "Friend", isSelf: false)] : []
         case "first_photo":
-            photos = isEarned ? [PhotoMemory(imageData: Data(), timestamp: baseDate)] : []
+            photos = isEarned ? [PhotoMemory(filename: "photo.jpg")] : []
         case "drinks_10":
             drinks = isEarned ? (1...10).map { _ in d(.beer) } : (1...9).map { _ in d(.beer) }
         case "drinks_50":
@@ -633,7 +633,7 @@ enum BACVectorEmitter {
         case "crew_5":
             crew = isEarned ? (1...5).map { CrewMember(name: "M \($0)", isSelf: false) } : (1...4).map { CrewMember(name: "M \($0)", isSelf: false) }
         case "photo_5":
-            photos = isEarned ? (1...5).map { PhotoMemory(imageData: Data(), timestamp: baseDate.addingTimeInterval(Double($0))) } : (1...4).map { PhotoMemory(imageData: Data(), timestamp: baseDate) }
+            photos = isEarned ? (1...5).map { PhotoMemory(filename: "photo_\($0).jpg") } : (1...4).map { PhotoMemory(filename: "photo_\($0).jpg") }
         case "jam_created":
             jams = isEarned ? 1 : 0
             AchievementCatalog.totalJamsCreated = jams
