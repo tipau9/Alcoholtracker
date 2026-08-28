@@ -1,0 +1,161 @@
+<resources>
+    <string name="app_name">promille.</string>
+
+    <!-- Disclaimer -->
+    <string name="disclaimer_short">Estimates only, not a breathalyser. When in doubt, don\'t drive.</string>
+    <string name="disclaimer_long">This app provides estimates based on the Widmark formula. Actual values may differ. Never use to assess fitness to drive. When in doubt: do not drive.</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_subtitle">Drink consciously.</string>
+    <string name="onboarding_lets_go">Get Started</string>
+    <string name="onboarding_continue">Continue</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_finish">Done</string>
+    <string name="onboarding_weight_title">How much do you weigh?</string>
+    <string name="onboarding_weight_subtitle">Your weight feeds directly into the Widmark calculation.</string>
+    <string name="onboarding_gender_title">Your biological sex?</string>
+    <string name="onboarding_gender_subtitle">Choose the biological sex for the calculation.</string>
+    <string name="onboarding_gender_info">Men and women have different proportions of body water. This directly affects the Widmark distribution factor.</string>
+    <string name="onboarding_body_title">Date of birth and height</string>
+    <string name="onboarding_body_subtitle">Your age will update automatically on every birthday.</string>
+    <string name="onboarding_favorites_title">Your favourites</string>
+    <string name="onboarding_favorites_subtitle">Choose 4 favourite drinks for quick access.</string>
+    <string name="onboarding_legal">For persons aged 18 and over only. BAC values are estimates and do not replace a breathalyser test.</string>
+    <string name="onboarding_pick_more">Pick %d more</string>
+    <string name="onboarding_weight_error">Weight must be between 35 and 250 kg</string>
+    <string name="onboarding_height_error">Height must be between 120 and 230 cm</string>
+
+    <!-- Gender -->
+    <string name="gender_male">Male</string>
+    <string name="gender_female">Female</string>
+    <string name="gender_diverse">Non-binary</string>
+
+    <!-- BAC Status -->
+    <string name="status_sober">Sober</string>
+    <string name="status_tipsy">Tipsy</string>
+    <string name="status_drunk">Drunk</string>
+    <string name="status_careful">Do not drive</string>
+    <string name="status_danger">Dangerous</string>
+
+    <!-- Home Screen -->
+    <string name="home_sober_in">Sober in %s</string>
+    <string name="home_drive_in">Legal to drive in %s</string>
+    <string name="home_add_drink">Add drink</string>
+    <string name="home_reset_session">Reset session</string>
+    <string name="home_drinks_count">%d drinks in this session</string>
+    <string name="home_sober_now">now</string>
+    <string name="home_over_72h">over 72 h</string>
+
+    <!-- Quick Add -->
+    <string name="quickadd_title">Add drink</string>
+    <string name="quickadd_favourites">Favourites</string>
+    <string name="quickadd_search">Search\u2026</string>
+    <string name="quickadd_custom">Custom brand</string>
+
+    <!-- Drink Categories -->
+    <string name="category_beer">Beer</string>
+    <string name="category_wine">Wine</string>
+    <string name="category_sparkling">Sparkling</string>
+    <string name="category_spirits">Spirits</string>
+    <string name="category_liqueur">Liqueur</string>
+    <string name="category_cocktail">Cocktail</string>
+    <string name="category_mixed">Mixed drink</string>
+    <string name="category_shot">Shot</string>
+    <string name="category_cider">Cider</string>
+    <string name="category_fortified">Fortified wine</string>
+    <string name="category_other">Other</string>
+    <string name="category_all">All</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_history">History</string>
+    <string name="nav_crew">Friends</string>
+    <string name="nav_safety">Safety</string>
+    <string name="nav_settings">Profile</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_profile">Profile</string>
+    <string name="settings_section_safety">Safety</string>
+    <string name="settings_section_limits">Limits</string>
+    <string name="settings_section_display">Display</string>
+    <string name="settings_section_thresholds">Thresholds</string>
+    <string name="settings_section_accessibility">Accessibility</string>
+    <string name="settings_section_achievements">Achievements</string>
+    <string name="settings_section_data">Data</string>
+    <string name="settings_section_about">About</string>
+
+    <string name="settings_weight">Weight</string>
+    <string name="settings_height">Height</string>
+    <string name="settings_birthdate">Date of birth</string>
+    <string name="settings_gender">Gender</string>
+    <string name="settings_elimination_rate">Elimination rate</string>
+    <string name="settings_emergency_name">Emergency contact name</string>
+    <string name="settings_emergency_phone">Emergency contact phone</string>
+    <string name="settings_warning_threshold">Warning threshold</string>
+    <string name="settings_weekly_limit">Weekly limit</string>
+    <string name="settings_weekly_limit_none">None</string>
+    <string name="settings_sober_days">Sober days per week</string>
+    <string name="settings_stomach_status">Stomach status</string>
+    <string name="settings_tolerance_mode">Tolerance mode</string>
+    <string name="settings_tolerance_hint">Raises assumed elimination rate to 0.20 BAC/h.</string>
+    <string name="settings_conservative_safety">Conservative (safety)</string>
+    <string name="settings_conservative_safety_hint">Safer time-to-sober predictions.</string>
+    <string name="settings_conservative_everywhere">Conservative everywhere</string>
+    <string name="settings_conservative_everywhere_hint">Conservative estimates across all charts and home screen.</string>
+    <string name="settings_drunk_mode">Drunk mode automatic</string>
+    <string name="settings_drunk_mode_hint">Simplifies the UI when BAC is high.</string>
+    <string name="settings_large_text">Large text</string>
+    <string name="settings_high_contrast">High contrast</string>
+    <string name="settings_reduce_motion">Reduce animations</string>
+    <string name="settings_reset_thresholds">Reset</string>
+    <string name="settings_threshold_tipsy">Tipsy</string>
+    <string name="settings_threshold_drunk">Drunk</string>
+    <string name="settings_threshold_careful">Careful</string>
+    <string name="settings_threshold_danger">Danger</string>
+    <string name="settings_export_csv">Export history as CSV</string>
+    <string name="settings_export_count">%d drinks</string>
+    <string name="settings_app_version">App version</string>
+    <string name="settings_achievements_count">%1$d of %2$d unlocked</string>
+    <string name="settings_slow">Slow</string>
+    <string name="settings_fast">Fast</string>
+    <string name="settings_relaxed">Relaxed</string>
+    <string name="settings_strict">Strict</string>
+
+    <!-- Achievements -->
+    <string name="achievements_title">Achievements</string>
+    <string name="achievements_unlocked">%1$d of %2$d unlocked</string>
+
+    <!-- Body Data -->
+    <string name="body_weight_label">Weight (kg)</string>
+    <string name="body_height_label">Height (cm)</string>
+    <string name="body_age_label">Age</string>
+
+    <!-- Safety -->
+    <string name="safety_title">Safety</string>
+    <string name="safety_sober_timer">Sober in</string>
+    <string name="safety_drive_timer">Legal to drive in</string>
+    <string name="safety_call_taxi">Call a taxi</string>
+    <string name="safety_call_emergency">Call emergency contact</string>
+    <string name="safety_helpline">Help: contact your local addiction helpline</string>
+
+    <!-- Crew -->
+    <string name="crew_title">Crew</string>
+    <string name="crew_sober_buddy">Sober Buddy</string>
+    <string name="crew_safe_home">Safe at home</string>
+    <string name="crew_sos">SOS to crew</string>
+    <string name="crew_i_am_home">I\'m home</string>
+
+    <!-- Placeholder -->
+    <string name="coming_soon">Coming soon</string>
+
+    <!-- Units -->
+    <string name="unit_ml">ml</string>
+    <string name="unit_kg">kg</string>
+    <string name="unit_cm">cm</string>
+    <string name="unit_permille">BAC</string>
+    <string name="unit_permille_per_hour">BAC/h</string>
+    <string name="unit_hours">h</string>
+    <string name="unit_drinks">drinks</string>
+    <string name="unit_days">days</string>
+</resources>

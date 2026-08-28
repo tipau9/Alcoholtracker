@@ -1,0 +1,161 @@
+<resources>
+    <string name="app_name">promille.</string>
+
+    <!-- Disclaimer -->
+    <string name="disclaimer_short">Schätzwerte, kein Atemtest. Im Zweifel nicht fahren.</string>
+    <string name="disclaimer_long">Diese App liefert Schätzwerte auf Basis der Widmark-Formel. Die tatsächlichen Werte können abweichen. Niemals zur Beurteilung der Fahrtüchtigkeit verwenden. Im Zweifel: nicht fahren.\n\nHilfe bei Alkoholproblemen:\nSucht- und Drogen-Hotline 0800 111 0 550</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_subtitle">Trink bewusst.</string>
+    <string name="onboarding_lets_go">Los geht\'s</string>
+    <string name="onboarding_continue">Weiter</string>
+    <string name="onboarding_skip">Überspringen</string>
+    <string name="onboarding_finish">Fertig</string>
+    <string name="onboarding_weight_title">Wie viel wiegst du?</string>
+    <string name="onboarding_weight_subtitle">Dein Gewicht fließt direkt in die Widmark-Berechnung ein.</string>
+    <string name="onboarding_gender_title">Dein biologisches Geschlecht?</string>
+    <string name="onboarding_gender_subtitle">Wähle das biologische Geschlecht für die Berechnung.</string>
+    <string name="onboarding_gender_info">Männer und Frauen haben unterschiedliche Anteile an Körperwasser. Das beeinflusst den Widmark-Verteilungsfaktor direkt.</string>
+    <string name="onboarding_body_title">Geburtsdatum und Größe</string>
+    <string name="onboarding_body_subtitle">Dein Alter aktualisiert sich damit an jedem Geburtstag automatisch.</string>
+    <string name="onboarding_favorites_title">Deine Favoriten</string>
+    <string name="onboarding_favorites_subtitle">Wähle 4 Lieblingsgetränke für den Schnellzugriff.</string>
+    <string name="onboarding_legal">Nur für Personen ab 18 Jahren. Promillewerte sind Schätzungen und ersetzen keinen Atemtest.</string>
+    <string name="onboarding_pick_more">Noch %d wählen</string>
+    <string name="onboarding_weight_error">Gewicht muss zwischen 35 und 250 kg liegen</string>
+    <string name="onboarding_height_error">Größe muss zwischen 120 und 230 cm liegen</string>
+
+    <!-- Gender -->
+    <string name="gender_male">Männlich</string>
+    <string name="gender_female">Weiblich</string>
+    <string name="gender_diverse">Divers</string>
+
+    <!-- BAC Status -->
+    <string name="status_sober">Nüchtern</string>
+    <string name="status_tipsy">Leicht beschwipst</string>
+    <string name="status_drunk">Beschwipst</string>
+    <string name="status_careful">Fahruntüchtig</string>
+    <string name="status_danger">Gefährlich</string>
+
+    <!-- Home Screen -->
+    <string name="home_sober_in">Nüchtern in %s</string>
+    <string name="home_drive_in">Fahrtauglich in %s</string>
+    <string name="home_add_drink">Getränk hinzufügen</string>
+    <string name="home_reset_session">Session zurücksetzen</string>
+    <string name="home_drinks_count">%d Getränke in dieser Session</string>
+    <string name="home_sober_now">jetzt</string>
+    <string name="home_over_72h">über 72 h</string>
+
+    <!-- Quick Add -->
+    <string name="quickadd_title">Getränk hinzufügen</string>
+    <string name="quickadd_favourites">Favoriten</string>
+    <string name="quickadd_search">Suche…</string>
+    <string name="quickadd_custom">Eigene Marke</string>
+
+    <!-- Drink Categories -->
+    <string name="category_beer">Bier</string>
+    <string name="category_wine">Wein</string>
+    <string name="category_sparkling">Sekt</string>
+    <string name="category_spirits">Spirituose</string>
+    <string name="category_liqueur">Likör</string>
+    <string name="category_cocktail">Cocktail</string>
+    <string name="category_mixed">Mischgetränk</string>
+    <string name="category_shot">Shot</string>
+    <string name="category_cider">Cider</string>
+    <string name="category_fortified">Likörwein</string>
+    <string name="category_other">Sonstiges</string>
+    <string name="category_all">Alle</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_history">Verlauf</string>
+    <string name="nav_crew">Freunde</string>
+    <string name="nav_safety">Sicher</string>
+    <string name="nav_settings">Profil</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_section_profile">Profil</string>
+    <string name="settings_section_safety">Sicherheit</string>
+    <string name="settings_section_limits">Limits</string>
+    <string name="settings_section_display">Anzeige</string>
+    <string name="settings_section_thresholds">Schwellenwerte</string>
+    <string name="settings_section_accessibility">Barrierefreiheit</string>
+    <string name="settings_section_achievements">Achievements</string>
+    <string name="settings_section_data">Daten</string>
+    <string name="settings_section_about">Über</string>
+
+    <string name="settings_weight">Gewicht</string>
+    <string name="settings_height">Größe</string>
+    <string name="settings_birthdate">Geburtsdatum</string>
+    <string name="settings_gender">Geschlecht</string>
+    <string name="settings_elimination_rate">Abbaurate</string>
+    <string name="settings_emergency_name">Notfallkontakt Name</string>
+    <string name="settings_emergency_phone">Notfallkontakt Telefon</string>
+    <string name="settings_warning_threshold">Warnschwelle</string>
+    <string name="settings_weekly_limit">Wochenlimit</string>
+    <string name="settings_weekly_limit_none">Keines</string>
+    <string name="settings_sober_days">Nüchterntage pro Woche</string>
+    <string name="settings_stomach_status">Magen-Status</string>
+    <string name="settings_tolerance_mode">Toleranz-Modus</string>
+    <string name="settings_tolerance_hint">Erhöht die angenommene Abbaurate auf 0,20 Promille/h.</string>
+    <string name="settings_conservative_safety">Konservativ rechnen (Sicherheit)</string>
+    <string name="settings_conservative_safety_hint">Sicherere Nüchtern-Prognosen.</string>
+    <string name="settings_conservative_everywhere">Konservativ in ganzer App</string>
+    <string name="settings_conservative_everywhere_hint">Konservative Werte auch in Home und Charts.</string>
+    <string name="settings_drunk_mode">Besoffen-Modus automatisch</string>
+    <string name="settings_drunk_mode_hint">Vereinfacht die Oberfläche bei hohem BAC.</string>
+    <string name="settings_large_text">Großer Text</string>
+    <string name="settings_high_contrast">Hoher Kontrast</string>
+    <string name="settings_reduce_motion">Animationen reduzieren</string>
+    <string name="settings_reset_thresholds">Zurücksetzen</string>
+    <string name="settings_threshold_tipsy">Beschwipst</string>
+    <string name="settings_threshold_drunk">Angeheitert</string>
+    <string name="settings_threshold_careful">Vorsicht</string>
+    <string name="settings_threshold_danger">Gefahr</string>
+    <string name="settings_export_csv">Verlauf als CSV exportieren</string>
+    <string name="settings_export_count">%d Getränke</string>
+    <string name="settings_app_version">App-Version</string>
+    <string name="settings_achievements_count">%1$d von %2$d freigeschaltet</string>
+    <string name="settings_slow">Langsam</string>
+    <string name="settings_fast">Schnell</string>
+    <string name="settings_relaxed">Entspannt</string>
+    <string name="settings_strict">Streng</string>
+
+    <!-- Achievements -->
+    <string name="achievements_title">Achievements</string>
+    <string name="achievements_unlocked">%1$d von %2$d freigeschaltet</string>
+
+    <!-- Body Data -->
+    <string name="body_weight_label">Gewicht (kg)</string>
+    <string name="body_height_label">Größe (cm)</string>
+    <string name="body_age_label">Alter</string>
+
+    <!-- Safety -->
+    <string name="safety_title">Sicher</string>
+    <string name="safety_sober_timer">Nüchtern in</string>
+    <string name="safety_drive_timer">Fahrtauglich in</string>
+    <string name="safety_call_taxi">Taxi rufen</string>
+    <string name="safety_call_emergency">Notfallkontakt anrufen</string>
+    <string name="safety_helpline">Hilfe: 0800 111 0 550</string>
+
+    <!-- Crew -->
+    <string name="crew_title">Crew</string>
+    <string name="crew_sober_buddy">Sober Buddy</string>
+    <string name="crew_safe_home">Sicher zu Hause</string>
+    <string name="crew_sos">SOS an Crew</string>
+    <string name="crew_i_am_home">Ich bin daheim</string>
+
+    <!-- Placeholder -->
+    <string name="coming_soon">Kommt bald</string>
+
+    <!-- Units -->
+    <string name="unit_ml">ml</string>
+    <string name="unit_kg">kg</string>
+    <string name="unit_cm">cm</string>
+    <string name="unit_permille">Promille</string>
+    <string name="unit_permille_per_hour">Promille/h</string>
+    <string name="unit_hours">h</string>
+    <string name="unit_drinks">Getränke</string>
+    <string name="unit_days">Tage</string>
+</resources>

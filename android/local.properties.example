@@ -1,0 +1,8 @@
+# Copy to local.properties (git-ignored) and point sdk.dir at your Android SDK.
+# Windows paths use forward slashes or escaped backslashes.
+sdk.dir=C:/Users/<you>/AppData/Local/Android/Sdk
+
+# Supabase credentials, mirroring the git-ignored SupabaseConfig.swift on iOS.
+# Not read yet: the backend client is phase 1 of the port and is not wired up.
+# supabase.url=https://<project>.supabase.co
+# supabase.anonKey=<anon key>

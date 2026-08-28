@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status bar icon: a glass. Single colour on transparent, as the system
+     tints notification small icons and drops everything else. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFFFF">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M5,3h14l-1.6,9.2c-0.4,2.2 -2.1,3.8 -4.2,4.1V20h3v2H7.8v-2h3v-3.7c-2.1,-0.3 -3.8,-1.9 -4.2,-4.1L5,3zM7.4,5l0.4,2.4h8.4L16.6,5H7.4z" />
+</vector>

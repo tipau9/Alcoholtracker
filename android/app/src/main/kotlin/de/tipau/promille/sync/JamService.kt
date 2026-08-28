@@ -1,0 +1,517 @@
+package de.tipau.promille.sync
+
+import de.tipau.promille.bac.Jam
+import de.tipau.promille.bac.JamArcadeGame
+import de.tipau.promille.bac.JamArcadeResultPayload
+import de.tipau.promille.bac.JamArcadeRoundPayload
+import de.tipau.promille.bac.JamConnectionType
+import de.tipau.promille.bac.JamParticipant
+import de.tipau.promille.bac.JamRoulettePayload
+import de.tipau.promille.bac.JamSettings
+import de.tipau.promille.bac.JamVisibility
+import de.tipau.promille.bac.WaterScore
+import de.tipau.promille.bac.activeJamRoster
+import de.tipau.promille.bac.electJamHost
+import de.tipau.promille.bac.mergeWaterScores
+import de.tipau.promille.bac.upserting
+import de.tipau.promille.bac.wasKickedFromJam
+import de.tipau.promille.network.PendingJamInvite
+import de.tipau.promille.network.SupabaseService
+import de.tipau.promille.network.deleteJam
+import de.tipau.promille.network.fetchFriendJams
+import de.tipau.promille.network.fetchJamArcadeResults
+import de.tipau.promille.network.fetchJamArcadeRound
+import de.tipau.promille.network.fetchJamParticipants
+import de.tipau.promille.network.fetchJamRoulette
+import de.tipau.promille.network.fetchJamWaterScores
+import de.tipau.promille.network.fetchMyJamInvitations
+import de.tipau.promille.network.findJamByCode
+import de.tipau.promille.network.friendCode
+import de.tipau.promille.network.joinJam
+import de.tipau.promille.network.leaveJam
+import de.tipau.promille.network.markInvitationSeen
+import de.tipau.promille.network.publishJam
+import de.tipau.promille.network.removeParticipant
+import de.tipau.promille.network.resetJamWater
+import de.tipau.promille.network.sanitizeFriendCode
+import de.tipau.promille.network.sendJamInvitation
+import de.tipau.promille.network.setJamArcadeRound
+import de.tipau.promille.network.setJamRoulette
+import de.tipau.promille.network.submitJamArcadeResult
+import de.tipau.promille.network.submitJamWaterTime
+import de.tipau.promille.network.updateJamHost
+import de.tipau.promille.network.updateMyJamStatus
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import java.util.UUID
+import kotlin.random.Random
+
+class JamException(message: String) : Exception(message)
+
+/**
+ * Port of JamService.swift over the Supabase transport.
+ *
+ * The proximity half of the iOS service (MultipeerConnectivity, Nearby
+ * Connections on this side) is not wired yet, so a proximity-only jam cannot be
+ * created here: it would produce a session with no transport at all, which is
+ * worse than saying so. Everything else -- create, join by code, join a friend's
+ * jam, invitations, roster polling, kick, host transfer, ghost-host election and
+ * the three mini games -- runs against the server exactly as on iOS.
+ */
+class JamService(
+    private val supabase: SupabaseService,
+    private val scope: CoroutineScope,
+    private val nowSeconds: () -> Long = { System.currentTimeMillis() / 1000 }
+) {
+
+    private val _currentJam = MutableStateFlow<Jam?>(null)
+    val currentJam: StateFlow<Jam?> = _currentJam.asStateFlow()
+
+    private val _availableJamsFromFriends = MutableStateFlow<List<Jam>>(emptyList())
+    val availableJamsFromFriends: StateFlow<List<Jam>> = _availableJamsFromFriends.asStateFlow()
+
+    private val _invitations = MutableStateFlow<List<PendingJamInvite>>(emptyList())
+    val invitations: StateFlow<List<PendingJamInvite>> = _invitations.asStateFlow()
+
+    private val _waterScores = MutableStateFlow<List<WaterScore>>(emptyList())
+    val waterScores: StateFlow<List<WaterScore>> = _waterScores.asStateFlow()
+
+    private val _incomingRoulette = MutableStateFlow<JamRoulettePayload?>(null)
+    val incomingRoulette: StateFlow<JamRoulettePayload?> = _incomingRoulette.asStateFlow()
+
+    private val _incomingArcadeRound = MutableStateFlow<JamArcadeRoundPayload?>(null)
+    val incomingArcadeRound: StateFlow<JamArcadeRoundPayload?> = _incomingArcadeRound.asStateFlow()
+
+    private val _arcadeResults = MutableStateFlow<List<JamArcadeResultPayload>>(emptyList())
+    val arcadeResults: StateFlow<List<JamArcadeResultPayload>> = _arcadeResults.asStateFlow()
+
+    private val _amHost = MutableStateFlow(false)
+    val amHost: StateFlow<Boolean> = _amHost.asStateFlow()
+
+    val mySettings = MutableStateFlow(JamSettings())
+
+    /** Set from the session so the roster carries a live value. */
+    val myCurrentBAC = MutableStateFlow(0.0)
+    val myCurrentStatus = MutableStateFlow<String?>(null)
+    val mySOSActive = MutableStateFlow(false)
+
+    private var myParticipantID: String = UUID.randomUUID().toString()
+    private var myJoinedAt: Long = 0
+    private var myConnectionType: JamConnectionType = JamConnectionType.CODE
+    private var confirmedOnServer = false
+
+    /**
+     * Ids that must not come back. A participant row lingers on the server for
+     * up to the staleness window after a leave or a kick, and without this the
+     * very next poll would put them straight back into the roster.
+     */
+    private val tombstones = mutableMapOf<String, Long>()
+    private var pollJob: Job? = null
+    private var statusJob: Job? = null
+
+    private fun tombstone(id: String) {
+        tombstones[id] = nowSeconds()
+    }
+
+    private fun liveTombstones(): Set<String> {
+        val now = nowSeconds()
+        tombstones.entries.removeAll { now - it.value > TOMBSTONE_SECONDS }
+        return tombstones.keys.toSet()
+    }
+
+    // MARK: Create and join
+
+    suspend fun createJam(visibility: JamVisibility, settings: JamSettings): Jam {
+        if (visibility == JamVisibility.PROXIMITY_ONLY) {
+            throw JamException("Reine Bluetooth-Jams gibt es auf Android noch nicht.")
+        }
+        if (!supabase.isSignedIn.value) throw JamException("Dafür musst du angemeldet sein.")
+
+        // The server row is written before any local state changes, so a failure
+        // cannot leave an active jam screen behind with nothing behind it.
+        mySettings.value = settings
+        myParticipantID = UUID.randomUUID().toString()
+        myJoinedAt = nowSeconds()
+        myConnectionType = JamConnectionType.CODE
+        confirmedOnServer = false
+
+        val hostName = supabase.myProfile.value?.displayName?.takeIf { it.isNotEmpty() } ?: "Host"
+        val jam = Jam(
+            id = UUID.randomUUID().toString(),
+            code = generateJamCode(),
+            hostUserID = supabase.userId ?: "",
+            hostName = hostName,
+            createdAtEpochSeconds = nowSeconds(),
+            visibility = visibility,
+            settings = settings,
+            participants = listOf(makeMyParticipant())
+        )
+        supabase.publishJam(jam)
+
+        _amHost.value = true
+        _currentJam.value = jam
+        startTimers()
+        return jam
+    }
+
+    suspend fun joinJamByCode(code: String) {
+        val jam = supabase.findJamByCode(code) ?: throw JamException("Kein Jam mit diesem Code.")
+        // A friends-only jam stays friends-only even if the code leaks: the host
+        // has to be in this device's friend list.
+        if (jam.visibility == JamVisibility.FRIENDS_ONLY) {
+            val hostCode = runCatching { supabase.friendCode(jam.hostUserID) }.getOrNull()
+            val mine = friendCodes.map { sanitizeFriendCode(it) }.toSet()
+            if (hostCode == null || sanitizeFriendCode(hostCode) !in mine) {
+                throw JamException("Dieser Jam ist nur für Freunde des Hosts.")
+            }
+        }
+        join(jam, JamConnectionType.CODE)
+    }
+
+    suspend fun joinJamFromFriend(jam: Jam) = join(jam, JamConnectionType.FRIEND)
+
+    private suspend fun join(jam: Jam, type: JamConnectionType) {
+        if (!supabase.isSignedIn.value) throw JamException("Dafür musst du angemeldet sein.")
+        myParticipantID = UUID.randomUUID().toString()
+        myJoinedAt = nowSeconds()
+        myConnectionType = type
+        confirmedOnServer = false
+
+        supabase.joinJam(
+            jamID = jam.id,
+            participantID = myParticipantID,
+            initialBAC = if (mySettings.value.shareBAC) myCurrentBAC.value else null,
+            connectionType = type.raw
+        )
+
+        _amHost.value = jam.hostUserID.isNotEmpty() && jam.hostUserID == supabase.userId
+        _currentJam.value = jam.copy(
+            participants = jam.participants.upserting(makeMyParticipant())
+        )
+        startTimers()
+    }
+
+    // MARK: Leave
+
+    fun leaveJam() {
+        val jam = _currentJam.value ?: return
+        val wasHost = _amHost.value
+
+        // Ghost jam: a leaving host hands the role to an elected member instead
+        // of ending the session for everyone still in it.
+        var electedHost: JamParticipant? = null
+        if (wasHost) {
+            val others = jam.participants.filter { it.id != myParticipantID }
+            electedHost = electJamHost(others, excludingUserID = supabase.userId)
+        }
+        val deletesJam = wasHost && electedHost == null
+
+        stopTimers()
+        _currentJam.value = null
+        _amHost.value = false
+        confirmedOnServer = false
+        // Games are per jam and must not leak into the next one.
+        _waterScores.value = emptyList()
+        _incomingRoulette.value = null
+        _incomingArcadeRound.value = null
+        _arcadeResults.value = emptyList()
+        _availableJamsFromFriends.value = emptyList()
+        tombstones.clear()
+
+        scope.launch {
+            if (deletesJam) {
+                runCatching { supabase.deleteJam(jam.id) }
+            } else {
+                // Repoint the host before deleting our own row, so the server
+                // side cleanup sees a live host and keeps the jam alive.
+                electedHost?.userID?.let { uid ->
+                    runCatching { supabase.updateJamHost(jam.id, uid, electedHost.displayName) }
+                }
+                runCatching { supabase.leaveJam(jam.id) }
+            }
+        }
+    }
+
+    // MARK: Host powers
+
+    fun canKick(participant: JamParticipant): Boolean =
+        _amHost.value && participant.id != myParticipantID
+
+    fun kickParticipant(participant: JamParticipant) {
+        val jam = _currentJam.value ?: return
+        if (!canKick(participant)) return
+        tombstone(participant.id)
+        _currentJam.value = jam.copy(
+            participants = jam.participants.filterNot { it.id == participant.id }
+        )
+        scope.launch { runCatching { supabase.removeParticipant(jam.id, participant.id) } }
+    }
+
+    fun canTransferHost(participant: JamParticipant): Boolean =
+        _amHost.value && participant.id != myParticipantID && participant.userID != null
+
+    fun transferHost(participant: JamParticipant) {
+        val jam = _currentJam.value ?: return
+        if (!canTransferHost(participant)) return
+        val uid = participant.userID ?: return
+        _amHost.value = false
+        _currentJam.value = jam.copy(hostUserID = uid, hostName = participant.displayName)
+        scope.launch { runCatching { supabase.updateJamHost(jam.id, uid, participant.displayName) } }
+    }
+
+    // MARK: Invitations and friend jams
+
+    var friendCodes: List<String> = emptyList()
+
+    suspend fun inviteFriend(friendCode: String) {
+        val jam = _currentJam.value ?: return
+        supabase.sendJamInvitation(friendCode, jam.id, jam.code, jam.hostName)
+    }
+
+    suspend fun refreshInvitations() {
+        if (!supabase.isSignedIn.value) return
+        _invitations.value = runCatching { supabase.fetchMyJamInvitations() }.getOrDefault(emptyList())
+    }
+
+    suspend fun dismissInvitation(id: String) {
+        runCatching { supabase.markInvitationSeen(id) }
+        _invitations.value = _invitations.value.filterNot { it.id == id }
+    }
+
+    suspend fun refreshFriendJams(codes: List<String>) {
+        friendCodes = codes
+        if (codes.isEmpty() || !supabase.isSignedIn.value) {
+            _availableJamsFromFriends.value = emptyList()
+            return
+        }
+        _availableJamsFromFriends.value =
+            runCatching { supabase.fetchFriendJams(codes) }.getOrDefault(emptyList())
+    }
+
+    // MARK: Mini games
+
+    suspend fun submitWaterTime(milliseconds: Int) {
+        val jam = _currentJam.value ?: return
+        val name = myDisplayName()
+        // Shown at once, so the tap feels immediate even before the round trip.
+        _waterScores.value = mergeWaterScores(
+            local = listOf(WaterScore(myParticipantID, name, milliseconds)),
+            server = _waterScores.value.filterNot { it.participantID == myParticipantID },
+            myParticipantID = myParticipantID
+        )
+        runCatching { supabase.submitJamWaterTime(jam.id, name, milliseconds) }
+    }
+
+    suspend fun resetWaterLeaderboard() {
+        val jam = _currentJam.value ?: return
+        if (!_amHost.value) return
+        _waterScores.value = emptyList()
+        runCatching { supabase.resetJamWater(jam.id) }
+    }
+
+    suspend fun startRoulette() {
+        val jam = _currentJam.value ?: return
+        val names = jam.participants.map { it.displayName }
+        if (names.isEmpty()) return
+        val payload = JamRoulettePayload(
+            id = UUID.randomUUID().toString(),
+            jamID = jam.id,
+            participants = names,
+            winnerIndex = Random.nextInt(names.size),
+            starterName = myDisplayName(),
+            starterID = myParticipantID
+        )
+        _incomingRoulette.value = payload
+        runCatching { supabase.setJamRoulette(payload) }
+    }
+
+    suspend fun startArcade(game: JamArcadeGame) {
+        val jam = _currentJam.value ?: return
+        val start = nowSeconds().toDouble() + ARCADE_LEAD_SECONDS
+        val round = JamArcadeRoundPayload(
+            id = UUID.randomUUID().toString(),
+            jamID = jam.id,
+            game = game,
+            starterID = myParticipantID,
+            starterName = myDisplayName(),
+            startAtEpochSeconds = start,
+            // Only Reaction Royale has a go signal, and it has to be at a time
+            // nobody can anticipate or the round is a coin flip on reflexes.
+            signalAtEpochSeconds = if (game == JamArcadeGame.REACTION_ROYALE) {
+                start + 2.5 + Random.nextDouble(3.0)
+            } else {
+                null
+            },
+            durationSeconds = if (game == JamArcadeGame.BALANCE_BATTLE) 10.0 else 5.0
+        )
+        _incomingArcadeRound.value = round
+        _arcadeResults.value = emptyList()
+        runCatching { supabase.setJamArcadeRound(round) }
+    }
+
+    suspend fun submitArcadeResult(value: Double, disqualified: Boolean = false) {
+        val jam = _currentJam.value ?: return
+        val round = _incomingArcadeRound.value ?: return
+        val result = JamArcadeResultPayload(
+            jamID = jam.id,
+            roundID = round.id,
+            participantID = myParticipantID,
+            participantName = myDisplayName(),
+            value = value,
+            disqualified = disqualified,
+            submittedAtEpochSeconds = nowSeconds().toDouble()
+        )
+        _arcadeResults.value = _arcadeResults.value
+            .filterNot { it.participantID == myParticipantID } + result
+        runCatching { supabase.submitJamArcadeResult(result) }
+    }
+
+    fun closeArcade() {
+        _incomingArcadeRound.value = null
+        _arcadeResults.value = emptyList()
+    }
+
+    fun dismissRoulette() {
+        _incomingRoulette.value = null
+    }
+
+    // MARK: Polling
+
+    private fun startTimers() {
+        stopTimers()
+        pollJob = scope.launch {
+            while (true) {
+                syncParticipants()
+                syncJamGames()
+                delay(POLL_INTERVAL_MS)
+            }
+        }
+        statusJob = scope.launch {
+            while (true) {
+                delay(STATUS_INTERVAL_MS)
+                val jam = _currentJam.value ?: continue
+                runCatching {
+                    supabase.updateMyJamStatus(
+                        jamID = jam.id,
+                        bac = if (mySettings.value.shareBAC) myCurrentBAC.value else null,
+                        status = if (mySettings.value.shareStatus) myCurrentStatus.value else null,
+                        sosActive = mySettings.value.shareSOSStatus && mySOSActive.value
+                    )
+                }
+                // Keep our own row in the local roster fresh too, otherwise the
+                // staleness filter would eventually drop us from our own list.
+                _currentJam.value = _currentJam.value?.let {
+                    it.copy(participants = it.participants.upserting(makeMyParticipant()))
+                }
+            }
+        }
+    }
+
+    private fun stopTimers() {
+        pollJob?.cancel()
+        pollJob = null
+        statusJob?.cancel()
+        statusJob = null
+    }
+
+    private suspend fun syncParticipants() {
+        val jam = _currentJam.value ?: return
+        val fresh = runCatching { supabase.fetchJamParticipants(jam.id) }.getOrNull() ?: return
+        val myUserID = supabase.userId
+
+        // Kick detection. The host never self kicks, and a row that was never
+        // confirmed may simply not have landed yet.
+        if (!_amHost.value) {
+            if (!wasKickedFromJam(fresh, myParticipantID, myUserID)) {
+                confirmedOnServer = true
+            } else if (confirmedOnServer) {
+                leaveJam()
+                return
+            }
+        }
+
+        val roster = activeJamRoster(
+            serverRows = fresh,
+            me = makeMyParticipant(),
+            myUserID = myUserID,
+            tombstonedIDs = liveTombstones(),
+            nowEpochSeconds = nowSeconds()
+        )
+        var updated = jam.copy(participants = roster)
+
+        // Ghost jam: the host vanished from the roster, so every remaining
+        // client elects the same replacement without asking the server.
+        if (roster.none { it.userID != null && it.userID == updated.hostUserID }) {
+            // Only an account can hold the host slot on a server jam. Electing
+            // an anonymous member would leave hostUserID pointing at the dead
+            // host and re-elect on every single poll.
+            electJamHost(roster.filter { it.userID != null })?.let { elected ->
+                updated = updated.copy(
+                    hostUserID = elected.userID ?: updated.hostUserID,
+                    hostName = elected.displayName
+                )
+                _amHost.value = elected.id == myParticipantID
+            }
+        }
+        _currentJam.value = updated
+    }
+
+    private suspend fun syncJamGames() {
+        val jam = _currentJam.value ?: return
+        runCatching { supabase.fetchJamRoulette(jam.id) }.getOrNull()?.let { draw ->
+            // Only a draw we have not shown yet, so a poll does not respin it.
+            if (_incomingRoulette.value?.id != draw.id) _incomingRoulette.value = draw
+        }
+        runCatching { supabase.fetchJamArcadeRound(jam.id) }.getOrNull()?.let { round ->
+            if (_incomingArcadeRound.value?.id != round.id) {
+                _incomingArcadeRound.value = round
+                _arcadeResults.value = emptyList()
+            }
+        }
+        _incomingArcadeRound.value?.let { round ->
+            runCatching { supabase.fetchJamArcadeResults(jam.id, round.id) }.getOrNull()
+                ?.let { _arcadeResults.value = it }
+        }
+        runCatching { supabase.fetchJamWaterScores(jam.id) }.getOrNull()?.let { server ->
+            _waterScores.value = mergeWaterScores(_waterScores.value, server, myParticipantID)
+        }
+    }
+
+    // MARK: Self
+
+    private fun myDisplayName(): String =
+        supabase.myProfile.value?.displayName?.takeIf { it.isNotEmpty() } ?: "Ich"
+
+    private fun makeMyParticipant(): JamParticipant = JamParticipant(
+        id = myParticipantID,
+        userID = supabase.userId,
+        displayName = myDisplayName(),
+        joinedAtEpochSeconds = myJoinedAt,
+        connectionType = myConnectionType,
+        currentBAC = if (mySettings.value.shareBAC) myCurrentBAC.value else null,
+        currentStatus = if (mySettings.value.shareStatus) myCurrentStatus.value else null,
+        hasSOSActive = mySettings.value.shareSOSStatus && mySOSActive.value,
+        lastUpdatedEpochSeconds = nowSeconds(),
+        sharedSettings = mySettings.value
+    )
+
+    private companion object {
+        /** Two GETs per tick, so 12s is about ten requests a minute. */
+        const val POLL_INTERVAL_MS = 12_000L
+        const val STATUS_INTERVAL_MS = 30_000L
+        const val TOMBSTONE_SECONDS = 180L
+
+        /** Enough lead for every client to see the round before it starts. */
+        const val ARCADE_LEAD_SECONDS = 5.0
+
+        private const val CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+        fun generateJamCode(): String =
+            (1..8).map { CODE_ALPHABET.random() }.joinToString("")
+    }
+}
