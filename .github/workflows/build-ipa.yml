@@ -227,11 +227,12 @@ jobs:
             echo "No end marker; the emitter did not complete."; tail -40 emit.log; exit 1
           fi
           tr -d '\r' < emit.log > emit.clean
-          grep '^BACVEC_META '  emit.clean | sed 's/^BACVEC_META //'  > meta.json
-          grep '^BACVEC '       emit.clean | sed 's/^BACVEC //'       > vectors.ndjson
-          grep '^BACVEC_COUNT ' emit.clean | sed 's/^BACVEC_COUNT //' > count.txt
+          grep '^BACVEC_META '    emit.clean | sed 's/^BACVEC_META //'    > meta.json
+          grep '^BACVEC '         emit.clean | sed 's/^BACVEC //'         > vectors.ndjson
+          grep '^BACVEC_COUNT '   emit.clean | sed 's/^BACVEC_COUNT //'   > count.txt
+          grep '^BACVEC_SECTION ' emit.clean | sed 's/^BACVEC_SECTION //' > sections.ndjson
           python3 - <<'PY'
-          import json, sys
+          import json, sys, os
           d = json.load(open("meta.json"))
           v = [json.loads(line) for line in open("vectors.ndjson") if line.strip()]
           announced = int(open("count.txt").read().strip())
@@ -239,6 +240,13 @@ jobs:
           if len(v) != announced:
               sys.exit(f"got {len(v)} vectors, emitter announced {announced}")
           d["vectors"] = v
+          if os.path.exists("sections.ndjson"):
+              for line in open("sections.ndjson"):
+                  line = line.strip()
+                  if not line: continue
+                  sec = json.loads(line)
+                  for k, val in sec.items():
+                      d[k] = val
           print(f"{len(v)} vectors, schema {d['schema']}, {d['os']}")
           lo, hi = d["constants"]["ageClamp"]
           for x in v:
