@@ -1,4 +1,11 @@
+
+
 package de.tipau.promille.ui.screens.jam
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+
+
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -211,7 +218,7 @@ private fun JamLobby(
                             Text("Beitreten", color = AppColors.accent, fontWeight = FontWeight.Bold)
                         }
                         TextButton(onClick = { run { jamService.dismissInvitation(invite.id) } }) {
-                            Text("✕", color = AppColors.textDim)
+                            Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(16.dp))
                         }
                     }
                 }
@@ -297,7 +304,7 @@ private fun JamLobby(
                         .fillMaxWidth()
                         .padding(vertical = 32.dp)
                 ) {
-                    Text("🎉", fontSize = 40.sp)
+                    Icon(de.tipau.promille.ui.components.AppIcons.EmojiEvents, null, tint = AppColors.accent, modifier = Modifier.size(40.dp))
                     Spacer(Modifier.height(10.dp))
                     Text(
                         "Kein Jam von Freunden.",
@@ -318,6 +325,7 @@ private fun JamLobby(
 
 // MARK: Active jam
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ActiveJam(
     container: AppContainer,
@@ -359,7 +367,7 @@ private fun ActiveJam(
         WaterContestSheet(
             scores = waterScores,
             canReset = amHost,
-            onSubmit = { ms -> scope.launch { jamService.submitWaterTime(ms) } },
+            onFinish = { ms -> scope.launch { jamService.submitWaterTime(ms) } },
             onReset = { scope.launch { jamService.resetWaterLeaderboard() } },
             onDismiss = { showWater = false }
         )
@@ -388,9 +396,11 @@ private fun ActiveJam(
     }
 
     roulette?.let { draw ->
-        RouletteResultDialog(
+        RoundRouletteSheet(
             payload = draw,
-            onDismiss = { jamService.dismissRoulette() }
+            canReroll = amHost,
+            onReroll = { scope.launch { jamService.startRoulette() } },
+            onClose = { jamService.dismissRoulette() }
         )
     }
 
@@ -419,9 +429,28 @@ private fun ActiveJam(
         contentPadding = PaddingValues(top = 16.dp, bottom = 36.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Active Header
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(AppColors.accent.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = de.tipau.promille.ui.components.AppIcons.Waveform,
+                        contentDescription = null,
+                        tint = AppColors.accent,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         jam.hostName,
                         color = AppColors.text,
@@ -445,15 +474,55 @@ private fun ActiveJam(
                     fontSize = 13.sp
                 )
                 Spacer(Modifier.width(10.dp))
-                CircleAction("＋", AppColors.accent) { showInvite = true }
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(AppColors.accent.copy(alpha = 0.12f))
+                        .border(0.5.dp, AppColors.accent.copy(alpha = 0.3f), CircleShape)
+                        .clickable { showInvite = true }
+                ) {
+                    Icon(
+                        imageVector = de.tipau.promille.ui.components.AppIcons.PersonPlus,
+                        contentDescription = "Einladen",
+                        tint = AppColors.accent,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
                 Spacer(Modifier.width(8.dp))
-                CircleAction("⚙", AppColors.textDim) { showPrivacy = true }
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(AppColors.card)
+                        .border(0.5.dp, AppColors.border, CircleShape)
+                        .clickable { showPrivacy = true }
+                ) {
+                    Icon(
+                        imageVector = de.tipau.promille.ui.components.AppIcons.Sliders,
+                        contentDescription = "Privatsphäre",
+                        tint = AppColors.textDim,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
 
+        // Jam Code Card
         item {
-            PromilleCard(Modifier.fillMaxWidth()) {
-                Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(AppColors.card)
+                    .border(0.5.dp, AppColors.border, RoundedCornerShape(16.dp))
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("Jam Code", color = AppColors.textDim, fontSize = 12.sp)
                     Text(
                         jam.code,
@@ -464,26 +533,414 @@ private fun ActiveJam(
                         letterSpacing = 6.sp
                     )
                 }
-            }
-        }
-
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                GameTile("🎰", "Runden-Roulette", Modifier.weight(1f)) {
-                    scope.launch { jamService.startRoulette() }
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(AppColors.accent.copy(alpha = 0.12f))
+                        .border(0.5.dp, AppColors.accent.copy(alpha = 0.3f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = de.tipau.promille.ui.components.AppIcons.Share,
+                        contentDescription = "Teilen",
+                        tint = AppColors.accent,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
-                GameTile("💧", "Wasser-Contest", Modifier.weight(1f)) { showWater = true }
-                GameTile("🕹", "Arcade", Modifier.weight(1f)) { showArcadePicker = true }
             }
         }
 
-        item { SectionLabel("TEILNEHMER (${jam.participants.size})") }
-        items(jam.participants, key = { it.id }) { participant ->
-            ParticipantRow(
-                participant = participant,
-                isHost = participant.userID != null && participant.userID == jam.hostUserID,
-                onLongPress = { participantMenu = participant }
-            )
+        // Participant List
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(AppColors.card)
+                    .border(0.5.dp, AppColors.border, RoundedCornerShape(16.dp))
+            ) {
+                jam.participants.forEachIndexed { index, participant ->
+                    val isHost = participant.userID != null && participant.userID == jam.hostUserID
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .combinedClickable(onClick = {}, onLongClick = { participantMenu = participant })
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (participant.hasSOSActive) AppColors.statusRed.copy(alpha = 0.2f)
+                                    else AppColors.accent.copy(alpha = 0.15f)
+                                )
+                        ) {
+                            Text(
+                                participant.displayName.take(1).uppercase(),
+                                color = if (participant.hasSOSActive) AppColors.statusRed else AppColors.accent,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    participant.displayName,
+                                    color = AppColors.text,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                if (isHost) {
+                                    Spacer(Modifier.width(6.dp))
+                                    Box(
+                                        Modifier
+                                            .background(AppColors.accent.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text("Host", color = AppColors.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                            Text(
+                                text = participant.currentBAC?.permilleString() ?: "Teilt keinen Wert",
+                                color = AppColors.textDim,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                    if (index < jam.participants.lastIndex) {
+                        Divider(color = AppColors.border, thickness = 0.5.dp, modifier = Modifier.padding(start = 68.dp))
+                    }
+                }
+            }
+        }
+
+        // 2x2 Quick Actions Grid
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Foto teilen
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(AppColors.accent.copy(alpha = 0.1f))
+                            .border(0.8.dp, AppColors.accent.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                            .clickable { /* Photo capture/share */ }
+                            .padding(vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(de.tipau.promille.ui.components.AppIcons.Camera, null, tint = AppColors.accent, modifier = Modifier.size(20.dp))
+                            Text("Foto teilen", color = AppColors.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+
+                    // Wasser
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(AppColors.card)
+                            .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+                            .clickable { showWater = true }
+                            .padding(vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(de.tipau.promille.ui.components.AppIcons.Water, null, tint = AppColors.accent, modifier = Modifier.size(20.dp))
+                            Text("Wasser", color = AppColors.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Runde
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(AppColors.card)
+                            .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+                            .clickable { scope.launch { jamService.startRoulette() } }
+                            .padding(vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(de.tipau.promille.ui.components.AppIcons.Dice, null, tint = AppColors.accent, modifier = Modifier.size(20.dp))
+                            Text("Runde", color = AppColors.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+
+                    // SOS
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(AppColors.statusRed.copy(alpha = 0.1f))
+                            .border(0.8.dp, AppColors.statusRed.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                            .clickable { /* Toggle SOS */ }
+                            .padding(vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(de.tipau.promille.ui.components.AppIcons.Shield, null, tint = AppColors.statusRed, modifier = Modifier.size(20.dp))
+                            Text("SOS", color = AppColors.statusRed, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Action Buttons
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Jam Arcade
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(AppColors.card)
+                        .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+                        .clickable { showArcadePicker = true }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(de.tipau.promille.ui.components.AppIcons.Gamepad, null, tint = AppColors.accent, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text("Jam Arcade", color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    Text("›", color = AppColors.textMuted, fontSize = 20.sp)
+                }
+
+                // Jam Code
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(AppColors.card)
+                        .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Jam Code", color = AppColors.textDim, fontSize = 12.sp)
+                    Text(
+                        jam.code,
+                        color = AppColors.text,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace,
+                        letterSpacing = 6.sp
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(AppColors.accent.copy(alpha = 0.12f))
+                        .border(0.5.dp, AppColors.accent.copy(alpha = 0.3f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = de.tipau.promille.ui.components.AppIcons.Share,
+                        contentDescription = "Teilen",
+                        tint = AppColors.accent,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+        }
+
+        // Participant List
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(AppColors.card)
+                    .border(0.5.dp, AppColors.border, RoundedCornerShape(16.dp))
+            ) {
+                jam.participants.forEachIndexed { index, participant ->
+                    val isHost = participant.userID != null && participant.userID == jam.hostUserID
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .combinedClickable(onClick = {}, onLongClick = { participantMenu = participant })
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (participant.hasSOSActive) AppColors.statusRed.copy(alpha = 0.2f)
+                                    else AppColors.accent.copy(alpha = 0.15f)
+                                )
+                        ) {
+                            Text(
+                                participant.displayName.take(1).uppercase(),
+                                color = if (participant.hasSOSActive) AppColors.statusRed else AppColors.accent,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    participant.displayName,
+                                    color = AppColors.text,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                if (isHost) {
+                                    Spacer(Modifier.width(6.dp))
+                                    Box(
+                                        Modifier
+                                            .background(AppColors.accent.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text("Host", color = AppColors.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                            Text(
+                                text = participant.currentBAC?.permilleString() ?: "Teilt keinen Wert",
+                                color = AppColors.textDim,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                    if (index < jam.participants.lastIndex) {
+                        Divider(color = AppColors.border, thickness = 0.5.dp, modifier = Modifier.padding(start = 68.dp))
+                    }
+                }
+            }
+        }
+
+        // 2x2 Quick Actions Grid
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Foto teilen
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(AppColors.accent.copy(alpha = 0.1f))
+                            .border(0.8.dp, AppColors.accent.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                            .clickable { /* Photo capture/share */ }
+                            .padding(vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(de.tipau.promille.ui.components.AppIcons.Camera, null, tint = AppColors.accent, modifier = Modifier.size(20.dp))
+                            Text("Foto teilen", color = AppColors.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+
+                    // Wasser
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(AppColors.card)
+                            .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+                            .clickable { showWater = true }
+                            .padding(vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(de.tipau.promille.ui.components.AppIcons.Water, null, tint = AppColors.accent, modifier = Modifier.size(20.dp))
+                            Text("Wasser", color = AppColors.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Runde
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(AppColors.card)
+                            .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+                            .clickable { scope.launch { jamService.startRoulette() } }
+                            .padding(vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(de.tipau.promille.ui.components.AppIcons.Dice, null, tint = AppColors.accent, modifier = Modifier.size(20.dp))
+                            Text("Runde", color = AppColors.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+
+                    // SOS
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(AppColors.statusRed.copy(alpha = 0.1f))
+                            .border(0.8.dp, AppColors.statusRed.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                            .clickable { /* Toggle SOS */ }
+                            .padding(vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(de.tipau.promille.ui.components.AppIcons.Shield, null, tint = AppColors.statusRed, modifier = Modifier.size(20.dp))
+                            Text("SOS", color = AppColors.statusRed, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Action Buttons
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Jam Arcade
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(AppColors.card)
+                        .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+                        .clickable { showArcadePicker = true }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(de.tipau.promille.ui.components.AppIcons.Gamepad, null, tint = AppColors.accent, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text("Jam Arcade", color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    Text("›", color = AppColors.textMuted, fontSize = 20.sp)
+                }
+
+                // Freunde einladen
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(AppColors.card)
+                        .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+                        .clickable { showInvite = true }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(de.tipau.promille.ui.components.AppIcons.PersonPlus, null, tint = AppColors.accent, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text("Freunde einladen", color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    Text("›", color = AppColors.textMuted, fontSize = 20.sp)
+                }
+            }
         }
 
         item {
@@ -492,98 +949,6 @@ private fun ActiveJam(
                 isDestructive = true,
                 onClick = { jamService.leaveJam() }
             )
-        }
-    }
-}
-
-@Composable
-private fun CircleAction(glyph: String, tint: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(32.dp)
-            .clip(CircleShape)
-            .background(if (tint == AppColors.accent) AppColors.accent.copy(alpha = 0.12f) else AppColors.card)
-            .border(0.5.dp, if (tint == AppColors.accent) AppColors.accent.copy(alpha = 0.3f) else AppColors.border, CircleShape)
-            .clickable(onClick = onClick)
-    ) {
-        Text(glyph, color = tint, fontSize = 15.sp)
-    }
-}
-
-@Composable
-private fun GameTile(icon: String, title: String, modifier: Modifier, onClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(AppColors.card)
-            .border(0.5.dp, AppColors.border, RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 18.dp)
-    ) {
-        Text(icon, fontSize = 28.sp)
-        Spacer(Modifier.height(6.dp))
-        Text(title, color = AppColors.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun ParticipantRow(
-    participant: JamParticipant,
-    isHost: Boolean,
-    onLongPress: () -> Unit
-) {
-    PromilleCard(
-        Modifier
-            .fillMaxWidth()
-            .combinedClickable(onClick = {}, onLongClick = onLongPress)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (participant.hasSOSActive) AppColors.statusRed.copy(alpha = 0.2f)
-                        else AppColors.accent.copy(alpha = 0.15f)
-                    )
-            ) {
-                Text(
-                    participant.displayName.take(1).uppercase(),
-                    color = if (participant.hasSOSActive) AppColors.statusRed else AppColors.accent,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        participant.displayName,
-                        color = AppColors.text,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    if (isHost) {
-                        Spacer(Modifier.width(6.dp))
-                        Box(
-                            Modifier
-                                .background(AppColors.accent.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text("Host", color = AppColors.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-                Text(
-                    text = participant.currentBAC?.permilleString() ?: "Teilt keinen Wert",
-                    color = AppColors.textDim,
-                    fontSize = 12.sp
-                )
-            }
         }
     }
 }

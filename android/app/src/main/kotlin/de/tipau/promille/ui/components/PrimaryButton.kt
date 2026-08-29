@@ -1,4 +1,7 @@
 package de.tipau.promille.ui.components
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -9,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,7 +27,7 @@ fun PrimaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: String? = null,
+    icon: ImageVector? = null,
     isDestructive: Boolean = false,
     enabled: Boolean = true
 ) {
@@ -49,12 +53,12 @@ fun PrimaryButton(
             horizontalArrangement = Arrangement.Center
         ) {
             if (icon != null) {
-                Text(icon, fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp))
+                Icon(icon, null, modifier = Modifier.size(18.dp).padding(end = 8.dp))
             }
             Text(
                 text = text,
                 fontWeight = FontWeight.Bold,
-                fontSize = 15.sp
+                fontSize = 17.sp
             )
         }
     }
@@ -78,7 +82,7 @@ fun PromilleFAB(
             contentColor = AppColors.background
         ),
         shape = CircleShape, // Capsule
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
         contentPadding = PaddingValues(horizontal = 22.dp, vertical = 14.dp),
         modifier = modifier.height(52.dp)
     ) {
@@ -88,7 +92,7 @@ fun PromilleFAB(
         ) {
             Text(icon, fontWeight = FontWeight.Bold, fontSize = 17.sp)
             Spacer(Modifier.width(8.dp))
-            Text(text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text(text, fontWeight = FontWeight.Bold, fontSize = 17.sp)
         }
     }
 }
