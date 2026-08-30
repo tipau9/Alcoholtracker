@@ -65,6 +65,7 @@ class SettingsViewModelTest {
         override suspend fun insertOrReplace(template: DrinkTemplateEntity) {}
         override suspend fun update(template: DrinkTemplateEntity) {}
         override suspend fun count(): Int = 0
+        override suspend fun getAllBarcodes(): List<String> = emptyList()
         override suspend fun deleteCustom() {}
     }
 

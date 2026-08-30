@@ -35,6 +35,11 @@ interface DrinkTemplateDao {
     @Query("SELECT COUNT(*) FROM drink_template")
     suspend fun count(): Int
 
+    /** Dedupe key for the community sync - avoids re-inserting a barcode that
+     *  already exists (seeded catalog or a prior sync) under a new row id. */
+    @Query("SELECT barcode FROM drink_template WHERE barcode != ''")
+    suspend fun getAllBarcodes(): List<String>
+
     /**
      * Only the user's own templates. The seeded catalog is not user data, so an
      * account switch must not wipe it.

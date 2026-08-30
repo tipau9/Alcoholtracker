@@ -35,5 +35,11 @@ class PromilleApplication : Application() {
                 templateDao = container.drinkTemplateDao
             )
         }
+
+        // Sync approved community drinks so barcode scans can match them
+        // locally. Fire-and-forget, same as the iOS launch sync.
+        applicationScope.launch {
+            container.drinkTemplateRepository.syncCommunityDrinks(container.supabase)
+        }
     }
 }

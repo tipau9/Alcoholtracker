@@ -110,6 +110,9 @@ class FakeDrinkTemplateDao : DrinkTemplateDao {
 
     override suspend fun count(): Int = templates.value.size
 
+    override suspend fun getAllBarcodes(): List<String> =
+        templates.value.values.map { it.barcode }.filter { it.isNotEmpty() }
+
     override suspend fun deleteCustom() {
         templates.update { map -> map.filterValues { !it.isCustom } }
     }

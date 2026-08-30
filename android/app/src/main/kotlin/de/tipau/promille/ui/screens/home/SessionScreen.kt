@@ -287,7 +287,8 @@ fun SessionScreen(
             },
             onStartSipCounter = { template ->
                 viewModel.startSipCounter(template)
-            }
+            },
+            supabase = container?.supabase
         )
     }
 

@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -33,13 +34,21 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import de.tipau.promille.AppColors
 import de.tipau.promille.R
+import de.tipau.promille.bac.DrinkCategory
 import de.tipau.promille.data.DrinkEntity
 import de.tipau.promille.data.DrinkTemplateEntity
 import de.tipau.promille.fixedSp
+import de.tipau.promille.network.SupabaseService
+import de.tipau.promille.network.contributeDrink
+import de.tipau.promille.network.lookupCommunityBarcode
 import de.tipau.promille.repository.DrinkTemplateRepository
+import de.tipau.promille.service.BarcodeService
+import de.tipau.promille.service.CandidateSource
+import de.tipau.promille.service.DrinkTemplateCandidate
 import de.tipau.promille.ui.components.AppIcons
 import de.tipau.promille.ui.components.DrinkIconView
 import de.tipau.promille.ui.components.SectionLabel
+import kotlinx.coroutines.launch
 import java.util.Locale
 import java.util.UUID
 import de.tipau.promille.AppSerif
@@ -129,7 +138,8 @@ fun QuickAddSheet(
     templateRepository: DrinkTemplateRepository,
     onDismiss: () -> Unit,
     onDrinkAdded: (DrinkEntity) -> Unit,
-    onStartSipCounter: ((DrinkTemplateEntity) -> Unit)? = null
+    onStartSipCounter: ((DrinkTemplateEntity) -> Unit)? = null,
+    supabase: SupabaseService? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var searchQuery by remember { mutableStateOf("") }
@@ -141,7 +151,11 @@ fun QuickAddSheet(
     var showSipPicker by remember { mutableStateOf(false) }
     var showBarcodeScanner by remember { mutableStateOf(false) }
     var selectedTemplateForAmount by remember { mutableStateOf<DrinkTemplateEntity?>(null) }
+    var barcodeCandidate by remember { mutableStateOf<DrinkTemplateCandidate?>(null) }
+    var barcodeError by remember { mutableStateOf<String?>(null) }
     var activeTab by remember { mutableStateOf(QATab.DRINKS) }
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     val favorites by templateRepository.getTopFavorites(6)
         .collectAsState(initial = emptyList())
@@ -178,7 +192,32 @@ fun QuickAddSheet(
                 if (match != null) {
                     selectedTemplateForAmount = match
                 } else {
-                    searchQuery = ean
+                    // Local/synced-community miss: chase community DB, then Open
+                    // Food Facts, then fall back to a blank manual candidate -
+                    // mirrors BarcodeCandidateSheet.swift's source chain.
+                    coroutineScope.launch {
+                        val communityHit = supabase?.let {
+                            runCatching { it.lookupCommunityBarcode(ean) }.getOrNull()
+                        }
+                        barcodeCandidate = when {
+                            communityHit != null -> DrinkTemplateCandidate.create(
+                                name = communityHit.name,
+                                abv = communityHit.abv,
+                                barcode = ean,
+                                volume = communityHit.volume,
+                                category = DrinkCategory.from(communityHit.category),
+                                foundInDatabase = true,
+                                source = CandidateSource.COMMUNITY
+                            )
+                            else -> BarcodeService.lookup(ean) ?: DrinkTemplateCandidate.create(
+                                name = "",
+                                abv = 0.0,
+                                barcode = ean,
+                                foundInDatabase = false,
+                                source = CandidateSource.MANUAL
+                            )
+                        }
+                    }
                 }
             },
             onDismiss = { showBarcodeScanner = false }
@@ -263,6 +302,59 @@ fun QuickAddSheet(
             onDismiss = { selectedTemplateForAmount = null },
             onDrinkAdded = { drink ->
                 selectedTemplateForAmount = null
+                onDrinkAdded(drink)
+                onDismiss()
+            }
+        )
+    }
+
+    barcodeCandidate?.let { candidate ->
+        BarcodeCandidateSheet(
+            candidate = candidate,
+            onDismiss = { barcodeCandidate = null },
+            onConfirm = { name, volume, abv, category ->
+                barcodeCandidate = null
+                val calories = (volume * (abv / 100.0) * 0.789 * 7).toInt()
+                val template = DrinkTemplateEntity(
+                    id = UUID.randomUUID().toString(),
+                    name = name,
+                    categoryRaw = category.raw,
+                    volume = volume,
+                    abv = abv,
+                    calories = calories,
+                    iconName = "",
+                    barcode = candidate.barcode,
+                    isCustom = true
+                )
+                val drink = DrinkEntity(
+                    id = UUID.randomUUID().toString(),
+                    templateID = template.id,
+                    name = name,
+                    volume = volume,
+                    abv = abv,
+                    calories = calories,
+                    iconName = "",
+                    categoryRaw = category.raw,
+                    timestampEpochSeconds = System.currentTimeMillis() / 1000
+                )
+                coroutineScope.launch {
+                    templateRepository.insertLocalTemplate(template)
+                    allTemplates.add(template)
+                    if (supabase != null) {
+                        runCatching {
+                            supabase.contributeDrink(
+                                context = context,
+                                name = name,
+                                category = category.raw,
+                                volume = volume,
+                                abv = abv,
+                                calories = calories,
+                                iconName = "",
+                                barcode = candidate.barcode
+                            )
+                        }
+                    }
+                }
                 onDrinkAdded(drink)
                 onDismiss()
             }
