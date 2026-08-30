@@ -128,16 +128,39 @@ jobs:
         run: |
           UDID=${{ steps.sim.outputs.udid }}
           APP=build/Build/Products/Debug-iphonesimulator/Alcoholtracker.app
-          xcrun simctl install "$UDID" "$APP"
-          echo "=== launching with -selfCheck ==="
-          ( xcrun simctl launch --console-pty "$UDID" com.tipau.Alcoholtracker -selfCheck > selfcheck.log 2>&1 ) &
-          for i in $(seq 1 30); do
+
+          # A log with only the launch PID line (no SELFCHECK SUMMARY at all) is the
+          # known simulator capture flake, not a real failure - see memory
+          # selfcheck-flake-empty-log. Re-boot and re-install on retry, not just
+          # re-launch, since a broken pty capture doesn't clear on its own. A real
+          # SELFCHECK FAIL is never retried - it exits immediately.
+          for attempt in 1 2; do
+            if [ "$attempt" -gt 1 ]; then
+              echo "=== attempt $attempt: re-boot + re-install after empty capture ==="
+              xcrun simctl shutdown "$UDID" 2>/dev/null || true
+              xcrun simctl boot "$UDID"
+              xcrun simctl bootstatus "$UDID" -b
+              xcrun simctl install "$UDID" "$APP"
+            else
+              xcrun simctl install "$UDID" "$APP"
+            fi
+
+            echo "=== launching with -selfCheck (attempt $attempt) ==="
+            : > selfcheck.log
+            ( xcrun simctl launch --console-pty "$UDID" com.tipau.Alcoholtracker -selfCheck > selfcheck.log 2>&1 ) &
+            for i in $(seq 1 30); do
+              grep -q "SELFCHECK SUMMARY" selfcheck.log && break
+              sleep 1
+            done
+            xcrun simctl terminate "$UDID" com.tipau.Alcoholtracker 2>/dev/null || true
+
             grep -q "SELFCHECK SUMMARY" selfcheck.log && break
-            sleep 1
+            if [ "$attempt" -eq 2 ]; then
+              echo "no SELFCHECK output after retry - app did not run the hook"; tail -40 selfcheck.log; exit 1
+            fi
           done
-          xcrun simctl terminate "$UDID" com.tipau.Alcoholtracker 2>/dev/null || true
           echo "=== SELFCHECK OUTPUT ==="
-          grep "SELFCHECK" selfcheck.log || { echo "no SELFCHECK output - app did not run the hook"; tail -40 selfcheck.log; exit 1; }
+          grep "SELFCHECK" selfcheck.log
 
       - name: Evaluate results
         run: |
@@ -276,3 +299,29 @@ jobs:
             bac_vectors.json
             emit.log
           retention-days: 14
+
+  # Automates memory `merge-branch-on-release`: perf/icon-cache into main once a
+  # dispatched build is verified green. Gated on BOTH build and selfcheck - build
+  # alone only proves it compiles, not that the runtime math is correct. Only
+  # fires for manual dispatch on that specific branch; tag-push releases and any
+  # other branch are untouched.
+  merge-to-main:
+    needs: [build, selfcheck]
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/perf/icon-cache'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Merge perf/icon-cache into main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main perf/icon-cache
+          git checkout main
+          git merge --no-ff origin/perf/icon-cache -m "Merge perf/icon-cache into main (auto, green build+selfcheck)"
+          git push origin main
