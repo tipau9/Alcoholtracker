@@ -142,7 +142,8 @@ fun activeJamRoster(
     me: JamParticipant,
     myUserID: String?,
     tombstonedIDs: Set<String>,
-    nowEpochSeconds: Long
+    nowEpochSeconds: Long,
+    existingParticipants: List<JamParticipant> = emptyList()
 ): List<JamParticipant> {
     val others = serverRows.filter { p ->
         p.id != me.id &&
@@ -150,7 +151,21 @@ fun activeJamRoster(
             p.id !in tombstonedIDs &&
             nowEpochSeconds - p.lastUpdatedEpochSeconds <= STALE_PARTICIPANT_SECONDS
     }
-    return others + me
+
+    // Keep multipeer-only peers (proximity peers with no server row, e.g. a
+    // discovered nearby jam that never had one, or an anonymous host):
+    // rebuilding purely from server rows made them flicker in and out every
+    // poll cycle. They persist regardless of age; only leave/kick drops them.
+    val otherIDs = others.map { it.id }.toSet()
+    val otherUserIDs = others.mapNotNull { it.userID }.toSet()
+    val keptProximityPeers = existingParticipants.filter { p ->
+        p.id != me.id &&
+            p.connectionType == JamConnectionType.PROXIMITY &&
+            p.id !in tombstonedIDs &&
+            p.id !in otherIDs &&
+            (p.userID == null || p.userID !in otherUserIDs)
+    }
+    return others + keptProximityPeers + me
 }
 
 /** True when our own row vanished from the server, which means the host kicked us. */

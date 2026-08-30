@@ -12,6 +12,7 @@ import de.tipau.promille.sync.BACPublisher
 import de.tipau.promille.sync.ConnectivityWatcher
 import de.tipau.promille.sync.FriendSyncService
 import de.tipau.promille.sync.JamService
+import de.tipau.promille.service.MultipeerService
 import de.tipau.promille.sync.HistorySyncService
 import de.tipau.promille.sync.OfflineSyncService
 import de.tipau.promille.repository.CrewRepository
@@ -37,10 +38,10 @@ class AppContainer(context: Context) {
     private val database: AppDatabase = AppDatabase.getInstance(context)
 
     // DAOs
-    private val drinkDao = database.drinkDao()
-    private val drinkTemplateDao = database.drinkTemplateDao()
-    private val userProfileDao = database.userProfileDao()
-    private val sessionEventDao = database.sessionEventDao()
+    val drinkDao = database.drinkDao()
+    val drinkTemplateDao = database.drinkTemplateDao()
+    val userProfileDao = database.userProfileDao()
+    val sessionEventDao = database.sessionEventDao()
     private val crewMemberDao = database.crewMemberDao()
     private val dayNoteDao = database.dayNoteDao()
     private val customMixDao = database.customMixDao()
@@ -54,6 +55,7 @@ class AppContainer(context: Context) {
     val sessionEventRepository = SessionEventRepository(sessionEventDao)
     val dayNoteRepository = DayNoteRepository(dayNoteDao)
     val crewRepository = CrewRepository(crewMemberDao)
+    val photoMemoryRepository = de.tipau.promille.repository.PhotoMemoryRepository(photoMemoryDao)
 
     // Network
     val supabase = SupabaseService(SupabaseTransport(SessionStore(context)))
@@ -81,7 +83,7 @@ class AppContainer(context: Context) {
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** Its polling has to outlive the jam screen, not the composition. */
-    val jamService = JamService(supabase, syncScope)
+    val jamService = JamService(supabase, syncScope, MultipeerService(context))
 
     private val connectivity = ConnectivityWatcher(context, syncScope) {
         offlineSync.syncAll()

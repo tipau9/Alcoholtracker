@@ -41,6 +41,7 @@ import de.tipau.promille.network.submitJamArcadeResult
 import de.tipau.promille.network.submitJamWaterTime
 import de.tipau.promille.network.updateJamHost
 import de.tipau.promille.network.updateMyJamStatus
+import de.tipau.promille.service.MultipeerService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -54,18 +55,21 @@ import kotlin.random.Random
 class JamException(message: String) : Exception(message)
 
 /**
- * Port of JamService.swift over the Supabase transport.
+ * Port of JamService.swift, orchestrating both transports exactly as iOS does:
+ * Supabase for [JamVisibility.usesServer] jams, [MultipeerService] (the Nearby
+ * Connections port of MultipeerConnectivity) for [JamVisibility.usesProximity]
+ * ones. A [JamVisibility.PROXIMITY_AND_CODE] jam runs both at once; a
+ * [JamVisibility.PROXIMITY_ONLY] one never touches the server.
  *
- * The proximity half of the iOS service (MultipeerConnectivity, Nearby
- * Connections on this side) is not wired yet, so a proximity-only jam cannot be
- * created here: it would produce a session with no transport at all, which is
- * worse than saying so. Everything else -- create, join by code, join a friend's
- * jam, invitations, roster polling, kick, host transfer, ghost-host election and
- * the three mini games -- runs against the server exactly as on iOS.
+ * [multipeer] is nullable so tests and any call site that has no Context handy
+ * still compile; passing null just means proximity jams behave as before this
+ * port (create throws, since a session with no transport at all is worse than
+ * saying so).
  */
 class JamService(
     private val supabase: SupabaseService,
     private val scope: CoroutineScope,
+    private val multipeer: MultipeerService? = null,
     private val nowSeconds: () -> Long = { System.currentTimeMillis() / 1000 }
 ) {
 
@@ -92,6 +96,12 @@ class JamService(
 
     private val _amHost = MutableStateFlow(false)
     val amHost: StateFlow<Boolean> = _amHost.asStateFlow()
+
+    // Photos received from peers in the current jam, capped like iOS's
+    // receivedPhotos (~200 KB each, so this bounds memory to ~6 MB).
+    private val _receivedPhotos = MutableStateFlow<List<MultipeerService.JamPhotoPayload>>(emptyList())
+    val receivedPhotos: StateFlow<List<MultipeerService.JamPhotoPayload>> = _receivedPhotos.asStateFlow()
+    private val maxReceivedPhotos = 30
 
     val mySettings = MutableStateFlow(JamSettings())
 
@@ -124,16 +134,113 @@ class JamService(
         return tombstones.keys.toSet()
     }
 
+    /** Jams discovered nearby while [startNearbyDiscovery] is running. */
+    val nearbyJams: StateFlow<List<Jam>> = multipeer?.discoveredJams ?: MutableStateFlow(emptyList())
+
+    init {
+        multipeer?.let { mp ->
+            mp.onStatusReceived = { broadcast ->
+                if (broadcast.jamID == _currentJam.value?.id) {
+                    _currentJam.value = _currentJam.value?.let {
+                        it.copy(participants = it.participants.upserting(broadcast.participant))
+                    }
+                }
+            }
+            mp.onControlReceived = { control -> handleIncomingControl(control) }
+            mp.onRouletteReceived = { payload ->
+                if (payload.jamID == _currentJam.value?.id && _incomingRoulette.value?.id != payload.id) {
+                    _incomingRoulette.value = payload
+                }
+            }
+            mp.onWaterReceived = { payload ->
+                if (payload.jamID == _currentJam.value?.id) {
+                    _waterScores.value = when (payload.kind) {
+                        MultipeerService.WaterKind.RESET -> emptyList()
+                        MultipeerService.WaterKind.RESULT -> mergeWaterScores(
+                            local = listOf(WaterScore(payload.participantID, payload.name, payload.milliseconds)),
+                            server = _waterScores.value.filterNot { it.participantID == payload.participantID },
+                            myParticipantID = myParticipantID
+                        )
+                    }
+                }
+            }
+            mp.onArcadeRoundReceived = { round ->
+                if (round.jamID == _currentJam.value?.id && _incomingArcadeRound.value?.id != round.id) {
+                    _incomingArcadeRound.value = round
+                    _arcadeResults.value = emptyList()
+                }
+            }
+            mp.onArcadeResultReceived = { result ->
+                if (result.jamID == _currentJam.value?.id) {
+                    _arcadeResults.value = _arcadeResults.value
+                        .filterNot { it.participantID == result.participantID } + result
+                }
+            }
+            mp.onPhotoReceived = { photo -> appendPhoto(photo) }
+        }
+    }
+
+    private fun appendPhoto(photo: MultipeerService.JamPhotoPayload) {
+        val updated = _receivedPhotos.value + photo
+        _receivedPhotos.value = if (updated.size > maxReceivedPhotos) {
+            updated.subList(updated.size - maxReceivedPhotos, updated.size)
+        } else {
+            updated
+        }
+    }
+
+    /** Shares a photo with the jam over the proximity channel; disabled without connected peers. */
+    fun sendPhoto(jpeg: ByteArray) {
+        if (_currentJam.value == null) throw JamException("Kein aktiver Jam.")
+        if (!mySettings.value.sharePhotos) throw JamException("Fotos teilen ist deaktiviert.")
+        if (multipeer?.hasConnectedPeers != true) throw JamException("Niemand in Reichweite.")
+        val bac = if (mySettings.value.shareBAC) myCurrentBAC.value else null
+        multipeer.broadcastPhoto(jpeg, myDisplayName(), bac)
+        // Own copy shown immediately, without waiting on the mesh round trip.
+        appendPhoto(MultipeerService.JamPhotoPayload("Du", jpeg, bac))
+    }
+
+    /** Moderation messages arriving over the proximity channel. */
+    private fun handleIncomingControl(control: MultipeerService.JamControl) {
+        val jam = _currentJam.value ?: return
+        if (control.jamID != jam.id) return
+        when (control.action) {
+            MultipeerService.ControlAction.KICK -> if (control.participantID == myParticipantID) {
+                leaveJam()
+            } else {
+                tombstone(control.participantID)
+                _currentJam.value = jam.copy(participants = jam.participants.filterNot { it.id == control.participantID })
+            }
+            MultipeerService.ControlAction.LEAVE -> {
+                tombstone(control.participantID)
+                _currentJam.value = jam.copy(participants = jam.participants.filterNot { it.id == control.participantID })
+            }
+            MultipeerService.ControlAction.TRANSFER_HOST -> {
+                val uid = control.userID ?: return
+                _amHost.value = control.participantID == myParticipantID
+                _currentJam.value = jam.copy(hostUserID = uid, hostName = control.newHostName ?: jam.hostName)
+            }
+        }
+    }
+
+    /** Starts browsing for nearby jams; the create/join lobby screen owns the lifecycle. */
+    fun startNearbyDiscovery() = multipeer?.startBrowsing()
+
+    fun stopNearbyDiscovery() = multipeer?.stopBrowsing()
+
     // MARK: Create and join
 
     suspend fun createJam(visibility: JamVisibility, settings: JamSettings): Jam {
-        if (visibility == JamVisibility.PROXIMITY_ONLY) {
-            throw JamException("Reine Bluetooth-Jams gibt es auf Android noch nicht.")
+        if (visibility.usesProximity && multipeer == null) {
+            throw JamException("Reine Bluetooth-Jams gibt es auf diesem Gerät nicht.")
         }
-        if (!supabase.isSignedIn.value) throw JamException("Dafür musst du angemeldet sein.")
+        if (visibility.usesServer && !supabase.isSignedIn.value) {
+            throw JamException("Dafür musst du angemeldet sein.")
+        }
 
-        // The server row is written before any local state changes, so a failure
-        // cannot leave an active jam screen behind with nothing behind it.
+        // The server row (when there is one) is written before any local state
+        // changes, so a failure cannot leave an active jam screen behind with
+        // nothing behind it.
         mySettings.value = settings
         myParticipantID = UUID.randomUUID().toString()
         myJoinedAt = nowSeconds()
@@ -144,14 +251,15 @@ class JamService(
         val jam = Jam(
             id = UUID.randomUUID().toString(),
             code = generateJamCode(),
-            hostUserID = supabase.userId ?: "",
+            hostUserID = if (visibility.usesServer) supabase.userId ?: "" else "",
             hostName = hostName,
             createdAtEpochSeconds = nowSeconds(),
             visibility = visibility,
             settings = settings,
             participants = listOf(makeMyParticipant())
         )
-        supabase.publishJam(jam)
+        if (visibility.usesServer) supabase.publishJam(jam)
+        if (visibility.usesProximity) multipeer?.startAdvertisingJam(jam)
 
         _amHost.value = true
         _currentJam.value = jam
@@ -175,19 +283,37 @@ class JamService(
 
     suspend fun joinJamFromFriend(jam: Jam) = join(jam, JamConnectionType.FRIEND)
 
+    /** Joins a jam found via [startNearbyDiscovery], connecting over Bluetooth/Wi-Fi. */
+    suspend fun joinNearbyJam(jam: Jam) = join(jam, JamConnectionType.PROXIMITY)
+
     private suspend fun join(jam: Jam, type: JamConnectionType) {
-        if (!supabase.isSignedIn.value) throw JamException("Dafür musst du angemeldet sein.")
+        // Nearby-discovered jams are always reported as usesServer (the wire
+        // protocol has no room for the real visibility, see onEndpointFound),
+        // so this gate only hard-blocks CODE/FRIEND joins - matching iOS,
+        // whose joinJamNearby registers with the server via `try?` rather
+        // than requiring sign-in first.
+        if (jam.visibility.usesServer && !supabase.isSignedIn.value && type != JamConnectionType.PROXIMITY) {
+            throw JamException("Dafür musst du angemeldet sein.")
+        }
         myParticipantID = UUID.randomUUID().toString()
         myJoinedAt = nowSeconds()
         myConnectionType = type
         confirmedOnServer = false
 
-        supabase.joinJam(
-            jamID = jam.id,
-            participantID = myParticipantID,
-            initialBAC = if (mySettings.value.shareBAC) myCurrentBAC.value else null,
-            connectionType = type.raw
-        )
+        if (jam.visibility.usesServer) {
+            val register: suspend () -> Unit = {
+                supabase.joinJam(
+                    jamID = jam.id,
+                    participantID = myParticipantID,
+                    initialBAC = if (mySettings.value.shareBAC) myCurrentBAC.value else null,
+                    connectionType = type.raw
+                )
+            }
+            if (type == JamConnectionType.PROXIMITY) runCatching { register() } else register()
+        }
+        // Connects at once if the host was already discovered; otherwise this
+        // just sets activeJamID so a discovery arriving later auto-connects.
+        if (jam.visibility.usesProximity) multipeer?.connectToJam(jam.id)
 
         _amHost.value = jam.hostUserID.isNotEmpty() && jam.hostUserID == supabase.userId
         _currentJam.value = jam.copy(
@@ -211,6 +337,29 @@ class JamService(
         }
         val deletesJam = wasHost && electedHost == null
 
+        if (jam.visibility.usesProximity) {
+            if (wasHost && electedHost != null) {
+                multipeer?.broadcastControl(
+                    MultipeerService.JamControl(
+                        action = MultipeerService.ControlAction.TRANSFER_HOST,
+                        jamID = jam.id,
+                        participantID = electedHost.id,
+                        userID = electedHost.userID,
+                        newHostName = electedHost.displayName
+                    )
+                )
+            } else {
+                multipeer?.broadcastControl(
+                    MultipeerService.JamControl(
+                        action = MultipeerService.ControlAction.LEAVE,
+                        jamID = jam.id,
+                        participantID = myParticipantID
+                    )
+                )
+            }
+            multipeer?.stopAll()
+        }
+
         stopTimers()
         _currentJam.value = null
         _amHost.value = false
@@ -221,7 +370,10 @@ class JamService(
         _incomingArcadeRound.value = null
         _arcadeResults.value = emptyList()
         _availableJamsFromFriends.value = emptyList()
+        _receivedPhotos.value = emptyList()
         tombstones.clear()
+
+        if (!jam.visibility.usesServer) return
 
         scope.launch {
             if (deletesJam) {
@@ -249,7 +401,18 @@ class JamService(
         _currentJam.value = jam.copy(
             participants = jam.participants.filterNot { it.id == participant.id }
         )
-        scope.launch { runCatching { supabase.removeParticipant(jam.id, participant.id) } }
+        if (jam.visibility.usesProximity) {
+            multipeer?.broadcastControl(
+                MultipeerService.JamControl(
+                    action = MultipeerService.ControlAction.KICK,
+                    jamID = jam.id,
+                    participantID = participant.id
+                )
+            )
+        }
+        if (jam.visibility.usesServer) {
+            scope.launch { runCatching { supabase.removeParticipant(jam.id, participant.id) } }
+        }
     }
 
     fun canTransferHost(participant: JamParticipant): Boolean =
@@ -261,7 +424,20 @@ class JamService(
         val uid = participant.userID ?: return
         _amHost.value = false
         _currentJam.value = jam.copy(hostUserID = uid, hostName = participant.displayName)
-        scope.launch { runCatching { supabase.updateJamHost(jam.id, uid, participant.displayName) } }
+        if (jam.visibility.usesProximity) {
+            multipeer?.broadcastControl(
+                MultipeerService.JamControl(
+                    action = MultipeerService.ControlAction.TRANSFER_HOST,
+                    jamID = jam.id,
+                    participantID = participant.id,
+                    userID = uid,
+                    newHostName = participant.displayName
+                )
+            )
+        }
+        if (jam.visibility.usesServer) {
+            scope.launch { runCatching { supabase.updateJamHost(jam.id, uid, participant.displayName) } }
+        }
     }
 
     // MARK: Invitations and friend jams
@@ -304,14 +480,28 @@ class JamService(
             server = _waterScores.value.filterNot { it.participantID == myParticipantID },
             myParticipantID = myParticipantID
         )
-        runCatching { supabase.submitJamWaterTime(jam.id, name, milliseconds) }
+        if (jam.visibility.usesProximity) {
+            multipeer?.broadcastWater(
+                MultipeerService.WaterPayload(jam.id, MultipeerService.WaterKind.RESULT, myParticipantID, name, milliseconds)
+            )
+        }
+        if (jam.visibility.usesServer) {
+            runCatching { supabase.submitJamWaterTime(jam.id, name, milliseconds) }
+        }
     }
 
     suspend fun resetWaterLeaderboard() {
         val jam = _currentJam.value ?: return
         if (!_amHost.value) return
         _waterScores.value = emptyList()
-        runCatching { supabase.resetJamWater(jam.id) }
+        if (jam.visibility.usesProximity) {
+            multipeer?.broadcastWater(
+                MultipeerService.WaterPayload(jam.id, MultipeerService.WaterKind.RESET, myParticipantID, myDisplayName(), 0)
+            )
+        }
+        if (jam.visibility.usesServer) {
+            runCatching { supabase.resetJamWater(jam.id) }
+        }
     }
 
     suspend fun startRoulette() {
@@ -327,7 +517,8 @@ class JamService(
             starterID = myParticipantID
         )
         _incomingRoulette.value = payload
-        runCatching { supabase.setJamRoulette(payload) }
+        if (jam.visibility.usesProximity) multipeer?.broadcastRoulette(payload)
+        if (jam.visibility.usesServer) runCatching { supabase.setJamRoulette(payload) }
     }
 
     suspend fun startArcade(game: JamArcadeGame) {
@@ -351,7 +542,8 @@ class JamService(
         )
         _incomingArcadeRound.value = round
         _arcadeResults.value = emptyList()
-        runCatching { supabase.setJamArcadeRound(round) }
+        if (jam.visibility.usesProximity) multipeer?.broadcastArcadeRound(round)
+        if (jam.visibility.usesServer) runCatching { supabase.setJamArcadeRound(round) }
     }
 
     suspend fun submitArcadeResult(value: Double, disqualified: Boolean = false) {
@@ -368,7 +560,8 @@ class JamService(
         )
         _arcadeResults.value = _arcadeResults.value
             .filterNot { it.participantID == myParticipantID } + result
-        runCatching { supabase.submitJamArcadeResult(result) }
+        if (jam.visibility.usesProximity) multipeer?.broadcastArcadeResult(result)
+        if (jam.visibility.usesServer) runCatching { supabase.submitJamArcadeResult(result) }
     }
 
     fun closeArcade() {
@@ -386,8 +579,10 @@ class JamService(
         stopTimers()
         pollJob = scope.launch {
             while (true) {
-                syncParticipants()
-                syncJamGames()
+                if (_currentJam.value?.visibility?.usesServer == true) {
+                    syncParticipants()
+                    syncJamGames()
+                }
                 delay(POLL_INTERVAL_MS)
             }
         }
@@ -395,13 +590,18 @@ class JamService(
             while (true) {
                 delay(STATUS_INTERVAL_MS)
                 val jam = _currentJam.value ?: continue
-                runCatching {
-                    supabase.updateMyJamStatus(
-                        jamID = jam.id,
-                        bac = if (mySettings.value.shareBAC) myCurrentBAC.value else null,
-                        status = if (mySettings.value.shareStatus) myCurrentStatus.value else null,
-                        sosActive = mySettings.value.shareSOSStatus && mySOSActive.value
-                    )
+                if (jam.visibility.usesProximity) {
+                    multipeer?.broadcastParticipant(makeMyParticipant(), jam.id)
+                }
+                if (jam.visibility.usesServer) {
+                    runCatching {
+                        supabase.updateMyJamStatus(
+                            jamID = jam.id,
+                            bac = if (mySettings.value.shareBAC) myCurrentBAC.value else null,
+                            status = if (mySettings.value.shareStatus) myCurrentStatus.value else null,
+                            sosActive = mySettings.value.shareSOSStatus && mySOSActive.value
+                        )
+                    }
                 }
                 // Keep our own row in the local roster fresh too, otherwise the
                 // staleness filter would eventually drop us from our own list.
@@ -440,7 +640,8 @@ class JamService(
             me = makeMyParticipant(),
             myUserID = myUserID,
             tombstonedIDs = liveTombstones(),
-            nowEpochSeconds = nowSeconds()
+            nowEpochSeconds = nowSeconds(),
+            existingParticipants = jam.participants
         )
         var updated = jam.copy(participants = roster)
 

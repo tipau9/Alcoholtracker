@@ -167,6 +167,28 @@ class JamActiveRosterTest {
         assertFalse(wasKickedFromJam(listOf(p("a"), p("x", userID = "u-me")), "me", "u-me"))
         assertFalse(wasKickedFromJam(listOf(p("me")), "me", null))
     }
+
+    @Test
+    fun `a proximity peer with no server row survives the poll`() {
+        val peer = p("bt").copy(connectionType = JamConnectionType.PROXIMITY)
+        val roster = activeJamRoster(
+            serverRows = emptyList(),
+            me = me, myUserID = "u-me", tombstonedIDs = emptySet(), nowEpochSeconds = now,
+            existingParticipants = listOf(peer)
+        )
+        assertEquals(listOf("bt", "me"), roster.map { it.id })
+    }
+
+    @Test
+    fun `a proximity peer we just kicked is not resurrected from the local copy`() {
+        val peer = p("bt").copy(connectionType = JamConnectionType.PROXIMITY)
+        val roster = activeJamRoster(
+            serverRows = emptyList(),
+            me = me, myUserID = "u-me", tombstonedIDs = setOf("bt"), nowEpochSeconds = now,
+            existingParticipants = listOf(peer)
+        )
+        assertEquals(listOf("me"), roster.map { it.id })
+    }
 }
 
 /** The water leaderboard merges two sources, one of which can race our own submit. */

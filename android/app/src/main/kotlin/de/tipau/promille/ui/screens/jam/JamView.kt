@@ -23,11 +23,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.Manifest
+import android.content.Context
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import de.tipau.promille.AppColors
 import de.tipau.promille.bac.Jam
 import de.tipau.promille.bac.JamArcadeGame
@@ -41,14 +48,37 @@ import de.tipau.promille.ui.components.PromilleCard
 import de.tipau.promille.ui.components.SectionLabel
 import de.tipau.promille.ui.screens.auth.AuthGateSheet
 import kotlinx.coroutines.launch
+import de.tipau.promille.AppSans
+import de.tipau.promille.TabularFigures
 
 /**
  * Port of JamLobbyView + ActiveJamView over the server transport.
  *
- * The lobby's "in der Nähe" section has no counterpart yet: Nearby Connections
- * is not wired, so advertising a proximity jam would list a session nobody can
- * reach. It is left out rather than shown empty and broken.
+ * The lobby's "in der Nähe" section (browsing [JamService.nearbyJams] via
+ * [JamService.startNearbyDiscovery]) has no UI yet, so a PROXIMITY_ONLY jam
+ * can only be reached by whoever already has it as currentJam - creating and
+ * code-based joining both work, discovery browsing does not. Left out rather
+ * than shown empty and broken.
  */
+private fun proximityPermissions(): Array<String> = buildList {
+    if (Build.VERSION.SDK_INT >= 31) {
+        add(Manifest.permission.BLUETOOTH_ADVERTISE)
+        add(Manifest.permission.BLUETOOTH_CONNECT)
+        add(Manifest.permission.BLUETOOTH_SCAN)
+    }
+    if (Build.VERSION.SDK_INT >= 33) {
+        add(Manifest.permission.NEARBY_WIFI_DEVICES)
+    } else {
+        // Nearby's BLE scan needs fine location pre-33; matches the manifest's
+        // maxSdkVersion="32" entry.
+        add(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
+}.toTypedArray()
+
+private fun hasProximityPermissions(context: Context): Boolean =
+    proximityPermissions().all {
+        ContextCompat.checkSelfPermission(context, it) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
 @Composable
 fun JamView(
     container: AppContainer,
@@ -110,6 +140,26 @@ private fun JamLobby(
         }
     }
 
+    // A PROXIMITY_* jam calls MultipeerService.startAdvertisingJam, which is
+    // a silent no-op (runCatching) without these grants - so request them
+    // first, or the host never becomes visible and nobody can tell why.
+    val context = LocalContext.current
+    var pendingCreate by remember { mutableStateOf<Pair<JamVisibility, JamSettings>?>(null) }
+    val proximityLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        pendingCreate?.let { (visibility, settings) -> run { jamService.createJam(visibility, settings) } }
+        pendingCreate = null
+    }
+    fun createJam(visibility: JamVisibility, settings: JamSettings) {
+        if (visibility.usesProximity && !hasProximityPermissions(context)) {
+            pendingCreate = visibility to settings
+            proximityLauncher.launch(proximityPermissions())
+        } else {
+            run { jamService.createJam(visibility, settings) }
+        }
+    }
+
     if (showAuth) {
         AuthGateSheet(
             supabase = container.supabase,
@@ -123,7 +173,7 @@ private fun JamLobby(
             onDismiss = { showCreate = false },
             onCreate = { visibility, settings ->
                 showCreate = false
-                run { jamService.createJam(visibility, settings) }
+                createJam(visibility, settings)
             }
         )
     }
@@ -529,7 +579,8 @@ private fun ActiveJam(
                         color = AppColors.text,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = AppSans,
+                        style = TabularFigures,
                         letterSpacing = 6.sp
                     )
                 }
@@ -735,7 +786,8 @@ private fun ActiveJam(
                         color = AppColors.text,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = AppSans,
+                        style = TabularFigures,
                         letterSpacing = 6.sp
                     )
                 }
