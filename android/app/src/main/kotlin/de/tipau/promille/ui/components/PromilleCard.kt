@@ -1,4 +1,7 @@
 package de.tipau.promille.ui.components
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,7 +28,7 @@ fun PromilleCard(
         modifier = modifier
             .fillMaxWidth()
             .background(AppColors.card, RoundedCornerShape(16.dp))
-            .border(1.dp, AppColors.border, RoundedCornerShape(16.dp))
+            .border(0.5.dp, AppColors.border, RoundedCornerShape(16.dp))
             .padding(16.dp),
         content = content
     )

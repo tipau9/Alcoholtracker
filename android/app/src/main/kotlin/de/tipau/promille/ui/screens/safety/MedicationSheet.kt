@@ -1,4 +1,11 @@
+
+
 package de.tipau.promille.ui.screens.safety
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+
+
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,9 +48,14 @@ private val MEDICATION_LIST = listOf(
 fun MedicationSheet(
     onDismiss: () -> Unit
 ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         containerColor = AppColors.background,
+        scrimColor = Color.Black.copy(alpha = 0.65f),
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
     ) {
         LazyColumn(
@@ -81,7 +94,7 @@ fun MedicationSheet(
                             .clickable(onClick = onDismiss),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("✕", color = AppColors.textDim, fontSize = 14.sp)
+                        Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(16.dp))
                     }
                 }
             }
@@ -99,7 +112,7 @@ fun MedicationSheet(
                                 .background(med.severityColor.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("💊", fontSize = 18.sp)
+                            Icon(de.tipau.promille.ui.components.AppIcons.Pill, null, tint = AppColors.accent, modifier = Modifier.size(20.dp))
                         }
                         Spacer(Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {

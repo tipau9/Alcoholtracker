@@ -1,4 +1,7 @@
 package de.tipau.promille.ui.screens.admin
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,6 +15,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -67,20 +72,33 @@ fun AdminConsoleSheet(
         if (isAdmin) viewModel.reloadAll()
     }
 
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = AppColors.background,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
+        sheetState = sheetState,
+        containerColor = Color.Transparent,
+        scrimColor = Color.Black.copy(alpha = 0.65f),
+        dragHandle = null
     ) {
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.92f)
-                .padding(horizontal = 20.dp),
-            contentPadding = PaddingValues(bottom = 36.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp, top = 16.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(AppColors.background)
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
         ) {
-            item {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.92f)
+                    .padding(horizontal = 20.dp),
+                contentPadding = PaddingValues(top = 20.dp, bottom = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -286,6 +304,7 @@ fun AdminConsoleSheet(
             }
         }
     }
+}
 }
 
 @Composable

@@ -1,12 +1,20 @@
 package de.tipau.promille.ui.viewmodels
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import de.tipau.promille.BacStatus
+import androidx.compose.ui.graphics.toArgb
+import de.tipau.promille.bac.BacStatus
+import de.tipau.promille.bac.StatusSkin
+import de.tipau.promille.color
 import de.tipau.promille.bac.*
 import de.tipau.promille.data.*
 import de.tipau.promille.repository.*
+import de.tipau.promille.platform.WeatherService
+import de.tipau.promille.service.LocationService
 import de.tipau.promille.service.NotificationService
 import de.tipau.promille.sync.BACPublisher
 import de.tipau.promille.sync.JamService
@@ -17,9 +25,9 @@ import java.time.ZoneId
 import java.util.UUID
 
 enum class BacTrend(val symbol: String, val text: String) {
-    RISING("▲", "steigend"),
+    RISING("↑", "steigend"),
     STABLE("■", "stabil"),
-    FALLING("▼", "fallend")
+    FALLING("↓", "fallend")
 }
 
 data class UndoAction(
@@ -39,26 +47,6 @@ class SessionViewModel(
 
     private val zone = ZoneId.systemDefault()
     private val pace = DrinkPaceMemory.disabled()
-
-    init {
-        // Automatically reschedule sobriety/drive notifications whenever projection or profile changes
-        applicationContext?.let { ctx ->
-            viewModelScope.launch {
-                combine(projection, profileEntity) { proj, prof ->
-                    if (proj != null && prof != null) {
-                        NotificationService.reschedule(
-                            context = ctx,
-                            input = proj,
-                            tipsyThreshold = prof.tipsyThreshold,
-                            warningThreshold = prof.warningThreshold
-                        )
-                    } else {
-                        NotificationService.cancelAll(ctx)
-                    }
-                }.collect()
-            }
-        }
-    }
 
     // 48h rolling window
     private val lookbackSeconds: Long
@@ -98,6 +86,22 @@ class SessionViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), System.currentTimeMillis() / 1000)
 
+    // Weather-driven hydration heat term (extra sweat loss on a warm night).
+    // Mirrors iOS HomeView.weatherSweatML: session span capped at 6h, only
+    // above a 24C "warm" threshold. Silent - only starts if location
+    // permission is already granted; requesting it is a Compose-level concern
+    // (Safety/Trends screens), not this ViewModel's job.
+    private val weatherService = WeatherService()
+    private val currentTempC = MutableStateFlow<Double?>(null)
+    private var lastWeatherFetchAtMs = 0L
+
+    val extraSweatML: StateFlow<Double> = combine(drinks, currentTempC, ticker) { list, temp, nowSeconds ->
+        if (temp == null || temp < 24.0) return@combine 0.0
+        val first = list.minOfOrNull { it.timestampEpochSeconds } ?: return@combine 0.0
+        val hours = ((nowSeconds - first) / 3600.0).coerceIn(0.0, 6.0)
+        HydrationCalculator.heatSweatLossMl(temp, hours)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
     val projection: StateFlow<BacProjectionInput?> = combine(
         drinks, profileEntity, stomachStatus, rawVomits, rawMeals, ticker
     ) { values ->
@@ -126,9 +130,16 @@ class SessionViewModel(
         proj?.currentBac(System.currentTimeMillis() / 1000) ?: 0.0
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val bacStatus: StateFlow<BacStatus> = currentBAC.map { bac ->
-        BacStatus.of(bac)
+    // The band edges are user-adjustable in Settings, so the status has to be
+    // derived against the profile. Reading it off the fixed defaults made those
+    // sliders decorative.
+    val bacStatus: StateFlow<BacStatus> = combine(currentBAC, profileEntity) { bac, profile ->
+        BacStatus.of(bac, profile?.let { UserProfileRepository.toProfile(it) })
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BacStatus.SOBER)
+
+    val statusSkin: StateFlow<StatusSkin> = profileEntity.map { profile ->
+        StatusSkin.from(profile?.statusSkinRaw ?: "standard")
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StatusSkin.STANDARD)
 
     val soberInHours: StateFlow<Double?> = projection.map { proj ->
         proj?.hoursUntil(0.0, System.currentTimeMillis() / 1000)
@@ -236,13 +247,67 @@ class SessionViewModel(
     val undoAction: StateFlow<UndoAction?> = _undoAction.asStateFlow()
 
     // Active sip drink counter state
-    private val _activeSipDrink = MutableStateFlow<Drink?>(null)
-    val activeSipDrink: StateFlow<Drink?> = _activeSipDrink.asStateFlow()
+    private val _activeSipDrink = MutableStateFlow<DrinkTemplateEntity?>(null)
+    val activeSipDrink: StateFlow<DrinkTemplateEntity?> = _activeSipDrink.asStateFlow()
 
     private val _sipCount = MutableStateFlow(0)
     val sipCount: StateFlow<Int> = _sipCount.asStateFlow()
 
+    private var sipCounterStartTime: Long? = null
+
+    val currentSipVolume: StateFlow<Double> = combine(activeSipDrink, profileEntity) { drink, profile ->
+        val base = profile?.sipVolumeML ?: 25.0
+        if (drink == null) return@combine base
+        when {
+            drink.abv > 20.0 -> maxOf(5.0, base * 0.3) // ~7.5 ml for spirits
+            drink.abv > 10.0 -> maxOf(10.0, base * 0.6) // ~15 ml for wine  
+            else -> base
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 25.0)
+
+    val sipTotalML: StateFlow<Double> = combine(sipCount, currentSipVolume) { count, vol ->
+        count.toDouble() * vol
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val sipPromille: StateFlow<Double> = combine(
+        activeSipDrink, sipTotalML, profileEntity, stomachStatus
+    ) { drink, totalMl, profileEnt, stomach ->
+        if (drink == null || profileEnt == null || totalMl <= 0) return@combine 0.0
+        val profile = UserProfileRepository.toProfile(profileEnt)
+        val input = DrinkInput(
+            offsetMinutes = 0.0,
+            volumeML = totalMl,
+            abv = drink.abv,
+            category = DrinkCategory.from(drink.categoryRaw),
+            drinkDurationMinutes = 15.0
+        )
+        BacCalculator.projectedPeak(
+            drink = input,
+            profile = profile,
+            stomach = stomach,
+            conservative = profile.conservativeForApp
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
     init {
+        // Always listens for a coordinate - permission may be granted later
+        // from RidePickerSheet/SafetyScreen via onLocationPermissionGranted(),
+        // not only at construction time.
+        viewModelScope.launch {
+            LocationService.coordinate.collect { coord ->
+                if (coord == null) return@collect
+                val now = System.currentTimeMillis()
+                if (now - lastWeatherFetchAtMs < 30 * 60 * 1000) return@collect
+                lastWeatherFetchAtMs = now
+                currentTempC.value = weatherService.fetchCurrentTemperature(coord.latitude, coord.longitude)
+            }
+        }
+        // Silent refresh for pinging: only if location was already granted
+        // elsewhere (Safety/Trends), never prompts from here.
+        applicationContext?.let { ctx ->
+            if (LocationService.hasPermission(ctx)) LocationService.requestLocation(ctx)
+        }
+
         viewModelScope.launch {
             profileEntity.filterNotNull().first().let {
                 stomachStatus.value = StomachStatus.from(it.stomachStatusRaw)
@@ -257,7 +322,58 @@ class SessionViewModel(
                 // shows as 0,00 and the ghost host election would always pick
                 // whoever is on Android as the soberest member.
                 jamService.myCurrentBAC.value = bac
-                jamService.myCurrentStatus.value = BacStatus.of(bac).germanName
+                // Deliberately the plain German name, never the skinned label:
+                // this string is rendered on other members' devices, and the
+                // Emoji skin would put emoji into an app that has none.
+                jamService.myCurrentStatus.value =
+                    BacStatus.of(bac, profileEntity.value?.let { UserProfileRepository.toProfile(it) }).germanName
+            }
+        }
+
+        // Automatically reschedule sobriety/drive notifications and widget/statusbar updates
+        applicationContext?.let { ctx ->
+            viewModelScope.launch {
+                combine(projection, profileEntity) { proj, prof ->
+                    if (proj != null && prof != null) {
+                        NotificationService.reschedule(
+                            context = ctx,
+                            input = proj,
+                            tipsyThreshold = prof.tipsyThreshold,
+                            warningThreshold = prof.warningThreshold
+                        )
+                    } else {
+                        NotificationService.cancelAll(ctx)
+                    }
+                }.collect()
+            }
+
+            viewModelScope.launch {
+                combine(currentBAC, bacStatus, bacTrend, soberInHours) { current, status, trend, soberHours ->
+                    // Reads the same token the status pill uses. The hardcoded hex
+                    // list that stood here painted DANGER in statusRed, so the widget
+                    // showed the careful colour at the worst band.
+                    val color = status.color.toArgb()
+                    de.tipau.promille.widget.PromilleAppWidgetProvider.updateAllWidgets(
+                        context = ctx,
+                        bac = current,
+                        statusText = status.germanName,
+                        statusColor = color
+                    )
+
+                    val soberTimeStr = soberHours?.let {
+                        val totalMin = (it * 60).toInt()
+                        val time = java.time.LocalTime.now().plusMinutes(totalMin.toLong())
+                        time.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm", java.util.Locale.GERMAN))
+                    }
+
+                    NotificationService.updateLiveNotification(
+                        context = ctx,
+                        bac = current,
+                        statusText = status.germanName,
+                        trendSymbol = trend.symbol,
+                        soberTimeStr = soberTimeStr
+                    )
+                }.collect()
             }
         }
     }
@@ -333,18 +449,54 @@ class SessionViewModel(
     }
 
     // Sip Counter Actions
-    fun startSipCounter(drink: Drink) {
-        _activeSipDrink.value = drink
+    fun startSipCounter(template: DrinkTemplateEntity) {
+        _activeSipDrink.value = template
         _sipCount.value = 0
+        sipCounterStartTime = System.currentTimeMillis() / 1000
     }
 
-    fun recordSip(sipVolumeML: Double = 25.0) {
+    fun addSip() {
+        if (_activeSipDrink.value == null) return
         _sipCount.value += 1
     }
 
-    fun finishSipCounter() {
+    fun removeSip() {
+        _sipCount.value = maxOf(0, _sipCount.value - 1)
+    }
+
+    fun commitSips() {
+        val template = _activeSipDrink.value ?: return
+        val count = _sipCount.value
+        if (count <= 0) return
+        val ml = count.toDouble() * currentSipVolume.value
+        val scaledCalories = if (template.volume > 0) {
+            (template.calories.toDouble() / template.volume * ml).toInt()
+        } else 0
+        val drink = DrinkEntity(
+            id = UUID.randomUUID().toString(),
+            templateID = template.id,
+            name = "${template.name} ($count Schlucke)",
+            volume = ml,
+            abv = template.abv,
+            calories = scaledCalories,
+            iconName = template.iconName,
+            categoryRaw = template.categoryRaw,
+            timestampEpochSeconds = System.currentTimeMillis() / 1000
+        )
+        // Use measured drinking duration if available
+        val start = sipCounterStartTime
+        val withDuration = if (start != null) {
+            val dur = maxOf(1.0, (System.currentTimeMillis() / 1000 - start) / 60.0)
+            drink.copy(drinkDurationMinutes = dur)
+        } else drink
+        addDrink(withDuration)
+        cancelSipCounter()
+    }
+
+    fun cancelSipCounter() {
         _activeSipDrink.value = null
         _sipCount.value = 0
+        sipCounterStartTime = null
     }
 
     // Session Events
@@ -376,5 +528,47 @@ class SessionViewModel(
             sessionEventRepository.clearAll()
             _undoAction.value = null
         }
+    }
+
+    fun updateHomeCustomization(homeStyle: String, warningThreshold: Double, activeWidgetsRaw: String) {
+        userProfileRepository.updateDebounced { entity ->
+            entity.copy(
+                homeStyleRaw = homeStyle,
+                warningThreshold = warningThreshold,
+                activeWidgetsRaw = activeWidgetsRaw
+            )
+        }
+    }
+
+    /** Back to the detailed layout from inside the minimal one, other home settings kept. */
+    fun setHomeStyle(homeStyle: String) {
+        userProfileRepository.updateDebounced { it.copy(homeStyleRaw = homeStyle) }
+    }
+
+    /**
+     * Leaving drunk mode also drops the oversized type it turned on, mirroring the
+     * onExit closure in HomeView.swift. Without this the normal layout stays blown
+     * up after the user asked for it back.
+     */
+    fun disableLargeText() {
+        userProfileRepository.updateDebounced { it.copy(largeText = false) }
+    }
+
+    fun toggleWidget(widgetRaw: String) {
+        val currentProfile = profileEntity.value ?: return
+        val raw = currentProfile.activeWidgetsRaw
+        val list = if (raw.isBlank()) {
+            listOf("timeToLimit", "water", "calories", "drinkCount", "bacCurve", "hydration", "stomachStatus", "favStrip", "drinkHistory", "milestone", "dayStats", "safetyActions")
+        } else {
+            raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        }.toMutableList()
+
+        if (list.contains(widgetRaw)) {
+            list.remove(widgetRaw)
+        } else {
+            list.add(widgetRaw)
+        }
+        val serialized = list.joinToString(",")
+        userProfileRepository.updateDebounced { it.copy(activeWidgetsRaw = serialized) }
     }
 }

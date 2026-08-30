@@ -42,11 +42,13 @@ import de.tipau.promille.bac.WaterLog
 import de.tipau.promille.data.UserProfileEntity
 import de.tipau.promille.ui.components.AppIcons
 import de.tipau.promille.ui.components.PrimaryButton
+import de.tipau.promille.ui.components.StatusPill
 import de.tipau.promille.ui.viewmodels.SessionViewModel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import de.tipau.promille.AppSerif
 
 /**
  * The two home layouts that are not the detailed one, ported from the
@@ -128,14 +130,14 @@ fun MinimalHomeView(
                             color = AppColors.text,
                             fontSize = fixedSp(130f),
                             fontWeight = FontWeight.ExtraLight,
-                            fontFamily = FontFamily.Serif
+                            fontFamily = AppSerif
                         )
                         Text(
                             text = "‰",
                             color = AppColors.textDim,
                             fontSize = 36.sp,
                             fontWeight = FontWeight.ExtraLight,
-                            fontFamily = FontFamily.Serif,
+                            fontFamily = AppSerif,
                             modifier = Modifier.padding(bottom = 22.dp)
                         )
                     }
@@ -208,19 +210,7 @@ fun MinimalHomeView(
 
 @Composable
 private fun MinimalStatusPill(status: BacStatus, skin: StatusSkin) {
-    Box(
-        modifier = Modifier
-            .background(status.color.copy(alpha = 0.15f), RoundedCornerShape(20.dp))
-            .border(0.5.dp, status.color.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
-            .padding(horizontal = 16.dp, vertical = 7.dp)
-    ) {
-        Text(
-            text = status.label(skin),
-            color = status.color,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
+    StatusPill(status = status, skin = skin)
 }
 
 // MARK: - Drunk mode
@@ -347,7 +337,7 @@ fun DrunkHomeView(
                         color = status.color,
                         fontSize = fixedSp(96f),
                         fontWeight = FontWeight.ExtraLight,
-                        fontFamily = FontFamily.Serif,
+                        fontFamily = AppSerif,
                         maxLines = 1
                     )
                     Text(
@@ -355,7 +345,7 @@ fun DrunkHomeView(
                         color = AppColors.textDim,
                         fontSize = 32.sp,
                         fontWeight = FontWeight.ExtraLight,
-                        fontFamily = FontFamily.Serif,
+                        fontFamily = AppSerif,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
                 }

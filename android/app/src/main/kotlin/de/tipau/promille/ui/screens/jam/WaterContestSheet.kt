@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -26,6 +27,8 @@ import de.tipau.promille.ui.components.AppIcons
 import de.tipau.promille.ui.components.SectionLabel
 import kotlinx.coroutines.delay
 import java.util.Locale
+import de.tipau.promille.AppSerif
+import de.tipau.promille.TabularFigures
 
 /**
  * 1:1 Port of WaterContestSheet.swift.
@@ -55,18 +58,31 @@ fun WaterContestSheet(
         }
     }
 
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = AppColors.background,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
+        sheetState = sheetState,
+        containerColor = Color.Transparent,
+        scrimColor = Color.Black.copy(alpha = 0.65f),
+        dragHandle = null
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp, top = 16.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(AppColors.background)
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
         ) {
-            // Header
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -148,7 +164,8 @@ fun WaterContestSheet(
                             color = AppColors.accent,
                             fontSize = fixedSp(46f),
                             fontWeight = FontWeight.Light,
-                            fontFamily = FontFamily.Serif
+                            fontFamily = AppSerif,
+                            style = TabularFigures
                         )
                         Text(
                             text = "Sekunden · tippen zum Stoppen",
@@ -166,7 +183,8 @@ fun WaterContestSheet(
                             color = AppColors.statusGreen,
                             fontSize = fixedSp(40f),
                             fontWeight = FontWeight.Light,
-                            fontFamily = FontFamily.Serif
+                            fontFamily = AppSerif,
+                            style = TabularFigures
                         )
                         Text(
                             text = "Nochmal? Tippen zum Start",
@@ -286,7 +304,8 @@ fun WaterContestSheet(
                                 color = if (rank == 1) AppColors.statusYellow else AppColors.text,
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                fontFamily = FontFamily.Serif
+                                fontFamily = AppSerif,
+                                style = TabularFigures
                             )
                         }
                     }
@@ -294,4 +313,5 @@ fun WaterContestSheet(
             }
         }
     }
+}
 }

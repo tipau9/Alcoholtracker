@@ -1,4 +1,7 @@
 package de.tipau.promille.ui.components
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -7,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -72,38 +76,69 @@ fun BACCurveChartView(
                 }
 
                 Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(AppColors.background)
-                        .border(1.dp, AppColors.border, RoundedCornerShape(8.dp))
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(
+                    Row(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(7.dp))
-                            .background(if (!showFullDay) AppColors.accent else Color.Transparent)
-                            .clickable { showFullDay = false }
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(AppColors.background)
+                            .border(1.dp, AppColors.border, RoundedCornerShape(8.dp))
                     ) {
-                        Text(
-                            text = "8h",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (!showFullDay) AppColors.background else AppColors.textDim
-                        )
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(7.dp))
+                                .background(if (!showFullDay) AppColors.accent else Color.Transparent)
+                                .clickable { showFullDay = false }
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "8h",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (!showFullDay) AppColors.background else AppColors.textDim
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(7.dp))
+                                .background(if (showFullDay) AppColors.accent else Color.Transparent)
+                                .clickable { showFullDay = true }
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "24h",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (showFullDay) AppColors.background else AppColors.textDim
+                            )
+                        }
                     }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(7.dp))
-                            .background(if (showFullDay) AppColors.accent else Color.Transparent)
-                            .clickable { showFullDay = true }
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "24h",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (showFullDay) AppColors.background else AppColors.textDim
-                        )
+
+                    if (onFullScreenTap != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .clickable(onClickLabel = "Vollbild-Kurve öffnen", onClick = onFullScreenTap),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(AppColors.background)
+                                    .border(0.5.dp, AppColors.border, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = de.tipau.promille.ui.components.AppIcons.Expand,
+                                    contentDescription = "Vollbild-Kurve",
+                                    tint = AppColors.textDim,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }

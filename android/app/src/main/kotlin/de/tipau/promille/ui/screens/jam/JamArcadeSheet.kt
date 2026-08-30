@@ -1,4 +1,7 @@
 package de.tipau.promille.ui.screens.jam
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 
 import android.content.Context
 import android.hardware.Sensor
@@ -14,12 +17,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
+import de.tipau.promille.fixedSp
 import de.tipau.promille.bac.BalanceAccumulator
 import de.tipau.promille.bac.JamArcadeGame
 import de.tipau.promille.bac.JamArcadeResultPayload
@@ -67,19 +73,31 @@ fun JamArcadeSheet(
         onSubmit(value, disqualified)
     }
 
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = AppColors.background,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
+        sheetState = sheetState,
+        containerColor = Color.Transparent,
+        scrimColor = Color.Black.copy(alpha = 0.65f),
+        dragHandle = null
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 36.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp, top = 16.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(AppColors.background)
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
             Text(
                 round.game.title,
                 color = AppColors.text,
@@ -99,7 +117,7 @@ fun JamArcadeSheet(
                     Text(
                         "${maxOf(1, kotlin.math.ceil(untilStart).toInt())}",
                         color = AppColors.accent,
-                        fontSize = 56.sp,
+                        fontSize = fixedSp(56f),
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -189,6 +207,7 @@ fun JamArcadeSheet(
             }
         }
     }
+}
 }
 
 private fun formatArcadeResult(result: JamArcadeResultPayload, game: JamArcadeGame): String = when {

@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,9 +49,14 @@ fun CreateJamSheet(
     var visibility by remember { mutableStateOf(JamVisibility.PROXIMITY_AND_CODE) }
     var settings by remember { mutableStateOf(JamSettings()) }
 
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         containerColor = AppColors.background,
+        scrimColor = Color.Black.copy(alpha = 0.65f),
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
     ) {
         Column(
@@ -187,9 +193,14 @@ fun JamPrivacySheet(
 ) {
     var draft by remember { mutableStateOf(settings) }
 
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         containerColor = AppColors.background,
+        scrimColor = Color.Black.copy(alpha = 0.65f),
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
     ) {
         Column(
@@ -284,9 +295,14 @@ fun InviteFriendsSheet(
 ) {
     val invited = remember { mutableStateListOf<String>() }
 
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         containerColor = AppColors.background,
+        scrimColor = Color.Black.copy(alpha = 0.65f),
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
     ) {
         Column(
@@ -401,9 +417,13 @@ fun ParticipantActionsDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JamSheet(container: de.tipau.promille.di.AppContainer, onDismiss: () -> Unit) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         containerColor = AppColors.background,
+        scrimColor = Color.Black.copy(alpha = 0.65f),
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
     ) {
         JamView(container = container, modifier = Modifier.fillMaxHeight(0.92f))
@@ -414,9 +434,13 @@ fun JamSheet(container: de.tipau.promille.di.AppContainer, onDismiss: () -> Unit
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArcadePickerSheet(onDismiss: () -> Unit, onPick: (JamArcadeGame) -> Unit) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         containerColor = AppColors.background,
+        scrimColor = Color.Black.copy(alpha = 0.65f),
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
     ) {
         Column(

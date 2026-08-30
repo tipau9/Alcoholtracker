@@ -10,7 +10,7 @@ object DrinkDurationEstimator {
 
     private const val MAX_MINUTES = 180.0
 
-    fun estimate(category: DrinkCategory, volumeML: Double, pace: DrinkPaceMemory): Double =
+    fun estimate(category: DrinkCategory, volumeML: Double, pace: DrinkPaceMemory = DrinkPaceMemory.disabled()): Double =
         pace.adjustedEstimate(category, baseEstimate(category, volumeML))
 
     fun baseEstimate(category: DrinkCategory, volumeML: Double): Double {

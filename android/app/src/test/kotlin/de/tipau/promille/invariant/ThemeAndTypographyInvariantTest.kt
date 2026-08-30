@@ -14,7 +14,8 @@ import kotlin.test.assertTrue
  * Requirement R4: UI & Quality Invariant Compliance
  *
  * Enforces exact theme color definitions, BacStatus threshold boundaries and
- * color mappings, and typography invariants (Serif hero numbers, Monospace counters).
+ * color mappings, and typography invariants (New York hero numbers, tabular
+ * figures on live counters).
  */
 class ThemeAndTypographyInvariantTest {
 
@@ -148,7 +149,7 @@ class ThemeAndTypographyInvariantTest {
     }
 
     @Test
-    fun `typography invariants enforce Serif for hero numbers and Monospace for technical counters`() {
+    fun `typography invariants enforce AppSerif for hero numbers and tabular figures for technical counters`() {
         val uiSrc = File(resolveAppDir(), "src/main/kotlin/de/tipau/promille/ui")
         assertTrue(uiSrc.exists(), "UI source directory missing: ${uiSrc.absolutePath}")
 
@@ -158,7 +159,7 @@ class ThemeAndTypographyInvariantTest {
 
         assertTrue(uiFiles.isNotEmpty(), "Found no UI Kotlin source files to scan")
 
-        // 1. Hero number displays must use FontFamily.Serif
+        // 1. Hero number displays must use the New York family, not the raw M3 Serif
         val heroDisplayFiles = listOf(
             "BACDisplaySection.kt",
             "FullScreenBacChart.kt",
@@ -175,35 +176,40 @@ class ThemeAndTypographyInvariantTest {
             assertTrue(file != null, "Expected UI file $fileName not found")
             val content = file.readText()
             assertTrue(
-                content.contains("FontFamily.Serif"),
-                "Hero number screen $fileName must use FontFamily.Serif for prominent BAC / amount readouts"
+                content.contains("AppSerif"),
+                "Hero number screen $fileName must use AppSerif for prominent BAC / amount readouts"
             )
         }
 
-        // 2. Technical counters, stopwatches and live arcade scores must use FontFamily.Monospace
-        val monospaceFiles = listOf(
+        // 2. Technical counters, stopwatches and live arcade scores must use tabular
+        // figures. iOS does this with .monospacedDigit(), never a monospaced face.
+        val tabularFiles = listOf(
             "FullScreenBacChart.kt",
             "WaterContestSheet.kt",
             "JamView.kt"
         )
 
-        for (fileName in monospaceFiles) {
+        for (fileName in tabularFiles) {
             val file = uiFiles.find { it.name == fileName }
             assertTrue(file != null, "Expected UI file $fileName not found")
             val content = file.readText()
             assertTrue(
-                content.contains("FontFamily.Monospace"),
-                "Technical counter screen $fileName must use FontFamily.Monospace for tabular alignment"
+                content.contains("TabularFigures"),
+                "Technical counter screen $fileName must use TabularFigures for tabular alignment"
             )
         }
 
-        // 3. Verify no forbidden fonts (e.g. Cursive) are used anywhere in the UI
+        // 3. No raw M3 families anywhere in the UI. Serif and Monospace resolve to
+        // Noto Serif and Droid Sans Mono on Android, which is not what iOS renders.
+        val forbidden = listOf("FontFamily.Cursive", "FontFamily.Serif", "FontFamily.Monospace")
         for (file in uiFiles) {
             val content = file.readText()
-            assertTrue(
-                !content.contains("FontFamily.Cursive"),
-                "Forbidden FontFamily.Cursive found in ${file.name}"
-            )
+            for (family in forbidden) {
+                assertTrue(
+                    !content.contains(family),
+                    "Forbidden $family found in ${file.name}; use AppSerif / AppSans + TabularFigures"
+                )
+            }
         }
     }
 }

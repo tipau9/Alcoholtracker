@@ -1,8 +1,11 @@
 package de.tipau.promille.ui.viewmodels
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import de.tipau.promille.BacStatus
+import de.tipau.promille.bac.BacStatus
 import de.tipau.promille.bac.*
 import de.tipau.promille.data.DrinkEntity
 import de.tipau.promille.data.MealEventEntity
@@ -82,8 +85,8 @@ class SafetyViewModel(
         proj?.currentBac(System.currentTimeMillis() / 1000) ?: 0.0
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val bacStatus: StateFlow<BacStatus> = currentBAC.map { bac ->
-        BacStatus.of(bac)
+    val bacStatus: StateFlow<BacStatus> = combine(currentBAC, bacProfile) { bac, profile ->
+        BacStatus.of(bac, profile)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BacStatus.SOBER)
 
     val soberInHours: StateFlow<Double?> = projection.map { proj ->
@@ -106,4 +109,12 @@ class SafetyViewModel(
 
     val isProbationaryDriver: StateFlow<Boolean> = profileEntity.map { it?.isProbationaryDriver ?: false }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val statusSkin: StateFlow<StatusSkin> = profileEntity.map { p ->
+        StatusSkin.from(p?.statusSkinRaw ?: "standard")
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StatusSkin.STANDARD)
+
+    fun setProbationaryDriver(on: Boolean) {
+        userProfileRepository.updateDebounced { it.copy(isProbationaryDriver = on) }
+    }
 }

@@ -5,21 +5,31 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
+import de.tipau.promille.bac.BacStatus
 import de.tipau.promille.bac.StatusSkin
 import de.tipau.promille.ui.components.PromilleCard
 
+/**
+ * 1:1 Port of StatusSkinPickerView.swift.
+ * Full preview list of all status skins with their corresponding badge levels.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatusSkinPickerSheet(
@@ -27,33 +37,46 @@ fun StatusSkinPickerSheet(
     onDismiss: () -> Unit,
     onSkinSelected: (StatusSkin) -> Unit
 ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = AppColors.background,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
+        sheetState = sheetState,
+        containerColor = Color.Transparent,
+        scrimColor = Color.Black.copy(alpha = 0.65f),
+        dragHandle = null
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp, top = 16.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(AppColors.background)
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
         ) {
-            // Header
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 20.dp)
+            ) {
+                // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        text = "Status-Sprachstil",
+                        text = "Status-Skin",
                         color = AppColors.text,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Wähle den Ton der Promille-Stufen",
+                        text = "Wähle die Bezeichnungen für deinen Promille-Status.",
                         color = AppColors.textDim,
-                        fontSize = 13.sp
+                        fontSize = 12.sp
                     )
                 }
                 Box(
@@ -61,11 +84,11 @@ fun StatusSkinPickerSheet(
                         .size(32.dp)
                         .clip(CircleShape)
                         .background(AppColors.card)
-                        .border(1.dp, AppColors.border, CircleShape)
+                        .border(0.5.dp, AppColors.border, CircleShape)
                         .clickable(onClick = onDismiss),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("✕", color = AppColors.textDim, fontSize = 14.sp)
+                    Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(16.dp))
                 }
             }
 
@@ -86,26 +109,50 @@ fun StatusSkinPickerSheet(
                                 onDismiss()
                             }
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = skin.displayName,
-                                    color = if (isSelected) AppColors.accent else AppColors.text,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Spacer(Modifier.height(2.dp))
-                                Text(
-                                    text = skin.skinDescription,
-                                    color = AppColors.textDim,
-                                    fontSize = 12.sp
-                                )
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = skin.displayName,
+                                        color = if (isSelected) AppColors.accent else AppColors.text,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        text = skin.skinDescription,
+                                        color = AppColors.textDim,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                if (isSelected) {
+                                    Icon(Icons.Filled.Check, null, tint = AppColors.accent, modifier = Modifier.size(18.dp))
+                                }
                             }
-                            if (isSelected) {
-                                Text("✓", color = AppColors.accent, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+
+                            // Badges preview row
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                items(BacStatus.entries) { status ->
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(AppColors.background)
+                                            .border(0.5.dp, AppColors.border, RoundedCornerShape(6.dp))
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = skin.label(status),
+                                            color = AppColors.textDim,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -113,4 +160,5 @@ fun StatusSkinPickerSheet(
             }
         }
     }
+}
 }

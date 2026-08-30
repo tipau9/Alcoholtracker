@@ -27,6 +27,14 @@ object AppIcons {
         }.build()
     }
 
+    val Minus: ImageVector = buildIcon("Minus") {
+        moveTo(5f, 11f)
+        horizontalLineToRelative(14f)
+        verticalLineToRelative(2f)
+        horizontalLineTo(5f)
+        close()
+    }
+
     val Car: ImageVector = buildIcon("Car") {
         moveTo(18.92f, 6.01f)
         curveTo(18.72f, 5.42f, 18.16f, 5f, 17.5f, 5f)
@@ -686,8 +694,9 @@ object AppIcons {
     val Info: ImageVector = Icons.Filled.Info
     val Bell: ImageVector = Icons.Filled.Notifications
     val Trash: ImageVector = Icons.Filled.Delete
-    val Heart: ImageVector = Icons.Filled.Favorite
+    @Suppress("DEPRECATION")
     val ExitToApp: ImageVector = Icons.Filled.ExitToApp
+    val Undo: ImageVector = Icons.Filled.Refresh
 
     val ChevronRight: ImageVector = buildIcon("ChevronRight") {
         moveTo(10f, 6f)
@@ -696,6 +705,26 @@ object AppIcons {
         lineToRelative(-1.41f, -1.41f)
         lineTo(13.17f, 12f)
         lineTo(8.59f, 7.41f)
+        close()
+    }
+
+    val ChevronDown: ImageVector = buildIcon("ChevronDown") {
+        moveTo(7.41f, 8.59f)
+        lineTo(12f, 13.17f)
+        lineToRelative(4.59f, -4.58f)
+        lineTo(18f, 10f)
+        lineToRelative(-6f, 6f)
+        lineToRelative(-6f, -6f)
+        close()
+    }
+
+    val ChevronUp: ImageVector = buildIcon("ChevronUp") {
+        moveTo(7.41f, 15.41f)
+        lineTo(12f, 10.83f)
+        lineToRelative(4.59f, 4.58f)
+        lineTo(18f, 14f)
+        lineToRelative(-6f, -6f)
+        lineToRelative(-6f, 6f)
         close()
     }
 
@@ -878,6 +907,116 @@ object AppIcons {
         horizontalLineToRelative(16f)
         verticalLineToRelative(-2f)
         curveToRelative(0f, -2.66f, -5.33f, -4f, -8f, -4f)
+        close()
+    }
+
+    val PersonCropCircleBadgePlus: ImageVector = buildIcon("PersonCropCircleBadgePlus") {
+        // Main outer circle
+        moveTo(14f, 2.5f)
+        curveTo(18.97f, 2.5f, 23f, 6.53f, 23f, 11.5f)
+        curveToRelative(0f, 4.97f, -4.03f, 9f, -9f, 9f)
+        curveToRelative(-1.38f, 0f, -2.68f, -0.31f, -3.85f, -0.87f)
+        curveToRelative(0.48f, -0.92f, 0.75f, -1.97f, 0.75f, -3.08f)
+        curveToRelative(0f, -3.52f, -2.61f, -6.44f, -6f, -6.92f)
+        curveTo(5.24f, 5.76f, 9.17f, 2.5f, 14f, 2.5f)
+        close()
+        // Cutout background of main circle (counter-clockwise)
+        moveTo(21.2f, 11.5f)
+        curveToRelative(0f, -3.98f, -3.22f, -7.2f, -7.2f, -7.2f)
+        curveToRelative(-3.98f, 0f, -7.2f, 3.22f, -7.2f, 7.2f)
+        curveToRelative(0f, 0.65f, 0.09f, 1.28f, 0.25f, 1.87f)
+        curveToRelative(1.15f, -0.37f, 2.37f, -0.57f, 3.65f, -0.57f)
+        curveToRelative(1.7f, 0f, 3.28f, 0.42f, 4.67f, 1.15f)
+        curveToRelative(3.38f, -0.2f, 5.83f, -1.05f, 5.83f, -2.45f)
+        close()
+        // Head inside circle
+        moveTo(14f, 6.2f)
+        curveToRelative(1.4f, 0f, 2.5f, 1.1f, 2.5f, 2.5f)
+        reflectiveCurveToRelative(-1.1f, 2.5f, -2.5f, 2.5f)
+        reflectiveCurveToRelative(-2.5f, -1.1f, -2.5f, -2.5f)
+        reflectiveCurveToRelative(1.1f, -2.5f, 2.5f, -2.5f)
+        close()
+        // Bust inside circle
+        moveTo(14f, 12.2f)
+        curveToRelative(2.3f, 0f, 4.3f, 1.2f, 4.8f, 2.9f)
+        curveToRelative(-1.4f, 1.2f, -3.1f, 1.9f, -4.8f, 1.9f)
+        curveToRelative(-1.2f, 0f, -2.3f, -0.3f, -3.3f, -0.9f)
+        curveToRelative(0.5f, -0.9f, 0.9f, -1.8f, 1.1f, -2.8f)
+        curveToRelative(0.7f, -0.7f, 1.4f, -1.1f, 2.2f, -1.1f)
+        close()
+        // Badge circle at bottom left
+        moveTo(5.5f, 11f)
+        curveTo(8.54f, 11f, 11f, 13.46f, 11f, 16.5f)
+        reflectiveCurveTo(8.54f, 22f, 5.5f, 22f)
+        reflectiveCurveTo(0f, 19.54f, 0f, 16.5f)
+        reflectiveCurveTo(2.46f, 11f, 5.5f, 11f)
+        close()
+        // Cutout for plus sign inside badge (counter-clockwise)
+        moveTo(6.25f, 13.25f)
+        verticalLineToRelative(2.5f)
+        horizontalLineToRelative(2.5f)
+        verticalLineToRelative(1.5f)
+        horizontalLineToRelative(-2.5f)
+        verticalLineToRelative(2.5f)
+        horizontalLineToRelative(-1.5f)
+        verticalLineToRelative(-2.5f)
+        horizontalLineToRelative(-2.5f)
+        verticalLineToRelative(-1.5f)
+        horizontalLineToRelative(2.5f)
+        verticalLineToRelative(-2.5f)
+        horizontalLineToRelative(1.5f)
+        close()
+    }
+
+    val PersonTextRectangle: ImageVector = buildIcon("PersonTextRectangle") {
+        // Outer card body with rounded corners
+        moveTo(21f, 4f)
+        horizontalLineTo(3f)
+        curveTo(1.9f, 4f, 1f, 4.9f, 1f, 6f)
+        verticalLineToRelative(12f)
+        curveToRelative(0f, 1.1f, 0.9f, 2f, 2f, 2f)
+        horizontalLineToRelative(18f)
+        curveToRelative(1.1f, 0f, 2f, -0.9f, 2f, -2f)
+        verticalLineTo(6f)
+        curveToRelative(0f, -1.1f, -0.9f, -2f, -2f, -2f)
+        close()
+        // Card cutout/inner background (counter-clockwise)
+        moveTo(21f, 6f)
+        verticalLineToRelative(12f)
+        horizontalLineTo(3f)
+        verticalLineTo(6f)
+        horizontalLineToRelative(18f)
+        close()
+        // Head of person on left
+        moveTo(7f, 7.5f)
+        curveToRelative(1.2f, 0f, 2.2f, 1f, 2.2f, 2.2f)
+        reflectiveCurveToRelative(-1f, 2.2f, -2.2f, 2.2f)
+        reflectiveCurveToRelative(-2.2f, -1f, -2.2f, -2.2f)
+        reflectiveCurveToRelative(1f, -2.2f, 2.2f, -2.2f)
+        close()
+        // Bust / shoulders of person
+        moveTo(7f, 13f)
+        curveToRelative(2f, 0f, 3.8f, 1.2f, 4f, 3f)
+        horizontalLineTo(3f)
+        curveToRelative(0.2f, -1.8f, 2f, -3f, 4f, -3f)
+        close()
+        // Top text bar on right
+        moveTo(13f, 8.5f)
+        horizontalLineToRelative(6.5f)
+        curveToRelative(0.55f, 0f, 1f, 0.45f, 1f, 1f)
+        reflectiveCurveToRelative(-0.45f, 1f, -1f, 1f)
+        horizontalLineTo(13f)
+        curveToRelative(-0.55f, 0f, -1f, -0.45f, -1f, -1f)
+        reflectiveCurveToRelative(0.45f, -1f, 1f, -1f)
+        close()
+        // Bottom text bar on right
+        moveTo(13f, 12.5f)
+        horizontalLineToRelative(4.5f)
+        curveToRelative(0.55f, 0f, 1f, 0.45f, 1f, 1f)
+        reflectiveCurveToRelative(-0.45f, 1f, -1f, 1f)
+        horizontalLineTo(13f)
+        curveToRelative(-0.55f, 0f, -1f, -0.45f, -1f, -1f)
+        reflectiveCurveToRelative(0.45f, -1f, 1f, -1f)
         close()
     }
 
@@ -1264,55 +1403,40 @@ object AppIcons {
         close()
     }
 
+    // slider.horizontal.3: three full-width rails, each interrupted by a ring
+    // knob. Rails are split around the knob so the hole stays dark; a single
+    // rect would fill the ring's centre back in under nonzero winding.
     val Sliders: ImageVector = buildIcon("Sliders") {
-        moveTo(3f, 17f)
-        verticalLineToRelative(2f)
-        horizontalLineToRelative(6f)
-        verticalLineToRelative(-2f)
-        horizontalLineTo(3f)
-        close()
-        moveTo(3f, 5f)
-        verticalLineToRelative(2f)
-        horizontalLineToRelative(10f)
-        verticalLineTo(5f)
-        horizontalLineTo(3f)
-        close()
-        moveTo(13f, 21f)
-        verticalLineToRelative(-2f)
-        horizontalLineToRelative(8f)
-        verticalLineToRelative(-2f)
-        horizontalLineToRelative(-8f)
-        verticalLineToRelative(-2f)
-        horizontalLineToRelative(-2f)
-        verticalLineToRelative(6f)
-        horizontalLineToRelative(2f)
-        close()
-        moveTo(7f, 9f)
-        verticalLineToRelative(2f)
-        horizontalLineTo(3f)
-        verticalLineToRelative(2f)
-        horizontalLineToRelative(4f)
-        verticalLineToRelative(2f)
-        horizontalLineToRelative(2f)
-        verticalLineTo(9f)
-        horizontalLineTo(7f)
-        close()
-        moveTo(21f, 13f)
-        verticalLineToRelative(-2f)
-        horizontalLineTo(11f)
-        verticalLineToRelative(2f)
-        horizontalLineToRelative(10f)
-        close()
-        moveTo(17f, 9f)
-        horizontalLineToRelative(2f)
-        verticalLineTo(7f)
-        horizontalLineToRelative(2f)
-        verticalLineTo(5f)
-        horizontalLineToRelative(-2f)
-        verticalLineTo(3f)
-        horizontalLineToRelative(-2f)
-        verticalLineToRelative(6f)
-        close()
+        fun rail(y: Float, x0: Float, x1: Float) {
+            moveTo(x0, y - 0.8f)
+            lineTo(x1, y - 0.8f)
+            lineTo(x1, y + 0.8f)
+            lineTo(x0, y + 0.8f)
+            close()
+        }
+        fun ring(cx: Float, cy: Float) {
+            moveTo(cx - 3f, cy)
+            arcToRelative(3f, 3f, 0f, true, true, 6f, 0f)
+            arcToRelative(3f, 3f, 0f, true, true, -6f, 0f)
+            close()
+            // reversed sweep punches the hole out of the disc
+            moveTo(cx - 1.4f, cy)
+            arcToRelative(1.4f, 1.4f, 0f, true, false, 2.8f, 0f)
+            arcToRelative(1.4f, 1.4f, 0f, true, false, -2.8f, 0f)
+            close()
+        }
+
+        rail(6f, 3f, 12f)
+        rail(6f, 18f, 21f)
+        ring(15f, 6f)
+
+        rail(12f, 3f, 5f)
+        rail(12f, 11f, 21f)
+        ring(8f, 12f)
+
+        rail(18f, 3f, 12f)
+        rail(18f, 18f, 21f)
+        ring(15f, 18f)
     }
 
     val Mug: ImageVector = buildIcon("Mug") {
@@ -1363,6 +1487,117 @@ object AppIcons {
         horizontalLineToRelative(20f)
         verticalLineToRelative(2f)
         horizontalLineTo(2f)
+        close()
+    }
+
+    val ForkKnife: ImageVector = buildIcon("ForkKnife") {
+        moveTo(11f, 9f)
+        horizontalLineTo(9f)
+        verticalLineTo(2f)
+        horizontalLineTo(7f)
+        verticalLineToRelative(7f)
+        horizontalLineTo(5f)
+        verticalLineTo(2f)
+        horizontalLineTo(3f)
+        verticalLineToRelative(7f)
+        curveToRelative(0f, 2.21f, 1.79f, 4f, 4f, 4f)
+        verticalLineToRelative(9f)
+        horizontalLineToRelative(2f)
+        verticalLineToRelative(-9f)
+        curveToRelative(2.21f, 0f, 4f, -1.79f, 4f, -4f)
+        verticalLineTo(2f)
+        horizontalLineToRelative(-2f)
+        verticalLineToRelative(7f)
+        close()
+        moveTo(19f, 2f)
+        curveToRelative(-2.21f, 0f, -4f, 1.79f, -4f, 4f)
+        verticalLineToRelative(6f)
+        horizontalLineToRelative(2f)
+        verticalLineToRelative(10f)
+        horizontalLineToRelative(2f)
+        verticalLineTo(2f)
+        horizontalLineToRelative(-0f)
+        close()
+    }
+
+    val Wind: ImageVector = buildIcon("Wind") {
+        moveTo(14.5f, 17f)
+        curveToRelative(0f, 1.65f, -1.35f, 3f, -3f, 3f)
+        reflectiveCurveToRelative(-3f, -1.35f, -3f, -3f)
+        horizontalLineToRelative(2f)
+        curveToRelative(0f, 0.55f, 0.45f, 1f, 1f, 1f)
+        reflectiveCurveToRelative(1f, -0.45f, 1f, -1f)
+        reflectiveCurveToRelative(-0.45f, -1f, -1f, -1f)
+        horizontalLineTo(2f)
+        verticalLineToRelative(-2f)
+        horizontalLineToRelative(9.5f)
+        curveToRelative(1.65f, 0f, 3f, 1.35f, 3f, 3f)
+        close()
+        moveTo(19f, 12f)
+        curveToRelative(0f, 1.65f, -1.35f, 3f, -3f, 3f)
+        reflectiveCurveToRelative(-3f, -1.35f, -3f, -3f)
+        reflectiveCurveToRelative(1.35f, -3f, 3f, -3f)
+        reflectiveCurveToRelative(3f, 1.35f, 3f, 3f)
+        horizontalLineToRelative(-2f)
+        curveToRelative(0f, -0.55f, -0.45f, -1f, -1f, -1f)
+        reflectiveCurveToRelative(-1f, 0.45f, -1f, 1f)
+        reflectiveCurveToRelative(0.45f, 1f, 1f, 1f)
+        horizontalLineTo(2f)
+        verticalLineToRelative(2f)
+        horizontalLineToRelative(14f)
+        curveToRelative(1.65f, 0f, 3f, -1.35f, 3f, -3f)
+        close()
+        moveTo(18.5f, 6f)
+        curveToRelative(0f, -1.65f, -1.35f, -3f, -3f, -3f)
+        reflectiveCurveToRelative(-3f, 1.35f, -3f, 3f)
+        horizontalLineToRelative(2f)
+        curveToRelative(0f, -0.55f, 0.45f, -1f, 1f, -1f)
+        reflectiveCurveToRelative(1f, 0.45f, 1f, 1f)
+        reflectiveCurveToRelative(-0.45f, 1f, -1f, 1f)
+        horizontalLineTo(2f)
+        verticalLineToRelative(2f)
+        horizontalLineToRelative(13.5f)
+        curveToRelative(1.65f, 0f, 3f, -1.35f, 3f, -3f)
+        close()
+    }
+
+    val Heart: ImageVector = buildIcon("Heart") {
+        moveTo(12f, 21.35f)
+        lineToRelative(-1.45f, -1.32f)
+        curveTo(5.4f, 15.36f, 2f, 12.28f, 2f, 8.5f)
+        curveTo(2f, 5.42f, 4.42f, 3f, 7.5f, 3f)
+        curveToRelative(1.74f, 0f, 3.41f, 0.81f, 4.5f, 2.09f)
+        curveTo(13.09f, 3.81f, 14.76f, 3f, 16.5f, 3f)
+        curveTo(19.58f, 3f, 22f, 5.42f, 22f, 8.5f)
+        curveToRelative(0f, 3.78f, -3.4f, 6.86f, -8.55f, 11.54f)
+        lineTo(12f, 21.35f)
+        close()
+    }
+
+    val ArrowDown: ImageVector = buildIcon("ArrowDown") {
+        moveTo(20f, 12f)
+        lineToRelative(-1.41f, -1.41f)
+        lineTo(13f, 16.17f)
+        verticalLineTo(4f)
+        horizontalLineToRelative(-2f)
+        verticalLineToRelative(12.17f)
+        lineToRelative(-5.58f, -5.59f)
+        lineTo(4f, 12f)
+        lineToRelative(8f, 8f)
+        lineToRelative(8f, -8f)
+        close()
+    }
+
+    val Equal: ImageVector = buildIcon("Equal") {
+        moveTo(19f, 9.5f)
+        horizontalLineTo(5f)
+        verticalLineToRelative(2f)
+        horizontalLineToRelative(14f)
+        close()
+        moveTo(19f, 13.5f)
+        horizontalLineTo(5f)
+        verticalLineToRelative(2f)
+        horizontalLineToRelative(14f)
         close()
     }
 }

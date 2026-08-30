@@ -1,4 +1,9 @@
 package de.tipau.promille.ui.screens.home
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+
+
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
@@ -12,6 +17,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+
+
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
+import de.tipau.promille.LocalReducedMotion
 import de.tipau.promille.bac.Drink
 import de.tipau.promille.bac.StomachStatus
 import de.tipau.promille.data.DrinkEntity
@@ -34,6 +42,10 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
+import de.tipau.promille.bac.LogicalDay
+import de.tipau.promille.AppSerif
 
 @Composable
 fun SessionScreen(
@@ -44,22 +56,32 @@ fun SessionScreen(
 ) {
     val bac by viewModel.currentBAC.collectAsState()
     val status by viewModel.bacStatus.collectAsState()
+    val skin by viewModel.statusSkin.collectAsState()
+    val reducedMotion = LocalReducedMotion.current
     val trend by viewModel.bacTrend.collectAsState()
     val soberIn by viewModel.soberInHours.collectAsState()
     val driveableIn by viewModel.driveableInHours.collectAsState()
     val drinks by viewModel.drinks.collectAsState()
+    val extraSweatML by viewModel.extraSweatML.collectAsState()
     val stomachStatus by viewModel.stomachStatus.collectAsState()
     val totalCalories by viewModel.totalCalories.collectAsState()
     val totalAlcoholGrams by viewModel.totalAlcoholGrams.collectAsState()
     val recommendedWater by viewModel.recommendedWaterMl.collectAsState()
     val waterGlasses by viewModel.hydrationGlasses.collectAsState()
+    var loggedGlasses by remember { mutableStateOf(container?.waterLog?.glassesToday(System.currentTimeMillis() / 1000) ?: 0) }
     val curvePoints by viewModel.bacCurve.collectAsState()
+    val curvePoints24h by viewModel.bacCurve24h.collectAsState()
     val pacingWarning by viewModel.pacingWarning.collectAsState()
     val undoAction by viewModel.undoAction.collectAsState()
     val profile by viewModel.profileEntity.collectAsState()
     val maxToday by viewModel.maxToday.collectAsState()
     val minutesSinceLast by viewModel.minutesSinceLastDrink.collectAsState()
     val weekCount by viewModel.currentWeekDrinkCount.collectAsState()
+    val activeSipDrink by viewModel.activeSipDrink.collectAsState()
+    val sipCount by viewModel.sipCount.collectAsState()
+    val sipTotalML by viewModel.sipTotalML.collectAsState()
+    val sipPromille by viewModel.sipPromille.collectAsState()
+    val currentSipVolume by viewModel.currentSipVolume.collectAsState()
 
     val scope = rememberCoroutineScope()
     val crewMembers by (container?.crewRepository?.members
@@ -89,7 +111,48 @@ fun SessionScreen(
 
     var showQuickAdd by remember { mutableStateOf(false) }
     var showRidePicker by remember { mutableStateOf(false) }
+    var showFullScreenChart by remember { mutableStateOf(false) }
+    var showHomeEditSheet by remember { mutableStateOf(false) }
+    var isWidgetEditMode by remember { mutableStateOf(false) }
+    var showMorningMoodPrompt by remember { mutableStateOf(false) }
     var amountTemplate by remember { mutableStateOf<DrinkTemplateEntity?>(null) }
+
+    val context = LocalContext.current
+    LaunchedEffect(drinks) {
+        val dayNoteRepo = container?.dayNoteRepository
+        if (dayNoteRepo != null) {
+            val now = Instant.now()
+            val todayLogical = LogicalDay.dateOf(now.epochSecond)
+            val yesterdayLogical = todayLogical.minus(java.time.Period.ofDays(1))
+            val yesterdayIso = yesterdayLogical.format(DateTimeFormatter.ISO_LOCAL_DATE)
+            val moodPromptDismissKey = "moodPromptDismissed_$yesterdayIso"
+
+            val prefs = context.getSharedPreferences("promille_prefs", Context.MODE_PRIVATE)
+            val isDismissed = prefs.getBoolean(moodPromptDismissKey, false)
+
+            val existing = dayNoteRepo.getNoteForDay(yesterdayIso)
+            val hadAlcoholYesterday = drinks.any {
+                it.abv > 0.01 && LogicalDay.dateOf(it.timestampEpochSeconds) == yesterdayLogical
+            }
+            if (!isDismissed && hadAlcoholYesterday && (existing == null || existing.moodRaw == 0)) {
+                showMorningMoodPrompt = true
+            }
+        }
+    }
+
+    val activeWidgets = remember(profile?.activeWidgetsRaw) {
+        HomeWidgetType.parseActiveWidgets(profile?.activeWidgetsRaw ?: "")
+    }
+
+    if (showHomeEditSheet) {
+        HomeEditSheet(
+            profile = profile,
+            onDismiss = { showHomeEditSheet = false },
+            onSave = { homeStyle, warningThreshold, activeWidgetsRaw ->
+                viewModel.updateHomeCustomization(homeStyle, warningThreshold, activeWidgetsRaw)
+            }
+        )
+    }
 
     // Achievement toast. The service exposes the unlocked set, not an event, so
     // the newly added id is the difference against what was already on screen.
@@ -130,6 +193,22 @@ fun SessionScreen(
             emergencyContactPhone = profile?.emergencyContactPhone,
             onDismiss = { showRidePicker = false }
         )
+    }
+
+    if (showFullScreenChart) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showFullScreenChart = false },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false
+            )
+        ) {
+            de.tipau.promille.ui.components.FullScreenBacChart(
+                points = if (curvePoints24h.isNotEmpty()) curvePoints24h else curvePoints,
+                drivingLimit = profile?.let { de.tipau.promille.repository.UserProfileRepository.toProfile(it).drivingLimit } ?: 0.5,
+                onDismiss = { showFullScreenChart = false }
+            )
+        }
     }
     var showResetDialog by remember { mutableStateOf(false) }
     var showMealSheet by remember { mutableStateOf(false) }
@@ -205,6 +284,9 @@ fun SessionScreen(
             onDismiss = { showQuickAdd = false },
             onDrinkAdded = { drink ->
                 viewModel.addDrink(drink)
+            },
+            onStartSipCounter = { template ->
+                viewModel.startSipCounter(template)
             }
         )
     }
@@ -222,434 +304,516 @@ fun SessionScreen(
         )
     }
 
+    // Drunk mode is opt-in per profile and dismissable for the rest of the session,
+    // so the auto trigger cannot trap someone in the simplified layout.
+    var drunkModeDismissed by remember { mutableStateOf(false) }
+    val isDrunkMode = profile?.drunkModeAuto == true &&
+        !drunkModeDismissed &&
+        bac >= (profile?.carefulThreshold ?: 0.80)
+
     Box(modifier = modifier.fillMaxSize().background(AppColors.background)) {
+        if (isDrunkMode) {
+            DrunkHomeView(
+                viewModel = viewModel,
+                profile = profile,
+                waterLog = container?.waterLog,
+                sosActive = myProfile?.sosActive == true,
+                onAddDrink = { showQuickAdd = true },
+                onCallRide = { showRidePicker = true },
+                onToggleSOS = {
+                    val next = myProfile?.sosActive != true
+                    scope.launch { runCatching { container?.supabase?.setSOS(next) } }
+                },
+                onExit = {
+                    if (profile?.largeText == true) viewModel.disableLargeText()
+                    drunkModeDismissed = true
+                }
+            )
+        } else if ((profile?.homeStyleRaw ?: "detailed") == "minimal") {
+            MinimalHomeView(
+                bac = bac,
+                status = status,
+                skin = skin,
+                onAddDrink = { showQuickAdd = true },
+                onExitToDetailed = { viewModel.setHomeStyle("detailed") }
+            )
+        } else {
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 110.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // Top Bar
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SectionLabel(text = "AKTUELL")
-                    if (drinks.isNotEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .background(AppColors.card)
-                                .border(1.dp, AppColors.border, CircleShape)
-                                .clickable { showResetDialog = true },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("↺", color = AppColors.textDim, fontSize = 16.sp)
-                        }
-                    }
+                if (isWidgetEditMode) {
+                    EditModeTopBar(
+                        onDone = { isWidgetEditMode = false }
+                    )
+                } else {
+                    HomeTopBar(
+                        onResetClick = { showResetDialog = true },
+                        onEdit = { isWidgetEditMode = true }
+                    )
                 }
             }
 
             // Pacing Warning
-            if (pacingWarning != null) {
+            if (pacingWarning != null && !isWidgetEditMode) {
                 item {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(AppColors.statusOrange.copy(alpha = 0.15f))
-                            .border(1.dp, AppColors.statusOrange.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
-                            .padding(14.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(AppColors.card)
+                            .border(0.5.dp, AppColors.statusOrange.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("⚠️", fontSize = 18.sp)
-                            Spacer(Modifier.width(10.dp))
-                            Text(
-                                text = pacingWarning!!,
-                                color = AppColors.statusOrange,
-                                fontSize = 13.sp,
-                                lineHeight = 17.sp,
-                                fontWeight = FontWeight.Medium
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(AppColors.statusOrange.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = AppIcons.Water,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = AppColors.statusOrange
+                                )
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    text = "Trink-Tempo",
+                                    color = AppColors.textDim,
+                                    fontSize = 11.sp
+                                )
+                                Text(
+                                    text = pacingWarning!!,
+                                    color = AppColors.text,
+                                    fontSize = 13.sp,
+                                    lineHeight = 17.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            if (needsAttention.isNotEmpty()) {
+            if (needsAttention.isNotEmpty() && !isWidgetEditMode) {
                 item {
                     CrewAlertBanner(names = needsAttention, onClick = { /* Crew tab */ })
                 }
             }
 
-            // 1. BAC Dial Hero
+            // 1. Central BAC Display Section
             item {
                 BACDisplaySection(
                     bac = bac,
                     status = status,
-                    trend = trend
+                    skin = skin,
+                    trend = trend,
+                    isEditMode = isWidgetEditMode,
+                    onLongClick = { isWidgetEditMode = true }
                 )
             }
 
-            // 2. Interactive 24h/8h BAC Curve Chart
-            item {
-                BACCurveChartView(
-                    points = curvePoints,
-                    drinks = drinks,
-                    warningThreshold = 0.5
-                )
-            }
-
-            // 3. 2x2 Info Tiles Grid
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    // Fahrtauglich
-                    InfoTile(
-                        icon = "🚗",
-                        title = "Fahrtauglich",
-                        value = driveableIn?.let { formatHours(it) } ?: "jetzt",
-                        accentColor = if (driveableIn != null && driveableIn!! > 0) AppColors.statusRed else AppColors.statusGreen,
-                        modifier = Modifier.weight(1f)
-                    )
-                    // Nüchtern
-                    InfoTile(
-                        icon = "⏱",
-                        title = "Nüchtern in",
-                        value = soberIn?.let { formatHours(it) } ?: "0 min",
-                        accentColor = if (bac > 0.01) AppColors.statusOrange else AppColors.statusGreen,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    // Kalorien
-                    InfoTile(
-                        icon = "🔥",
-                        title = "Kalorien",
-                        value = "$totalCalories kcal",
-                        accentColor = AppColors.accent,
-                        modifier = Modifier.weight(1f)
-                    )
-                    // Getränke
-                    InfoTile(
-                        icon = "🍺",
-                        title = "Getränke",
-                        value = "${drinks.size} gesamt",
-                        accentColor = AppColors.accent,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            // 4. Hydration Widget
-            if (drinks.isNotEmpty()) {
-                item {
-                    PromilleCard {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(AppColors.accent.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("💧", fontSize = 20.sp)
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Wasserbedarf", color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                                Text(
-                                    text = if (recommendedWater > 0) "Noch ca. $waterGlasses Gläser ($recommendedWater ml) trinken" else "Ausgeglichen!",
-                                    color = AppColors.textDim,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 5. Stomach Status Picker
-            item {
-                SectionLabel("Magen-Status")
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    StomachStatus.entries.forEach { s ->
-                        val isSelected = stomachStatus == s
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isSelected) AppColors.accent.copy(alpha = 0.15f) else AppColors.card)
-                                .border(
-                                    1.dp,
-                                    if (isSelected) AppColors.accent else AppColors.border,
-                                    RoundedCornerShape(12.dp)
-                                )
-                                .clickable { viewModel.stomachStatus.value = s }
-                                .padding(vertical = 10.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = s.germanName,
-                                color = if (isSelected) AppColors.accent else AppColors.textDim,
-                                fontSize = 13.sp,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Event Logging Cards (Essen, Pusten, Übergeben)
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(AppColors.card)
-                            .border(1.dp, AppColors.border, RoundedCornerShape(12.dp))
-                            .clickable { showMealSheet = true }
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("🍽️", fontSize = 16.sp)
-                            Spacer(Modifier.height(2.dp))
-                            Text("Essen", color = AppColors.text, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(AppColors.card)
-                            .border(1.dp, AppColors.border, RoundedCornerShape(12.dp))
-                            .clickable { showBreathalyzerDialog = true }
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("💨", fontSize = 16.sp)
-                            Spacer(Modifier.height(2.dp))
-                            Text("Pusten", color = AppColors.text, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(AppColors.card)
-                            .border(1.dp, AppColors.border, RoundedCornerShape(12.dp))
-                            .clickable { showVomitDialog = true }
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("🤮", fontSize = 16.sp)
-                            Spacer(Modifier.height(2.dp))
-                            Text(
-                                text = if (vomits.isNotEmpty()) "${vomits.size}× Kotzen" else "Kotzen",
-                                color = if (vomits.isNotEmpty()) AppColors.statusOrange else AppColors.text,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-            }
-            item {
-                FavouritesStrip(
-                    templates = favorites,
-                    onAdd = { template ->
-                        viewModel.addDrink(
-                            DrinkEntity(
-                                id = UUID.randomUUID().toString(),
-                                templateID = template.id,
-                                name = template.name,
-                                volume = template.volume,
-                                abv = template.abv,
-                                calories = template.calories,
-                                iconName = template.iconName,
-                                categoryRaw = template.categoryRaw,
-                                timestampEpochSeconds = System.currentTimeMillis() / 1000
-                            )
-                        )
-                    },
-                    // The stored size is not always the one in front of you.
-                    onLongPress = { amountTemplate = it }
-                )
-            }
-
-            item {
-                // Keyed on the ticker: hoursUntil reads projection.value and is
-                // not a flow, so without this the countdown freezes until some
-                // other observed state happens to change.
-                val hoursUntilTarget = remember(nowSeconds, profile) {
-                    viewModel.hoursUntil(
-                        if (profile?.isProbationaryDriver == true) {
-                            profile?.tipsyThreshold ?: 0.01
-                        } else {
-                            0.5
-                        }
-                    )
-                }
-                MilestoneCard(
-                    hoursUntilTarget = hoursUntilTarget,
-                    isProbationaryDriver = profile?.isProbationaryDriver == true
-                )
-            }
-
-            item {
-                DayStatsCard(
-                    drinkCount = drinks.size,
-                    maxToday = maxToday,
-                    minutesSinceLastDrink = minutesSinceLast
-                )
-            }
-
-            profile?.weeklyDrinkLimit?.takeIf { it > 0 }?.let { limit ->
-                item { WeeklyLimitCard(used = weekCount, limit = limit) }
-            }
-
-            if (container != null) {
-                item {
-                    SafetyActionsCard(
-                        sosActive = myProfile?.sosActive == true,
-                        onCallRide = { showRidePicker = true },
-                        onToggleSOS = {
-                            val next = myProfile?.sosActive != true
-                            scope.launch { runCatching { container.supabase.setSOS(next) } }
-                        }
-                    )
-                }
-            }
-
-            // 7. Drink History Section
-            item {
-                SectionLabel("Getränke dieser Session (${drinks.size})")
-            }
-
-            if (drinks.isEmpty()) {
+            // Action Prompt (Empty State)
+            if (drinks.isEmpty() && !isWidgetEditMode) {
                 item {
                     EmptyDrinkHint(onAdd = { showQuickAdd = true })
                 }
-            } else {
-                items(drinks.reversed(), key = { it.id }) { drink ->
-                    val timeStr = timeFormatter.format(Instant.ofEpochSecond(drink.timestampEpochSeconds))
-                    PromilleCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { editingDrink = drink }
+            }
+
+            // 2. Stomach Status Selector (MAGEN: Leer / Leicht gefüllt / Satt)
+            item {
+                EditableWidgetContainer(
+                    isEditMode = isWidgetEditMode,
+                    isActive = activeWidgets.contains(HomeWidgetType.STOMACH_STATUS),
+                    onToggleActive = { viewModel.toggleWidget("stomachStatus") }
+                ) {
+                    StomachStatusPicker(
+                        currentStatus = stomachStatus,
+                        onStatusSelected = { viewModel.stomachStatus.value = it }
+                    )
+                }
+            }
+
+            // 3. Event Logging Cards (Essen protokollieren & Breathalyser Messung)
+            if (drinks.isNotEmpty() && !isWidgetEditMode) {
+                item {
+                    MealActionCard(
+                        lastMealSubtitle = null,
+                        onClick = { showMealSheet = true }
+                    )
+                }
+                item {
+                    BreathalyzerCard(
+                        currentBAC = bac,
+                        latestReadingText = null,
+                        onClick = { showBreathalyzerDialog = true }
+                    )
+                }
+            }
+
+            // 4. Übergeben
+            if (drinks.isNotEmpty() && !isWidgetEditMode) {
+                item {
+                    VomitActionCard(
+                        vomitCount = vomits.size,
+                        onLogClick = { showVomitDialog = true },
+                        onUndoClick = { viewModel.removeLastVomit() }
+                    )
+                }
+            }
+
+            // 5. BAC Verlauf (Timeline Chart)
+            item {
+                EditableWidgetContainer(
+                    isEditMode = isWidgetEditMode,
+                    isActive = activeWidgets.contains(HomeWidgetType.BAC_CURVE),
+                    onToggleActive = { viewModel.toggleWidget("bacCurve") }
+                ) {
+                    BACCurveChartView(
+                        points = curvePoints,
+                        drinks = drinks,
+                        warningThreshold = 0.5,
+                        onFullScreenTap = { showFullScreenChart = true }
+                    )
+                }
+            }
+
+            // 6. Unter 0,5% / Nächster Meilenstein
+            if (drinks.isNotEmpty() || isWidgetEditMode) {
+                item {
+                    EditableWidgetContainer(
+                        isEditMode = isWidgetEditMode,
+                        isActive = activeWidgets.contains(HomeWidgetType.MILESTONE),
+                        onToggleActive = { viewModel.toggleWidget("milestone") }
                     ) {
+                        val hoursUntilTarget = remember(nowSeconds, profile) {
+                            viewModel.hoursUntil(
+                                if (profile?.isProbationaryDriver == true) {
+                                    profile?.tipsyThreshold ?: 0.01
+                                } else {
+                                    0.5
+                                }
+                            )
+                        }
+                        MilestoneCard(
+                            hoursUntilTarget = hoursUntilTarget,
+                            isProbationaryDriver = profile?.isProbationaryDriver == true
+                        )
+                    }
+                }
+            }
+
+            // 7. Hydration Section
+            item {
+                EditableWidgetContainer(
+                    isEditMode = isWidgetEditMode,
+                    isActive = activeWidgets.contains(HomeWidgetType.WATER) || activeWidgets.contains(HomeWidgetType.HYDRATION),
+                    onToggleActive = { viewModel.toggleWidget("hydration") }
+                ) {
+                    if (container?.waterLog != null) {
+                        HydrationWidget(
+                            drinks = drinks,
+                            profile = profile?.let { de.tipau.promille.repository.UserProfileRepository.toProfile(it) },
+                            extraSweatML = extraSweatML,
+                            vomitCount = vomits.size,
+                            waterLog = container.waterLog
+                        )
+                    } else {
+                        HydrationCard(
+                            drinksCount = drinks.size,
+                            waterGlasses = loggedGlasses,
+                            recommendedWaterMl = recommendedWater,
+                            onAddGlass = {
+                                loggedGlasses++
+                            },
+                            onRemoveGlass = {
+                                loggedGlasses = (loggedGlasses - 1).coerceAtLeast(0)
+                            }
+                        )
+                    }
+                }
+            }
+
+            // 8. 2x2 Info Tiles Grid (Unter Grenzwert / Wasser / Kalorien / Drinks heute)
+            val showTime = activeWidgets.contains(HomeWidgetType.TIME_TO_LIMIT)
+            val showWater = activeWidgets.contains(HomeWidgetType.WATER)
+            val showCalories = activeWidgets.contains(HomeWidgetType.CALORIES)
+            val showCount = activeWidgets.contains(HomeWidgetType.DRINK_COUNT)
+
+            item {
+                EditableWidgetContainer(
+                    isEditMode = isWidgetEditMode,
+                    isActive = showTime || showWater || showCalories || showCount,
+                    onToggleActive = {
+                        viewModel.toggleWidget("timeToLimit")
+                    }
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = drink.name,
-                                    color = AppColors.text,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Spacer(Modifier.height(2.dp))
-                                Text(
-                                    text = "$timeStr Uhr · ${String.format(Locale.GERMANY, "%.0f ml · %.1f%% · %d kcal", drink.volumeML, drink.abv, drink.calories)}",
-                                    color = AppColors.textDim,
-                                    fontSize = 12.sp
-                                )
-                            }
-                            Text(
-                                text = "✎",
-                                color = AppColors.textMuted,
-                                fontSize = 14.sp
+                            val driveText = driveableIn?.let { if (it <= 0) "Nüchtern" else "in ${formatHours(it)}" } ?: "Nüchtern"
+                            InfoWidget(
+                                icon = AppIcons.Car,
+                                label = if (profile?.isProbationaryDriver == true) "Bis 0,0 ‰" else "Bis 0,5 ‰",
+                                value = driveText,
+                                iconColor = AppColors.accent,
+                                modifier = Modifier.weight(1f)
+                            )
+                            val waterText = if (recommendedWater <= 0) "Ausreichend" else "Noch $waterGlasses Gl."
+                            InfoWidget(
+                                icon = AppIcons.Water,
+                                label = "Wasser",
+                                value = waterText,
+                                iconColor = AppColors.accent,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            InfoWidget(
+                                icon = AppIcons.Fire,
+                                label = "Kalorien",
+                                value = "$totalCalories kcal",
+                                iconColor = AppColors.statusOrange,
+                                modifier = Modifier.weight(1f)
+                            )
+                            InfoWidget(
+                                icon = AppIcons.Person,
+                                label = "Drinks heute",
+                                value = "${drinks.size}",
+                                iconColor = AppColors.statusGreen,
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }
                 }
             }
+
+            // Kater-Prognose Card
+            item {
+                HangoverForecastCard(currentBAC = bac)
+            }
+
+            // Weekly Limit Card
+            if (!isWidgetEditMode) {
+                profile?.weeklyDrinkLimit?.takeIf { it > 0 }?.let { limit ->
+                    item { WeeklyLimitCard(used = weekCount, limit = limit) }
+                }
+            }
+
+            // 9. Day Stats (Drinks, Maximum, Letzter Drink)
+            item {
+                EditableWidgetContainer(
+                    isEditMode = isWidgetEditMode,
+                    isActive = activeWidgets.contains(HomeWidgetType.DAY_STATS),
+                    onToggleActive = { viewModel.toggleWidget("dayStats") }
+                ) {
+                    DayStatsCard(
+                        drinkCount = drinks.size,
+                        maxToday = maxToday,
+                        minutesSinceLastDrink = minutesSinceLast
+                    )
+                }
+            }
+
+            // 10. Schnell hinzufügen (Favourites Strip)
+            if (favorites.isNotEmpty() || isWidgetEditMode) {
+                item {
+                    EditableWidgetContainer(
+                        isEditMode = isWidgetEditMode,
+                        isActive = activeWidgets.contains(HomeWidgetType.FAV_STRIP),
+                        onToggleActive = { viewModel.toggleWidget("favStrip") }
+                    ) {
+                        FavouritesStrip(
+                            templates = favorites,
+                            onAdd = { template ->
+                                viewModel.addDrink(
+                                    DrinkEntity(
+                                        id = UUID.randomUUID().toString(),
+                                        templateID = template.id,
+                                        name = template.name,
+                                        volume = template.volume,
+                                        abv = template.abv,
+                                        calories = template.calories,
+                                        iconName = template.iconName,
+                                        categoryRaw = template.categoryRaw,
+                                        timestampEpochSeconds = System.currentTimeMillis() / 1000
+                                    )
+                                )
+                            },
+                            onLongPress = { amountTemplate = it }
+                        )
+                    }
+                }
+            }
+
+            // 11. Heute mit der Drinks Auflistung
+            if (drinks.isNotEmpty() || isWidgetEditMode) {
+                item {
+                    EditableWidgetContainer(
+                        isEditMode = isWidgetEditMode,
+                        isActive = activeWidgets.contains(HomeWidgetType.DRINK_HISTORY),
+                        onToggleActive = { viewModel.toggleWidget("drinkHistory") }
+                    ) {
+                        DrinkHistorySection(
+                            drinks = drinks,
+                            stomachStatus = stomachStatus,
+                            onEdit = { editingDrink = it },
+                            onFinish = { viewModel.finishDrinkNow(it) },
+                            onDuplicate = { viewModel.duplicateDrink(it) },
+                            onDelete = { viewModel.removeDrink(it) }
+                        )
+                    }
+                }
+            }
+
+            // 12. Sicher nach Hause (Safety Actions)
+            if (container != null) {
+                item {
+                    EditableWidgetContainer(
+                        isEditMode = isWidgetEditMode,
+                        isActive = activeWidgets.contains(HomeWidgetType.SAFETY_ACTIONS),
+                        onToggleActive = { viewModel.toggleWidget("safetyActions") }
+                    ) {
+                        SafetyActionsCard(
+                            sosActive = myProfile?.sosActive == true,
+                            onCallRide = { showRidePicker = true },
+                            onToggleSOS = {
+                                val next = myProfile?.sosActive != true
+                                scope.launch { runCatching { container.supabase.setSOS(next) } }
+                            }
+                        )
+                    }
+                }
+            }
+
+            // 10. Disclaimer Footer Text matching iOS
+            item {
+                Text(
+                    text = "Widmark-Schätzwert. Müdigkeit, Medikamente und individuelle Faktoren können stark abweichen. Kein Ersatz für einen Atemtest. Im Zweifel nicht fahren.",
+                    color = AppColors.textMuted,
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                )
+            }
         }
 
-        // Floating Action Button (FAB) for QuickAdd
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(24.dp)
-        ) {
+        // FAB placement mirrors HomeView.swift:591-594: trailing 24, bottom 32.
+        if (!isWidgetEditMode && activeSipDrink == null) {
             PromilleFAB(
                 text = "Drink hinzufügen",
-                onClick = { showQuickAdd = true }
+                onClick = { showQuickAdd = true },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 24.dp, bottom = 32.dp)
+            )
+        }
+        }
+
+        // Morning mood prompt sits above the layout branch, not inside the detailed
+        // list: the minimal and drunk layouts have no list, and losing the prompt
+        // there would silently stop the day note from ever getting a mood.
+        if (showMorningMoodPrompt) {
+            de.tipau.promille.ui.components.MorningMoodPrompt(
+                onSelect = { mood ->
+                    showMorningMoodPrompt = false
+                    val now = Instant.now()
+                    val todayLogical = LogicalDay.dateOf(now.epochSecond)
+                    val yesterdayLogical = todayLogical.minus(java.time.Period.ofDays(1))
+                    val yesterdayIso = yesterdayLogical.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                    val moodPromptDismissKey = "moodPromptDismissed_$yesterdayIso"
+
+                    val prefs = context.getSharedPreferences("promille_prefs", Context.MODE_PRIVATE)
+                    prefs.edit().putBoolean(moodPromptDismissKey, true).apply()
+
+                    scope.launch {
+                        container?.dayNoteRepository?.saveNote(yesterdayIso, "", mood.raw)
+                    }
+                },
+                onDismiss = {
+                    showMorningMoodPrompt = false
+                    val now = Instant.now()
+                    val todayLogical = LogicalDay.dateOf(now.epochSecond)
+                    val yesterdayLogical = todayLogical.minus(java.time.Period.ofDays(1))
+                    val yesterdayIso = yesterdayLogical.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                    val moodPromptDismissKey = "moodPromptDismissed_$yesterdayIso"
+
+                    val prefs = context.getSharedPreferences("promille_prefs", Context.MODE_PRIVATE)
+                    prefs.edit().putBoolean(moodPromptDismissKey, true).apply()
+                },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 8.dp, start = 20.dp, end = 20.dp)
             )
         }
 
-        unlockToast?.let { title ->
+        val currentToast = unlockToast
+        if (currentToast != null) {
             AchievementToast(
-                title = title,
+                title = currentToast,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 12.dp, start = 20.dp, end = 20.dp)
             )
         }
 
-        // Floating Undo Snackbar
+        // Floating Sip Counter Overlay (replaces bottom area while counting)
         AnimatedVisibility(
-            visible = undoAction != null,
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            visible = activeSipDrink != null,
+            enter = if (reducedMotion) fadeIn() else slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = if (reducedMotion) fadeOut() else slideOutVertically(targetOffsetY = { it }) + fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 84.dp, start = 20.dp, end = 20.dp)
+                .padding(horizontal = 16.dp, vertical = 20.dp)
+        ) {
+            activeSipDrink?.let { drink ->
+                SipCounterView(
+                    drinkName = drink.name,
+                    drinkAbv = drink.abv,
+                    sipCount = sipCount,
+                    sipTotalML = sipTotalML.toInt(),
+                    sipPromille = sipPromille,
+                    currentSipVolume = currentSipVolume.toInt(),
+                    onAddSip = { viewModel.addSip() },
+                    onRemoveSip = { viewModel.removeSip() },
+                    onCommit = { viewModel.commitSips() },
+                    onCancel = { viewModel.cancelSipCounter() }
+                )
+            }
+        }
+
+        // Floating Undo Snackbar
+        AnimatedVisibility(
+            visible = undoAction != null && activeSipDrink == null,
+            // Motion.swift:37, appToastBottom: the slide collapses to a plain
+            // opacity change when the user asked for less motion.
+            enter = if (reducedMotion) fadeIn() else slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = if (reducedMotion) fadeOut() else slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 84.dp)
         ) {
             if (undoAction != null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(AppColors.card)
-                        .border(1.dp, AppColors.border, RoundedCornerShape(14.dp))
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = undoAction!!.label,
-                            color = AppColors.text,
-                            fontSize = 14.sp
-                        )
-                        Text(
-                            text = "Rückgängig",
-                            color = AppColors.accent,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            modifier = Modifier.clickable { viewModel.performUndo() }
-                        )
-                    }
-                }
+                UndoSnackbar(
+                    label = undoAction!!.label,
+                    onUndo = { viewModel.performUndo() }
+                )
             }
         }
     }
@@ -657,25 +821,43 @@ fun SessionScreen(
 
 @Composable
 private fun InfoTile(
-    icon: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
-    value: String,
-    accentColor: androidx.compose.ui.graphics.Color,
+    subtitle: String,
+    accentColor: androidx.compose.ui.graphics.Color = AppColors.text,
     modifier: Modifier = Modifier
 ) {
     PromilleCard(modifier = modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(icon, fontSize = 18.sp)
-            Spacer(Modifier.width(8.dp))
-            Column {
-                Text(title, color = AppColors.textDim, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                Spacer(Modifier.height(2.dp))
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .background(AppColors.card, androidx.compose.foundation.shape.CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = AppColors.text
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    text = value,
+                    text = title,
                     color = accentColor,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = AppSerif,
                     maxLines = 1
+                )
+                Text(
+                    text = subtitle,
+                    color = AppColors.textDim,
+                    fontSize = 12.sp
                 )
             }
         }

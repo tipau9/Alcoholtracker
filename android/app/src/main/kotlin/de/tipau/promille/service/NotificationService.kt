@@ -12,13 +12,14 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import de.tipau.promille.MainActivity
 import de.tipau.promille.bac.BacProjectionInput
 import java.util.Locale
 import kotlin.math.max
 
 /**
  * Port of NotificationService.swift.
- * Manages instant alerts (SOS/high BAC) and scheduled sobriety/threshold alarms.
+ * Manages instant alerts, live ongoing status notification, and scheduled sobriety/threshold alarms.
  */
 object NotificationService {
 
@@ -26,9 +27,12 @@ object NotificationService {
     const val CHANNEL_ALERTS = "promille.alerts"
     /** Scheduled sobriety and threshold notifications. */
     const val CHANNEL_SOBRIETY = "promille.sobriety"
+    /** Live ongoing statusbar notification. */
+    const val CHANNEL_LIVE = "promille.live"
 
     const val SOBER_NOTIFICATION_ID = "sober_notification"
     const val DRIVE_NOTIFICATION_ID = "drive_notification"
+    const val LIVE_NOTIFICATION_ID = 2001
     private const val PREFS_NAME = "promille_notifications"
     private const val KEY_SOBRIETY_ENABLED = "notifySobrietyEnabled"
 
@@ -59,6 +63,16 @@ object NotificationService {
                     description = "Meldungen, wenn du wieder nüchtern oder unter deiner Warnschwelle bist."
                 }
             )
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    CHANNEL_LIVE,
+                    "Live-Promillestand",
+                    NotificationManager.IMPORTANCE_LOW
+                ).apply {
+                    description = "Laufende Statusanzeige deines Promillewerts."
+                    setShowBadge(false)
+                }
+            )
         }
         channelsCreated = true
     }
@@ -82,6 +96,59 @@ object NotificationService {
             .edit()
             .putBoolean(KEY_SOBRIETY_ENABLED, enabled)
             .apply()
+    }
+
+    /**
+     * Updates the ongoing Live Activity notification in the Android status bar.
+     */
+    fun updateLiveNotification(
+        context: Context,
+        bac: Double,
+        statusText: String,
+        trendSymbol: String,
+        soberTimeStr: String?
+    ) {
+        if (!isAuthorized(context)) return
+        ensureChannels(context)
+
+        if (bac < 0.01) {
+            cancelLiveNotification(context)
+            return
+        }
+
+        val mainIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val mainPendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            mainIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val formattedBac = String.format(Locale.GERMANY, "%.2f ‰", bac)
+        val contentText = buildString {
+            append("$statusText · Trend: $trendSymbol")
+            if (!soberTimeStr.isNullOrBlank()) {
+                append(" · Nüchtern: $soberTimeStr")
+            }
+        }
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_LIVE)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("$formattedBac  ($statusText)")
+            .setContentText(contentText)
+            .setContentIntent(mainPendingIntent)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+
+        NotificationManagerCompat.from(context).notify(LIVE_NOTIFICATION_ID, notification)
+    }
+
+    fun cancelLiveNotification(context: Context) {
+        NotificationManagerCompat.from(context).cancel(LIVE_NOTIFICATION_ID)
     }
 
     /**
@@ -112,7 +179,7 @@ object NotificationService {
     )
 
     fun promilleString(value: Double): String =
-        String.format(Locale.GERMAN, "%.2f", value)
+        String.format(Locale.GERMANY, "%.2f", value)
 
     /**
      * Pure planning function without platform dependencies, matching NotificationService.swift.

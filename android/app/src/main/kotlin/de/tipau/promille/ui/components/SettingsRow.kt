@@ -3,41 +3,57 @@ package de.tipau.promille.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
 
+private val UnfoldMoreIcon: ImageVector = ImageVector.Builder(
+    name = "UnfoldMore",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f
+).apply {
+    path(fill = SolidColor(Color.White)) {
+        moveTo(12f, 5.83f)
+        lineTo(15.17f, 9f)
+        lineToRelative(1.41f, -1.41f)
+        lineTo(12f, 3f)
+        lineTo(7.41f, 7.59f)
+        lineTo(8.83f, 9f)
+        lineTo(12f, 5.83f)
+        close()
+        moveTo(12f, 18.17f)
+        lineTo(8.83f, 15f)
+        lineToRelative(-1.41f, 1.41f)
+        lineTo(12f, 21f)
+        lineToRelative(4.59f, -4.59f)
+        lineTo(15.17f, 15f)
+        lineTo(12f, 18.17f)
+        close()
+    }
+}.build()
+
 /**
  * A toggle row matching the iOS STToggleRow style.
- * Icon (optional) + Title + optional Subtitle on the left, Switch on the right.
+ * Leading icon + Title + optional Subtitle on the left, Switch on the right.
  */
 @Composable
 fun SettingsToggleRow(
@@ -46,36 +62,56 @@ fun SettingsToggleRow(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
-    icon: String? = null
+    icon: ImageVector? = null,
+    iconColor: Color = AppColors.accent
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (icon != null) {
+            Box(
+                modifier = Modifier.width(22.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconColor,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+        }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 color = AppColors.text,
-                fontSize = 15.sp
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Normal
             )
             if (subtitle != null) {
                 Text(
                     text = subtitle,
-                    color = AppColors.textMuted,
-                    fontSize = 12.sp
+                    color = AppColors.textDim,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
                 )
             }
         }
+        Spacer(Modifier.width(12.dp))
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = AppColors.background,
-                checkedTrackColor = AppColors.accent,
-                uncheckedThumbColor = AppColors.textDim,
-                uncheckedTrackColor = AppColors.border
+                checkedThumbColor = Color.White,
+                checkedTrackColor = iconColor,
+                uncheckedThumbColor = Color.White,
+                uncheckedTrackColor = AppColors.border,
+                uncheckedBorderColor = Color.Transparent,
+                checkedBorderColor = Color.Transparent
             )
         )
     }
@@ -83,7 +119,7 @@ fun SettingsToggleRow(
 
 /**
  * A numeric input row matching the iOS STNumericRow style.
- * Label on the left, text field + unit on the right.
+ * Clean, borderless text field aligned to the trailing side with unit.
  */
 @Composable
 fun SettingsNumericRow(
@@ -94,10 +130,12 @@ fun SettingsNumericRow(
     modifier: Modifier = Modifier,
     keyboardType: KeyboardType = KeyboardType.Decimal
 ) {
+    var text by remember(value) { mutableStateOf(value) }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -106,33 +144,103 @@ fun SettingsNumericRow(
             fontSize = 15.sp,
             modifier = Modifier.weight(1f)
         )
-        OutlinedTextField(
-            value = value,
-            onValueChange = { onValueChange(it.filter { c -> c.isDigit() || c == ',' || c == '.' }) },
+        androidx.compose.foundation.text.BasicTextField(
+            value = text,
+            onValueChange = {
+                val filtered = it.filter { c -> c.isDigit() || c == ',' || c == '.' }
+                text = filtered
+                onValueChange(filtered)
+            },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = AppColors.text,
-                unfocusedTextColor = AppColors.text,
-                focusedBorderColor = AppColors.accent,
-                unfocusedBorderColor = AppColors.border,
-                cursorColor = AppColors.accent
+            textStyle = androidx.compose.ui.text.TextStyle(
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = AppColors.accent,
+                textAlign = androidx.compose.ui.text.style.TextAlign.End
             ),
-            modifier = Modifier.width(100.dp)
+            cursorBrush = androidx.compose.ui.graphics.SolidColor(AppColors.accent),
+            modifier = Modifier.width(74.dp)
         )
-        Spacer(Modifier.width(8.dp))
+        if (unit.isNotEmpty()) {
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = unit,
+                color = AppColors.textDim,
+                fontSize = 13.sp,
+                modifier = Modifier.width(36.dp)
+            )
+        }
+    }
+}
+
+/**
+ * A contact text field row matching the iOS STContactField style.
+ * Clean, borderless text field with label on left and trailing text/placeholder.
+ */
+@Composable
+fun SettingsContactRow(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    keyboardType: KeyboardType = KeyboardType.Text
+) {
+    var text by remember(value) { mutableStateOf(value) }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         Text(
-            text = unit,
-            color = AppColors.textDim,
-            fontSize = 14.sp
+            text = label,
+            color = AppColors.text,
+            fontSize = 15.sp,
+            modifier = Modifier.width(120.dp)
         )
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.CenterEnd
+        ) {
+            if (text.isEmpty()) {
+                Text(
+                    text = placeholder,
+                    color = AppColors.textMuted,
+                    fontSize = 15.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            androidx.compose.foundation.text.BasicTextField(
+                value = text,
+                onValueChange = {
+                    text = it
+                    onValueChange(it)
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = AppColors.accent,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.End
+                ),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(AppColors.accent),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }
 
 /**
  * A slider row matching the iOS STElimRow / STThresholdRow style.
- * Label + value display on top, Slider underneath with min/max labels.
+ * Label + value display on top, custom slider underneath with min/max labels.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsSliderRow(
     label: String,
@@ -146,21 +254,27 @@ fun SettingsSliderRow(
     steps: Int = 0,
     statusDotColor: Color? = null
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val activeColor = statusDotColor ?: AppColors.accent
+
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
                 if (statusDotColor != null) {
                     Box(
                         modifier = Modifier
-                            .size(10.dp)
+                            .size(8.dp)
                             .clip(CircleShape)
                             .background(statusDotColor)
                     )
@@ -172,23 +286,42 @@ fun SettingsSliderRow(
                     fontSize = 15.sp
                 )
             }
+            Spacer(Modifier.width(12.dp))
             Text(
                 text = valueDisplay,
-                color = AppColors.accent,
-                fontSize = 15.sp,
+                color = activeColor,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold
             )
         }
+        Spacer(Modifier.height(4.dp))
         Slider(
             value = value,
             onValueChange = onValueChange,
             valueRange = valueRange,
             steps = steps,
-            colors = SliderDefaults.colors(
-                thumbColor = AppColors.accent,
-                activeTrackColor = AppColors.accent,
-                inactiveTrackColor = AppColors.border
-            ),
+            interactionSource = interactionSource,
+            thumb = {
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .shadow(2.dp, CircleShape)
+                        .background(Color.White, CircleShape)
+                        .border(0.5.dp, Color(0x22000000), CircleShape)
+                )
+            },
+            track = { sliderState ->
+                SliderDefaults.Track(
+                    sliderState = sliderState,
+                    modifier = Modifier.height(4.dp),
+                    colors = SliderDefaults.colors(
+                        activeTrackColor = activeColor,
+                        inactiveTrackColor = AppColors.border,
+                        activeTickColor = Color.Transparent,
+                        inactiveTickColor = Color.Transparent
+                    )
+                )
+            },
             modifier = Modifier.fillMaxWidth()
         )
         if (minLabel.isNotEmpty() || maxLabel.isNotEmpty()) {
@@ -196,9 +329,49 @@ fun SettingsSliderRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = minLabel, color = AppColors.textMuted, fontSize = 11.sp)
-                Text(text = maxLabel, color = AppColors.textMuted, fontSize = 11.sp)
+                Text(text = minLabel, color = AppColors.textDim, fontSize = 11.sp)
+                Text(text = maxLabel, color = AppColors.textDim, fontSize = 11.sp)
             }
+        }
+    }
+}
+
+/**
+ * A selectable picker row matching iOS STSelectRow (e.g. Geschlecht, Home-Ansicht, Standard-Magen)
+ * with current value on the right and a subtle double-chevron (↕).
+ */
+@Composable
+fun SettingsSelectRow(
+    label: String,
+    value: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 13.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = label, color = AppColors.text, fontSize = 15.sp)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = value,
+                color = AppColors.accent,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Icon(
+                imageVector = UnfoldMoreIcon,
+                contentDescription = null,
+                tint = AppColors.accent,
+                modifier = Modifier.size(16.dp)
+            )
         }
     }
 }
@@ -215,15 +388,16 @@ fun SettingsInfoRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+            .padding(horizontal = 16.dp, vertical = 13.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = label, color = AppColors.textDim, fontSize = 15.sp)
+        Text(text = label, color = AppColors.text, fontSize = 15.sp)
         Text(
             text = value,
-            color = AppColors.text,
+            color = AppColors.textDim,
             fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.Bold
         )
     }
 }
@@ -235,21 +409,36 @@ fun SettingsInfoRow(
 fun SettingsDestructiveRow(
     label: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (icon != null) {
+            Box(
+                modifier = Modifier.width(22.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = AppColors.statusRed,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+        }
         Text(
             text = label,
             color = AppColors.statusRed,
             fontSize = 15.sp
         )
+        Spacer(Modifier.weight(1f))
     }
 }
 
@@ -261,16 +450,31 @@ fun SettingsNavigationRow(
     title: String,
     subtitle: String? = null,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    iconColor: Color = AppColors.accent
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (icon != null) {
+            Box(
+                modifier = Modifier.width(22.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconColor,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+        }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
@@ -280,15 +484,16 @@ fun SettingsNavigationRow(
             if (subtitle != null) {
                 Text(
                     text = subtitle,
-                    color = AppColors.textMuted,
+                    color = AppColors.textDim,
                     fontSize = 12.sp
                 )
             }
         }
-        Text(
-            text = "\u203A",
-            color = AppColors.textMuted,
-            fontSize = 20.sp
+        Icon(
+            imageVector = AppIcons.ChevronRight,
+            contentDescription = null,
+            tint = AppColors.textDim,
+            modifier = Modifier.size(14.dp)
         )
     }
 }
@@ -300,6 +505,7 @@ fun SettingsNavigationRow(
 fun SettingsDivider() {
     HorizontalDivider(
         color = AppColors.border,
-        modifier = Modifier.padding(vertical = 4.dp)
+        thickness = 0.5.dp,
+        modifier = Modifier.padding(start = 16.dp)
     )
 }

@@ -1,4 +1,11 @@
+
+
 package de.tipau.promille.ui.screens.auth
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+
+
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,6 +20,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -42,12 +51,26 @@ fun AuthGateSheet(
     onSignedIn: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = AppColors.background,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
+        sheetState = sheetState,
+        containerColor = Color.Transparent,
+        scrimColor = Color.Black.copy(alpha = 0.65f),
+        dragHandle = null
     ) {
-        AuthGateContent(supabase, onSignedIn, onDismiss)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp, top = 16.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(AppColors.background)
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
+        ) {
+            AuthGateContent(supabase, onSignedIn, onDismiss)
+        }
     }
 }
 
@@ -113,7 +136,7 @@ private fun AuthGateContent(
                     .size(40.dp)
                     .background(AppColors.accent.copy(alpha = 0.12f), RoundedCornerShape(11.dp))
             ) {
-                Text("🔒", fontSize = 18.sp)
+                Icon(de.tipau.promille.ui.components.AppIcons.Lock, null, tint = AppColors.accent, modifier = Modifier.size(20.dp))
             }
             Text(
                 text = if (mode == AuthMode.SIGN_IN) "Anmelden" else "Registrieren",
@@ -130,7 +153,7 @@ private fun AuthGateContent(
                     .border(0.5.dp, AppColors.border, CircleShape)
                     .clickable(onClick = onDismiss)
             ) {
-                Text("✕", color = AppColors.textDim, fontSize = 14.sp)
+                Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(16.dp))
             }
         }
 

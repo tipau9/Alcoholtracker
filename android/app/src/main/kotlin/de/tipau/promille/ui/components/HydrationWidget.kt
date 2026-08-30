@@ -125,7 +125,7 @@ fun HydrationWidget(
             // Stats rows
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 HydrationStatRow(
-                    icon = "",
+                    icon = AppIcons.Water,
                     iconColor = AppColors.accent,
                     label = "Wasseraufnahme",
                     value = "+${waterIn.toInt()} ml",
@@ -134,7 +134,7 @@ fun HydrationWidget(
                 )
 
                 HydrationStatRow(
-                    icon = "↓",
+                    icon = AppIcons.ArrowDown,
                     iconColor = AppColors.statusOrange,
                     label = "Alkohol-Diurese",
                     value = "-${diuresis.toInt()} ml",
@@ -161,7 +161,7 @@ fun HydrationWidget(
                             .background(netColor.copy(alpha = 0.13f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("=", color = netColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Icon(AppIcons.Equal, null, tint = netColor, modifier = Modifier.size(14.dp))
                     }
 
                     Spacer(Modifier.width(12.dp))
@@ -178,7 +178,9 @@ fun HydrationWidget(
                         text = netValueString,
                         color = netColor,
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = de.tipau.promille.AppSans,
+                        style = de.tipau.promille.TabularFigures
                     )
 
                     Spacer(Modifier.width(8.dp))
@@ -257,11 +259,11 @@ fun HydrationWidget(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     val isGreen = extraWater == 0
-                    Text(
-                        text = if (isGreen) "OK" else "!",
-                        color = if (isGreen) AppColors.statusGreen else AppColors.statusOrange,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
+                    Icon(
+                        imageVector = if (isGreen) Icons.Filled.CheckCircle else Icons.Filled.Info,
+                        contentDescription = null,
+                        tint = if (isGreen) AppColors.statusGreen else AppColors.statusOrange,
+                        modifier = Modifier.size(14.dp)
                     )
                     Text(
                         text = if (extraWater == 0) {
@@ -279,7 +281,7 @@ fun HydrationWidget(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(de.tipau.promille.ui.components.AppIcons.Sun, null, tint = AppColors.accent, modifier = Modifier.size(14.dp))
+                        Icon(de.tipau.promille.ui.components.AppIcons.Sun, null, tint = AppColors.statusOrange, modifier = Modifier.size(14.dp))
                         Text(
                             text = "Inkl. ca. ${extraSweatML.toInt()} ml Schweißverlust (warmes Wetter).",
                             color = AppColors.textMuted,
@@ -294,7 +296,7 @@ fun HydrationWidget(
 
 @Composable
 private fun HydrationStatRow(
-    icon: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     iconColor: Color,
     label: String,
     value: String,
@@ -312,7 +314,7 @@ private fun HydrationStatRow(
                 .background(iconColor.copy(alpha = 0.13f)),
             contentAlignment = Alignment.Center
         ) {
-            Text(icon, color = iconColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(14.dp))
         }
 
         Spacer(Modifier.width(12.dp))
@@ -328,7 +330,9 @@ private fun HydrationStatRow(
             text = value,
             color = valueColor,
             fontSize = 14.sp,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            fontFamily = de.tipau.promille.AppSans,
+            style = de.tipau.promille.TabularFigures
         )
     }
 }
@@ -352,7 +356,7 @@ private fun WaterLogRow(
                 .background(AppColors.statusGreen.copy(alpha = 0.13f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(de.tipau.promille.ui.components.AppIcons.Water, null, tint = AppColors.accent, modifier = Modifier.size(14.dp))
+            Icon(de.tipau.promille.ui.components.AppIcons.Cup, null, tint = AppColors.statusGreen, modifier = Modifier.size(14.dp))
         }
 
         Column(modifier = Modifier.weight(1f)) {
@@ -415,3 +419,4 @@ private fun WaterLogRow(
         }
     }
 }
+

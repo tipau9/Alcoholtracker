@@ -12,27 +12,34 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
-import de.tipau.promille.ui.components.PromilleCard
+import de.tipau.promille.color
+import de.tipau.promille.ui.components.AppIcons
 import de.tipau.promille.ui.components.SectionLabel
 import de.tipau.promille.ui.viewmodels.SafetyViewModel
+import java.util.Locale
+import de.tipau.promille.AppSerif
 
 private fun formatHours(hours: Double): String {
     val totalMinutes = (hours * 60).toInt()
     val h = totalMinutes / 60
     val m = totalMinutes % 60
     return when {
-        h > 0 && m > 0 -> "${h}h ${m}m"
-        h > 0 -> "${h}h"
+        h > 0 && m > 0 -> "${h} h ${m} min"
+        h > 0 -> "${h} h"
         else -> "${m} min"
     }
 }
@@ -57,6 +64,7 @@ fun SafetyScreen(
     val context = LocalContext.current
     val bac by viewModel.currentBAC.collectAsState()
     val status by viewModel.bacStatus.collectAsState()
+    val skin by viewModel.statusSkin.collectAsState()
     val soberIn by viewModel.soberInHours.collectAsState()
     val driveableIn by viewModel.driveableInHours.collectAsState()
     val contactName by viewModel.emergencyContactName.collectAsState()
@@ -66,7 +74,6 @@ fun SafetyScreen(
     val profile by viewModel.bacProfile.collectAsState()
 
     var showRidePicker by remember { mutableStateOf(false) }
-    var showMedications by remember { mutableStateOf(false) }
 
     if (showRidePicker) {
         RidePickerSheet(
@@ -75,256 +82,421 @@ fun SafetyScreen(
         )
     }
 
-    if (showMedications) {
-        MedicationSheet(
-            onDismiss = { showMedications = false }
-        )
-    }
-
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(AppColors.background)
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(AppColors.statusGreen.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("🛡️", fontSize = 20.sp)
-            }
-            Spacer(Modifier.width(12.dp))
-            Column {
-                Text(
-                    text = "Sicherheit",
-                    color = AppColors.text,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Schütze dich und andere",
-                    color = AppColors.textDim,
-                    fontSize = 13.sp
-                )
-            }
-        }
-
-        // Timer Cards
-        SectionLabel("Prognosen")
+        // SFTopBar matching iOS
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Nüchtern Timer
-            PromilleCard(modifier = Modifier.weight(1f)) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = "NÜCHTERN IN",
-                        color = AppColors.textDim,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 0.5.sp
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = soberIn?.let { formatHours(it) } ?: "0 min",
-                        color = if (bac > 0.01) AppColors.statusOrange else AppColors.statusGreen,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "bis 0,00 ‰",
-                        color = AppColors.textMuted,
-                        fontSize = 11.sp
-                    )
-                }
-            }
-
-            // Fahrtauglich Timer
-            PromilleCard(modifier = Modifier.weight(1f)) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = "FAHRTAUGLICH",
-                        color = AppColors.textDim,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 0.5.sp
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = driveableIn?.let { formatHours(it) } ?: "jetzt",
-                        color = if (driveableIn != null && driveableIn!! > 0) AppColors.statusRed else AppColors.statusGreen,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = if (isProbationary) "bis 0,0 ‰ (Probezeit)" else "bis 0,50 ‰",
-                        color = AppColors.textMuted,
-                        fontSize = 11.sp
-                    )
-                }
-            }
-        }
-
-        // Trink-Prognose (ForecastView)
-        if (profile != null) {
-            ForecastView(
-                drinks = drinks,
-                profile = profile!!
-            )
-        }
-
-        // Action Buttons
-        SectionLabel("Heimweg & Notfall")
-
-        // Heimfahrt organisieren (Uber / Taxi / Maps)
-        ActionCard(
-            icon = "🚕",
-            title = "Sicher nach Hause",
-            subtitle = "Uber bestellen, Taxi rufen (22456) oder ÖPNV planen",
-            accentColor = AppColors.accent,
-            onClick = { showRidePicker = true }
-        )
-
-        // Medikamente & Wechselwirkungen
-        ActionCard(
-            icon = "💊",
-            title = "Medikamente & Alkohol",
-            subtitle = "Wechselwirkungen mit Ibuprofen, Paracetamol & Co.",
-            accentColor = AppColors.statusOrange,
-            onClick = { showMedications = true }
-        )
-
-        // Notfallkontakt anrufen
-        val hasContact = !contactPhone.isNullOrBlank()
-        ActionCard(
-            icon = "📞",
-            title = if (hasContact) "Notfallkontakt anrufen" else "Kein Notfallkontakt hinterlegt",
-            subtitle = if (hasContact) "${contactName ?: "Kontakt"}: $contactPhone" else "In den Einstellungen festlegen",
-            accentColor = if (hasContact) AppColors.statusGreen else AppColors.textMuted,
-            onClick = {
-                if (hasContact) {
-                    dialNumber(context, contactPhone!!)
-                } else {
-                    Toast.makeText(context, "Bitte trage in den Einstellungen einen Notfallkontakt ein", Toast.LENGTH_LONG).show()
-                }
-            }
-        )
-
-        // Sucht- & Drogen-Hotline
-        ActionCard(
-            icon = "ℹ️",
-            title = "Sucht- & Drogen-Hotline",
-            subtitle = "Kostenlose Hilfe: 0800 111 0 550",
-            accentColor = AppColors.accent,
-            onClick = {
-                dialNumber(context, "08001110550")
-            }
-        )
-
-        // Hydration Tip
-        SectionLabel("Tipp")
-        PromilleCard {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(AppColors.accent.copy(alpha = 0.15f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("💧", fontSize = 18.sp)
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Zwischendurch Wasser trinken!",
-                        color = AppColors.text,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = "Ein Glas Wasser pro alkoholischem Getränk beugt einem Kater vor und unterstützt die Hydration.",
-                        color = AppColors.textDim,
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp
-                    )
-                }
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        // Disclaimer
-        Text(
-            text = "Rechtlicher Hinweis: Alle Werte basieren auf mathematischen Schätzungen (Widmark/Watson) und ersetzen keinen Alkohol-Atemtest. Im Zweifelsfall niemals selbst fahren!",
-            color = AppColors.textMuted,
-            fontSize = 11.sp,
-            lineHeight = 15.sp
-        )
-    }
-}
-
-@Composable
-private fun ActionCard(
-    icon: String,
-    title: String,
-    subtitle: String,
-    accentColor: androidx.compose.ui.graphics.Color,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(AppColors.card)
-            .border(1.dp, AppColors.border, RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(top = 16.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Text(
+                text = "Sicherheit",
+                color = AppColors.text,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        HorizontalDivider(color = AppColors.border, thickness = 0.5.dp)
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            // SFBACCard matching iOS SFBACCard
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .background(accentColor.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(status.color.copy(alpha = 0.08f))
+                    .border(1.dp, status.color.copy(alpha = 0.40f), RoundedCornerShape(16.dp))
             ) {
-                Text(icon, fontSize = 20.sp)
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .padding(top = 12.dp, bottom = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = AppIcons.Water,
+                                contentDescription = null,
+                                tint = status.color,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Text(
+                                text = "Aktueller Pegel",
+                                color = status.color,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        // Status pill
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(status.color.copy(alpha = 0.15f))
+                                .border(0.5.dp, status.color.copy(alpha = 0.5f), CircleShape)
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = status.label(skin),
+                                color = status.color,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = AppColors.border.copy(alpha = 0.5f), thickness = 0.5.dp)
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = String.format(Locale.GERMAN, "%.2f", bac),
+                            color = status.color,
+                            fontSize = 56.sp,
+                            fontFamily = AppSerif,
+                            fontWeight = FontWeight.Light
+                        )
+                        Text(
+                            text = "Promille (‰)",
+                            color = status.color.copy(alpha = 0.7f),
+                            fontSize = 13.sp
+                        )
+                    }
+
+                    HorizontalDivider(color = AppColors.border.copy(alpha = 0.5f), thickness = 0.5.dp)
+
+                    Text(
+                        text = "Widmark-Schätzwert. Individuelle Faktoren können abweichen. Kein Atemtest. Im Zweifel nicht fahren.",
+                        color = AppColors.textMuted,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                    )
+                }
             }
-            Spacer(Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
+
+            // ZEITEN Section
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SectionLabel(text = "ZEITEN")
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(AppColors.card)
+                        .border(0.5.dp, AppColors.border, RoundedCornerShape(16.dp))
+                ) {
+                    Column {
+                        // Nüchtern Timer Row
+                        val isSoberReady = bac <= 0.01
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 13.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSoberReady) AppColors.statusGreen.copy(alpha = 0.12f) else AppColors.textDim.copy(alpha = 0.10f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = AppIcons.Check,
+                                    contentDescription = null,
+                                    tint = if (isSoberReady) AppColors.statusGreen else AppColors.textDim,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(14.dp))
+                            Text(
+                                text = "Nüchtern",
+                                color = AppColors.text,
+                                fontSize = 17.sp
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                text = if (isSoberReady) "Bereits nüchtern"
+                                else soberIn?.let { formatHours(it) } ?: "> 72 h",
+                                color = if (isSoberReady) AppColors.statusGreen else AppColors.text,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 60.dp),
+                            color = AppColors.border.copy(alpha = 0.5f),
+                            thickness = 0.5.dp
+                        )
+
+                        // Fahrtauglich Timer Row
+                        val isUnderDriveLimit = if (isProbationary) bac <= 0.01 else bac < 0.5
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 13.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isUnderDriveLimit) AppColors.statusGreen.copy(alpha = 0.12f) else AppColors.textDim.copy(alpha = 0.10f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = AppIcons.Car,
+                                    contentDescription = null,
+                                    tint = if (isUnderDriveLimit) AppColors.statusGreen else AppColors.textDim,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(14.dp))
+                            Text(
+                                text = if (isProbationary) "Unter 0,0 ‰" else "Unter 0,5 ‰",
+                                color = AppColors.text,
+                                fontSize = 17.sp
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                text = if (isUnderDriveLimit) "Fahrbereit"
+                                else driveableIn?.let { formatHours(it) } ?: "> 72 h",
+                                color = if (isUnderDriveLimit) AppColors.statusGreen else AppColors.text,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+            }
+
+            // FAHR-GRENZWERT Section (matching iOS SFLimitSegment)
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SectionLabel(text = "FAHR-GRENZWERT")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Standard (0,5 ‰) Segment
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (!isProbationary) AppColors.accent else AppColors.card)
+                            .border(
+                                width = if (!isProbationary) 1.dp else 0.5.dp,
+                                color = if (!isProbationary) AppColors.accent else AppColors.border,
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                            .clickable { viewModel.setProbationaryDriver(false) }
+                            .padding(vertical = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = "0,5 ‰",
+                                color = if (!isProbationary) AppColors.background else AppColors.text,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "Standard",
+                                color = if (!isProbationary) AppColors.background.copy(alpha = 0.8f) else AppColors.textDim,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+
+                    // Probezeit (0,0 ‰) Segment
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (isProbationary) AppColors.accent else AppColors.card)
+                            .border(
+                                width = if (isProbationary) 1.dp else 0.5.dp,
+                                color = if (isProbationary) AppColors.accent else AppColors.border,
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                            .clickable { viewModel.setProbationaryDriver(true) }
+                            .padding(vertical = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = "Probezeit",
+                                color = if (isProbationary) AppColors.background else AppColors.text,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "0,0 ‰",
+                                color = if (isProbationary) AppColors.background.copy(alpha = 0.8f) else AppColors.textDim,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
+
                 Text(
-                    text = title,
-                    color = AppColors.text,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    color = AppColors.textDim,
-                    fontSize = 12.sp
+                    text = "Gilt für deine Fahrbereit-Zeit, die Vorausschau und die Fahrbereit-Anzeige bei als Fahrer markierten Freunden.",
+                    color = AppColors.textMuted,
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp
                 )
             }
-            Text(
-                text = "›",
-                color = AppColors.textMuted,
-                fontSize = 22.sp
-            )
+
+            // Vorausschau (ForecastView)
+            if (profile != null) {
+                ForecastView(
+                    drinks = drinks,
+                    profile = profile!!
+                )
+            }
+
+            // AKTIONEN Section (matching iOS SFActionButton)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SectionLabel(text = "AKTIONEN")
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // Heimfahrt
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(AppColors.card)
+                            .border(0.5.dp, AppColors.border, RoundedCornerShape(16.dp))
+                            .clickable { showRidePicker = true }
+                            .padding(horizontal = 16.dp, vertical = 14.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(AppColors.accent.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = AppIcons.Car,
+                                    contentDescription = null,
+                                    tint = AppColors.accent,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+
+                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    text = "Heimfahrt",
+                                    color = AppColors.text,
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "Taxi oder Maps öffnen",
+                                    color = AppColors.textDim,
+                                    fontSize = 13.sp
+                                )
+                            }
+
+                            Text(
+                                text = "›",
+                                color = AppColors.textMuted,
+                                fontSize = 20.sp
+                            )
+                        }
+                    }
+
+                    // Notfallkontakt
+                    if (!contactPhone.isNullOrBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(AppColors.card)
+                                .border(0.5.dp, AppColors.border, RoundedCornerShape(16.dp))
+                                .clickable { dialNumber(context, contactPhone!!) }
+                                .padding(horizontal = 16.dp, vertical = 14.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(AppColors.statusOrange.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = AppIcons.Phone,
+                                        contentDescription = null,
+                                        tint = AppColors.statusOrange,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
+                                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(
+                                        text = "Notfallkontakt anrufen",
+                                        color = AppColors.text,
+                                        fontSize = 17.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = contactName?.ifBlank { "Notfallkontakt" } ?: "Notfallkontakt",
+                                        color = AppColors.textDim,
+                                        fontSize = 13.sp
+                                    )
+                                }
+
+                                Text(
+                                    text = "›",
+                                    color = AppColors.textMuted,
+                                    fontSize = 20.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }

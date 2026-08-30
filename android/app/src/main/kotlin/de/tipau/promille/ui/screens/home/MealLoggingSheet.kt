@@ -1,15 +1,24 @@
 package de.tipau.promille.ui.screens.home
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+
+
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+
+
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,110 +49,154 @@ fun MealLoggingSheet(
     var mealName by remember { mutableStateOf("") }
     var selectedImpact by remember { mutableStateOf(MealImpact.LIGHT_MEAL) }
 
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = AppColors.background,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
+        sheetState = sheetState,
+        containerColor = Color.Transparent,
+        scrimColor = Color.Black.copy(alpha = 0.65f),
+        dragHandle = null
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 36.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp, top = 16.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(AppColors.background)
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
         ) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Column {
-                    Text(
-                        text = "Essen protokollieren",
-                        color = AppColors.text,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Wirkt auf noch nicht aufgenommenen Alkohol",
-                        color = AppColors.textDim,
-                        fontSize = 12.sp
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.card)
-                        .border(1.dp, AppColors.border, CircleShape)
-                        .clickable(onClick = onDismiss),
-                    contentAlignment = Alignment.Center
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("✕", color = AppColors.textDim, fontSize = 14.sp)
-                }
-            }
-
-            // Name Field
-            SectionLabel("Gericht / Mahlzeit (optional)")
-            OutlinedTextField(
-                value = mealName,
-                onValueChange = { mealName = it },
-                placeholder = { Text("z.B. Pizza, Döner, Burger", color = AppColors.textMuted) },
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = AppColors.text,
-                    unfocusedTextColor = AppColors.text,
-                    focusedBorderColor = AppColors.accent,
-                    unfocusedBorderColor = AppColors.border,
-                    cursorColor = AppColors.accent
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Meal Impact Options
-            SectionLabel("Mahlzeit-Art")
-            MEAL_OPTIONS.forEach { opt ->
-                val isSelected = selectedImpact == opt.impact
-                PromilleCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { selectedImpact = opt.impact }
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                    Column {
+                        Text(
+                            text = "Essen protokollieren",
+                            color = AppColors.text,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Wirkt auf noch nicht aufgenommenen Alkohol",
+                            color = AppColors.textDim,
+                            fontSize = 12.sp
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(AppColors.card)
+                            .border(1.dp, AppColors.border, CircleShape)
+                            .clickable(onClick = onDismiss),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = opt.title,
-                                color = if (isSelected) AppColors.accent else AppColors.text,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Spacer(Modifier.height(2.dp))
-                            Text(
-                                text = opt.subtitle,
-                                color = AppColors.textDim,
-                                fontSize = 12.sp
-                            )
-                        }
-                        if (isSelected) {
-                            Text("✓", color = AppColors.accent, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "Schließen",
+                            modifier = Modifier.size(16.dp),
+                            tint = AppColors.textDim
+                        )
+                    }
+                }
+
+                // Food Name Field
+                OutlinedTextField(
+                    value = mealName,
+                    onValueChange = { mealName = it },
+                    placeholder = {
+                        Text(
+                            "Was gab es? (z.B. Pizza, Döner, Nüsse)",
+                            color = AppColors.textMuted,
+                            fontSize = 14.sp
+                        )
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = AppColors.card,
+                        unfocusedContainerColor = AppColors.card,
+                        focusedTextColor = AppColors.text,
+                        unfocusedTextColor = AppColors.text,
+                        focusedBorderColor = AppColors.accent,
+                        unfocusedBorderColor = AppColors.border,
+                        cursorColor = AppColors.accent
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Impact Selection
+                SectionLabel(text = "GRÖSSE DER MAHLZEIT")
+                PromilleCard {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(0.dp)
+                    ) {
+                        MEAL_OPTIONS.forEachIndexed { index, option ->
+                            val isSelected = selectedImpact == option.impact
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { selectedImpact = option.impact }
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    Text(
+                                        text = option.title,
+                                        color = if (isSelected) AppColors.accent else AppColors.text,
+                                        fontSize = 15.sp,
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                                    )
+                                    Text(
+                                        text = option.subtitle,
+                                        color = AppColors.textDim,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                if (isSelected) {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = AppColors.accent
+                                    )
+                                }
+                            }
+                            if (index < MEAL_OPTIONS.lastIndex) {
+                                HorizontalDivider(
+                                    color = AppColors.border,
+                                    modifier = Modifier.padding(start = 16.dp)
+                                )
+                            }
                         }
                     }
                 }
+
+                Spacer(Modifier.height(8.dp))
+
+                PrimaryButton(
+                    text = "Mahlzeit speichern",
+                    onClick = {
+                        onLogMeal(selectedImpact, mealName.trim())
+                        onDismiss()
+                    }
+                )
             }
-
-            Spacer(Modifier.height(8.dp))
-
-            PrimaryButton(
-                text = "Mahlzeit speichern",
-                onClick = {
-                    onLogMeal(selectedImpact, mealName.trim())
-                    onDismiss()
-                }
-            )
         }
     }
 }

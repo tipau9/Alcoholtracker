@@ -1,4 +1,7 @@
 package de.tipau.promille.ui.viewmodels
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -116,6 +119,18 @@ class SettingsViewModel(
         updateProfile { it.copy(statusSkinRaw = skinRaw) }
     }
     
+    fun updateBirthDate(birthDate: Long, age: Int) {
+        updateProfile { it.copy(birthDate = birthDate, age = age) }
+    }
+
+    fun updateHomeStyle(homeStyleRaw: String) {
+        updateProfile { it.copy(homeStyleRaw = homeStyleRaw) }
+    }
+
+    fun updateSipVolumeML(sipVolumeML: Double) {
+        updateProfile { it.copy(sipVolumeML = sipVolumeML) }
+    }
+
     fun resetThresholds() {
         updateProfile { 
             it.copy(

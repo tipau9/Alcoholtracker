@@ -1,4 +1,7 @@
 package de.tipau.promille.ui.viewmodels
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

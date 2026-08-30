@@ -37,23 +37,23 @@ enum class StomachStatus(
  * Scales [StomachStatus.absorptionMinutes]. CO2 accelerates gastric emptying;
  * shots reach peak faster due to small volume and rapid transit.
  */
-enum class DrinkCategory(val raw: String, val absorptionModifier: Double) {
-    BEER("beer", 0.85),
-    WINE("wine", 1.0),
-    SPARKLING("sparkling", 0.85),
-    SPIRITS("spirits", 1.0),
-    LIQUEUR("liqueur", 1.0),
-    COCKTAIL("cocktail", 1.0),
-    MIXED("mixed", 1.0),
-    SHOT("shot", 0.75),
-    CIDER("cider", 0.85),
-    FORTIFIED("fortified", 1.0),
-    WATER("water", 1.0),
-    SOFT_DRINK("softDrink", 1.0),
-    JUICE("juice", 1.0),
-    COFFEE_TEA("coffeeTea", 1.0),
-    MILK("milk", 1.0),
-    OTHER("other", 1.0);
+enum class DrinkCategory(val raw: String, val absorptionModifier: Double, val germanName: String) {
+    BEER("beer", 0.85, "Bier"),
+    WINE("wine", 1.0, "Wein"),
+    SPARKLING("sparkling", 0.85, "Sekt und Schaumwein"),
+    SPIRITS("spirits", 1.0, "Spirituose"),
+    LIQUEUR("liqueur", 1.0, "Likör"),
+    COCKTAIL("cocktail", 1.0, "Cocktail"),
+    MIXED("mixed", 1.0, "Mischgetränk"),
+    SHOT("shot", 0.75, "Shot"),
+    CIDER("cider", 0.85, "Cider"),
+    FORTIFIED("fortified", 1.0, "Likörwein"),
+    WATER("water", 1.0, "Wasser"),
+    SOFT_DRINK("softDrink", 1.0, "Softdrink"),
+    JUICE("juice", 1.0, "Saft"),
+    COFFEE_TEA("coffeeTea", 1.0, "Kaffee und Tee"),
+    MILK("milk", 1.0, "Milch"),
+    OTHER("other", 1.0, "Sonstiges");
 
     companion object {
         fun from(raw: String): DrinkCategory = entries.firstOrNull { it.raw == raw } ?: OTHER
@@ -185,4 +185,13 @@ data class Profile(
             warningThreshold, tipsyThreshold, drunkThreshold,
             carefulThreshold, dangerThreshold
         ).joinToString("|")
+
+    companion object {
+        val DEFAULT = Profile(
+            weightKg = 75.0,
+            heightCm = 175.0,
+            age = 25,
+            gender = Gender.MALE
+        )
+    }
 }

@@ -710,9 +710,7 @@ class JamService(
         /** Enough lead for every client to see the round before it starts. */
         const val ARCADE_LEAD_SECONDS = 5.0
 
-        private const val CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-
         fun generateJamCode(): String =
-            (1..8).map { CODE_ALPHABET.random() }.joinToString("")
+            de.tipau.promille.service.JamCodeGenerator.generate()
     }
 }

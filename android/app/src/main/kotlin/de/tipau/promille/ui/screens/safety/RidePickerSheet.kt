@@ -1,4 +1,11 @@
+
+
 package de.tipau.promille.ui.screens.safety
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+
+
 
 import android.content.Intent
 import android.net.Uri
@@ -13,11 +20,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
+import de.tipau.promille.service.LocationService
 import de.tipau.promille.ui.components.PrimaryButton
 import de.tipau.promille.ui.components.PromilleCard
 import de.tipau.promille.ui.components.SectionLabel
@@ -31,19 +40,46 @@ fun RidePickerSheet(
     val context = LocalContext.current
     var destination by remember { mutableStateOf("") }
 
+    // Mirrors iOS RidePickerSheet.swift requesting location on appear - feeds
+    // the weather-driven hydration heat term on Home, nothing shown in this
+    // sheet itself. Singleton LocationService, so SessionViewModel (already
+    // collecting its coordinate flow) picks the grant up without a callback.
+    val locationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted -> if (granted) LocationService.requestLocation(context) }
+    LaunchedEffect(Unit) {
+        if (LocationService.hasPermission(context)) {
+            LocationService.requestLocation(context)
+        } else {
+            locationPermissionLauncher.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+        }
+    }
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = AppColors.background,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
+        sheetState = sheetState,
+        containerColor = Color.Transparent,
+        scrimColor = Color.Black.copy(alpha = 0.65f),
+        dragHandle = null
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 36.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp, top = 16.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(AppColors.background)
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
         ) {
-            // Header
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -71,7 +107,7 @@ fun RidePickerSheet(
                         .clickable(onClick = onDismiss),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("✕", color = AppColors.textDim, fontSize = 14.sp)
+                    Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(16.dp))
                 }
             }
 
@@ -120,7 +156,7 @@ fun RidePickerSheet(
                         }
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("🚗", fontSize = 24.sp)
+                        Icon(de.tipau.promille.ui.components.AppIcons.Car, null, tint = AppColors.accent, modifier = Modifier.size(26.dp))
                         Spacer(Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text("Mit Uber fahren", color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -143,7 +179,7 @@ fun RidePickerSheet(
                         }
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("🚕", fontSize = 24.sp)
+                        Icon(de.tipau.promille.ui.components.AppIcons.Taxi, null, tint = AppColors.accent, modifier = Modifier.size(26.dp))
                         Spacer(Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text("Taxi Deutschland (22456)", color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -171,7 +207,7 @@ fun RidePickerSheet(
                         }
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("🚆", fontSize = 24.sp)
+                        Icon(de.tipau.promille.ui.components.AppIcons.Train, null, tint = AppColors.accent, modifier = Modifier.size(26.dp))
                         Spacer(Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text("Öffentlicher Nahverkehr", color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -195,7 +231,7 @@ fun RidePickerSheet(
                             }
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("📞", fontSize = 24.sp)
+                            Icon(de.tipau.promille.ui.components.AppIcons.Phone, null, tint = AppColors.accent, modifier = Modifier.size(26.dp))
                             Spacer(Modifier.width(14.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text("Notfallkontakt anrufen", color = AppColors.statusGreen, fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -208,4 +244,5 @@ fun RidePickerSheet(
             }
         }
     }
+}
 }

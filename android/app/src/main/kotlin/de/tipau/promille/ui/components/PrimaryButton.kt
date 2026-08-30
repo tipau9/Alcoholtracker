@@ -18,6 +18,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
 
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+
 /**
  * 1:1 mirror of PrimaryButton.swift in iOS.
  * Full-width accent button with 20.dp rounded corners for primary actions.
@@ -31,10 +34,14 @@ fun PrimaryButton(
     isDestructive: Boolean = false,
     enabled: Boolean = true
 ) {
+    val haptic = LocalHapticFeedback.current
     val baseColor = if (isDestructive) AppColors.statusRed else AppColors.accent
 
     Button(
-        onClick = onClick,
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onClick()
+        },
         enabled = enabled,
         colors = ButtonDefaults.buttonColors(
             containerColor = baseColor,
@@ -43,10 +50,8 @@ fun PrimaryButton(
             disabledContentColor = AppColors.background.copy(alpha = 0.6f)
         ),
         shape = RoundedCornerShape(20.dp),
-        contentPadding = PaddingValues(vertical = 15.dp, horizontal = 20.dp),
-        modifier = modifier
-            .fillMaxWidth()
-            .height(54.dp)
+        contentPadding = PaddingValues(vertical = 16.dp, horizontal = 20.dp),
+        modifier = modifier.fillMaxWidth()
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -57,7 +62,7 @@ fun PrimaryButton(
             }
             Text(
                 text = text,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 17.sp
             )
         }
@@ -73,26 +78,30 @@ fun PromilleFAB(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: String = "+"
+    icon: ImageVector = AppIcons.Plus
 ) {
+    val haptic = LocalHapticFeedback.current
     Button(
-        onClick = onClick,
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onClick()
+        },
         colors = ButtonDefaults.buttonColors(
             containerColor = AppColors.accent,
             contentColor = AppColors.background
         ),
         shape = CircleShape, // Capsule
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
-        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 14.dp),
-        modifier = modifier.height(52.dp)
+        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 15.dp),
+        modifier = modifier
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            Text(icon, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+            Icon(icon, null, modifier = Modifier.size(15.dp))
             Spacer(Modifier.width(8.dp))
-            Text(text, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+            Text(text, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
         }
     }
 }

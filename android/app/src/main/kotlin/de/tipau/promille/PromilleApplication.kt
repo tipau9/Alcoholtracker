@@ -24,10 +24,16 @@ class PromilleApplication : Application() {
         super.onCreate()
         container = AppContainer(this)
 
+        de.tipau.promille.service.BackgroundRefreshService.registerAndSchedule(this)
+
         // Seed the drink catalog from assets/drink_catalog.json on first launch.
         // INSERT OR IGNORE makes re-runs safe.
         applicationScope.launch {
             container.drinkTemplateRepository.seedCatalog(this@PromilleApplication)
+            de.tipau.promille.service.CompatibilityCheckService.normalizeStoredData(
+                drinkDao = container.drinkDao,
+                templateDao = container.drinkTemplateDao
+            )
         }
     }
 }

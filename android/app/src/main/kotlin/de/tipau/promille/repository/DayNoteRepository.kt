@@ -21,4 +21,10 @@ class DayNoteRepository(private val dao: DayNoteDao) {
     suspend fun update(note: DayNoteEntity) {
         dao.insertOrUpdate(note)
     }
+
+    suspend fun saveNote(day: String, text: String, moodRaw: Int) {
+        val existing = dao.getNoteForDay(day)
+        val note = (existing ?: DayNoteEntity(day = day)).copy(text = text, moodRaw = moodRaw)
+        dao.insertOrUpdate(note)
+    }
 }
