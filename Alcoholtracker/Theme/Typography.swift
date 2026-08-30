@@ -29,6 +29,15 @@ extension Font {
     /// 80pt serif light: BAC readout in cards and widgets (always fixed).
     static let appLargeNumber  = Font.system(size: 80, weight: .light,  design: .serif)
 
+    /// 52pt serif semibold: onboarding wordmark "promille." (always fixed).
+    static let appSerifLogo    = Font.system(size: 52, weight: .semibold, design: .serif)
+
+    /// 30pt serif semibold: onboarding question titles (always fixed).
+    static let appSerifTitle   = Font.system(size: 30, weight: .semibold, design: .serif)
+
+    /// 64pt serif medium: large picker value readout, e.g. weight (always fixed).
+    static let appSerifValue   = Font.system(size: 64, weight: .medium, design: .serif)
+
     /// Screen titles and top headlines (~28pt at default size).
     static let appHeadline    = Font.title.weight(.semibold)
 
@@ -74,10 +83,21 @@ extension View {
     }
 }
 
-// MARK: - BAC number formatting
+// MARK: - Number formatting
+//
+// All user-facing decimals use a German decimal comma ("0,52" statt "0.52").
+// Plain String(format:) renders a point regardless of device locale, so every
+// visible number goes through deFormatted / bacFormatted instead.
+
+let germanLocale = Locale(identifier: "de_DE")
 
 extension Double {
-    var bacFormatted: String { String(format: "%.2f", self) }
+    /// German-locale decimal string with the given fraction digits ("1,5").
+    func deFormatted(_ fractionDigits: Int = 1) -> String {
+        String(format: "%.\(fractionDigits)f", locale: germanLocale, self)
+    }
+
+    var bacFormatted: String { String(format: "%.2f", locale: germanLocale, self) }
 
     var asHoursMinutes: String {
         let h = Int(self)

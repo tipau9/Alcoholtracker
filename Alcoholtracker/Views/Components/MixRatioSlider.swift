@@ -134,7 +134,7 @@ private struct RatioPresetButton: View {
     @Previewable @State var fraction = 0.25
     VStack(spacing: 24) {
         MixRatioSlider(spiritFraction: $fraction)
-        Text("Spirit fraction: \(String(format: "%.2f", fraction))")
+        Text("Spirit fraction: \(String(format: "%.2f", locale: germanLocale, fraction))")
             .font(.appCaption)
             .foregroundStyle(Color.appTextDim)
     }

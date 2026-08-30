@@ -112,7 +112,7 @@ struct QuickAddSheet: View {
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                             .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.appBorder, lineWidth: 0.5))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .disabled(isLookingUpBarcode)
                 }
                 .padding(.horizontal, 16)
@@ -201,9 +201,9 @@ struct QuickAddSheet: View {
                             let shouldHide = value < -40
                             let shouldShow = value > -10
                             if shouldHide && showBottomBar {
-                                withAnimation(.easeInOut(duration: 0.2)) { showBottomBar = false }
+                                withAnimation(.appSpring) { showBottomBar = false }
                             } else if shouldShow && !showBottomBar {
-                                withAnimation(.easeInOut(duration: 0.2)) { showBottomBar = true }
+                                withAnimation(.appSpring) { showBottomBar = true }
                             }
                         }
 
@@ -215,7 +215,7 @@ struct QuickAddSheet: View {
                                 onBottleMode:   { showBottleMode = true },
                                 onSipCounter:   onStartSipCounter != nil ? { showSipPicker = true } : nil
                             )
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                            .transition(.appToastBottom)
                         }
                     } else {
                         QAMixesTab(
@@ -228,12 +228,12 @@ struct QuickAddSheet: View {
                         )
                     }
                 }
-                .animation(.easeInOut(duration: 0.2), value: showBottomBar)
+                .animation(.appSpring, value: showBottomBar)
             }
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.hidden)
-        // PERF: 150ms debounce — avoids refiltering 800+ items on every keystroke
+        // PERF: 150ms debounce -- avoids refiltering 800+ items on every keystroke
         .task(id: searchQuery) {
             try? await Task.sleep(for: .milliseconds(150))
             debouncedQuery = searchQuery
@@ -312,27 +312,32 @@ struct QuickAddSheet: View {
                     Task {
                         defer { isLookingUpBarcode = false }
                         do {
-                            // 1. Check community DB first (faster + grows with each scan)
+                            // 1. Prefer locally learned/corrected products.
+                            if let local = localBarcodeTemplate(code) {
+                                barcodeCandidate = DrinkTemplateCandidate(
+                                    name: local.name,
+                                    abv: local.abv,
+                                    barcode: local.barcode,
+                                    volume: local.volume,
+                                    category: local.category,
+                                    source: .local
+                                )
+                                return
+                            }
+                            // 2. Check community DB (grows with each scan)
                             if let row = try? await supabase.lookupCommunityBarcode(code) {
-                                if row.abv <= 0 {
-                                    barcodeError = "Alkoholfreie Getränke (0,0% Vol.) können nicht hinzugefügt werden."
-                                    return
-                                }
                                 barcodeCandidate = DrinkTemplateCandidate(
                                     name:     row.name,
                                     abv:      row.abv,
                                     barcode:  row.barcode,
                                     volume:   row.volume,
-                                    category: DrinkCategory(rawValue: row.category) ?? .beer
+                                    category: DrinkCategory(rawValue: row.category) ?? (row.abv > 0 ? .beer : .softDrink),
+                                    source: .community
                                 )
                                 return
                             }
-                            // 2. Fall back to Open Food Facts
+                            // 3. Fall back to Open Food Facts
                             if let candidate = try await BarcodeService.lookup(barcode: code) {
-                                if candidate.abv <= 0 {
-                                    barcodeError = "Alkoholfreie Getränke (0,0% Vol.) können nicht hinzugefügt werden."
-                                    return
-                                }
                                 barcodeCandidate = candidate
                             } else {
                                 // Not in any database: let the user enter it by
@@ -341,8 +346,9 @@ struct QuickAddSheet: View {
                                 // learns products that exist nowhere else.
                                 barcodeCandidate = DrinkTemplateCandidate(
                                     name: "", abv: 0, barcode: code,
-                                    volume: 330, category: .beer,
-                                    foundInDatabase: false
+                                    volume: 330, category: .softDrink,
+                                    foundInDatabase: false,
+                                    source: .manual
                                 )
                             }
                         } catch {
@@ -359,10 +365,13 @@ struct QuickAddSheet: View {
         )) {
             if let candidate = barcodeCandidate {
                 BarcodeCandidateSheet(candidate: candidate, profile: profile) { name, vol, abv, category in
-                    let cal = Int(vol * abv / 100.0 * 0.789 * 7.1)
+                    let safeVolume = BarcodeService.sanitizedVolumeML(vol)
+                    let safeABV = BarcodeService.sanitizedABV(abv)
+                    let safeCategory = BarcodeService.sanitizedCategory(category, abv: safeABV)
+                    let cal = Int(safeVolume * safeABV / 100.0 * 0.789 * 7.1)
                     let template = DrinkTemplate(
-                        name: name, category: category,
-                        volume: vol, abv: abv, calories: cal, isCustom: true
+                        name: name, category: safeCategory,
+                        volume: safeVolume, abv: safeABV, calories: cal, isCustom: true
                     )
                     template.barcode = candidate.barcode
                     context.insert(template)
@@ -374,11 +383,11 @@ struct QuickAddSheet: View {
                     Task {
                         try? await supabase.contributeDrink(
                             name:     name,
-                            category: category,
-                            volume:   vol,
-                            abv:      abv,
+                            category: safeCategory,
+                            volume:   safeVolume,
+                            abv:      safeABV,
                             calories: cal,
-                            iconName: category.symbolName,
+                            iconName: safeCategory.symbolName,
                             barcode:  capturedBarcode
                         )
                     }
@@ -401,6 +410,10 @@ struct QuickAddSheet: View {
         let drink = Drink.from(template: template)
         onAdd(drink)
         dismiss()
+    }
+
+    private func localBarcodeTemplate(_ barcode: String) -> DrinkTemplate? {
+        allTemplates.first { $0.barcode == barcode }
     }
 }
 
@@ -435,7 +448,7 @@ private struct QAHeader: View {
                     .clipShape(Circle())
                     .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
     }
 }
@@ -462,7 +475,7 @@ private struct QASearchBar: View {
                         .font(.system(size: 16))
                         .foregroundStyle(Color.appTextDim)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
         .padding(.horizontal, 14)
@@ -487,7 +500,7 @@ private func bacContribution(for template: DrinkTemplate, profile: UserProfile?)
     // matches what the BAC display will actually climb to (not raw Widmark).
     return BACCalculator.projectedPeak(
         volume: template.volume, abv: template.abv, category: template.category,
-        profile: p, stomachStatus: p.defaultStomachStatus
+        profile: p, stomachStatus: p.defaultStomachStatus, conservative: p.conservativeForApp
     )
 }
 
@@ -541,7 +554,7 @@ private struct QADrinkCard: View {
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("\(Int(template.volume)) ml · \(String(format: "%.1f", template.abv)) %")
+            Text("\(Int(template.volume)) ml · \(String(format: "%.1f", locale: germanLocale, template.abv)) %")
                 .font(.appMicro)
                 .foregroundStyle(Color.appTextDim)
 
@@ -627,7 +640,7 @@ private struct QADrinkRow: View {
                     .font(.appBody)
                     .foregroundStyle(Color.appText)
                     .lineLimit(1)
-                Text("\(Int(template.volume)) ml · \(String(format: "%.1f", template.abv)) %")
+                Text("\(Int(template.volume)) ml · \(String(format: "%.1f", locale: germanLocale, template.abv)) %")
                     .font(.appMicro)
                     .foregroundStyle(Color.appTextDim)
             }
@@ -714,7 +727,7 @@ private struct QABACBadge: View {
     private var tint: Color { contribution > 0.3 ? .statusOrange : .statusGreen }
 
     var body: some View {
-        Text(String(format: "+%.2f‰", contribution))
+        Text(String(format: "+%.2f‰", locale: germanLocale, contribution))
             .font(.appMicro)
             .foregroundStyle(tint)
             .padding(.horizontal, 7)
@@ -785,7 +798,7 @@ private struct QAActionChip: View {
             }
             .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }
 
@@ -838,7 +851,7 @@ private struct QACategoryChip: View {
                 lineWidth: isSelected ? 1.0 : 0.5
             ))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }
 
@@ -853,7 +866,7 @@ struct CustomBrandSheet: View {
 
     @State private var name = ""
     @State private var volumeText = "330"
-    @State private var abvText = "5.0"
+    @State private var abvText = "5,0"
 
     private var volume: Double {
         Double(volumeText.replacingOccurrences(of: ",", with: ".")) ?? 0
@@ -870,7 +883,7 @@ struct CustomBrandSheet: View {
         guard let p = profile, volume > 0, abv > 0 else { return nil }
         return BACCalculator.projectedPeak(
             volume: volume, abv: abv, category: .other,
-            profile: p, stomachStatus: p.defaultStomachStatus
+            profile: p, stomachStatus: p.defaultStomachStatus, conservative: p.conservativeForApp
         )
     }
 
@@ -905,7 +918,7 @@ struct CustomBrandSheet: View {
                             )
                             QAFormField(
                                 label: "ALKOHOL",
-                                placeholder: "5.0",
+                                placeholder: "5,0",
                                 text: $abvText,
                                 suffix: "%",
                                 isNumeric: true
@@ -1069,19 +1082,29 @@ struct BarcodeCandidateSheet: View {
         self.onConfirm = onConfirm
         _name = State(initialValue: candidate.name)
         _volumeText = State(initialValue: "\(Int(candidate.volume))")
-        _abvText = State(initialValue: String(format: "%.1f", candidate.abv))
+        _abvText = State(initialValue: String(format: "%.1f", locale: germanLocale, candidate.abv))
         _category = State(initialValue: candidate.category)
     }
 
     private var volume: Double { Double(volumeText.replacingOccurrences(of: ",", with: ".")) ?? 0 }
     private var abv: Double { Double(abvText.replacingOccurrences(of: ",", with: ".")) ?? 0 }
-    private var isValid: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty && volume > 0 && abv > 0 }
+    private var isValid: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty && volume > 0 && abv >= 0 }
+    private var sourceColor: Color {
+        candidate.foundInDatabase ? Color.statusGreen : Color.appAccent
+    }
+    private var sourceMessage: String {
+        if !candidate.foundInDatabase {
+            return "Nicht in der Datenbank. Trag die Werte ein, dann lernt die App diesen Barcode."
+        }
+        let suffix = candidate.adjustedBySanitizer ? " · Werte plausibilisiert" : ""
+        return "\(candidate.source.label)\(suffix)"
+    }
 
     private var bacPreview: Double? {
         guard let p = profile, volume > 0, abv > 0 else { return nil }
         return BACCalculator.projectedPeak(
             volume: volume, abv: abv, category: category,
-            profile: p, stomachStatus: p.defaultStomachStatus
+            profile: p, stomachStatus: p.defaultStomachStatus, conservative: p.conservativeForApp
         )
     }
 
@@ -1100,12 +1123,10 @@ struct BarcodeCandidateSheet: View {
                         HStack(spacing: 8) {
                             Image(systemName: candidate.foundInDatabase ? "barcode.viewfinder" : "plus.viewfinder")
                                 .font(.system(size: 13))
-                                .foregroundStyle(candidate.foundInDatabase ? Color.statusGreen : Color.appAccent)
-                            Text(candidate.foundInDatabase
-                                 ? "Gefunden bei Open Food Facts"
-                                 : "Nicht in der Datenbank. Trag die Werte ein, dann lernt die App diesen Barcode.")
+                                .foregroundStyle(sourceColor)
+                            Text(sourceMessage)
                                 .font(.appCaption)
-                                .foregroundStyle(candidate.foundInDatabase ? Color.statusGreen : Color.appTextDim)
+                                .foregroundStyle(candidate.foundInDatabase ? sourceColor : Color.appTextDim)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -1113,7 +1134,7 @@ struct BarcodeCandidateSheet: View {
                         BCCategoryRow(category: $category)
                         HStack(spacing: 12) {
                             QAFormField(label: "MENGE", placeholder: "330", text: $volumeText, suffix: "ml", isNumeric: true)
-                            QAFormField(label: "ALKOHOL", placeholder: "5.0", text: $abvText, suffix: "%", isNumeric: true)
+                            QAFormField(label: "ALKOHOL", placeholder: "5,0", text: $abvText, suffix: "%", isNumeric: true)
                         }
                         if let bac = bacPreview {
                             QABACPreviewRow(contribution: bac)
@@ -1161,7 +1182,7 @@ private struct SipTemplatePicker: View {
                             .foregroundStyle(Color.appTextDim)
                             .frame(width: 30, height: 30).background(Color.appCard).clipShape(Circle())
                             .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 0.5))
-                    }.buttonStyle(.plain)
+                    }.buttonStyle(.pressable)
                 }
                 .padding(.horizontal, 20).padding(.vertical, 14)
 
@@ -1187,13 +1208,13 @@ private struct SipTemplatePicker: View {
                                         .clipShape(RoundedRectangle(cornerRadius: 8))
                                     VStack(alignment: .leading, spacing: 1) {
                                         Text(t.name).font(.appBody).foregroundStyle(Color.appText).lineLimit(1)
-                                        Text("\(t.abv, specifier: "%.1f")% vol").font(.appCaption).foregroundStyle(Color.appTextDim)
+                                        Text("\(t.abv.deFormatted(1))% vol").font(.appCaption).foregroundStyle(Color.appTextDim)
                                     }
                                     Spacer()
                                     Image(systemName: "hand.tap.fill").font(.system(size: 12)).foregroundStyle(Color.appAccent)
                                 }
                                 .padding(.horizontal, 16).padding(.vertical, 11)
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(.pressable)
                             Divider().background(Color.appBorder).padding(.leading, 62)
                         }
                     }
@@ -1219,7 +1240,7 @@ private struct QATabPicker: View {
         .background(Color.appCard)
         .clipShape(Capsule())
         .overlay(Capsule().strokeBorder(Color.appBorder, lineWidth: 0.5))
-        .animation(.easeInOut(duration: 0.15), value: active)
+        .animation(.appSnappy, value: active)
     }
 
     private func tabButton(_ label: String, tab: QATab) -> some View {
@@ -1232,7 +1253,7 @@ private struct QATabPicker: View {
                 .background(active == tab ? Color.appAccent : Color.clear)
                 .clipShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }
 
@@ -1376,7 +1397,7 @@ private struct QAMySavedMixRow: View {
                     .font(.appBody)
                     .foregroundStyle(Color.appText)
                     .lineLimit(1)
-                Text("\(Int(mix.totalVolume)) ml · \(String(format: "%.1f", mix.totalAbv)) %")
+                Text("\(Int(mix.totalVolume)) ml · \(String(format: "%.1f", locale: germanLocale, mix.totalAbv)) %")
                     .font(.appMicro)
                     .foregroundStyle(Color.appTextDim)
             }
@@ -1389,14 +1410,14 @@ private struct QAMySavedMixRow: View {
                     .foregroundStyle(Color.statusRed)
                     .frame(width: 30, height: 30)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
 
             Button(action: onDrink) {
                 Image(systemName: "plus.circle")
                     .font(.system(size: 18, weight: .light))
                     .foregroundStyle(Color.appAccent)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
         .padding(.vertical, 11)
         .contentShape(Rectangle())
@@ -1425,7 +1446,7 @@ private struct QACommunityMixRow: View {
                     .font(.appBody)
                     .foregroundStyle(Color.appText)
                     .lineLimit(1)
-                Text("\(row.ingredients.count) Zutaten · \(Int(row.totalVolume)) ml · \(String(format: "%.1f", row.totalAbv)) %")
+                Text("\(row.ingredients.count) Zutaten · \(Int(row.totalVolume)) ml · \(String(format: "%.1f", locale: germanLocale, row.totalAbv)) %")
                     .font(.appMicro)
                     .foregroundStyle(Color.appTextDim)
             }
@@ -1438,7 +1459,7 @@ private struct QACommunityMixRow: View {
                     .foregroundStyle(Color.appTextDim)
                     .frame(width: 28, height: 28)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
 
             Button(action: onUpvote) {
                 Image(systemName: isUpvoted ? "hand.thumbsup.fill" : "hand.thumbsup")
@@ -1446,7 +1467,7 @@ private struct QACommunityMixRow: View {
                     .foregroundStyle(isUpvoted ? Color.appAccent : Color.appTextDim)
                     .frame(width: 28, height: 28)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
 
             if isAdopted {
                 Image(systemName: "checkmark.circle.fill")
@@ -1463,7 +1484,7 @@ private struct QACommunityMixRow: View {
                         .clipShape(Capsule())
                         .overlay(Capsule().strokeBorder(Color.appAccent.opacity(0.3), lineWidth: 0.5))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
         .padding(.horizontal, 14)

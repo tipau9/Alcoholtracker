@@ -7,18 +7,19 @@ struct DrinkEditSheet: View {
 
     let drink: Drink
     let profile: UserProfile?
-    let onSave: (Double, Date) -> Void
+    let onSave: (Double, Date, Double) -> Void
     let onDelete: () -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var volumeText: String
     @State private var timestamp: Date
+    @State private var durationMinutes: Double
     @State private var showDeleteConfirm = false
 
     init(
         drink: Drink,
         profile: UserProfile?,
-        onSave: @escaping (Double, Date) -> Void,
+        onSave: @escaping (Double, Date, Double) -> Void,
         onDelete: @escaping () -> Void
     ) {
         self.drink = drink
@@ -27,6 +28,7 @@ struct DrinkEditSheet: View {
         self.onDelete = onDelete
         self._volumeText = State(initialValue: "\(Int(drink.volume))")
         self._timestamp = State(initialValue: drink.timestamp)
+        self._durationMinutes = State(initialValue: drink.drinkDurationMinutes)
     }
 
     private var volume: Double {
@@ -40,8 +42,30 @@ struct DrinkEditSheet: View {
         return BACCalculator.projectedPeak(
             volume: volume, abv: drink.abv, category: drink.category,
             profile: p, stomachStatus: p.defaultStomachStatus,
-            drinkDurationMinutes: drink.drinkDurationMinutes
+            drinkDurationMinutes: durationMinutes, conservative: p.conservativeForApp
         )
+    }
+
+    private var autoDurationMinutes: Double {
+        DrinkDurationEstimator.estimate(category: drink.category, volumeML: volume)
+    }
+
+    private var effectiveDurationMinutes: Double {
+        durationMinutes > 0 ? durationMinutes : autoDurationMinutes
+    }
+
+    private var estimatedEndTime: Date {
+        timestamp.addingTimeInterval(effectiveDurationMinutes * 60)
+    }
+
+    private var absorptionEndTime: Date {
+        let window = BACCalculator.absorptionWindowMinutes(
+            category: drink.category,
+            volumeML: volume,
+            drinkDurationMinutes: durationMinutes,
+            gastric: profile?.defaultStomachStatus.absorptionMinutes ?? StomachStatus.light.absorptionMinutes
+        )
+        return timestamp.addingTimeInterval(window * 60)
     }
 
     var body: some View {
@@ -65,7 +89,7 @@ struct DrinkEditSheet: View {
                         Text(drink.name)
                             .font(.appBodyBold)
                             .foregroundStyle(Color.appText)
-                        Text("\(String(format: "%.1f", drink.abv)) % Alk.")
+                        Text("\(String(format: "%.1f", locale: germanLocale, drink.abv)) % Alk.")
                             .font(.appCaption)
                             .foregroundStyle(Color.appTextDim)
                         if drink.mixerVolume > 0 {
@@ -119,8 +143,22 @@ struct DrinkEditSheet: View {
                         }
 
                         VStack(alignment: .leading, spacing: 8) {
+                            SectionLabel(text: "TRINKDAUER")
+                            DurationChipRow(
+                                durationMinutes: $durationMinutes,
+                                estimatedMinutes: autoDurationMinutes
+                            )
+                            Text("Start \(timestamp.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute())) · fertig ca. \(estimatedEndTime.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute()))")
+                                .font(.appMicro)
+                                .foregroundStyle(Color.appTextMuted)
+                            Text("Aufnahme ca. bis \(absorptionEndTime.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute()))")
+                                .font(.appMicro)
+                                .foregroundStyle(Color.appTextMuted)
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
                             SectionLabel(text: "UHRZEIT")
-                            DatePicker("", selection: $timestamp, displayedComponents: [.hourAndMinute])
+                            DatePicker("", selection: $timestamp, in: Date.distantPast...Date(), displayedComponents: [.hourAndMinute])
                                 .datePickerStyle(.wheel)
                                 .labelsHidden()
                                 .frame(maxWidth: .infinity)
@@ -158,7 +196,7 @@ struct DrinkEditSheet: View {
                         }
 
                         PrimaryButton(title: "Speichern", icon: "checkmark", isDisabled: !isValid) {
-                            onSave(volume, timestamp)
+                            onSave(volume, timestamp, durationMinutes)
                             dismiss()
                         }
 

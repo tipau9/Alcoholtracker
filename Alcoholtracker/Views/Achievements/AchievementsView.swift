@@ -88,7 +88,7 @@ struct AchievementsView: View {
                 RoundedRectangle(cornerRadius: 3)
                     .fill(Color.appAccent)
                     .frame(width: geo.size.width * fraction, height: 4)
-                    .animation(.easeInOut(duration: 0.4), value: achievements.unlockedCount)
+                    .animation(.appSpring, value: achievements.unlockedCount)
             }
         }
         .frame(height: 4)
@@ -162,13 +162,13 @@ private struct AchievementCard: View {
                 )
         )
         .opacity(isUnlocked ? 1.0 : 0.5)
-        .scaleEffect(popped ? 1.04 : 1.0)
+        .scaleEffect(popped ? 1.02 : 1.0)
         .onAppear {
             guard isUnlocked else { return }
             Task {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.55)) { popped = true }
-                try? await Task.sleep(for: .milliseconds(300))
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.55)) { popped = false }
+                withAnimation(.appGentle) { popped = true }
+                try? await Task.sleep(for: .milliseconds(400))
+                withAnimation(.appGentle) { popped = false }
             }
         }
         .contextMenu {

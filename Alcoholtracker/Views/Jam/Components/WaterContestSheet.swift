@@ -93,7 +93,7 @@ struct WaterContestSheet: View {
                     TimelineView(.periodic(from: .now, by: 1.0 / 30.0)) { ctx in
                         let elapsed = max(0, ctx.date.timeIntervalSince(startDate ?? ctx.date))
                         VStack(spacing: 4) {
-                            Text(String(format: "%.2f", elapsed))
+                            Text(String(format: "%.2f", locale: germanLocale, elapsed))
                                 .font(.system(size: 46, weight: .light, design: .serif))
                                 .monospacedDigit()
                                 .foregroundStyle(Color.appAccent)
@@ -104,7 +104,7 @@ struct WaterContestSheet: View {
                     }
                 } else if let ms = lastResultMs {
                     VStack(spacing: 4) {
-                        Text(String(format: "%.2f s", Double(ms) / 1000))
+                        Text(String(format: "%.2f s", locale: germanLocale, Double(ms) / 1000))
                             .font(.system(size: 40, weight: .light, design: .serif))
                             .monospacedDigit()
                             .foregroundStyle(Color.statusGreen)
@@ -176,7 +176,7 @@ struct WaterContestSheet: View {
                 .font(.appBody)
                 .foregroundStyle(Color.appText)
             Spacer()
-            Text(String(format: "%.2f s", Double(score.ms) / 1000))
+            Text(String(format: "%.2f s", locale: germanLocale, Double(score.ms) / 1000))
                 .font(.system(size: 17, weight: .semibold, design: .serif))
                 .monospacedDigit()
                 .foregroundStyle(rank == 1 ? Color.statusYellow : Color.appText)

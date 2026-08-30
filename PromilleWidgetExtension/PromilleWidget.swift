@@ -9,6 +9,10 @@ private let kKeyBAC            = "currentBAC"
 private let kKeyRate           = "eliminationRate"
 private let kKeyDate           = "bacLastUpdated"
 private let kKeyWarningThreshold = "warningThreshold"
+// Legal "fit to drive" limit in ‰ (0,0 in der Probezeit, sonst 0,5). Written by
+// the app so the widget's driving row uses the legal limit, NOT the freely
+// configurable Warnschwelle.
+private let kKeyDrivingLimit   = "drivingLimit"
 
 // MARK: - Inline colors (mirrors Colors.swift without importing main target)
 
@@ -48,6 +52,9 @@ struct PromilleEntry: TimelineEntry {
     let eliminationRate: Double
     let lastUpdated: Date
     let warningThreshold: Double
+    // Legal driving limit (Probezeit-aware). The "Fahrbereit"/Grenzwert row counts
+    // down to this, not to the Warnschwelle.
+    var drivingLimit: Double = 0.5
     var statusConfig: SharedStatusConfig = .fallback
 
     var statusColor: Color { wStatusColor(bac: bac, config: statusConfig) }
@@ -99,7 +106,7 @@ struct PromilleProvider: TimelineProvider {
     }
 
     func placeholder(in context: Context) -> PromilleEntry {
-        PromilleEntry(date: Date(), bac: 0.82, eliminationRate: 0.15, lastUpdated: Date(), warningThreshold: 0.5)
+        PromilleEntry(date: Date(), bac: 0.82, eliminationRate: 0.15, lastUpdated: Date(), warningThreshold: 0.5, drivingLimit: 0.5)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (PromilleEntry) -> Void) {
@@ -134,12 +141,15 @@ struct PromilleProvider: TimelineProvider {
         let rate             = rawRate > 0 ? max(0.05, min(0.30, rawRate)) : 0.15
         let lastUpdated      = (defaults.object(forKey: kKeyDate) as? Date) ?? date
         let warningThreshold = defaults.object(forKey: kKeyWarningThreshold) as? Double ?? 0.5
+        // Fall back to the standard 0,5 legal limit, never to the Warnschwelle.
+        let drivingLimit     = defaults.object(forKey: kKeyDrivingLimit) as? Double ?? 0.5
         return PromilleEntry(
             date: date,
             bac: projectedBAC(at: date, fallbackBAC: rawBAC, fallbackUpdated: lastUpdated, rate: rate),
             eliminationRate: rate,
             lastUpdated: lastUpdated,
             warningThreshold: warningThreshold,
+            drivingLimit: drivingLimit,
             statusConfig: SharedStateStore.readStatusConfig()
         )
     }
@@ -213,7 +223,7 @@ private struct WSmallView: View {
                     .foregroundStyle(cText)
             }
             Spacer()
-            Text(String(format: "%.2f", entry.bac))
+            Text(String(format: "%.2f", locale: Locale(identifier: "de_DE"), entry.bac))
                 .font(.system(size: 44, weight: .light, design: .serif))
                 .foregroundStyle(entry.statusColor)
                 .monospacedDigit()
@@ -277,7 +287,7 @@ private struct WMediumView: View {
                         .foregroundStyle(cText)
                 }
                 Spacer()
-                Text(String(format: "%.2f", entry.bac))
+                Text(String(format: "%.2f", locale: Locale(identifier: "de_DE"), entry.bac))
                     .font(.system(size: 52, weight: .light, design: .serif))
                     .foregroundStyle(entry.statusColor)
                     .monospacedDigit()
@@ -312,8 +322,8 @@ private struct WMediumView: View {
                 )
                 WTimerRow(
                     icon: "car.fill",
-                    label: "Fahrbereit",
-                    value: entry.hoursUntil(entry.warningThreshold).map { wFormatHours($0) } ?? "Jetzt",
+                    label: "Grenzwert",
+                    value: entry.hoursUntil(entry.drivingLimit).map { wFormatHours($0) } ?? "Jetzt",
                     color: cAccent
                 )
             }
@@ -378,7 +388,7 @@ private struct WLargeView: View {
 
             Spacer()
 
-            Text(String(format: "%.2f", entry.bac))
+            Text(String(format: "%.2f", locale: Locale(identifier: "de_DE"), entry.bac))
                 .font(.system(size: 72, weight: .light, design: .serif))
                 .foregroundStyle(entry.statusColor)
                 .monospacedDigit()
@@ -414,10 +424,10 @@ private struct WLargeView: View {
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("Bis fahrbereit")
+                    Text("Bis Grenzwert")
                         .font(.system(size: 11))
                         .foregroundStyle(cTextDim)
-                    Text(entry.hoursUntil(entry.warningThreshold).map { wFormatHours($0) } ?? "Jetzt")
+                    Text(entry.hoursUntil(entry.drivingLimit).map { wFormatHours($0) } ?? "Jetzt")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(cText)
                         .monospacedDigit()
@@ -436,7 +446,7 @@ private struct WCircularView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Text(String(format: "%.2f", entry.bac))
+            Text(String(format: "%.2f", locale: Locale(identifier: "de_DE"), entry.bac))
                 .font(.system(size: 14, weight: .semibold, design: .serif))
                 .foregroundStyle(entry.statusColor)
                 .monospacedDigit()
@@ -459,7 +469,7 @@ private struct WRectangularView: View {
                 .font(.system(size: 18, weight: .light))
                 .foregroundStyle(entry.statusColor)
             VStack(alignment: .leading, spacing: 1) {
-                Text(String(format: "%.2f ‰", entry.bac))
+                Text(String(format: "%.2f ‰", locale: Locale(identifier: "de_DE"), entry.bac))
                     .font(.system(size: 16, weight: .semibold, design: .serif))
                     .foregroundStyle(entry.statusColor)
                     .monospacedDigit()

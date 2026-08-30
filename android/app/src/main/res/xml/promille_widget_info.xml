@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/disclaimer_short"
+    android:initialKeyguardLayout="@layout/promille_widget"
+    android:initialLayout="@layout/promille_widget"
+    android:minWidth="140dp"
+    android:minHeight="70dp"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="900000"
+    android:widgetCategory="home_screen" />

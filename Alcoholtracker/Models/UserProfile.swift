@@ -47,6 +47,47 @@ enum HomeStyle: String, Codable, CaseIterable {
     }
 }
 
+enum BodyDataValidation {
+    static let weightRange: ClosedRange<Double> = 35...250
+    static let heightRange: ClosedRange<Double> = 120...230
+    static let ageRange: ClosedRange<Int> = 18...100
+
+    static func weightError(_ value: Double) -> String? {
+        guard value.isFinite, weightRange.contains(value) else {
+            return "Gewicht muss zwischen 35 und 250 kg liegen."
+        }
+        return nil
+    }
+
+    static func heightError(_ value: Double) -> String? {
+        guard value.isFinite, heightRange.contains(value) else {
+            return "Größe muss zwischen 120 und 230 cm liegen."
+        }
+        return nil
+    }
+
+    static func ageError(_ value: Int) -> String? {
+        guard ageRange.contains(value) else {
+            return "Alter muss zwischen 18 und 100 Jahren liegen."
+        }
+        return nil
+    }
+
+    static func age(from birthDate: Date, now: Date = Date()) -> Int {
+        Calendar.current.dateComponents([.year], from: birthDate, to: now).year ?? 0
+    }
+
+    static func birthDateRange(now: Date = Date()) -> ClosedRange<Date> {
+        let calendar = Calendar.current
+        // Normalize to calendar days so someone whose 18th or 100th birthday is
+        // today remains selectable regardless of the current time of day.
+        let today = calendar.startOfDay(for: now)
+        let oldest = calendar.date(byAdding: .year, value: -ageRange.upperBound, to: today) ?? today
+        let youngest = calendar.date(byAdding: .year, value: -ageRange.lowerBound, to: today) ?? today
+        return oldest...youngest
+    }
+}
+
 enum WidgetType: String, Codable, CaseIterable {
     // Info-Kacheln (2x2 grid on home screen)
     case timeToLimit      = "timeToLimit"
@@ -55,14 +96,30 @@ enum WidgetType: String, Codable, CaseIterable {
     case drinkCount       = "drinkCount"
     // Abschnitte (full-width sections)
     case bacCurve         = "bacCurve"
+    case hydration        = "hydration"
     case stomachStatus    = "stomachStatus"
     case favStrip         = "favStrip"
     case drinkHistory     = "drinkHistory"
+    case milestone        = "milestone"
+    case dayStats         = "dayStats"
+    case safetyActions    = "safetyActions"
     // Reserved for future phases
     case streak           = "streak"
     case crewStatus       = "crewStatus"
     case drinkingSpeed    = "drinkingSpeed"
     case hangover         = "hangover"
+
+    // Widgets added after the initial widget system shipped. Profiles whose
+    // stored list is empty (created before customisation existed) do NOT get
+    // these automatically, so an app update never changes an untouched home
+    // screen; fresh profiles receive every case via the initialiser.
+    static let newerAdditions: Set<WidgetType> = [.milestone, .dayStats, .safetyActions]
+
+    static var preWidgetDefault: [WidgetType] {
+        allCases.filter { !newerAdditions.contains($0) }
+    }
+
+    static let explicitNoneRaw = "__none__"
 
     var localizedName: String {
         switch self {
@@ -71,9 +128,13 @@ enum WidgetType: String, Codable, CaseIterable {
         case .calories:      return "Kalorien"
         case .drinkCount:    return "Drinks heute"
         case .bacCurve:      return "BAC-Verlauf"
+        case .hydration:     return "Wasser-Tracker"
         case .stomachStatus: return "Magen-Status"
         case .favStrip:      return "Schnell hinzufügen"
         case .drinkHistory:  return "Verlauf heute"
+        case .milestone:     return "Nächster Meilenstein"
+        case .dayStats:      return "Tages-Stats"
+        case .safetyActions: return "Safety-Aktionen"
         case .streak:        return "Streak"
         case .crewStatus:    return "Freunde-Status"
         case .drinkingSpeed: return "Trinkgeschwindigkeit"
@@ -88,9 +149,13 @@ enum WidgetType: String, Codable, CaseIterable {
         case .calories:      return "flame.fill"
         case .drinkCount:    return "figure.walk"
         case .bacCurve:      return "chart.line.uptrend.xyaxis"
+        case .hydration:     return "drop.circle.fill"
         case .stomachStatus: return "fork.knife"
         case .favStrip:      return "bolt.fill"
         case .drinkHistory:  return "clock.fill"
+        case .milestone:     return "car.fill"
+        case .dayStats:      return "chart.bar.fill"
+        case .safetyActions: return "shield.fill"
         case .streak:        return "star.fill"
         case .crewStatus:    return "person.3.fill"
         case .drinkingSpeed: return "speedometer"
@@ -136,6 +201,11 @@ final class UserProfile {
     var genderRaw: String
     var homeStyleRaw: String
     var activeWidgetsRaw: String // comma-separated WidgetType rawValues (legacy: JSON array)
+
+    // Order of the full-width home sections (WidgetType rawValues plus the
+    // pseudo id "grid" for the 2x2 tile block). Empty = built-in default order.
+    // Inline default required for SwiftData lightweight migration.
+    var homeSectionOrderRaw: String = ""
     var stomachStatusRaw: String
     var statusSkinRaw: String = "standard"
 
@@ -165,6 +235,27 @@ final class UserProfile {
     // Inline default required for SwiftData lightweight migration.
     var drunkModeAuto: Bool = false
 
+    // Konservativ rechnen (Worst-Case): safety figures assume full alcohol
+    // bioavailability and the cautious base elimination rate, while retaining
+    // physical absorption timing. The rest of the app keeps the realistic model.
+    // Inline default required for SwiftData lightweight migration.
+    var conservativeSafety: Bool = false
+
+    // Konservativ in der ganzen App: when on, the worst-case model is applied
+    // everywhere (home BAC, curves, add badges), not just the safety screens. This
+    // implies the safety figures are conservative too. Off keeps the realistic
+    // model app-wide (the safety screens still honour conservativeSafety on their own).
+    // Inline default required for SwiftData lightweight migration.
+    var conservativeEverywhere: Bool = false
+
+    // Whether the safety readiness timers + forecast should use the worst-case model:
+    // either the safety-only switch or the app-wide switch turns it on.
+    var conservativeForSafety: Bool { conservativeSafety || conservativeEverywhere }
+
+    // Whether the rest of the app (home, charts, badges) should use the worst-case
+    // model. Only the app-wide switch does this.
+    var conservativeForApp: Bool { conservativeEverywhere }
+
     // MARK: Computed wrappers
 
     var gender: Gender {
@@ -187,8 +278,14 @@ final class UserProfile {
         set { statusSkinRaw = newValue.rawValue }
     }
 
+    var homeSectionOrder: [String] {
+        get { homeSectionOrderRaw.isEmpty ? [] : homeSectionOrderRaw.components(separatedBy: ",") }
+        set { homeSectionOrderRaw = newValue.joined(separator: ",") }
+    }
+
     var activeWidgets: [WidgetType] {
         get {
+            if activeWidgetsRaw == WidgetType.explicitNoneRaw { return [] }
             let stored = _parseRawList(activeWidgetsRaw)
             // An empty stored list means "all active" (the default for a fresh
             // profile, which is initialised with every case). A NON-empty list is
@@ -198,11 +295,13 @@ final class UserProfile {
             // widget the user had disabled. New widget types added in an update
             // stay reachable: the edit sheet lists them and a fresh profile gets
             // them via the all-cases initialiser.
-            guard !stored.isEmpty else { return WidgetType.allCases }
+            guard !stored.isEmpty else { return WidgetType.preWidgetDefault }
             return stored.compactMap { WidgetType(rawValue: $0) }
         }
         set {
-            activeWidgetsRaw = newValue.map(\.rawValue).joined(separator: ",")
+            activeWidgetsRaw = newValue.isEmpty
+                ? WidgetType.explicitNoneRaw
+                : newValue.map(\.rawValue).joined(separator: ",")
         }
     }
 
@@ -221,10 +320,34 @@ final class UserProfile {
         return fromBirth > 0 ? fromBirth : age
     }
 
+    var validatedWeight: Double {
+        // Keep UI validation at 35 kg, but use the engine's 30 kg floor for old or
+        // malformed stored profiles so the safety calculation never raises a real
+        // low weight and thereby understates BAC.
+        min(max(weight, 30), BodyDataValidation.weightRange.upperBound)
+    }
+
+    var validatedHeight: Double {
+        min(max(height, BodyDataValidation.heightRange.lowerBound), BodyDataValidation.heightRange.upperBound)
+    }
+
+    var validatedAge: Int {
+        min(max(currentAge, BodyDataValidation.ageRange.lowerBound), BodyDataValidation.ageRange.upperBound)
+    }
+
     // FIX BUG1: when toleranceMode is active, enforce minimum elimination rate of 0.20
     // (regular drinkers metabolise at 0.17-0.25 vs 0.10-0.20 for occasional drinkers)
     var effectiveEliminationRate: Double {
         toleranceMode ? max(eliminationRate, 0.20) : eliminationRate
+    }
+
+    // Worst-case (conservative) safety math must NOT assume the faster metabolism of
+    // tolerance mode: a higher elimination rate shortens the "nüchtern"/"fahrbereit"
+    // times and errs optimistic, which is the opposite of what a worst-case readout
+    // should do. Conservative callers therefore drop the tolerance floor and use the
+    // user's base rate; everyone else keeps the tolerance-adjusted rate.
+    func resolvedEliminationRate(conservative: Bool) -> Double {
+        conservative ? eliminationRate : effectiveEliminationRate
     }
 
     // MARK: Driving limit
@@ -249,19 +372,27 @@ final class UserProfile {
     // line with the Watson-Widmark / German forensic values (men ~0.70, women
     // ~0.60). Clamp is the physiological blood-r range.
     var distributionFactor: Double {
-        let a = Double(currentAge)
-        let tbw: Double
+        min(max((totalBodyWater / validatedWeight) / 0.806, 0.50), 0.90)
+    }
+
+    // MARK: Total body water (Watson 1980)
+    // Estimated total body water in LITRES from age/height/weight/gender. Drives
+    // both the Widmark distribution factor above and the exact dehydration model
+    // (HydrationCalculator): a deficit of X ml is far more dehydrating for a small
+    // person with little body water than for a large one, so the hydration status
+    // is scaled against this rather than an absolute ml threshold.
+    var totalBodyWater: Double {
+        let a = Double(validatedAge)
         switch gender {
         case .male:
-            tbw = 2.447 - 0.09516 * a + 0.1074 * height + 0.3362 * weight
+            return 2.447 - 0.09516 * a + 0.1074 * validatedHeight + 0.3362 * validatedWeight
         case .female:
-            tbw = -2.097 + 0.1069 * height + 0.2466 * weight
+            return -2.097 + 0.1069 * validatedHeight + 0.2466 * validatedWeight
         case .diverse:
-            let m = 2.447 - 0.09516 * a + 0.1074 * height + 0.3362 * weight
-            let f = -2.097 + 0.1069 * height + 0.2466 * weight
-            tbw = (m + f) / 2.0
+            let m = 2.447 - 0.09516 * a + 0.1074 * validatedHeight + 0.3362 * validatedWeight
+            let f = -2.097 + 0.1069 * validatedHeight + 0.2466 * validatedWeight
+            return (m + f) / 2.0
         }
-        return min(max((tbw / weight) / 0.806, 0.50), 0.90)
     }
 
     init(

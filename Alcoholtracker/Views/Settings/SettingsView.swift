@@ -13,7 +13,10 @@ import UIKit
 struct SettingsView: View {
 
     @Query private var profiles: [UserProfile]
-    @Query(sort: \Drink.timestamp) private var allDrinks: [Drink]
+    // Only the count is needed on screen; the full history is fetched on demand
+    // (export / notification reschedule) instead of paging every Drink into
+    // memory each time Settings opens.
+    @State private var drinkCount = 0
     @Environment(\.modelContext) private var context
     @Environment(SupabaseService.self) private var supabase
     @Environment(AchievementService.self) private var achievements
@@ -23,6 +26,8 @@ struct SettingsView: View {
     @State private var showNotifyDeniedAlert = false
     @State private var exportFile: ExportFile? = nil
     @State private var showDeleteAccountConfirm = false
+    @State private var saveDebouncer = SaveDebouncer()
+    @AppStorage("shareAnonymousCityInsights") private var shareAnonymousCityInsights = false
 
     private var profile: UserProfile? { profiles.first }
 
@@ -51,7 +56,6 @@ struct SettingsView: View {
                             SettingsMeasurementsSection(p: p, save: save)
                             SettingsThresholdSection(p: p, save: save)
                             SettingsAccessibilitySection(p: p, save: save)
-                            SettingsMedicationSection(p: p, save: save)
                             SettingsHealthKitSection(p: p, save: save)
                             achievementsSection
                             dataSection
@@ -64,6 +68,14 @@ struct SettingsView: View {
                         .padding(.bottom, 40)
                     }
                 }
+            }
+        }
+        .task {
+            drinkCount = (try? context.fetchCount(FetchDescriptor<Drink>())) ?? 0
+        }
+        .onDisappear {
+            saveDebouncer.flush(context: context) {
+                AppTheme.shared.sync(from: profile)
             }
         }
     }
@@ -121,7 +133,11 @@ struct SettingsView: View {
 
     // MARK: - Save helper
 
-    private func save() { try? context.save() }
+    private func save() {
+        saveDebouncer.schedule(context: context) {
+            AppTheme.shared.sync(from: profile)
+        }
+    }
 
     // MARK: - Notifications section
 
@@ -145,7 +161,10 @@ struct SettingsView: View {
                                         // 48h window covers rolling sessions past 06:00;
                                         // fully metabolised drinks contribute zero anyway.
                                         let lookback = Date().addingTimeInterval(-48 * 3600)
-                                        let recent = allDrinks.filter { $0.timestamp >= lookback }
+                                        let recentDescriptor = FetchDescriptor<Drink>(
+                                            predicate: #Predicate { $0.timestamp >= lookback }
+                                        )
+                                        let recent = (try? context.fetch(recentDescriptor)) ?? []
                                         await NotificationService.reschedule(
                                             drinks: recent,
                                             profile: p,
@@ -184,7 +203,10 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionLabel(text: "DATEN")
             Button {
-                if let url = try? ExportService.csvURL(drinks: allDrinks) {
+                let all = (try? context.fetch(
+                    FetchDescriptor<Drink>(sortBy: [SortDescriptor(\.timestamp)])
+                )) ?? []
+                if let url = try? ExportService.csvURL(drinks: all) {
                     exportFile = ExportFile(url: url)
                 }
             } label: {
@@ -197,7 +219,7 @@ struct SettingsView: View {
                         Text("Verlauf als CSV exportieren")
                             .font(.appBody)
                             .foregroundStyle(Color.appText)
-                        Text("\(allDrinks.count) Drinks, öffnet sich in Excel und Numbers")
+                        Text("\(drinkCount) Drinks, öffnet sich in Excel und Numbers")
                             .font(.appCaption)
                             .foregroundStyle(Color.appTextDim)
                     }
@@ -217,8 +239,8 @@ struct SettingsView: View {
                 RoundedRectangle(cornerRadius: 16)
                     .strokeBorder(Color.appBorder, lineWidth: 0.5)
             )
-            .disabled(allDrinks.isEmpty)
-            .opacity(allDrinks.isEmpty ? 0.5 : 1)
+            .disabled(drinkCount == 0)
+            .opacity(drinkCount == 0 ? 0.5 : 1)
         }
         .sheet(item: $exportFile) { file in
             STShareSheet(url: file.url)
@@ -403,6 +425,28 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionLabel(text: "DATENSCHUTZ")
             VStack(spacing: 0) {
+                Toggle(isOn: $shareAnonymousCityInsights) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "building.2.crop.circle")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.appAccent)
+                            .frame(width: 22)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Anonyme Stadtstatistiken beitragen")
+                                .font(.appBody)
+                                .foregroundStyle(Color.appText)
+                            Text("Getränk, lokale Stunde sowie begrenzte BAC- und Dauerwerte teilen")
+                                .font(.appCaption)
+                                .foregroundStyle(Color.appTextDim)
+                        }
+                    }
+                }
+                .tint(Color.appAccent)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+
+                Divider().background(Color.appBorder).padding(.leading, 16)
+
                 STDestructiveRow(
                     icon: "photo.on.rectangle",
                     label: "Alle Erinnerungsfotos löschen",
@@ -416,7 +460,7 @@ struct SettingsView: View {
                     .strokeBorder(Color.appBorder, lineWidth: 0.5)
             )
 
-            Text("Fotos werden lokal auf deinem Gerät im App-Ordner gespeichert und nirgendwo hochgeladen.")
+            Text("Persönliche Trends bleiben lokal. Stadtwerte werden nur nach deiner Zustimmung übertragen und erst ab mindestens fünf verschiedenen Beiträgern angezeigt. Fotos bleiben ausschließlich auf deinem Gerät.")
                 .font(.appMicro)
                 .foregroundStyle(Color.appTextMuted)
                 .multilineTextAlignment(.leading)

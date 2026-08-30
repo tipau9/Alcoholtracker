@@ -66,8 +66,11 @@ struct ParticipantPrivacySheet: View {
     let participant: JamParticipant
     var canKick: Bool = false
     var onKick: () -> Void = {}
+    var canTransferHost: Bool = false
+    var onTransferHost: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
     @State private var showKickConfirm = false
+    @State private var showTransferConfirm = false
 
     private var shared: [String] {
         guard let s = participant.sharedSettings else { return [] }
@@ -157,6 +160,27 @@ struct ParticipantPrivacySheet: View {
                         )
                     }
 
+                    if canTransferHost {
+                        Button { showTransferConfirm = true } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "crown.fill")
+                                Text("Host übergeben")
+                            }
+                            .font(.appBodyBold)
+                            .foregroundStyle(Color.appAccent)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.appAccent.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .strokeBorder(Color.appAccent.opacity(0.3), lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.top, 4)
+                    }
+
                     if canKick {
                         Button { showKickConfirm = true } label: {
                             HStack(spacing: 8) {
@@ -196,6 +220,19 @@ struct ParticipantPrivacySheet: View {
             Button("Abbrechen", role: .cancel) {}
         } message: {
             Text("\(participant.displayName) wird aus dem Jam entfernt.")
+        }
+        .confirmationDialog(
+            "Host übergeben?",
+            isPresented: $showTransferConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Host übergeben") {
+                onTransferHost()
+                dismiss()
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("\(participant.displayName) wird zum Host. Du bleibst als Teilnehmer im Jam.")
         }
     }
 

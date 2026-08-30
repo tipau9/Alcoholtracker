@@ -12,6 +12,8 @@ struct SafetyView: View {
     @Environment(SupabaseService.self) private var supabase
     @Query private var profiles: [UserProfile]
     @Query private var allDrinks: [Drink]
+    @Query private var allVomitEvents: [VomitEvent]
+    @Query private var allMealEvents: [MealEvent]
     @State private var now = Date()
     @State private var locationService = LocationService()
     @State private var showRidePicker = false
@@ -26,6 +28,14 @@ struct SafetyView: View {
             filter: #Predicate { $0.timestamp >= cutoff },
             sort: \.timestamp
         )
+        _allVomitEvents = Query(
+            filter: #Predicate { $0.timestamp >= cutoff },
+            sort: \.timestamp
+        )
+        _allMealEvents = Query(
+            filter: #Predicate { $0.timestamp >= cutoff },
+            sort: \.timestamp
+        )
     }
 
     private var profile: UserProfile? { profiles.first }
@@ -35,12 +45,38 @@ struct SafetyView: View {
         return allDrinks.filter { $0.timestamp >= logicalStart }
     }
 
+    private var todaysVomitTimes: [Date] {
+        let logicalStart = Calendar.current.logicalDayStart(for: now)
+        return allVomitEvents
+            .filter { $0.timestamp >= logicalStart }
+            .map(\.timestamp)
+    }
+
+    private var todaysMeals: [MealEventValue] {
+        let logicalStart = Calendar.current.logicalDayStart(for: now)
+        return allMealEvents.filter { $0.timestamp >= logicalStart }.map(\.value)
+    }
+
     private var currentBAC: Double {
-        guard let p = profile else { return 0 }
-        return BACCalculator.currentBAC(drinks: todaysDrinks, profile: p, at: now, stomachStatus: stomachStatus)
+        guard let projectionInput else { return 0 }
+        // Use the same conservative setting as the readiness timers below so the big
+        // headline pegel and the Nüchtern/Fahrbereit times are derived from one curve.
+        return projectionInput.currentBAC(at: now)
     }
 
     private var stomachStatus: StomachStatus { profile?.defaultStomachStatus ?? .light }
+    private var projectionInput: BACProjectionInput? {
+        guard let p = profile else { return nil }
+        return BACProjectionInput(
+            drinks: todaysDrinks,
+            profile: p,
+            stomachStatus: stomachStatus,
+            conservative: p.conservativeForSafety,
+            vomitTimes: todaysVomitTimes,
+            mealEvents: todaysMeals
+        )
+    }
+
     private var bacStatus: BACStatus {
         guard let p = profile else { return BACStatus(bac: currentBAC) }
         return BACStatus(bac: currentBAC, profile: p)
@@ -48,8 +84,10 @@ struct SafetyView: View {
     private var skin: StatusSkin { profile?.statusSkin ?? .standard }
 
     private func hoursUntil(_ target: Double) -> Double? {
-        guard let p = profile else { return nil }
-        return BACCalculator.hoursUntilBAC(target, drinks: todaysDrinks, profile: p, from: now, stomachStatus: stomachStatus)
+        guard let projectionInput else { return nil }
+        // The readiness timers respect the "Konservativ rechnen" switch so the
+        // Fahrbereit/Nüchtern times are worst-case when the user wants them safe.
+        return projectionInput.hoursUntil(target, from: now)
     }
 
     // MARK: Body
@@ -71,7 +109,10 @@ struct SafetyView: View {
                         timersSection
                         driveModeSection
                         if let p = profile {
-                            ForecastView(drinks: todaysDrinks, profile: p)
+                            ForecastView(
+                                drinks: todaysDrinks, profile: p,
+                                vomitTimes: todaysVomitTimes, mealEvents: todaysMeals
+                            )
                         }
                         actionsSection
                         SFDisclaimer()
@@ -113,11 +154,13 @@ struct SafetyView: View {
                     .background(Color.appBorder)
                     .padding(.leading, 54)
                 SFTimerRow(
-                    label: isProbation ? "Fahrbereit (0,0 ‰)" : "Fahrbereit (0,5 ‰)",
+                    label: isProbation ? "Unter 0,0 ‰" : "Unter 0,5 ‰",
                     icon: "car.fill",
                     iconColor: Color.appAccent,
                     hours: hoursUntil(driveTarget),
-                    readyLabel: "Fahrbereit"
+                    // Kein "Fahrbereit"-Versprechen: die App sagt nur, wann der Wert
+                    // rechnerisch unter dem Grenzwert liegt, nicht dass man fahren darf.
+                    readyLabel: "Unter Grenzwert"
                 )
             }
             .background(Color.appCard)
@@ -250,7 +293,7 @@ private struct SFBACCard: View {
             Divider().background(Color.appBorder.opacity(0.5))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(String(format: "%.2f", bac))
+                Text(String(format: "%.2f", locale: germanLocale, bac))
                     .font(.system(size: 56, weight: .light, design: .serif))
                     .foregroundStyle(status.color)
                     .monospacedDigit()
@@ -284,11 +327,16 @@ private struct SFTimerRow: View {
     let label: String
     let icon: String
     let iconColor: Color
-    let hours: Double?     // 0 or nil (BAC already at target) → show readyLabel; nil from hoursUntilBAC → already there
+    // hoursUntilBAC returns 0 only when BAC is at/below the target and will not
+    // rise above it later from still-active absorption. nil means the target is
+    // not reached within the forecast window. Those two must read differently:
+    // only 0 means "ready"; nil must show more than a day away so the safety
+    // screen never tells an intoxicated user they are already nüchtern.
+    let hours: Double?
     let readyLabel: String
 
     private var isReady: Bool {
-        guard let h = hours else { return true }
+        guard let h = hours else { return false }
         return h <= 0
     }
 
@@ -297,7 +345,8 @@ private struct SFTimerRow: View {
     }
 
     private var displayText: String {
-        guard let h = hours, h > 0 else { return readyLabel }
+        guard let h = hours else { return "> 72 h" }
+        guard h > 0 else { return readyLabel }
         let totalMin = Int(h * 60)
         let hr = totalMin / 60
         let min = totalMin % 60
@@ -359,7 +408,7 @@ private struct SFLimitSegment: View {
             )
         }
         .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.15), value: selected)
+        .animation(.appSnappy, value: selected)
     }
 }
 

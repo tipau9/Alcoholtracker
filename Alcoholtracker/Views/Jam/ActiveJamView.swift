@@ -22,6 +22,8 @@ struct ActiveJamView: View {
     @State private var photoShareError: String?
     @State private var showWaterContest = false
     @State private var showInviteSheet  = false
+    @State private var showArcadePicker = false
+    @State private var showRouletteHint = false
 
     // Friends whose display name is not yet among the jam participants.
     // Name-based match is pragmatic: we don't hold friend UUIDs locally.
@@ -79,22 +81,34 @@ struct ActiveJamView: View {
         .sheet(isPresented: $showInviteSheet) {
             InviteFriendsSheet(jam: jam, friends: uninvitedFriends)
         }
+        .sheet(isPresented: $showArcadePicker) {
+            JamArcadePickerSheet { game in
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(250))
+                    jamService.startArcade(game)
+                }
+            }
+        }
         .sheet(item: $longPressParticipant) { p in
             ParticipantPrivacySheet(
                 participant: p,
                 canKick: jamService.canKick(p),
-                onKick: { jamService.kickParticipant(p) }
+                onKick: { jamService.kickParticipant(p) },
+                canTransferHost: jamService.canTransferHost(p),
+                onTransferHost: { jamService.transferHost(to: p) }
             )
         }
-        .sheet(item: Binding(
-            get: { jamService.incomingRoulette },
-            set: { if $0 == nil { jamService.incomingRoulette = nil } }
-        )) { payload in
-            RoundRouletteSheet(
-                payload: payload,
-                onReroll: { jamService.startRoulette() },
-                onClose: { jamService.incomingRoulette = nil }
-            )
+        .sheet(isPresented: Binding(
+            get: { jamService.incomingRoulette != nil },
+            set: { if !$0 { jamService.incomingRoulette = nil } }
+        )) {
+            RoulettePresentationHost()
+        }
+        .sheet(isPresented: Binding(
+            get: { jamService.incomingArcadeRound != nil },
+            set: { if !$0 { jamService.closeArcade() } }
+        )) {
+            ArcadePresentationHost(participantCount: jam.participants.count)
         }
         .sheet(isPresented: $showWaterContest) {
             WaterContestSheet()
@@ -152,6 +166,11 @@ struct ActiveJamView: View {
             Button("OK", role: .cancel) { photoShareError = nil }
         } message: {
             Text(photoShareError ?? "")
+        }
+        .alert("Noch niemand dabei", isPresented: $showRouletteHint) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Zum Auslosen einer Runde müssen mindestens 2 Leute im Jam sein. Lade zuerst jemanden ein.")
         }
         .confirmationDialog(
             "Jam verlassen?",
@@ -352,7 +371,11 @@ struct ActiveJamView: View {
         }
         HStack(spacing: 12) {
             ActionChip(icon: "dice.fill", label: "Runde") {
-                jamService.startRoulette()
+                if jam.participants.count >= 2 {
+                    jamService.startRoulette()
+                } else {
+                    showRouletteHint = true
+                }
             }
 
             ActionChip(
@@ -362,6 +385,9 @@ struct ActiveJamView: View {
             ) {
                 jamService.mySOSActive.toggle()
             }
+        }
+        ActionChip(icon: "gamecontroller.fill", label: "Jam Arcade") {
+            showArcadePicker = true
         }
         ActionChip(icon: "person.badge.plus", label: "Freunde einladen") {
             showInviteSheet = true
@@ -391,6 +417,44 @@ struct ActiveJamView: View {
 //
 // Decodes the JPEG once per photo in .task instead of in every body pass;
 // with a dozen 200 KB photos the inline decode caused visible scroll jank.
+
+/// Keeps one stable sheet presentation while a reroll replaces the draw payload.
+/// The wheel observes the new draw id and starts its animation in place.
+private struct RoulettePresentationHost: View {
+    @Environment(JamService.self) private var jamService
+
+    var body: some View {
+        if let payload = jamService.incomingRoulette {
+            RoundRouletteSheet(
+                payload: payload,
+                canReroll: jamService.canRerollRoulette(payload),
+                onReroll: { jamService.rerollRoulette(payload) },
+                onClose: { jamService.incomingRoulette = nil }
+            )
+        }
+    }
+}
+
+private struct ArcadePresentationHost: View {
+    let participantCount: Int
+    @Environment(JamService.self) private var jamService
+
+    var body: some View {
+        if let round = jamService.incomingArcadeRound {
+            JamArcadeSheet(
+                round: round,
+                results: jamService.arcadeResults,
+                participantCount: participantCount,
+                canRestart: jamService.canRestartArcade(round),
+                onSubmit: { value, disqualified in
+                    jamService.submitArcadeResult(value: value, disqualified: disqualified)
+                },
+                onRestart: { jamService.startArcade(round.game, replacing: round) },
+                onClose: { jamService.closeArcade() }
+            )
+        }
+    }
+}
 
 private struct JamPhotoThumb: View {
     let photo: JamPhotoPayload
@@ -687,7 +751,7 @@ private struct InviteFriendsSheet: View {
                                             }
                                             .buttonStyle(.plain)
                                             .disabled(sentIDs.contains(friend.id))
-                                            .animation(.easeInOut(duration: 0.2), value: sentIDs.contains(friend.id))
+                                            .animation(.appSnappy, value: sentIDs.contains(friend.id))
                                         }
                                         // OS share sheet as fallback
                                         ShareLink(item: "Tritt meinem Jam bei! Code: \(jam.code)") {
@@ -767,7 +831,7 @@ private struct FriendInviteChip: View {
             }
         }
         .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.2), value: invited)
+        .animation(.appSnappy, value: invited)
         .disabled(friend.friendCode == nil)
     }
 }

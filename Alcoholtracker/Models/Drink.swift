@@ -16,7 +16,8 @@ final class Drink {
     var categoryRaw: String
     var mixerVolume: Double = 0         // ml of non-alcoholic mixer (0 for unmixed drinks)
     var mixerWaterContent: Double = 0   // % water in mixer, 0-100 (0 if no mixer)
-    // 0 = auto-estimate via DrinkDurationEstimator; positive value = actual measured minutes
+    // timestamp is the drinking start time.
+    // 0 = auto-estimate via DrinkDurationEstimator; positive value = estimated or measured minutes.
     var drinkDurationMinutes: Double = 0
 
     var category: DrinkCategory {
@@ -26,6 +27,19 @@ final class Drink {
 
     var alcoholGrams: Double {
         volume * (abv / 100.0) * 0.789
+    }
+
+    var effectiveDrinkDurationMinutes: Double {
+        if drinkDurationMinutes > 0 { return drinkDurationMinutes }
+        return DrinkDurationEstimator.estimate(category: category, volumeML: volume)
+    }
+
+    var estimatedFinishedAt: Date {
+        timestamp.addingTimeInterval(effectiveDrinkDurationMinutes * 60)
+    }
+
+    func finish(at date: Date = Date()) {
+        drinkDurationMinutes = max(1, date.timeIntervalSince(timestamp) / 60)
     }
 
     init(

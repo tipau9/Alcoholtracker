@@ -79,7 +79,7 @@ nonisolated struct SharedStatusConfig: Codable {
         drunkThreshold: 0.30,
         carefulThreshold: 0.80,
         dangerThreshold: 1.50,
-        labels: ["Nüchtern", "Leicht beschwipst", "Beschwipst", "Aufpassen", "Fahruntauglich"]
+        labels: ["Nüchtern", "Leicht beschwipst", "Beschwipst", "Fahruntüchtig", "Gefährlich"]
     )
 
     func label(forBAC bac: Double) -> String {
@@ -87,7 +87,7 @@ nonisolated struct SharedStatusConfig: Codable {
         case ..<tipsyThreshold:   return labels.count > 0 ? labels[0] : "Nüchtern"
         case ..<drunkThreshold:   return labels.count > 1 ? labels[1] : "Leicht"
         case ..<carefulThreshold: return labels.count > 2 ? labels[2] : "Beschwipst"
-        case ..<dangerThreshold:  return labels.count > 3 ? labels[3] : "Aufpassen"
+        case ..<dangerThreshold:  return labels.count > 3 ? labels[3] : "Fahruntüchtig"
         default:                  return labels.count > 4 ? labels[4] : "Gefährlich"
         }
     }

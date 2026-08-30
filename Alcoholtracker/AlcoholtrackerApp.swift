@@ -15,6 +15,7 @@ struct PromilleApp: App {
     @State private var achievements = AchievementService()
     @State private var health = HealthKitService()
     @State private var locationService = LocationService()
+    @State private var weather = WeatherProvider()
     private let theme = AppTheme.shared
     @Environment(\.scenePhase) private var scenePhase
 
@@ -58,17 +59,23 @@ struct PromilleApp: App {
                 .environment(achievements)
                 .environment(health)
                 .environment(locationService)
+                .environment(weather)
                 .environment(theme)
                 .preferredColorScheme(.dark)
                 .task {
                     RuntimeSelfCheck.runIfRequested()
+                    BACVectorEmitter.runIfRequested()
                     seedDrinkDatabase()
+                    CompatibilityCheckService.normalizeStoredData(in: persistence.container.mainContext)
                     await syncCommunityDrinks()
                     syncThemeFromProfile()
                     await historySync.sync()
                     // Silently refresh city for pinging if already authorized.
                     if locationService.status == .granted {
                         locationService.requestLocation()
+                        // Pull current weather for the hydration heat term (no-ops
+                        // without a coordinate yet or the WeatherKit entitlement).
+                        await weather.refresh(for: locationService.coordinate)
                     }
                 }
         }

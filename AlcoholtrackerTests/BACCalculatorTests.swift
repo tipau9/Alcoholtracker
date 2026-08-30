@@ -1,0 +1,389 @@
+import XCTest
+import SwiftData
+@testable import Alcoholtracker
+
+@MainActor
+final class BACCalculatorTests: XCTestCase {
+    private func profile(
+        weight: Double = 75,
+        height: Double = 180,
+        age: Int = 25,
+        gender: Gender = .male
+    ) -> UserProfile {
+        let profile = UserProfile(weight: weight, height: height, age: age, gender: gender)
+        profile.birthDate = Calendar.current.date(byAdding: .year, value: -age, to: Date()) ?? Date()
+        return profile
+    }
+
+    private func drink(
+        volume: Double = 500,
+        abv: Double = 5,
+        category: DrinkCategory = .beer,
+        timestamp: Date = Date()
+    ) -> Drink {
+        let drink = Drink(
+            name: "Test",
+            volume: volume,
+            abv: abv,
+            calories: 200,
+            iconName: "mug.fill",
+            category: category,
+            timestamp: timestamp
+        )
+        drink.drinkDurationMinutes = DrinkDurationEstimator.baseEstimate(category: category, volumeML: volume)
+        return drink
+    }
+
+    func testWidmarkRawBeerContributionIsInExpectedRange() {
+        let p = profile()
+
+        let raw = BACCalculator.bacContribution(
+            volume: 500,
+            abv: 5,
+            weight: p.validatedWeight,
+            distributionFactor: p.distributionFactor
+        )
+
+        XCTAssertEqual(p.distributionFactor, 0.738, accuracy: 0.02)
+        XCTAssertEqual(raw, 0.356, accuracy: 0.025)
+    }
+
+    func testAutomaticDrinkDurationScalesWithEditedVolume() {
+        let original = DrinkDurationEstimator.baseEstimate(category: .spirits, volumeML: 200)
+        let enlarged = DrinkDurationEstimator.baseEstimate(category: .spirits, volumeML: 1000)
+
+        XCTAssertEqual(original, 8, accuracy: 0.001)
+        XCTAssertEqual(enlarged, 40, accuracy: 0.001)
+        XCTAssertGreaterThan(enlarged, original)
+    }
+
+    func testInvalidStoredBodyWeightIsClampedForSafetyMath() {
+        let p = profile(weight: 700)
+
+        let raw = BACCalculator.bacContribution(
+            volume: 500,
+            abv: 5,
+            weight: p.validatedWeight,
+            distributionFactor: p.distributionFactor
+        )
+
+        XCTAssertEqual(p.validatedWeight, BodyDataValidation.weightRange.upperBound)
+        XCTAssertLessThan(raw, 0.15)
+    }
+
+    func testLegacyLowWeightIsNotRaisedForSafetyMath() {
+        let p = profile(weight: 32, height: 150, gender: .female)
+        let minimumValid = profile(weight: 35, height: 150, gender: .female)
+
+        XCTAssertEqual(p.validatedWeight, 32)
+        XCTAssertGreaterThan(
+            BACCalculator.bacContribution(
+                volume: 500, abv: 5,
+                weight: p.validatedWeight,
+                distributionFactor: p.distributionFactor
+            ),
+            BACCalculator.bacContribution(
+                volume: 500, abv: 5,
+                weight: minimumValid.validatedWeight,
+                distributionFactor: minimumValid.distributionFactor
+            )
+        )
+    }
+
+    func testEliminationLowersBACAfterPeak() {
+        let p = profile()
+        let start = Date()
+        let beer = drink(timestamp: start)
+
+        let nearPeak = BACCalculator.currentBAC(
+            drinks: [beer],
+            profile: p,
+            at: start.addingTimeInterval(70 * 60),
+            stomachStatus: .light
+        )
+        let later = BACCalculator.currentBAC(
+            drinks: [beer],
+            profile: p,
+            at: start.addingTimeInterval(160 * 60),
+            stomachStatus: .light
+        )
+
+        XCTAssertGreaterThan(nearPeak, 0.05)
+        XCTAssertLessThan(later, nearPeak)
+    }
+
+    func testCustomStatusThresholdsAreRespected() {
+        let p = profile()
+        p.tipsyThreshold = 0.05
+        p.drunkThreshold = 0.40
+        p.carefulThreshold = 0.90
+        p.dangerThreshold = 1.80
+
+        XCTAssertEqual(BACStatus(bac: 0.04, profile: p), .sober)
+        XCTAssertEqual(BACStatus(bac: 0.30, profile: p), .tipsy)
+        XCTAssertEqual(BACStatus(bac: 0.70, profile: p), .drunk)
+        XCTAssertEqual(BACStatus(bac: 1.20, profile: p), .careful)
+        XCTAssertEqual(BACStatus(bac: 2.00, profile: p), .danger)
+    }
+
+    func testProbationaryDrivingLimitIsZeroTolerance() {
+        let p = profile()
+        p.isProbationaryDriver = true
+
+        XCTAssertEqual(p.drivingLimit, 0.0)
+        XCTAssertTrue(p.mayDrive(at: 0.004))
+        XCTAssertFalse(p.mayDrive(at: 0.02))
+    }
+
+    func testConservativeModeDoesNotUnderestimateRealisticPeak() {
+        let p = profile()
+        let start = Date()
+        let beer = drink(timestamp: start)
+
+        let realistic = BACCalculator.peakBAC(
+            drinks: [beer],
+            profile: p,
+            stomachStatus: .light,
+            conservative: false
+        )
+        let conservative = BACCalculator.peakBAC(
+            drinks: [beer],
+            profile: p,
+            stomachStatus: .light,
+            conservative: true
+        )
+
+        XCTAssertGreaterThanOrEqual(conservative, realistic)
+    }
+
+    func testConservativeCurrentBACStillRisesThroughAbsorption() {
+        let p = profile()
+        let start = Date()
+        let beer = drink(timestamp: start)
+
+        let early = BACCalculator.currentBAC(
+            drinks: [beer],
+            profile: p,
+            at: start.addingTimeInterval(10 * 60),
+            stomachStatus: .light,
+            conservative: true
+        )
+        let later = BACCalculator.currentBAC(
+            drinks: [beer],
+            profile: p,
+            at: start.addingTimeInterval(70 * 60),
+            stomachStatus: .light,
+            conservative: true
+        )
+        let realisticEarly = BACCalculator.currentBAC(
+            drinks: [beer],
+            profile: p,
+            at: start.addingTimeInterval(10 * 60),
+            stomachStatus: .light,
+            conservative: false
+        )
+
+        XCTAssertGreaterThan(early, 0)
+        XCTAssertGreaterThan(later, early)
+        XCTAssertGreaterThanOrEqual(early, realisticEarly)
+    }
+
+    func testHoursUntilWaitsThroughFutureAbsorptionRise() {
+        let p = profile()
+        let start = Date()
+        let beer = drink(timestamp: start)
+        let target = 0.05
+
+        XCTAssertLessThanOrEqual(
+            BACCalculator.currentBAC(
+                drinks: [beer],
+                profile: p,
+                at: start,
+                stomachStatus: .light
+            ),
+            target
+        )
+
+        let hours = BACCalculator.hoursUntilBAC(
+            target,
+            drinks: [beer],
+            profile: p,
+            from: start,
+            stomachStatus: .light
+        )
+
+        XCTAssertNotNil(hours)
+        XCTAssertGreaterThan(hours ?? 0, 0.05)
+    }
+
+    func testHoursUntilUsesFinalCrossingAfterLaterDrink() {
+        let p = profile()
+        let now = Date()
+        let first = drink(volume: 200, abv: 40, category: .spirits,
+                          timestamp: now.addingTimeInterval(-90 * 60))
+        let later = drink(volume: 200, abv: 40, category: .spirits,
+                           timestamp: now.addingTimeInterval(4 * 3600))
+
+        let hours = BACCalculator.hoursUntilBAC(
+            0.5,
+            drinks: [first, later],
+            profile: p,
+            from: now,
+            stomachStatus: .light
+        )
+
+        XCTAssertNotNil(hours)
+        XCTAssertGreaterThan((hours ?? 0) * 3600, later.timestamp.timeIntervalSince(now))
+    }
+
+    func testNonForceReloadRecalculatesAfterInPlaceEdit() throws {
+        let container = try ModelContainer(
+            for: Schema([Drink.self, DrinkTemplate.self, VomitEvent.self, MealEvent.self, BreathalyzerReading.self]),
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = container.mainContext
+        let p = profile()
+        let vm = SessionViewModel()
+        vm.configure(profile: p, context: context)
+        let logged = drink(timestamp: Date().addingTimeInterval(-75 * 60))
+        vm.addDrink(logged)
+        let before = vm.currentBAC
+
+        logged.volume *= 2
+        try context.save()
+        vm.loadTodaysDrinks()
+
+        XCTAssertGreaterThan(before, 0.001)
+        XCTAssertGreaterThan(vm.currentBAC, before)
+    }
+
+    func testProbationaryChangeRefreshesSharedDrivingLimit() throws {
+        let container = try ModelContainer(
+            for: Schema([Drink.self, DrinkTemplate.self, VomitEvent.self, MealEvent.self, BreathalyzerReading.self]),
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let p = profile()
+        let vm = SessionViewModel()
+        vm.configure(profile: p, context: container.mainContext)
+        XCTAssertEqual(UserDefaults.widgetShared.double(forKey: UserDefaults.keyDrivingLimit), 0.5)
+
+        p.isProbationaryDriver = true
+        vm.configure(profile: p, context: container.mainContext)
+
+        XCTAssertEqual(UserDefaults.widgetShared.double(forKey: UserDefaults.keyDrivingLimit), 0.0)
+    }
+
+    func testExplicitlyDisablingAllWidgetsSticks() {
+        let p = profile()
+
+        p.activeWidgets = []
+
+        XCTAssertEqual(p.activeWidgets, [])
+        XCTAssertEqual(p.activeWidgetsRaw, WidgetType.explicitNoneRaw)
+    }
+
+    func testBodyDataValidationBoundaries() {
+        XCTAssertNil(BodyDataValidation.weightError(70))
+        XCTAssertNotNil(BodyDataValidation.weightError(700))
+        XCTAssertNil(BodyDataValidation.heightError(180))
+        XCTAssertNotNil(BodyDataValidation.heightError(70))
+        XCTAssertNil(BodyDataValidation.ageError(30))
+        XCTAssertNotNil(BodyDataValidation.ageError(12))
+    }
+
+    func testAgeFromBirthDateChangesOnBirthday() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let now = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2026, month: 7, day: 12, hour: 12
+        )))
+        let birthdayWasYesterday = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2001, month: 7, day: 11
+        )))
+        let birthdayIsTomorrow = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2001, month: 7, day: 13
+        )))
+
+        XCTAssertEqual(BodyDataValidation.age(from: birthdayWasYesterday, now: now), 25)
+        XCTAssertEqual(BodyDataValidation.age(from: birthdayIsTomorrow, now: now), 24)
+    }
+
+    func testPersonalInsightsBuildsRankingsAndTimePatterns() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let now = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 12, hour: 18)))
+        let first = drink(timestamp: try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 11, hour: 20))))
+        first.name = "Bier"
+        let second = drink(timestamp: try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 11, hour: 21))))
+        second.name = "Bier"
+        let third = drink(volume: 200, abv: 12, category: .wine,
+                          timestamp: try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 12, hour: 10))))
+        third.name = "Wein"
+
+        let insights = PersonalInsights.build(
+            drinks: [first, second, third],
+            profile: profile(),
+            cutoff: nil,
+            now: now
+        )
+
+        XCTAssertEqual(insights.totalDrinks, 3)
+        XCTAssertEqual(insights.drinkingDays, 2)
+        XCTAssertEqual(insights.averageDrinksPerDrinkingDay, 1.5, accuracy: 0.001)
+        XCTAssertEqual(insights.topDrinks.first?.name, "Bier")
+        XCTAssertEqual(insights.topDrinks.first?.count, 2)
+        XCTAssertEqual(insights.hourly.first(where: { $0.value == 20 })?.count, 1)
+        XCTAssertEqual(insights.hourly.first(where: { $0.value == 10 })?.count, 1)
+    }
+
+    func testMealOnlyChangesAlcoholNotYetAbsorbed() {
+        let p = profile()
+        let start = Date().addingTimeInterval(-20 * 60)
+        let spirit = drink(volume: 200, abv: 40, category: .spirits, timestamp: start)
+        let mealTime = start.addingTimeInterval(20 * 60)
+        let meal = MealEventValue(id: UUID(), timestamp: mealTime, impact: .fullMeal, name: "Abendessen")
+
+        let atMealWithoutFood = BACCalculator.currentBAC(
+            drinks: [spirit], profile: p, at: mealTime, stomachStatus: .light
+        )
+        let atMealWithFood = BACCalculator.currentBAC(
+            drinks: [spirit], profile: p, at: mealTime, stomachStatus: .light,
+            mealEvents: [meal]
+        )
+        let laterWithoutFood = BACCalculator.currentBAC(
+            drinks: [spirit], profile: p, at: mealTime.addingTimeInterval(40 * 60), stomachStatus: .light
+        )
+        let laterWithFood = BACCalculator.currentBAC(
+            drinks: [spirit], profile: p, at: mealTime.addingTimeInterval(40 * 60), stomachStatus: .light,
+            mealEvents: [meal]
+        )
+
+        XCTAssertEqual(atMealWithFood, atMealWithoutFood, accuracy: 0.0001)
+        XCTAssertLessThan(laterWithFood, laterWithoutFood)
+    }
+
+    func testArcadeRoundAndResultCodecPreserveSharedIdentity() throws {
+        let jamID = UUID()
+        let round = JamArcadeRoundPayload(
+            id: UUID(), jamID: jamID, game: .reactionRoyale,
+            starterID: UUID(), starterName: "Mia",
+            startAt: Date(), signalAt: Date().addingTimeInterval(4), durationSeconds: 5
+        )
+        let result = JamArcadeResultPayload(
+            jamID: jamID, roundID: round.id, participantID: UUID(),
+            participantName: "Noah", value: 241, disqualified: false, submittedAt: Date()
+        )
+
+        let decodedRound = try JSONDecoder().decode(
+            JamArcadeRoundPayload.self,
+            from: JSONEncoder().encode(round)
+        )
+        let decodedResult = try JSONDecoder().decode(
+            JamArcadeResultPayload.self,
+            from: JSONEncoder().encode(result)
+        )
+
+        XCTAssertEqual(decodedRound.id, round.id)
+        XCTAssertEqual(decodedRound.signalAt, round.signalAt)
+        XCTAssertEqual(decodedResult.roundID, round.id)
+        XCTAssertEqual(decodedResult.participantID, result.participantID)
+    }
+}

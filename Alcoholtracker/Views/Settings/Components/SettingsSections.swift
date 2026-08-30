@@ -23,7 +23,8 @@ struct SettingsProfileSection: View {
                     label: "Gewicht",
                     unit: "kg",
                     format: "%.1f",
-                    range: 30...250,
+                    range: BodyDataValidation.weightRange,
+                    validationMessage: "Gewicht muss zwischen 35 und 250 kg liegen.",
                     value: Binding(get: { p.weight }, set: { p.weight = $0; save() })
                 )
                 Divider().background(Color.appBorder).padding(.leading, 16)
@@ -31,7 +32,8 @@ struct SettingsProfileSection: View {
                     label: "Größe",
                     unit: "cm",
                     format: "%.0f",
-                    range: 100...250,
+                    range: BodyDataValidation.heightRange,
+                    validationMessage: "Größe muss zwischen 120 und 230 cm liegen.",
                     value: Binding(get: { p.height }, set: { p.height = $0; save() })
                 )
                 Divider().background(Color.appBorder).padding(.leading, 16)
@@ -43,8 +45,8 @@ struct SettingsProfileSection: View {
                     Spacer()
                     DatePicker(
                         "",
-                        selection: Binding(get: { p.birthDate }, set: { p.birthDate = $0; p.age = Calendar.current.dateComponents([.year], from: $0, to: Date()).year ?? p.age; save() }),
-                        in: ...Calendar.current.date(byAdding: .year, value: -16, to: Date())!,
+                        selection: Binding(get: { p.birthDate }, set: { p.birthDate = $0; p.age = BodyDataValidation.age(from: $0); save() }),
+                        in: BodyDataValidation.birthDateRange(),
                         displayedComponents: .date
                     )
                     .labelsHidden()
@@ -198,6 +200,28 @@ struct SettingsDisplaySection: View {
                     label: "Toleranzmodus",
                     subtitle: "Passt die Berechnung für regelmäßige Trinker an",
                     isOn: Binding(get: { p.toleranceMode }, set: { p.toleranceMode = $0; save() })
+                )
+                Divider().background(Color.appBorder).padding(.leading, 16)
+                STToggleRow(
+                    icon: "exclamationmark.shield.fill",
+                    label: "Konservativ rechnen",
+                    subtitle: "Vorsichtige Annahmen für Fahrbereit-Zeiten & Vorausschau",
+                    isOn: Binding(get: { p.conservativeForSafety }, set: {
+                        p.conservativeSafety = $0
+                        if !$0 { p.conservativeEverywhere = false }
+                        save()
+                    })
+                )
+                Divider().background(Color.appBorder).padding(.leading, 16)
+                STToggleRow(
+                    icon: "exclamationmark.shield",
+                    label: "Konservativ in ganzer App",
+                    subtitle: "Vorsichtige Annahmen auch für Startseite, Kurven & Badges",
+                    isOn: Binding(get: { p.conservativeEverywhere }, set: {
+                        p.conservativeEverywhere = $0
+                        if $0 { p.conservativeSafety = true }
+                        save()
+                    })
                 )
                 Divider().background(Color.appBorder).padding(.leading, 16)
                 STToggleRow(
@@ -394,58 +418,6 @@ struct SettingsAccessibilitySection: View {
                 RoundedRectangle(cornerRadius: 16)
                     .strokeBorder(Color.appBorder, lineWidth: 0.5)
             )
-        }
-    }
-}
-
-// MARK: - Medication (B3)
-
-struct SettingsMedicationSection: View {
-    let p: UserProfile
-    let save: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionLabel(text: "MEDIKAMENTE (AKTUELL)")
-            VStack(spacing: 0) {
-                ForEach(Array(MedicationFlag.allCases.enumerated()), id: \.element.rawValue) { idx, med in
-                    Toggle(isOn: Binding(
-                        get: { p.activeMedications.contains(med) },
-                        set: { on in
-                            var current = p.activeMedications
-                            if on { current.append(med) } else { current.removeAll { $0 == med } }
-                            p.activeMedications = current
-                            save()
-                        }
-                    )) {
-                        HStack(spacing: 12) {
-                            Image(systemName: med.symbolName)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(Color.appAccent)
-                                .frame(width: 22)
-                            Text(med.rawValue)
-                                .font(.appBody)
-                                .foregroundStyle(Color.appText)
-                        }
-                    }
-                    .tint(Color.appAccent)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    if idx < MedicationFlag.allCases.count - 1 {
-                        Divider().background(Color.appBorder).padding(.leading, 16)
-                    }
-                }
-            }
-            .background(Color.appCard)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(Color.appBorder, lineWidth: 0.5)
-            )
-
-            Text("Aktive Medikamente werden bei deinem ersten Drink des Abends als Hinweis angezeigt. Kein medizinischer Rat.")
-                .font(.appMicro)
-                .foregroundStyle(Color.appTextMuted)
         }
     }
 }

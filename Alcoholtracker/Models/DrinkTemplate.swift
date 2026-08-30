@@ -14,6 +14,11 @@ enum DrinkCategory: String, Codable, CaseIterable {
     case shot      = "shot"
     case cider     = "cider"
     case fortified = "fortified"
+    case water     = "water"
+    case softDrink = "softDrink"
+    case juice     = "juice"
+    case coffeeTea = "coffeeTea"
+    case milk      = "milk"
     case other     = "other"
 
     var localizedName: String {
@@ -28,6 +33,11 @@ enum DrinkCategory: String, Codable, CaseIterable {
         case .shot:      return "Shot"
         case .cider:     return "Cider"
         case .fortified: return "Likörwein"
+        case .water:     return "Wasser"
+        case .softDrink: return "Softdrink"
+        case .juice:     return "Saft"
+        case .coffeeTea: return "Kaffee und Tee"
+        case .milk:      return "Milch"
         case .other:     return "Sonstiges"
         }
     }
@@ -44,6 +54,11 @@ enum DrinkCategory: String, Codable, CaseIterable {
         case .shot:      return "flame.fill"
         case .cocktail:  return "wineglass.fill"
         case .mixed:     return "cylinder.fill"
+        case .water:     return "waterbottle.fill"
+        case .softDrink: return "cylinder.fill"
+        case .juice:     return "takeoutbag.and.cup.and.straw.fill"
+        case .coffeeTea: return "cup.and.saucer.fill"
+        case .milk:      return "drop.fill"
         case .other:     return "cup.and.saucer"
         }
     }
@@ -52,17 +67,18 @@ enum DrinkCategory: String, Codable, CaseIterable {
     var commonBottleSizes: [(label: String, volumeML: Double)] {
         switch self {
         case .spirits, .liqueur:
-            return [("Klein (0,2 L)", 200), ("Standard (0,5 L)", 500),
-                    ("Flasche (0,7 L)", 700), ("Liter (1,0 L)", 1000)]
+            return [("0,2 L", 200), ("0,5 L", 500),
+                    ("0,7 L", 700), ("1,0 L", 1000)]
         case .beer, .cider:
-            return [("Flasche (0,33 L)", 330), ("Flasche (0,5 L)", 500),
-                    ("Sixpack (6x0,33 L)", 1980), ("Kasten (20x0,5 L)", 10000)]
+            return [("0,25 L", 250), ("0,33 L", 330),
+                    ("0,5 L", 500), ("0,7 L", 700)]
         case .wine, .sparkling, .fortified:
-            return [("Halbe (0,375 L)", 375), ("Flasche (0,75 L)", 750),
-                    ("Magnum (1,5 L)", 1500)]
-        default:
-            return [("Klein (0,33 L)", 330), ("Standard (0,5 L)", 500),
-                    ("Gross (0,7 L)", 700), ("Liter (1,0 L)", 1000)]
+            return [("0,375 L", 375), ("0,7 L", 700),
+                    ("0,75 L", 750), ("1,5 L", 1500)]
+        case .water, .softDrink, .juice, .coffeeTea, .milk, .cocktail, .mixed, .shot, .other:
+            return [("0,33 L", 330), ("0,5 L", 500),
+                    ("0,7 L", 700), ("0,75 L", 750),
+                    ("1,0 L", 1000), ("1,5 L", 1500)]
         }
     }
 
@@ -72,7 +88,8 @@ enum DrinkCategory: String, Codable, CaseIterable {
         switch self {
         case .shot:                         return 0.75
         case .beer, .cider, .sparkling:     return 0.85
-        default:                            return 1.0
+        case .water, .softDrink, .juice, .coffeeTea, .milk, .cocktail, .mixed, .spirits, .liqueur, .wine, .fortified, .other:
+            return 1.0
         }
     }
 }
@@ -116,8 +133,10 @@ enum BACStatus: Equatable, Hashable, CaseIterable {
         case .sober:   return "Nüchtern"
         case .tipsy:   return "Leicht beschwipst"
         case .drunk:   return "Beschwipst"
-        case .careful: return "Aufpassen"
-        case .danger:  return "Fahruntauglich"
+        // 0,8 bis 1,5 ‰ liegt bereits klar über dem 0,5-Grenzwert; "Aufpassen"
+        // verharmloste das. Ab 1,5 ‰ dann die deutliche Warnung.
+        case .careful: return "Fahruntüchtig"
+        case .danger:  return "Gefährlich"
         }
     }
 
@@ -162,20 +181,26 @@ enum StomachStatus: String, Codable, CaseIterable {
         switch self {
         case .empty: return 45.0   // fasted: 30-60 min to peak (Widmark)
         case .light: return 75.0   // mixed meal: 60-90 min to peak
-        case .full:  return 120.0  // high-calorie meal: 90-180 min to peak
+        case .full:  return 90.0   // full meal: ~90 min to peak (see note on peakFactor)
         }
     }
 
     // Peak-BAC scaling = (forensic resorption deficit) × (food/absorption-completeness).
     // A ~10% first-pass loss in the gut wall and liver applies to the whole dose even
     // when fasted, so the empty-stomach factor is 0.90 (forensic minimum) rather than
-    // 1.00. Food in the stomach lowers the peak further on top of that, preserving the
-    // empty > light > full gradient: 1.00→0.90, 0.90→0.81, 0.75→0.68.
+    // 1.00. Food lowers the peak further on top of that, keeping the empty > light >
+    // full gradient.
+    //
+    // NOTE: the `full` values were softened (peakFactor 0.68 -> 0.75, absorptionMinutes
+    // 120 -> 90). The two food hebel (a lower peakFactor AND a longer absorption window
+    // that subtracts more elimination) compounded so hard that a single beer's projected
+    // peak collapsed to ~0.00 on a full stomach, which is wrong: a full meal cuts the
+    // peak by ~30-50%, not ~100%. The net peaks stay monotonic (empty > light > full).
     var peakFactor: Double {
         switch self {
         case .empty: return 0.90
         case .light: return 0.81
-        case .full:  return 0.68
+        case .full:  return 0.75
         }
     }
 }

@@ -165,11 +165,44 @@ final class HistoryViewModel {
         let id = UUID()
         let moodScore: Int
         let averagePeakBAC: Double
+        let nights: Int
+    }
+
+    // The one-sentence takeaway of the mood card: average peak of positively
+    // vs. negatively rated nights. nil until both buckets have >= 2 nights,
+    // so a single outlier evening never produces a bogus conclusion.
+    struct MoodInsight {
+        let goodAvg: Double
+        let goodNights: Int
+        let badAvg: Double
+        let badNights: Int
+    }
+
+    func moodInsight(drinks: [Drink], notes: [DayNote], profile: UserProfile) -> MoodInsight? {
+        let byMood = peakBACsByMood(drinks: drinks, notes: notes, profile: profile)
+        let good = (byMood[DayMood.happy.rawValue] ?? []) + (byMood[DayMood.proud.rawValue] ?? [])
+        let bad  = (byMood[DayMood.regret.rawValue] ?? []) + (byMood[DayMood.terrible.rawValue] ?? [])
+        guard good.count >= 2, bad.count >= 2 else { return nil }
+        return MoodInsight(
+            goodAvg: good.reduce(0, +) / Double(good.count),
+            goodNights: good.count,
+            badAvg: bad.reduce(0, +) / Double(bad.count),
+            badNights: bad.count
+        )
     }
 
     // Korreliert Kater/Stimmung mit dem Peak BAC der Nacht, auf die sich die
     // Notiz bezieht.
     func getMoodCorrelations(drinks: [Drink], notes: [DayNote], profile: UserProfile) -> [MoodCorrelation] {
+        let bacsByMood = peakBACsByMood(drinks: drinks, notes: notes, profile: profile)
+        return bacsByMood.map { (mood, bacs) in
+            let avgBAC = bacs.reduce(0.0, +) / Double(bacs.count)
+            return MoodCorrelation(moodScore: mood, averagePeakBAC: avgBAC, nights: bacs.count)
+        }.sorted { $0.moodScore < $1.moodScore }
+    }
+
+    // Peak-BACs der bewerteten Nächte, gruppiert nach Stimmung.
+    private func peakBACsByMood(drinks: [Drink], notes: [DayNote], profile: UserProfile) -> [Int: [Double]] {
         // 1. Drinks nach logischem Tag (Mitternacht des logischen Tages)
         //    gruppieren - dieselbe Schluesselform wie note.dayStart.
         var drinksByDay: [Date: [Drink]] = [:]
@@ -183,19 +216,19 @@ final class HistoryViewModel {
         //    speichern die Stimmung unter der Nacht, auf die sie sich bezieht -
         //    daher kein Tagesversatz mehr.
         var bacsByMood: [Int: [Double]] = [:]
-
         for note in notes where note.mood != .neutral {
             if let dayDrinks = drinksByDay[note.dayStart] {
-                let peakBAC = BACCalculator.peakBAC(drinks: dayDrinks, profile: profile, stomachStatus: profile.defaultStomachStatus)
+                let peakBAC = BACProjectionInput(
+                    drinks: dayDrinks,
+                    profile: profile,
+                    stomachStatus: profile.defaultStomachStatus,
+                    conservative: profile.conservativeForApp,
+                    vomitTimes: []
+                ).peakBAC()
                 bacsByMood[note.moodRaw, default: []].append(peakBAC)
             }
         }
-        
-        // 3. Durchschnittlichen BAC pro Stimmung berechnen
-        return bacsByMood.map { (mood, bacs) in
-            let avgBAC = bacs.reduce(0.0, +) / Double(bacs.count)
-            return MoodCorrelation(moodScore: mood, averagePeakBAC: avgBAC)
-        }.sorted { $0.moodScore > $1.moodScore }
+        return bacsByMood
     }
 
     // Logical day: 06:00 on `date` to 05:59 the next day (matches SessionViewModel).

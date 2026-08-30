@@ -1,0 +1,4733 @@
+{
+ "version": 6,
+ "drinks": [
+  {
+   "name": "Augustiner Helle",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.2,
+   "calories": 210,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Augustiner Edelstoff",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.6,
+   "calories": 222,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Becks Pils",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.9,
+   "calories": 146,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Berliner Kindl Pils",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.1,
+   "calories": 205,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Bitburger Pils",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.8,
+   "calories": 142,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Corona Extra",
+   "category": "beer",
+   "volumeML": 355.0,
+   "abv": 4.5,
+   "calories": 148,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Erdinger Alkoholfrei",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 0.4,
+   "calories": 125,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Erdinger Weißbier",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.3,
+   "calories": 220,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Franziskaner Weissbier",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.0,
+   "calories": 215,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Heineken",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 142,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Hofbräu Original",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.1,
+   "calories": 210,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Jever Pilsener",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.9,
+   "calories": 145,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Krombacher Radler",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 2.5,
+   "calories": 205,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Löwenbräu Original",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.2,
+   "calories": 210,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Paulaner Hefe-Weißbier",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.5,
+   "calories": 225,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Paulaner Spezi",
+   "category": "mixed",
+   "volumeML": 500.0,
+   "abv": 0.0,
+   "calories": 200,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Smirnoff Ice",
+   "category": "mixed",
+   "volumeML": 275.0,
+   "abv": 4.0,
+   "calories": 195,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Tannenzäpfle Rothaus",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 5.1,
+   "calories": 145,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Three Sixty Vodka Cola",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 215,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Warsteiner Premium",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.8,
+   "calories": 142,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Weihenstephaner Hefeweißbier",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.4,
+   "calories": 220,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Bacardi Cola (Dose)",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 230,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Captain Morgan Cola",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 220,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Flensburger Pilsener",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.8,
+   "calories": 142,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Stauder Premium Pils",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.6,
+   "calories": 137,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Astra Urtyp",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.9,
+   "calories": 145,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Tegernseer Hell",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 4.8,
+   "calories": 200,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Spaten Münchner Hell",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.2,
+   "calories": 210,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Hacker-Pschorr Münchner Gold",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.5,
+   "calories": 220,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Andechser Bergbock Hell",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 6.9,
+   "calories": 178,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Schneider Weisse Original",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.4,
+   "calories": 220,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Maisel's Weisse",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.2,
+   "calories": 210,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Erdinger Kristall",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.3,
+   "calories": 215,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Erdinger Dunkel",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.6,
+   "calories": 225,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Schöfferhofer Hefeweizen",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.0,
+   "calories": 210,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Hacker-Pschorr Hefe Weiße",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.5,
+   "calories": 225,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Stella Artois",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 142,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Amstel",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 145,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Carlsberg",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 143,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Tuborg",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.6,
+   "calories": 137,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Budweiser",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 147,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Coors Light",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.2,
+   "calories": 102,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Miller High Life",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.6,
+   "calories": 140,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Asahi Super Dry",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 140,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Sapporo Premium",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.9,
+   "calories": 138,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Singha",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 147,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Tiger Beer",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 145,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Tsingtao",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.7,
+   "calories": 134,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Modelo Especial",
+   "category": "beer",
+   "volumeML": 355.0,
+   "abv": 4.4,
+   "calories": 143,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Pilsner Urquell",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.4,
+   "calories": 132,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Kozel Premium",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.6,
+   "calories": 138,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Staropramen",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 145,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Köstritzer Schwarzbier",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.8,
+   "calories": 145,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Guinness Draught",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 4.2,
+   "calories": 190,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Murphy's Irish Stout",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 4.0,
+   "calories": 185,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Erdinger Pikantus",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 7.3,
+   "calories": 270,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Andechser Doppelbock Dunkel",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 7.1,
+   "calories": 265,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Aventinus Weizen-Eisbock",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 12.0,
+   "calories": 255,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Salvator Doppelbock",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 7.9,
+   "calories": 285,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Maisel's Weisse Doppelbock",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 8.0,
+   "calories": 180,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Paulaner Radler",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 2.5,
+   "calories": 205,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Erdinger Radler",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 2.5,
+   "calories": 200,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Schöfferhofer Pomegranate",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 2.5,
+   "calories": 215,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Berliner Weisse mit Schuss",
+   "category": "beer",
+   "volumeML": 300.0,
+   "abv": 2.8,
+   "calories": 155,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Astra Kiezmische",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 2.5,
+   "calories": 205,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Reissdorf Kölsch",
+   "category": "beer",
+   "volumeML": 200.0,
+   "abv": 4.8,
+   "calories": 87,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Gaffel Kölsch",
+   "category": "beer",
+   "volumeML": 200.0,
+   "abv": 4.8,
+   "calories": 87,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Mühlen Kölsch",
+   "category": "beer",
+   "volumeML": 200.0,
+   "abv": 4.8,
+   "calories": 87,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Päffgen Kölsch",
+   "category": "beer",
+   "volumeML": 200.0,
+   "abv": 4.9,
+   "calories": 89,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Sünner Kölsch",
+   "category": "beer",
+   "volumeML": 200.0,
+   "abv": 4.8,
+   "calories": 87,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Sion Kölsch",
+   "category": "beer",
+   "volumeML": 200.0,
+   "abv": 4.8,
+   "calories": 87,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Dom Kölsch",
+   "category": "beer",
+   "volumeML": 200.0,
+   "abv": 4.8,
+   "calories": 87,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Beck's Blue",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 38,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Paulaner Weißbier Alkoholfrei",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 0.5,
+   "calories": 125,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Clausthaler Original",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 0.4,
+   "calories": 85,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Bitburger 0.0%",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 38,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Krombacher 0.0%",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 35,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Rotwein Glas",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 13.0,
+   "calories": 170,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Weißwein Glas",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 12.0,
+   "calories": 160,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Roséwein Glas",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 11.5,
+   "calories": 165,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Riesling Glas",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 11.5,
+   "calories": 155,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Glühwein",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 9.0,
+   "calories": 250,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Federweißer",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 6.0,
+   "calories": 140,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Lambrusco Glas",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 11.0,
+   "calories": 160,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Prosecco Glas",
+   "category": "wine",
+   "volumeML": 100.0,
+   "abv": 11.0,
+   "calories": 75,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Sekt Glas",
+   "category": "wine",
+   "volumeML": 100.0,
+   "abv": 11.5,
+   "calories": 80,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Champagner Glas",
+   "category": "wine",
+   "volumeML": 100.0,
+   "abv": 12.0,
+   "calories": 90,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Grauburgunder",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 12.5,
+   "calories": 165,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Spätburgunder",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 13.0,
+   "calories": 170,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Sauvignon Blanc",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 12.5,
+   "calories": 165,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Chardonnay",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 13.0,
+   "calories": 170,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Cabernet Sauvignon",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 13.5,
+   "calories": 175,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Merlot",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 13.5,
+   "calories": 175,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Pinot Noir",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 13.0,
+   "calories": 170,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Tempranillo",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 13.5,
+   "calories": 175,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Sangiovese",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 13.0,
+   "calories": 170,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Sangria",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 9.0,
+   "calories": 200,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Rotwein lieblich",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 11.5,
+   "calories": 175,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Weißwein halbtrocken",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 11.5,
+   "calories": 165,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Weißwein lieblich",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 11.0,
+   "calories": 170,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Roséwein halbtrocken",
+   "category": "wine",
+   "volumeML": 200.0,
+   "abv": 11.0,
+   "calories": 165,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Sekt trocken",
+   "category": "sparkling",
+   "volumeML": 100.0,
+   "abv": 11.5,
+   "calories": 80,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Sekt halbtrocken",
+   "category": "sparkling",
+   "volumeML": 100.0,
+   "abv": 11.5,
+   "calories": 85,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Prosecco",
+   "category": "sparkling",
+   "volumeML": 100.0,
+   "abv": 11.0,
+   "calories": 77,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Champagner",
+   "category": "sparkling",
+   "volumeML": 100.0,
+   "abv": 12.0,
+   "calories": 84,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Crémant",
+   "category": "sparkling",
+   "volumeML": 100.0,
+   "abv": 12.0,
+   "calories": 84,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Cava",
+   "category": "sparkling",
+   "volumeML": 100.0,
+   "abv": 11.5,
+   "calories": 80,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Asti Spumante",
+   "category": "sparkling",
+   "volumeML": 100.0,
+   "abv": 7.5,
+   "calories": 60,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Lambrusco frizzante",
+   "category": "sparkling",
+   "volumeML": 100.0,
+   "abv": 8.0,
+   "calories": 65,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Henkell Trocken",
+   "category": "sparkling",
+   "volumeML": 100.0,
+   "abv": 11.5,
+   "calories": 80,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Mumm Extra Dry",
+   "category": "sparkling",
+   "volumeML": 100.0,
+   "abv": 11.5,
+   "calories": 80,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Rotkäppchen Sekt",
+   "category": "sparkling",
+   "volumeML": 100.0,
+   "abv": 11.5,
+   "calories": 80,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Söhnlein Brillant",
+   "category": "sparkling",
+   "volumeML": 100.0,
+   "abv": 11.0,
+   "calories": 77,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Aperol Pur",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 11.0,
+   "calories": 60,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Baileys",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 17.0,
+   "calories": 130,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Campari Pur",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 25.0,
+   "calories": 60,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Fernet Branca",
+   "category": "spirits",
+   "volumeML": 30.0,
+   "abv": 39.0,
+   "calories": 75,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Gin Pur",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Jägermeister",
+   "category": "spirits",
+   "volumeML": 20.0,
+   "abv": 35.0,
+   "calories": 50,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Limoncello",
+   "category": "spirits",
+   "volumeML": 30.0,
+   "abv": 30.0,
+   "calories": 80,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Ouzo",
+   "category": "spirits",
+   "volumeML": 20.0,
+   "abv": 38.0,
+   "calories": 55,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Pfeffi",
+   "category": "spirits",
+   "volumeML": 20.0,
+   "abv": 30.0,
+   "calories": 55,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Rum Shot",
+   "category": "spirits",
+   "volumeML": 20.0,
+   "abv": 40.0,
+   "calories": 55,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Rum (neat)",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 90,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Schnaps Korn",
+   "category": "spirits",
+   "volumeML": 20.0,
+   "abv": 32.0,
+   "calories": 45,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Tequila Shot",
+   "category": "spirits",
+   "volumeML": 20.0,
+   "abv": 38.0,
+   "calories": 50,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Vodka Shot",
+   "category": "spirits",
+   "volumeML": 20.0,
+   "abv": 40.0,
+   "calories": 55,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Whiskey Shot",
+   "category": "spirits",
+   "volumeML": 20.0,
+   "abv": 40.0,
+   "calories": 55,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Whiskey (neat)",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 43.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Williams Birne",
+   "category": "spirits",
+   "volumeML": 20.0,
+   "abv": 40.0,
+   "calories": 55,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Smirnoff Red Label",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 37.5,
+   "calories": 90,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Absolut Vodka",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Russian Standard Vodka",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Stolichnaya Vodka",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Bombay Sapphire",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Tanqueray Gin",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 43.1,
+   "calories": 100,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Monkey 47 Gin",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 47.0,
+   "calories": 110,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "The Botanist Gin",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 46.0,
+   "calories": 108,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Beefeater Gin",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Gordon's Gin",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 37.5,
+   "calories": 90,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Captain Morgan Spiced",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 35.0,
+   "calories": 85,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Havana Club 3 Anos",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Diplomatico Reserva",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Ron Zacapa 23",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Kraken Spiced Rum",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 47.0,
+   "calories": 110,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Stroh Rum 80",
+   "category": "spirits",
+   "volumeML": 20.0,
+   "abv": 80.0,
+   "calories": 90,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Jack Daniel's",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Jim Beam",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Jameson",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Johnnie Walker Red",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Johnnie Walker Black",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Glenfiddich 12",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "The Macallan 12",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Bulleit Bourbon",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 45.0,
+   "calories": 103,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Maker's Mark",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 45.0,
+   "calories": 103,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Jose Cuervo Gold",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 38.0,
+   "calories": 90,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Sierra Silver Tequila",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 38.0,
+   "calories": 90,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Patron Silver",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Aquavit",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Doppelkorn",
+   "category": "spirits",
+   "volumeML": 20.0,
+   "abv": 38.0,
+   "calories": 45,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Korn",
+   "category": "spirits",
+   "volumeML": 20.0,
+   "abv": 32.0,
+   "calories": 38,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Mirabelle",
+   "category": "spirits",
+   "volumeML": 20.0,
+   "abv": 40.0,
+   "calories": 45,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Zwetschge",
+   "category": "spirits",
+   "volumeML": 20.0,
+   "abv": 40.0,
+   "calories": 45,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Kirsch",
+   "category": "spirits",
+   "volumeML": 20.0,
+   "abv": 40.0,
+   "calories": 45,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Beluga Noble",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Roku Gin",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 43.0,
+   "calories": 100,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Old Pascas Brown 73",
+   "category": "spirits",
+   "volumeML": 20.0,
+   "abv": 73.0,
+   "calories": 105,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Chivas Regal 12",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Tullamore Dew",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 95,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Don Julio Blanco",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 38.0,
+   "calories": 90,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Olmeca Altos Plata",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 38.0,
+   "calories": 90,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Averna",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 29.0,
+   "calories": 95,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Ramazzotti",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 30.0,
+   "calories": 100,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Cynar",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 16.5,
+   "calories": 65,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Underberg",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 44.0,
+   "calories": 62,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Pernod",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 90,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Pastis",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 90,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Cointreau",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 140,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Grand Marnier",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 135,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Triple Sec",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 30.0,
+   "calories": 120,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Malibu Kokos",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 21.0,
+   "calories": 145,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Kahlúa",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 20.0,
+   "calories": 120,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Tia Maria",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 20.0,
+   "calories": 120,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Galliano",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 30.0,
+   "calories": 105,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Drambuie",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 105,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Frangelico",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 20.0,
+   "calories": 115,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Amaretto Disaronno",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 28.0,
+   "calories": 135,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Berentzen Apfelkorn",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 20.0,
+   "calories": 115,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Raki",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 45.0,
+   "calories": 60,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Saurer Apfel Schnapps",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 16.0,
+   "calories": 90,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Absinth",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 55.0,
+   "calories": 75,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Advocaat",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 14.0,
+   "calories": 125,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Amarula",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 17.0,
+   "calories": 115,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Sheridan's",
+   "category": "liqueur",
+   "volumeML": 40.0,
+   "abv": 15.5,
+   "calories": 125,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Berliner Luft",
+   "category": "shot",
+   "volumeML": 20.0,
+   "abv": 18.0,
+   "calories": 35,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Kümmerling",
+   "category": "shot",
+   "volumeML": 20.0,
+   "abv": 35.0,
+   "calories": 60,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Sourz Apple",
+   "category": "shot",
+   "volumeML": 20.0,
+   "abv": 15.0,
+   "calories": 38,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Sourz Raspberry",
+   "category": "shot",
+   "volumeML": 20.0,
+   "abv": 15.0,
+   "calories": 38,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "B-52",
+   "category": "shot",
+   "volumeML": 20.0,
+   "abv": 28.0,
+   "calories": 50,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Wodka Feige",
+   "category": "shot",
+   "volumeML": 20.0,
+   "abv": 20.0,
+   "calories": 42,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Tequila Sunrise Shot",
+   "category": "shot",
+   "volumeML": 20.0,
+   "abv": 18.0,
+   "calories": 42,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Unicum",
+   "category": "shot",
+   "volumeML": 20.0,
+   "abv": 40.0,
+   "calories": 58,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Schwarzwald Shot",
+   "category": "shot",
+   "volumeML": 20.0,
+   "abv": 35.0,
+   "calories": 55,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Baby Guinness",
+   "category": "shot",
+   "volumeML": 20.0,
+   "abv": 25.0,
+   "calories": 45,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Tequila Slammer",
+   "category": "shot",
+   "volumeML": 20.0,
+   "abv": 38.0,
+   "calories": 50,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Sourz Pink",
+   "category": "shot",
+   "volumeML": 20.0,
+   "abv": 15.0,
+   "calories": 38,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Aperol Spritz",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 11.0,
+   "calories": 175,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Bloody Mary",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 10.0,
+   "calories": 150,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Caipirinha",
+   "category": "cocktail",
+   "volumeML": 150.0,
+   "abv": 16.0,
+   "calories": 240,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Cuba Libre",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 11.0,
+   "calories": 220,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Espresso Martini",
+   "category": "cocktail",
+   "volumeML": 100.0,
+   "abv": 22.0,
+   "calories": 180,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Gin Tonic",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 12.0,
+   "calories": 180,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Hugo",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 9.0,
+   "calories": 145,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Long Island Iced Tea",
+   "category": "cocktail",
+   "volumeML": 250.0,
+   "abv": 22.0,
+   "calories": 350,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Mai Tai",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 22.0,
+   "calories": 290,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Manhattan",
+   "category": "cocktail",
+   "volumeML": 80.0,
+   "abv": 30.0,
+   "calories": 150,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Margarita",
+   "category": "cocktail",
+   "volumeML": 150.0,
+   "abv": 18.0,
+   "calories": 280,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Mojito",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 11.0,
+   "calories": 210,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Moscow Mule",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 10.0,
+   "calories": 200,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Negroni",
+   "category": "cocktail",
+   "volumeML": 90.0,
+   "abv": 24.0,
+   "calories": 160,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Old Fashioned",
+   "category": "cocktail",
+   "volumeML": 80.0,
+   "abv": 32.0,
+   "calories": 170,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Pina Colada",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 14.0,
+   "calories": 320,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Sex on the Beach",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 11.0,
+   "calories": 220,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Tequila Sunrise",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 10.0,
+   "calories": 230,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Vodka Cola",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 10.0,
+   "calories": 200,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Vodka Energy",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 9.0,
+   "calories": 195,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Daiquiri",
+   "category": "cocktail",
+   "volumeML": 150.0,
+   "abv": 18.0,
+   "calories": 220,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Cosmopolitan",
+   "category": "cocktail",
+   "volumeML": 150.0,
+   "abv": 19.0,
+   "calories": 210,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Whiskey Sour",
+   "category": "cocktail",
+   "volumeML": 150.0,
+   "abv": 22.0,
+   "calories": 180,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Tom Collins",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 10.0,
+   "calories": 190,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Mint Julep",
+   "category": "cocktail",
+   "volumeML": 150.0,
+   "abv": 20.0,
+   "calories": 170,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Singapore Sling",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 14.0,
+   "calories": 225,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Gin Basil Smash",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 25.0,
+   "calories": 215,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Bramble",
+   "category": "cocktail",
+   "volumeML": 150.0,
+   "abv": 18.0,
+   "calories": 175,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Pornstar Martini",
+   "category": "cocktail",
+   "volumeML": 150.0,
+   "abv": 20.0,
+   "calories": 220,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Penicillin",
+   "category": "cocktail",
+   "volumeML": 120.0,
+   "abv": 22.0,
+   "calories": 150,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Paloma",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 12.0,
+   "calories": 175,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Watermelon Margarita",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 16.0,
+   "calories": 225,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Espresso Tonic",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 8.0,
+   "calories": 125,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Aperol Tonic",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 7.0,
+   "calories": 120,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Lillet Tonic",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 6.0,
+   "calories": 105,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Hugo Spritz",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 9.0,
+   "calories": 145,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Caipirovka",
+   "category": "cocktail",
+   "volumeML": 150.0,
+   "abv": 16.0,
+   "calories": 235,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Lillet Wild Berry Spritz",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 8.0,
+   "calories": 130,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Blue Lagoon",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 10.0,
+   "calories": 195,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Swimming Pool",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 14.0,
+   "calories": 235,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Hurricane",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 14.0,
+   "calories": 245,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Zombie",
+   "category": "cocktail",
+   "volumeML": 150.0,
+   "abv": 28.0,
+   "calories": 275,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Bahama Mama",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 10.0,
+   "calories": 195,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Eierpunsch",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 8.0,
+   "calories": 205,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Feuerzangenbowle",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 12.0,
+   "calories": 225,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Maibowle",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 8.0,
+   "calories": 185,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Erdbeerbowle",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 7.0,
+   "calories": 165,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Pfirsichbowle",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 8.0,
+   "calories": 175,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Mojito Rosa",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 12.0,
+   "calories": 215,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Caipiroska",
+   "category": "cocktail",
+   "volumeML": 150.0,
+   "abv": 16.0,
+   "calories": 235,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Gin Garden",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 12.0,
+   "calories": 185,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Rhubarb Spritz",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 9.0,
+   "calories": 150,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Bacardi Breezer Lime",
+   "category": "mixed",
+   "volumeML": 275.0,
+   "abv": 5.5,
+   "calories": 185,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Jim Beam Cola",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 215,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Jack Daniel's Cola",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 220,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Wodka Energy Dose",
+   "category": "mixed",
+   "volumeML": 250.0,
+   "abv": 7.0,
+   "calories": 150,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Smirnoff Ice Cranberry",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 4.0,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "V+ Cola",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 215,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Berentzen Mix",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 16.0,
+   "calories": 345,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Tequila Sunrise Dose",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 5.5,
+   "calories": 175,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Schwarze Sau",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 17.0,
+   "calories": 295,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Strongbow Original",
+   "category": "cider",
+   "volumeML": 500.0,
+   "abv": 4.5,
+   "calories": 205,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Kopparberg Pear",
+   "category": "cider",
+   "volumeML": 330.0,
+   "abv": 4.5,
+   "calories": 148,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Somersby Apple",
+   "category": "cider",
+   "volumeML": 330.0,
+   "abv": 4.5,
+   "calories": 155,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Rekorderlig Wildberries",
+   "category": "cider",
+   "volumeML": 330.0,
+   "abv": 4.5,
+   "calories": 148,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Old Mout Berries",
+   "category": "cider",
+   "volumeML": 330.0,
+   "abv": 4.0,
+   "calories": 140,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Kopparberg Strawberry Lime",
+   "category": "cider",
+   "volumeML": 330.0,
+   "abv": 4.5,
+   "calories": 152,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "White Claw Mango",
+   "category": "cider",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 100,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "White Claw Black Cherry",
+   "category": "cider",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 100,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "White Claw Natural Lime",
+   "category": "cider",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 100,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Truly Wild Berry",
+   "category": "cider",
+   "volumeML": 355.0,
+   "abv": 5.0,
+   "calories": 100,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Aldi Hard Seltzer",
+   "category": "cider",
+   "volumeML": 330.0,
+   "abv": 4.8,
+   "calories": 96,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Sherry Fino",
+   "category": "fortified",
+   "volumeML": 100.0,
+   "abv": 15.0,
+   "calories": 115,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Sherry Amontillado",
+   "category": "fortified",
+   "volumeML": 100.0,
+   "abv": 17.0,
+   "calories": 130,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Sherry Oloroso",
+   "category": "fortified",
+   "volumeML": 100.0,
+   "abv": 18.0,
+   "calories": 135,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Portwein Tawny",
+   "category": "fortified",
+   "volumeML": 100.0,
+   "abv": 20.0,
+   "calories": 153,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Portwein Ruby",
+   "category": "fortified",
+   "volumeML": 100.0,
+   "abv": 20.0,
+   "calories": 163,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Madeira",
+   "category": "fortified",
+   "volumeML": 100.0,
+   "abv": 18.0,
+   "calories": 140,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Marsala",
+   "category": "fortified",
+   "volumeML": 100.0,
+   "abv": 17.0,
+   "calories": 130,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Vermouth Rosso",
+   "category": "fortified",
+   "volumeML": 100.0,
+   "abv": 15.0,
+   "calories": 105,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Vermouth Bianco",
+   "category": "fortified",
+   "volumeML": 100.0,
+   "abv": 15.0,
+   "calories": 100,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Vermouth Extra Dry",
+   "category": "fortified",
+   "volumeML": 100.0,
+   "abv": 18.0,
+   "calories": 115,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Lillet Blanc",
+   "category": "fortified",
+   "volumeML": 100.0,
+   "abv": 17.0,
+   "calories": 120,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Cinzano Bianco",
+   "category": "fortified",
+   "volumeML": 100.0,
+   "abv": 14.4,
+   "calories": 100,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Uerige Altbier",
+   "category": "beer",
+   "volumeML": 300.0,
+   "abv": 4.7,
+   "calories": 128,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Schlüssel Alt",
+   "category": "beer",
+   "volumeML": 300.0,
+   "abv": 4.8,
+   "calories": 130,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Schumacher Alt",
+   "category": "beer",
+   "volumeML": 300.0,
+   "abv": 4.7,
+   "calories": 128,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Füchschen Alt",
+   "category": "beer",
+   "volumeML": 300.0,
+   "abv": 4.8,
+   "calories": 130,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Diebels Alt",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.9,
+   "calories": 142,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Spaten Optimator",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 7.2,
+   "calories": 300,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Weihenstephaner Korbinian",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 7.4,
+   "calories": 310,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Einbecker Ur-Bock Dunkel",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 6.5,
+   "calories": 175,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Becks Bier Dose",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 4.9,
+   "calories": 205,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Sternburg Export Dose",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 4.9,
+   "calories": 205,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Astra Rotlicht Dose",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.0,
+   "calories": 210,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Oettinger Pils Dose",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 4.7,
+   "calories": 198,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Lech Bier Dose",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.2,
+   "calories": 212,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Schlenkerla Rauchbier",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.1,
+   "calories": 210,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Spezial Rauchbier",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 4.6,
+   "calories": 195,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Fireball",
+   "category": "shot",
+   "volumeML": 30.0,
+   "abv": 33.0,
+   "calories": 72,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Jägermeister Shot",
+   "category": "shot",
+   "volumeML": 20.0,
+   "abv": 35.0,
+   "calories": 50,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Mexikaner",
+   "category": "shot",
+   "volumeML": 20.0,
+   "abv": 15.0,
+   "calories": 35,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Tequila Gold",
+   "category": "shot",
+   "volumeML": 20.0,
+   "abv": 38.0,
+   "calories": 48,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Sambuca",
+   "category": "shot",
+   "volumeML": 25.0,
+   "abv": 38.0,
+   "calories": 72,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Dark and Stormy",
+   "category": "cocktail",
+   "volumeML": 200.0,
+   "abv": 9.0,
+   "calories": 185,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Spicy Margarita",
+   "category": "cocktail",
+   "volumeML": 150.0,
+   "abv": 18.0,
+   "calories": 270,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Clover Club",
+   "category": "cocktail",
+   "volumeML": 130.0,
+   "abv": 18.0,
+   "calories": 185,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Spritz Veneziano",
+   "category": "cocktail",
+   "volumeML": 250.0,
+   "abv": 8.0,
+   "calories": 160,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Frozen Daiquiri",
+   "category": "cocktail",
+   "volumeML": 150.0,
+   "abv": 16.0,
+   "calories": 210,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Lynchburg Lemonade",
+   "category": "cocktail",
+   "volumeML": 250.0,
+   "abv": 9.0,
+   "calories": 200,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Coca-Cola",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 139,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Coca-Cola Zero",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 1,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Fanta Orange",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 134,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Sprite",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 105,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Red Bull",
+   "category": "other",
+   "volumeML": 250.0,
+   "abv": 0.0,
+   "calories": 113,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Monster Energy",
+   "category": "other",
+   "volumeML": 500.0,
+   "abv": 0.0,
+   "calories": 228,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Wasser still",
+   "category": "other",
+   "volumeML": 500.0,
+   "abv": 0.0,
+   "calories": 0,
+   "iconName": "drop.fill"
+  },
+  {
+   "name": "Wasser sprudelnd",
+   "category": "other",
+   "volumeML": 500.0,
+   "abv": 0.0,
+   "calories": 0,
+   "iconName": "drop.fill"
+  },
+  {
+   "name": "Orangensaft",
+   "category": "other",
+   "volumeML": 200.0,
+   "abv": 0.0,
+   "calories": 86,
+   "iconName": "cup.and.saucer.fill"
+  },
+  {
+   "name": "Apfelsaft",
+   "category": "other",
+   "volumeML": 200.0,
+   "abv": 0.0,
+   "calories": 96,
+   "iconName": "cup.and.saucer.fill"
+  },
+  {
+   "name": "Krombacher Pils",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.8,
+   "calories": 136,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Krombacher Pils Alkoholfrei",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 40,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Krombacher Weizen",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.3,
+   "calories": 228,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Bitburger Premium Pils",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.8,
+   "calories": 136,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Bitburger 0,0% Alkoholfrei",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 40,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Veltins Pilsener",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.8,
+   "calories": 136,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Veltins Helles Pülleken",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 5.2,
+   "calories": 147,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Beck's Pils",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.9,
+   "calories": 139,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Beck's Gold",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.9,
+   "calories": 139,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Beck's Blue Alkoholfrei",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.3,
+   "calories": 40,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Warsteiner Premium Pilsener",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.8,
+   "calories": 136,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Warsteiner Herb",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.8,
+   "calories": 136,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Radeberger Pilsner",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.8,
+   "calories": 136,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Jever Fun Alkoholfrei",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.3,
+   "calories": 40,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Oettinger Pils",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 4.7,
+   "calories": 202,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Oettinger Export",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.4,
+   "calories": 232,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Hasseröder Premium Pils",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 4.9,
+   "calories": 210,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "König Pilsener",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.9,
+   "calories": 139,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Holsten Pilsener",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 4.8,
+   "calories": 206,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Augustiner Lagerbier Hell",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.2,
+   "calories": 223,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Paulaner Münchner Hell",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 4.9,
+   "calories": 210,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Benediktiner Hell",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.0,
+   "calories": 215,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Benediktiner Weissbier",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.4,
+   "calories": 232,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Chiemseer Hell",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 4.8,
+   "calories": 206,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Mönchshof Original",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 4.9,
+   "calories": 210,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Bayreuther Brauhaus Hell",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 4.9,
+   "calories": 210,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Grevensteiner Original",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 5.2,
+   "calories": 147,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Zirndorfer Landbier",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 4.9,
+   "calories": 210,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Paulaner Hefe-Weißbier Naturtrüb",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.5,
+   "calories": 236,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Paulaner Hefe-Weißbier Alkoholfrei",
+   "category": "other",
+   "volumeML": 500.0,
+   "abv": 0.5,
+   "calories": 60,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Franziskaner Hefe-Weissbier Naturtrüb",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.0,
+   "calories": 215,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Franziskaner Alkoholfrei",
+   "category": "other",
+   "volumeML": 500.0,
+   "abv": 0.5,
+   "calories": 60,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Maisel's Weisse Original",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.2,
+   "calories": 223,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Störtebeker Bernstein-Weizen",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.3,
+   "calories": 228,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Erdinger Alkoholfrei Zitrone",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.3,
+   "calories": 40,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Mönchshof Kellerbier",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 5.4,
+   "calories": 232,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Störtebeker Atlantik-Ale",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 5.1,
+   "calories": 144,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Störtebeker Keller-Bier 1402",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 4.8,
+   "calories": 206,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Störtebeker Pilsener-Bier",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 4.9,
+   "calories": 210,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Störtebeker Frei-Bier Alkoholfrei",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.5,
+   "calories": 40,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Ratsherrn Pale Ale",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 5.6,
+   "calories": 158,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Rügener Baltic Ale",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 7.5,
+   "calories": 212,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Crew Republic Drunken Sailor IPA",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 6.4,
+   "calories": 181,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Leffe Blonde",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 6.6,
+   "calories": 187,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Leffe Brune",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 6.5,
+   "calories": 184,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Kilkenny Irish Red Ale",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.3,
+   "calories": 122,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Neumarkter Lammsbräu Bio Glutenfrei",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.7,
+   "calories": 133,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Neumarkter Lammsbräu Urstoff Bio",
+   "category": "beer",
+   "volumeML": 500.0,
+   "abv": 4.7,
+   "calories": 202,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Estrella Galicia Especial",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 5.5,
+   "calories": 156,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Carlsberg Elephant",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 7.5,
+   "calories": 212,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Carlsberg Pilsner",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 142,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Heineken Premium Lager",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 142,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Heineken 0.0%",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 40,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Corona Cero 0.0%",
+   "category": "other",
+   "volumeML": 355.0,
+   "abv": 0.0,
+   "calories": 42,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Früh Kölsch",
+   "category": "beer",
+   "volumeML": 200.0,
+   "abv": 4.8,
+   "calories": 82,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Frankenheim Alt",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.8,
+   "calories": 136,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Bolten Alt",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.9,
+   "calories": 139,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Guinness Extra Stout",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 4.1,
+   "calories": 116,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Guinness Hop House 13",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 142,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Vitamalz Das Original",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 50,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Karamalz Classic",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.2,
+   "calories": 55,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Kandi Malz",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 50,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Oettinger Malz",
+   "category": "other",
+   "volumeML": 500.0,
+   "abv": 0.0,
+   "calories": 75,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Sünner Malz",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 50,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Warsteiner Radler Zitrone",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.5,
+   "calories": 165,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Oettinger Radler",
+   "category": "mixed",
+   "volumeML": 500.0,
+   "abv": 2.5,
+   "calories": 250,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Gösser NaturRadler",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.0,
+   "calories": 165,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Gösser NaturRadler Alkoholfrei",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 40,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Mönchshof Natur Radler",
+   "category": "mixed",
+   "volumeML": 500.0,
+   "abv": 2.5,
+   "calories": 250,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Mönchshof Natur Radler Alkoholfrei",
+   "category": "other",
+   "volumeML": 500.0,
+   "abv": 0.5,
+   "calories": 60,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Krombacher Radler Naturtrüb",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.5,
+   "calories": 165,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Bitburger Radler Naturtrüb",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.0,
+   "calories": 165,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Hacker-Pschorr Natur Radler",
+   "category": "mixed",
+   "volumeML": 500.0,
+   "abv": 2.5,
+   "calories": 250,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Zötler Naturradler",
+   "category": "mixed",
+   "volumeML": 500.0,
+   "abv": 2.5,
+   "calories": 250,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Paulaner Weißbier-Zitrone",
+   "category": "mixed",
+   "volumeML": 500.0,
+   "abv": 2.5,
+   "calories": 250,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Veltins V+ Lemon",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.5,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Veltins V+ Curuba",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.5,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Veltins V+ Cola",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.0,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Veltins V+ Energy",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.5,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Veltins V+ Apple",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.0,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Veltins V+ Berry-X",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.5,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Veltins V+ Grapefruit",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.0,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Veltins V+ Sprizz",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.0,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Karlsberg Mixery Bier+Cola+X",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 3.1,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Karlsberg Mixery Bier+Cherry+X",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 3.1,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Karlsberg Mixery Iced Lemon",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 142,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Karlsberg Mixery Iced Blue",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 142,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Astra Rotlicht",
+   "category": "beer",
+   "volumeML": 330.0,
+   "abv": 6.0,
+   "calories": 170,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Astra Rakete",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 5.9,
+   "calories": 167,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Astra Granate Energy",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.5,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Astra Nackt",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.5,
+   "calories": 40,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Gaffel Lemon",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.0,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Gaffel Kölsch & Cola",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.0,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Gaffel Fassbrause Zitrone",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 40,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Schöfferhofer Grapefruit",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.5,
+   "calories": 165,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Schöfferhofer Grapefruit Alkoholfrei",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 40,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Schöfferhofer Granatapfel",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.5,
+   "calories": 165,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Schöfferhofer Maracuja",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.5,
+   "calories": 165,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Schöfferhofer Zitrone Naturtrüb",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.5,
+   "calories": 165,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Schöfferhofer Weizen-Mix Kirsche",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.5,
+   "calories": 165,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Schöfferhofer Kaktusfeige",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.5,
+   "calories": 165,
+   "iconName": "mug.fill"
+  },
+  {
+   "name": "Desperados Original",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 5.9,
+   "calories": 167,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Desperados Mojito",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 5.9,
+   "calories": 167,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Desperados Red",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 5.9,
+   "calories": 167,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Desperados Lime",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 3.0,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Desperados 0.0%",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 40,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Beck's Green Lemon",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.5,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Beck's Green Lemon Zero",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 40,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Beck's Ice",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.5,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Beck's Red Holunder",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.5,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Beck's Lemon Brew",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 2.5,
+   "calories": 165,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Salitos Original",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 5.9,
+   "calories": 167,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Salitos Ice",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 5.2,
+   "calories": 147,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Salitos Blue",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 142,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Salitos Pink",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 142,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Salitos 0,0%",
+   "category": "other",
+   "volumeML": 330.0,
+   "abv": 0.0,
+   "calories": 40,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Käfer Hugo",
+   "category": "sparkling",
+   "volumeML": 200.0,
+   "abv": 6.9,
+   "calories": 173,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Scavi & Ray Hugo",
+   "category": "sparkling",
+   "volumeML": 200.0,
+   "abv": 6.0,
+   "calories": 158,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Light live Hugo Alkoholfrei",
+   "category": "other",
+   "volumeML": 200.0,
+   "abv": 0.0,
+   "calories": 40,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Jules Mumm Hugo",
+   "category": "sparkling",
+   "volumeML": 200.0,
+   "abv": 8.0,
+   "calories": 191,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Mionetto Il Hugo",
+   "category": "sparkling",
+   "volumeML": 200.0,
+   "abv": 8.0,
+   "calories": 191,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Jack Daniel's Berry",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 214,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Jack Daniel's Ginger",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 214,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Jim Beam Ice Tea",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 214,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Gordon's Gin & Tonic",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 214,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Bombay Sapphire Gin & Tonic",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 214,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Smirnoff Ice Original",
+   "category": "mixed",
+   "volumeML": 250.0,
+   "abv": 4.0,
+   "calories": 65,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Smirnoff Ice Tropical",
+   "category": "mixed",
+   "volumeML": 250.0,
+   "abv": 4.0,
+   "calories": 65,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Bacardi Razz & Sprite",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 214,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Bacardi Mojito Dose",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 214,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Pitu Caipirinha Dose",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 214,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Absolut Mixt Blueberry & Lime",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 107,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Absolut Mixt Cloudberry & Apple",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 5.0,
+   "calories": 107,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Three Sixty Vodka Mate",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 214,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "9 Mile Vodka Energy",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 214,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Effect Vodka Energy",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 214,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Captain Morgan Mojito Dose",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 214,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Wodka Gorbatschow Lemon Dose",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 214,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Wodka Gorbatschow Energy Dose",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 214,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Wodka Gorbatschow Maracuja Dose",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 214,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Sierra Tequila Margarita Dose",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 214,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Kleiner Feigling Coco Biscuit Dose",
+   "category": "mixed",
+   "volumeML": 250.0,
+   "abv": 10.0,
+   "calories": 162,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Havana Club Cola Dose",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 214,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Malibu Pineapple Dose",
+   "category": "mixed",
+   "volumeML": 330.0,
+   "abv": 10.0,
+   "calories": 214,
+   "iconName": "cylinder.fill"
+  },
+  {
+   "name": "Aperol Aperitivo",
+   "category": "fortified",
+   "volumeML": 50.0,
+   "abv": 11.0,
+   "calories": 33,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Campari Bitter",
+   "category": "fortified",
+   "volumeML": 50.0,
+   "abv": 25.0,
+   "calories": 75,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Lillet Rose",
+   "category": "fortified",
+   "volumeML": 50.0,
+   "abv": 17.0,
+   "calories": 51,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Lillet Rouge",
+   "category": "fortified",
+   "volumeML": 50.0,
+   "abv": 17.0,
+   "calories": 51,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Martini Bianco",
+   "category": "fortified",
+   "volumeML": 75.0,
+   "abv": 14.4,
+   "calories": 64,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Martini Rosso",
+   "category": "fortified",
+   "volumeML": 75.0,
+   "abv": 14.4,
+   "calories": 64,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Martini Extra Dry",
+   "category": "fortified",
+   "volumeML": 75.0,
+   "abv": 15.0,
+   "calories": 67,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Martini Fiero",
+   "category": "fortified",
+   "volumeML": 75.0,
+   "abv": 14.9,
+   "calories": 67,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Ramazzotti Aperitivo Rosato",
+   "category": "fortified",
+   "volumeML": 50.0,
+   "abv": 15.0,
+   "calories": 45,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Pimm's No. 1",
+   "category": "fortified",
+   "volumeML": 50.0,
+   "abv": 25.0,
+   "calories": 75,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Jack Daniel's Old No. 7",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Jack Daniel's Gentleman Jack",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Jack Daniel's Single Barrel",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 45.0,
+   "calories": 99,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Jack Daniel's Tennessee Honey",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 35.0,
+   "calories": 43,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Jim Beam Bourbon Whiskey",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Jim Beam Red Stag",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 32.5,
+   "calories": 40,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Jim Beam Apple",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 32.5,
+   "calories": 40,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Johnnie Walker Red Label",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Johnnie Walker Black Label",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Jameson Irish Whiskey",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Tullamore D.E.W. Irish Whiskey",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Chivas Regal 12 Years",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Glenfiddich 12 Years Single Malt",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Maker's Mark Bourbon",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 45.0,
+   "calories": 99,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Lagavulin 16 Years Single Malt",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 43.0,
+   "calories": 94,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Laphroaig 10 Years Single Malt",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Absolut Vodka Blue",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Absolut Citron",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Absolut Kurant",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Smirnoff Red Label No. 21",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 37.5,
+   "calories": 82,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Three Sixty Vodka",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 37.5,
+   "calories": 82,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Three Sixty Black 42",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 42.0,
+   "calories": 92,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Wodka Gorbatschow Vodka",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 37.5,
+   "calories": 82,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "9 Mile Vodka",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 37.5,
+   "calories": 82,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Belvedere Vodka",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Grey Goose Vodka",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Finlandia Vodka",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Skyy Vodka",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Gordon's London Dry Gin",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 37.5,
+   "calories": 82,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Gordon's Pink Gin",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 37.5,
+   "calories": 82,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Gordon's Sicilian Lemon",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 37.5,
+   "calories": 82,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Bombay Sapphire London Dry Gin",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Tanqueray London Dry Gin",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 43.1,
+   "calories": 94,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Tanqueray Flor de Sevilla",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 41.3,
+   "calories": 90,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Hendrick's Gin",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 41.4,
+   "calories": 91,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Monkey 47 Schwarzwald Dry Gin",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 47.0,
+   "calories": 103,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Beefeater London Dry Gin",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Gin Sul Dry Gin",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 43.0,
+   "calories": 94,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Malfy Gin Rosa",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 41.0,
+   "calories": 90,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Malfy Gin Limone",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 41.0,
+   "calories": 90,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Bacardi Carta Blanca",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 37.5,
+   "calories": 82,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Bacardi Carta Oro",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 37.5,
+   "calories": 82,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Bacardi Carta Negra",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Bacardi Oakheart Spiced",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 35.0,
+   "calories": 77,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Havana Club 3 Años",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Havana Club 7 Años",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Havana Club Especial",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Captain Morgan Spiced Gold",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 35.0,
+   "calories": 77,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Captain Morgan White Rum",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 37.5,
+   "calories": 82,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Ron Zacapa Centenario 23",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Botucal Reserva Exclusiva",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Don Papa Rum",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Plantation Pineapple Rum",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Asbach Uralt",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 38.0,
+   "calories": 83,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Chantré Weinbrand",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 36.0,
+   "calories": 79,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Mariacron Weinbrand",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 36.0,
+   "calories": 79,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Wilthener Goldkrone",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 28.0,
+   "calories": 61,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Hennessy V.S Cognac",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Rémy Martin V.S.O.P Cognac",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Osborne Veterano Brandy",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 30.0,
+   "calories": 66,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Osborne 103 Brandy",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 30.0,
+   "calories": 66,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Ouzo 12",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 38.0,
+   "calories": 83,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Pernod Anis",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Ricard Pastis",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 45.0,
+   "calories": 99,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Nordhäuser Doppelkorn",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 38.0,
+   "calories": 83,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Nordhäuser Eiskorn",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 32.0,
+   "calories": 70,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Berentzen Korn",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 32.0,
+   "calories": 70,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Strothmann Weizenkorn",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 32.0,
+   "calories": 70,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Oldesloer Weizenkorn",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 32.0,
+   "calories": 70,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Julia Grappa",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 38.0,
+   "calories": 83,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Nonino Grappa Vendemmia",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 41.0,
+   "calories": 90,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Schladerer Kirschwasser",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 42.0,
+   "calories": 92,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Schladerer Williams-Birne",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Schladerer Himbeergeist",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 42.0,
+   "calories": 92,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Prinz Williams-Christ-Birne",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 41.0,
+   "calories": 90,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Prinz Alte Marille",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 41.0,
+   "calories": 90,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Lantenhammer Haselnuss",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 42.0,
+   "calories": 92,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Sierra Tequila Silver",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 38.0,
+   "calories": 83,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Sierra Tequila Reposado",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 38.0,
+   "calories": 83,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Jose Cuervo Especial Silver",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 38.0,
+   "calories": 83,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Jose Cuervo Especial Reposado",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 38.0,
+   "calories": 83,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "San Cosme Mezcal Artesanal",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Pitu Cachaca",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Nega Fulo Cachaca",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 41.5,
+   "calories": 91,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Janeiro Cachaca",
+   "category": "spirits",
+   "volumeML": 40.0,
+   "abv": 40.0,
+   "calories": 88,
+   "iconName": "flame.fill"
+  },
+  {
+   "name": "Jägermeister Kräuterlikör",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 35.0,
+   "calories": 43,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Jägermeister Scharf",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 33.0,
+   "calories": 41,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Baileys Original Irish Cream",
+   "category": "liqueur",
+   "volumeML": 50.0,
+   "abv": 17.0,
+   "calories": 52,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Baileys Salted Caramel",
+   "category": "liqueur",
+   "volumeML": 50.0,
+   "abv": 17.0,
+   "calories": 52,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Ramazzotti Amaro",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 30.0,
+   "calories": 37,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Kahlua Kaffeelikör",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 20.0,
+   "calories": 25,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Malibu Coconut",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 21.0,
+   "calories": 26,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Licor 43 Cuarenta Y Tres",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 31.0,
+   "calories": 38,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Cointreau Orangenlikör",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 40.0,
+   "calories": 50,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Disaronno Amaretto",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 28.0,
+   "calories": 35,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Southern Comfort Likör",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 35.0,
+   "calories": 43,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Batida de Coco",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 16.0,
+   "calories": 20,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Berentzen Apfel",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 18.0,
+   "calories": 22,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Berentzen Saurer Apfel",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 16.0,
+   "calories": 20,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Berentzen Waldmeister",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 16.0,
+   "calories": 20,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Kuemmerling Kräuterlikör",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 35.0,
+   "calories": 43,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Kleiner Feigling Original",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 20.0,
+   "calories": 25,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Amarula Cream Liqueur",
+   "category": "liqueur",
+   "volumeML": 50.0,
+   "abv": 17.0,
+   "calories": 52,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Eckes Edelkirsch",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 20.0,
+   "calories": 25,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Pfeffi Pfefferminzlikör",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 18.0,
+   "calories": 22,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Berliner Luft Pfefferminzlikör",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 18.0,
+   "calories": 22,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Averna Amaro",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 29.0,
+   "calories": 36,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Bols Peppermint",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 24.0,
+   "calories": 30,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Bols Blue Curacao",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 21.0,
+   "calories": 26,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Killepitsch Kräuterlikör",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 42.0,
+   "calories": 52,
+   "iconName": "wineglass.fill"
+  },
+  {
+   "name": "Underberg Kräuterlikör",
+   "category": "liqueur",
+   "volumeML": 20.0,
+   "abv": 44.0,
+   "calories": 55,
+   "iconName": "wineglass.fill"
+  }
+ ]
+}

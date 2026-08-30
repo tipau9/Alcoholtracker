@@ -31,7 +31,7 @@ struct InfoWidget: View {
                     .minimumScaleFactor(0.55)
                     .monospacedDigit()
                     .contentTransition(.numericText())
-                    .animation(.easeInOut(duration: 0.3), value: value)
+                    .animation(.appGentle, value: value)
 
                 Text(label)
                     .font(.appMicro)

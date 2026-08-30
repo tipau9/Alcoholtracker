@@ -11,7 +11,7 @@ A German-language iOS app (SwiftUI + SwiftData) that tracks alcohol intake, esti
 - **Real-time BAC engine** — Widmark with a Watson-1980 distribution factor derived from your body data, plus a user-adjustable elimination rate and a tolerance mode.
 - **Drink logging** — quick add, bottle mode, barcode scanning, custom mixes, and a sip counter. "Logical days" start at 06:00 so one night out isn't split across two calendar days.
 - **History & trends** — month calendar colour-coded by peak BAC, per-day notes & mood, weekly/category/mood charts.
-- **Safety** — driving-limit forecast ("when am I fit to drive?"), probationary-driver mode (0.0 ‰), emergency contact, and a ride-home picker (Uber / Apple Maps).
+- **Safety** — driving-limit forecast ("when am I fit to drive?"), probationary-driver mode (0.0 ‰) that auto-syncs the forecast target, an optional "Konservativ rechnen" worst-case mode (ADAC-near) for the readiness timers, emergency contact, and a ride-home picker (Uber / Apple Maps).
 - **Crew** — add friends by code and see their live status; opt-in BAC sharing.
 - **Jams** — synchronised social sessions over MultipeerConnectivity (offline/Bluetooth) **and** Supabase (online), including a "who buys the next round" roulette and a water contest.
 - **Widgets & Live Activities** — current BAC, status, and time-to-limit on the Home Screen and Lock Screen.
@@ -19,6 +19,8 @@ A German-language iOS app (SwiftUI + SwiftData) that tracks alcohol intake, esti
 - **Community drink database** — self-learning: barcode scans contribute to a shared catalogue that auto-approves after enough independent confirmations.
 - **Account-based backup** — optionally sign in to back up your full history, settings, water log and custom drinks/mixes, and restore them on a new device.
 - **Accessibility & theming** — dark-only design, Dynamic Type, high-contrast mode, reduced motion, and a user-chosen accent colour.
+
+A full, area-by-area breakdown lives in [FEATURES.md](FEATURES.md).
 
 ---
 
@@ -36,7 +38,7 @@ A free Apple ID signature lasts 7 days; re-sign with the same tool when it expir
 
 ## Build from source
 
-**Requirements:** macOS with Xcode 16.4 (iOS 18.5 SDK). No third-party package dependencies — everything is first-party Apple frameworks (SwiftUI, SwiftData, Charts, MapKit, ActivityKit, MultipeerConnectivity, HealthKit).
+**Requirements:** macOS with the CI-pinned Xcode version from `.github/workflows/build-ipa.yml` or newer. The project uses `PBXFileSystemSynchronizedRootGroup`, so older Xcode versions can miss sources. No third-party package dependencies — everything is first-party Apple frameworks (SwiftUI, SwiftData, Charts, MapKit, ActivityKit, MultipeerConnectivity, HealthKit).
 
 Open `Alcoholtracker.xcodeproj` and run, or from the command line:
 
@@ -59,7 +61,12 @@ mkdir -p Payload && cp -R build/Build/Products/Release-iphoneos/Alcoholtracker.a
 
 New `.swift` files are picked up automatically — the project uses `PBXFileSystemSynchronizedRootGroup`, so files under `Alcoholtracker/` (or `PromilleWidgetExtension/`) are compiled without editing `project.pbxproj`.
 
-> There is **no test suite**. "Verifying" a change means it compiles cleanly and runs in the simulator.
+Run focused unit tests when touching model/calculation logic, then compile and run in the simulator:
+
+```bash
+xcodebuild test -project Alcoholtracker.xcodeproj -scheme Alcoholtracker \
+  -destination 'platform=iOS Simulator,name=iPhone 16'
+```
 
 ### Continuous integration
 
@@ -94,6 +101,9 @@ The backend is **raw Supabase REST (PostgREST)** — no SDK, hand-rolled HTTP. F
    | [`supabase/account_history.sql`](supabase/account_history.sql) | `drink_history`, `day_notes`, `user_backup` tables with per-user Row Level Security |
    | [`supabase/profiles_security.sql`](supabase/profiles_security.sql) | Locks `profiles` to self-only and exposes friends' data exclusively through SECURITY DEFINER lookups (prevents enumerating other users' BAC/SOS) |
    | [`supabase/jams_security.sql`](supabase/jams_security.sql) | Locks `jam_participants` to self-writes + host-kick and `jams` to host-only, exposing the roster, join-by-code and friends-only feed exclusively through SECURITY DEFINER lookups (prevents enumerating every jam's members, codes and hosts) |
+   | [`supabase/jam_games.sql`](supabase/jam_games.sql) | Jam game RPCs for water contests and roulette |
+   | [`supabase/jam_invitations.sql`](supabase/jam_invitations.sql) | Jam invitation RPCs and event audit table |
+   | [`supabase/admin_security.sql`](supabase/admin_security.sql) | Admin roles, moderation, reports, metrics, feature flags and audit logging |
 
 For CI, also add the credentials as repository secrets (*Settings → Secrets and variables → Actions*): `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
 

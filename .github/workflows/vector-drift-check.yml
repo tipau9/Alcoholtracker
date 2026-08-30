@@ -1,0 +1,44 @@
+name: BAC vector drift check
+
+# The golden vectors in testdata/bac_vectors.json are generated from the live
+# Swift BAC engine (bac-vectors job in build-ipa.yml) and are what the Android
+# Kotlin port is pinned against. If a PR changes the engine's math but not the
+# vectors, the two platforms silently diverge until someone remembers to
+# regenerate by hand. Kotlin-only changes are intentionally NOT in scope here -
+# vectors are Swift-sourced, so a Kotlin edit can never cause this kind of drift.
+on:
+  pull_request:
+    paths:
+      - "Alcoholtracker/Services/BACCalculator.swift"
+      - "Alcoholtracker/Services/AlcoholKinetics.swift"
+      - "testdata/bac_vectors.json"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Compare engine vs. vectors
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          engine_changed=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- \
+            Alcoholtracker/Services/BACCalculator.swift \
+            Alcoholtracker/Services/AlcoholKinetics.swift)
+          vectors_changed=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- \
+            testdata/bac_vectors.json)
+
+          if [ -n "$engine_changed" ] && [ -z "$vectors_changed" ]; then
+            echo "BAC engine changed but testdata/bac_vectors.json did not:"
+            echo "$engine_changed"
+            echo ""
+            echo "Regenerate the vectors: gh workflow run build-ipa.yml --ref <this-branch>, then download and commit the bac-vectors artifact."
+            exit 1
+          fi
+
+          echo "No drift: engine and vectors changed together (or neither changed)."

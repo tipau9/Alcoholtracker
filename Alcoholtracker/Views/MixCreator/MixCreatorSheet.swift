@@ -31,7 +31,7 @@ struct MixCreatorSheet: View {
         let effectiveABV = alcoholMl / totalVolume * 100.0
         return BACCalculator.projectedPeak(
             volume: totalVolume, abv: effectiveABV, category: .cocktail,
-            profile: p, stomachStatus: p.defaultStomachStatus
+            profile: p, stomachStatus: p.defaultStomachStatus, conservative: p.conservativeForApp
         )
     }
 
@@ -109,10 +109,10 @@ struct MixCreatorSheet: View {
                                 },
                                 onShare: { shareMix() }
                             )
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                            .transition(.appToastBottom)
                         }
                     }
-                    .animation(.easeInOut(duration: 0.22), value: isReadyToAdd)
+                    .animation(.appSpring, value: isReadyToAdd)
                 }
             }
         }
@@ -159,7 +159,7 @@ struct MixCreatorSheet: View {
                 VStack(spacing: 0) {
                     ForEach(Array(ingredients.enumerated()), id: \.element.id) { (i, ing) in
                         MCIngredientRow(ingredient: ing) {
-                            withAnimation { ingredients.removeAll { $0.id == ing.id } }
+                            withAnimation(.appSpring) { ingredients.removeAll { $0.id == ing.id } }
                         }
                         if i < ingredients.count - 1 {
                             Divider()
@@ -179,15 +179,15 @@ struct MixCreatorSheet: View {
             if showAddForm {
                 MCAddIngredientForm { name, volume, abv in
                     let ing = MixIngredient(name: name, abv: abv, volume: volume)
-                    withAnimation { ingredients.append(ing) }
+                    withAnimation(.appSpring) { ingredients.append(ing) }
                     showAddForm = false
                 } onCancel: {
                     showAddForm = false
                 }
-                .transition(.move(edge: .top).combined(with: .opacity))
+                .transition(.appBannerTop)
             } else {
                 Button {
-                    withAnimation(.easeInOut(duration: 0.18)) { showAddForm = true }
+                    withAnimation(.appSpring) { showAddForm = true }
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "plus.circle.fill")
@@ -203,7 +203,7 @@ struct MixCreatorSheet: View {
                 .buttonStyle(.plain)
             }
         }
-        .animation(.easeInOut(duration: 0.18), value: showAddForm)
+        .animation(.appSpring, value: showAddForm)
     }
 
     private func buildMix() -> CustomMix {
@@ -292,7 +292,7 @@ private struct MCIngredientRow: View {
                 Text(ingredient.name)
                     .font(.appBody)
                     .foregroundStyle(Color.appText)
-                Text(String(format: "%.0f ml, %.1f%%", ingredient.volume, ingredient.abv))
+                Text(String(format: "%.0f ml, %.1f%%", locale: germanLocale, ingredient.volume, ingredient.abv))
                     .font(.appCaption)
                     .foregroundStyle(Color.appTextDim)
             }
@@ -438,13 +438,13 @@ private struct MCPreviewCard: View {
             VStack(spacing: 0) {
                 MCPreviewRow(
                     label: "Gesamtmenge",
-                    value: String(format: "%.0f ml", totalVolume)
+                    value: String(format: "%.0f ml", locale: germanLocale, totalVolume)
                 )
                 Divider().background(Color.appBorder).padding(.leading, 16)
 
                 MCPreviewRow(
                     label: "Eff. Alkohol",
-                    value: String(format: "%.1f %%", effectiveABV)
+                    value: String(format: "%.1f %%", locale: germanLocale, effectiveABV)
                 )
                 Divider().background(Color.appBorder).padding(.leading, 16)
 

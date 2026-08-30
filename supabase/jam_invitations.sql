@@ -1,102 +1,158 @@
 -- jam_invitations: peer-to-peer jam invites via friend code
 -- Run once in the Supabase SQL Editor.
 
-CREATE TABLE IF NOT EXISTS jam_invitations (
-    id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-    inviter_code text        NOT NULL,
-    invitee_code text        NOT NULL,
-    jam_id       uuid        NOT NULL,
-    jam_code     text        NOT NULL,
-    host_name    text        NOT NULL DEFAULT '',
-    created_at   timestamptz NOT NULL DEFAULT now(),
-    seen_at      timestamptz,
-    UNIQUE (invitee_code, jam_id)
+create table if not exists public.jam_invitations (
+    id            uuid primary key default gen_random_uuid(),
+    inviter_code  text not null,
+    invitee_code  text not null,
+    jam_id        uuid not null,
+    jam_code      text not null,
+    host_name     text not null default '',
+    created_at    timestamptz not null default now(),
+    seen_at       timestamptz,
+    unique (invitee_code, jam_id)
 );
 
-CREATE INDEX IF NOT EXISTS jam_invitations_invitee_idx ON jam_invitations (invitee_code);
+create index if not exists jam_invitations_invitee_idx
+    on public.jam_invitations (invitee_code);
 
-ALTER TABLE jam_invitations ENABLE ROW LEVEL SECURITY;
--- All access goes through SECURITY DEFINER RPCs below; no direct RLS policies.
+create table if not exists public.jam_invitation_events (
+    inviter_id uuid not null,
+    created_at timestamptz not null default now()
+);
 
--- -----------------------------------------------------------------------
--- Send an invitation.
--- Upserts on (invitee_code, jam_id): re-inviting refreshes created_at so
--- the recipient sees it again if they previously dismissed it.
--- -----------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION send_jam_invitation(
+create index if not exists jam_invitation_events_inviter_idx
+    on public.jam_invitation_events (inviter_id, created_at);
+
+alter table public.jam_invitations enable row level security;
+alter table public.jam_invitation_events enable row level security;
+
+create or replace function public.send_jam_invitation(
     p_invitee_code text,
     p_jam_id       uuid,
     p_jam_code     text,
-    p_host_name    text DEFAULT ''
-) RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
-DECLARE
+    p_host_name    text default ''
+) returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
     v_my_code text;
-BEGIN
-    SELECT friend_code INTO v_my_code FROM profiles WHERE id = auth.uid();
-    IF v_my_code IS NULL OR v_my_code = '' THEN RETURN; END IF;
-    IF upper(trim(p_invitee_code)) = upper(trim(v_my_code)) THEN RETURN; END IF;
+    v_recent integer;
+begin
+    if auth.uid() is null then
+        return;
+    end if;
 
-    INSERT INTO jam_invitations (inviter_code, invitee_code, jam_id, jam_code, host_name)
-    VALUES (
+    delete from public.jam_invitation_events
+    where created_at < now() - interval '7 days';
+
+    select count(*) into v_recent
+    from public.jam_invitation_events
+    where inviter_id = auth.uid()
+      and created_at > now() - interval '1 hour';
+
+    if v_recent >= 30 then
+        raise exception 'jam_invitation_rate_limited';
+    end if;
+
+    select friend_code into v_my_code
+    from public.profiles
+    where id = auth.uid();
+
+    if v_my_code is null or v_my_code = '' then
+        return;
+    end if;
+    if upper(trim(p_invitee_code)) = upper(trim(v_my_code)) then
+        return;
+    end if;
+
+    insert into public.jam_invitation_events(inviter_id)
+    values (auth.uid());
+
+    insert into public.jam_invitations (inviter_code, invitee_code, jam_id, jam_code, host_name)
+    values (
         upper(trim(v_my_code)),
         upper(trim(p_invitee_code)),
         p_jam_id,
         upper(trim(p_jam_code)),
         coalesce(nullif(trim(p_host_name), ''), 'Jemand')
     )
-    ON CONFLICT (invitee_code, jam_id) DO UPDATE
-        SET seen_at    = NULL,
+    on conflict (invitee_code, jam_id) do update
+        set seen_at    = null,
             created_at = now(),
-            host_name  = EXCLUDED.host_name;
+            host_name  = excluded.host_name;
 
-    -- Rolling cleanup: remove invitations older than 48 h.
-    DELETE FROM jam_invitations WHERE created_at < now() - interval '48 hours';
-END;
+    delete from public.jam_invitations
+    where created_at < now() - interval '48 hours';
+end;
 $$;
-GRANT EXECUTE ON FUNCTION send_jam_invitation TO authenticated;
 
--- -----------------------------------------------------------------------
--- Fetch all unseen invitations for the calling user.
--- -----------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION my_jam_invitations()
-RETURNS TABLE (
-    id           uuid,
-    inviter_code text,
-    jam_id       uuid,
-    jam_code     text,
-    host_name    text,
-    created_at   timestamptz
-) LANGUAGE plpgsql SECURITY DEFINER AS $$
-DECLARE
+create or replace function public.my_jam_invitations()
+returns table (
+    id            uuid,
+    inviter_code  text,
+    jam_id        uuid,
+    jam_code      text,
+    host_name     text,
+    created_at    timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
     v_my_code text;
-BEGIN
-    SELECT friend_code INTO v_my_code FROM profiles WHERE id = auth.uid();
-    IF v_my_code IS NULL OR v_my_code = '' THEN RETURN; END IF;
+begin
+    select friend_code into v_my_code
+    from public.profiles
+    where id = auth.uid();
 
-    RETURN QUERY
-        SELECT ji.id, ji.inviter_code, ji.jam_id, ji.jam_code, ji.host_name, ji.created_at
-        FROM jam_invitations ji
-        WHERE ji.invitee_code = upper(trim(v_my_code))
-          AND ji.seen_at IS NULL
-          AND ji.created_at > now() - interval '24 hours'
-        ORDER BY ji.created_at DESC;
-END;
+    if v_my_code is null or v_my_code = '' then
+        return;
+    end if;
+
+    return query
+    select ji.id, ji.inviter_code, ji.jam_id, ji.jam_code, ji.host_name, ji.created_at
+    from public.jam_invitations ji
+    where ji.invitee_code = upper(trim(v_my_code))
+      and ji.seen_at is null
+      and ji.created_at > now() - interval '24 hours'
+    order by ji.created_at desc;
+end;
 $$;
-GRANT EXECUTE ON FUNCTION my_jam_invitations TO authenticated;
 
--- -----------------------------------------------------------------------
--- Mark a single invitation as seen (idempotent).
--- -----------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION mark_invitation_seen(p_id uuid)
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
-DECLARE
+create or replace function public.mark_invitation_seen(p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
     v_my_code text;
-BEGIN
-    SELECT friend_code INTO v_my_code FROM profiles WHERE id = auth.uid();
-    IF v_my_code IS NULL OR v_my_code = '' THEN RETURN; END IF;
-    UPDATE jam_invitations
-    SET seen_at = now()
-    WHERE id = p_id AND invitee_code = upper(trim(v_my_code));
-END;
+begin
+    select friend_code into v_my_code
+    from public.profiles
+    where id = auth.uid();
+
+    if v_my_code is null or v_my_code = '' then
+        return;
+    end if;
+
+    update public.jam_invitations
+    set seen_at = now()
+    where id = p_id
+      and invitee_code = upper(trim(v_my_code));
+end;
 $$;
-GRANT EXECUTE ON FUNCTION mark_invitation_seen TO authenticated;
+
+revoke all on function public.send_jam_invitation(text, uuid, text, text) from public, anon, authenticated;
+revoke all on function public.my_jam_invitations() from public, anon, authenticated;
+revoke all on function public.mark_invitation_seen(uuid) from public, anon, authenticated;
+revoke all on table public.jam_invitations from public, anon, authenticated;
+revoke all on table public.jam_invitation_events from public, anon, authenticated;
+
+grant execute on function public.send_jam_invitation(text, uuid, text, text) to authenticated;
+grant execute on function public.my_jam_invitations() to authenticated;
+grant execute on function public.mark_invitation_seen(uuid) to authenticated;

@@ -14,11 +14,17 @@ struct JamStatusBroadcast: Codable {
 // instead of relying on a staleness timeout; `kick` removes a participant on
 // the host's behalf and signals the target to leave the jam.
 struct JamControl: Codable {
-    enum Action: String, Codable { case leave, kick }
+    enum Action: String, Codable { case leave, kick, transferHost }
     let action: Action
     let jamID: UUID
+    // For leave/kick: the affected participant. For transferHost: the NEW host's
+    // participant id (and userID), so the elected device promotes itself and the
+    // others update who they show as host.
     let participantID: UUID
     let userID: String?
+    // New host's display name on a transferHost (so receivers update the label even
+    // if that participant is not in their local roster). Defaulted for back-compat.
+    var newHostName: String? = nil
 }
 
 // Round roulette: the starter picks the loser and broadcasts the ordered
@@ -35,17 +41,21 @@ struct JamRoulettePayload: Codable, Identifiable {
     let participants: [String]
     let winnerIndex: Int
     let starterName: String
+    /// Stable participant identity of the person who started this draw.
+    /// Nil only for payloads produced by older app versions.
+    let starterID: UUID?
 
-    init(id: UUID = UUID(), jamID: UUID, participants: [String], winnerIndex: Int, starterName: String) {
+    init(id: UUID = UUID(), jamID: UUID, participants: [String], winnerIndex: Int, starterName: String, starterID: UUID?) {
         self.id = id
         self.jamID = jamID
         self.participants = participants
         self.winnerIndex = winnerIndex
         self.starterName = starterName
+        self.starterID = starterID
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, jamID, participants, winnerIndex, starterName
+        case id, jamID, participants, winnerIndex, starterName, starterID
     }
 
     init(from decoder: Decoder) throws {
@@ -55,6 +65,7 @@ struct JamRoulettePayload: Codable, Identifiable {
         self.participants = try c.decode([String].self, forKey: .participants)
         self.winnerIndex  = try c.decode(Int.self, forKey: .winnerIndex)
         self.starterName  = try c.decode(String.self, forKey: .starterName)
+        self.starterID    = try c.decodeIfPresent(UUID.self, forKey: .starterID)
     }
 }
 
@@ -76,8 +87,67 @@ struct WaterScore: Identifiable, Equatable {
     let ms: Int
 }
 
+enum JamArcadeGame: String, Codable, CaseIterable, Identifiable {
+    case perfectSecond
+    case balanceBattle
+    case reactionRoyale
+
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .perfectSecond: return "Perfect Second"
+        case .balanceBattle: return "Balance Battle"
+        case .reactionRoyale: return "Reaction Royale"
+        }
+    }
+    var subtitle: String {
+        switch self {
+        case .perfectSecond: return "Triff genau 5,000 Sekunden"
+        case .balanceBattle: return "Halte dein Handy möglichst ruhig"
+        case .reactionRoyale: return "Reagiere schnell – aber nicht zu früh"
+        }
+    }
+    var icon: String {
+        switch self {
+        case .perfectSecond: return "stopwatch.fill"
+        case .balanceBattle: return "gyroscope"
+        case .reactionRoyale: return "bolt.fill"
+        }
+    }
+}
+
+struct JamArcadeRoundPayload: Codable, Identifiable {
+    let id: UUID
+    let jamID: UUID
+    let game: JamArcadeGame
+    let starterID: UUID
+    let starterName: String
+    let startAt: Date
+    let signalAt: Date?
+    let durationSeconds: Double
+}
+
+struct JamArcadeResultPayload: Codable, Identifiable, Equatable {
+    var id: String { "\(roundID.uuidString)|\(participantID.uuidString)" }
+    let jamID: UUID
+    let roundID: UUID
+    let participantID: UUID
+    let participantName: String
+    /// Milliseconds for timing/reaction games; normalized wobble score for balance.
+    let value: Double
+    let disqualified: Bool
+    let submittedAt: Date
+}
+
 // Wraps a status broadcast, a photo, a control message, a roulette draw, or a
 // water-contest update so a single send path handles them all.
+//
+// Mesh routing: `messageID` lets every node forward a message at most once (so it
+// can ride A -> B -> C hops without looping), and `ttl` is the remaining hop budget
+// that bounds how far it travels. Both are absent in payloads from older builds, so
+// `messageID` decodes as nil (those fall back to the legacy host-only relay) and
+// `ttl` to 0. New sends always carry them, so a network of updated peers forms a
+// true relay mesh instead of the old host-only star.
 struct JamEnvelope: Codable {
     enum Payload: Codable {
         case status(JamStatusBroadcast)
@@ -85,8 +155,27 @@ struct JamEnvelope: Codable {
         case control(JamControl)
         case roulette(JamRoulettePayload)
         case water(WaterPayload)
+        case arcadeRound(JamArcadeRoundPayload)
+        case arcadeResult(JamArcadeResultPayload)
     }
     let payload: Payload
+    var messageID: UUID?
+    var ttl: Int
+
+    init(payload: Payload, messageID: UUID? = UUID(), ttl: Int = 5) {
+        self.payload = payload
+        self.messageID = messageID
+        self.ttl = ttl
+    }
+
+    enum CodingKeys: String, CodingKey { case payload, messageID, ttl }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.payload   = try c.decode(Payload.self, forKey: .payload)
+        self.messageID = try c.decodeIfPresent(UUID.self, forKey: .messageID)
+        self.ttl       = (try c.decodeIfPresent(Int.self, forKey: .ttl)) ?? 0
+    }
 }
 
 struct JamPhotoPayload: Codable, Identifiable {
@@ -119,6 +208,8 @@ final class MultipeerService: NSObject {
     var onControlReceived: ((JamControl) -> Void)?
     var onRouletteReceived: ((JamRoulettePayload) -> Void)?
     var onWaterReceived: ((WaterPayload) -> Void)?
+    var onArcadeRoundReceived: ((JamArcadeRoundPayload) -> Void)?
+    var onArcadeResultReceived: ((JamArcadeResultPayload) -> Void)?
 
     // The jam the local user is actually in. Connections are only initiated
     // and accepted for this jam: without the gate, every browsing device
@@ -135,6 +226,24 @@ final class MultipeerService: NSObject {
     private var mcSession: MCSession?
     private var advertiser: MCNearbyServiceAdvertiser?
     private var browser: MCNearbyServiceBrowser?
+
+    // Bounded set of recently-seen mesh message ids, so each message is forwarded
+    // and delivered at most once. A ring buffer (order array) caps memory while a
+    // Set keeps membership checks O(1).
+    private var seenIDs: Set<UUID> = []
+    private var seenOrder: [UUID] = []
+    private let maxSeen = 512
+
+    @MainActor private func hasSeen(_ id: UUID) -> Bool { seenIDs.contains(id) }
+
+    @MainActor private func rememberSeen(_ id: UUID) {
+        guard seenIDs.insert(id).inserted else { return }
+        seenOrder.append(id)
+        if seenOrder.count > maxSeen {
+            let drop = seenOrder.removeFirst()
+            seenIDs.remove(drop)
+        }
+    }
 
     override init() {
         myPeerID = MCPeerID(displayName: UIDevice.current.name)
@@ -238,6 +347,20 @@ final class MultipeerService: NSObject {
         try? s.send(data, toPeers: s.connectedPeers, with: .reliable)
     }
 
+    func broadcastArcadeRound(_ payload: JamArcadeRoundPayload) {
+        guard let s = mcSession, !s.connectedPeers.isEmpty else { return }
+        let envelope = JamEnvelope(payload: .arcadeRound(payload))
+        guard let data = try? JSONEncoder().encode(envelope) else { return }
+        try? s.send(data, toPeers: s.connectedPeers, with: .reliable)
+    }
+
+    func broadcastArcadeResult(_ payload: JamArcadeResultPayload) {
+        guard let s = mcSession, !s.connectedPeers.isEmpty else { return }
+        let envelope = JamEnvelope(payload: .arcadeResult(payload))
+        guard let data = try? JSONEncoder().encode(envelope) else { return }
+        try? s.send(data, toPeers: s.connectedPeers, with: .reliable)
+    }
+
     // Compresses image to JPEG (max 200 KB) and broadcasts to all connected peers.
     func broadcastPhoto(_ image: UIImage, senderName: String, senderBAC: Double?) {
         guard let s = mcSession, !s.connectedPeers.isEmpty else { return }
@@ -304,29 +427,60 @@ extension MultipeerService: MCSessionDelegate {
         let sender = peerID
         Task { @MainActor [weak self] in
             guard let self else { return }
-            // Joiners only connect to the advertising host (star topology), so
-            // the host relays everything to the other peers. Otherwise guests
-            // in proximity-only jams would never see each other. Relayed
-            // messages stop at non-hosting receivers, so no loops.
-            if self.advertiser != nil, let s = self.mcSession {
-                let others = s.connectedPeers.filter { $0 != sender }
-                if !others.isEmpty {
-                    try? s.send(captured, toPeers: others, with: .reliable)
-                }
-            }
-            // Try new envelope format first, fall back to legacy bare broadcast
+            // Try the new envelope format first, fall back to legacy bare broadcast.
             if let envelope = try? JSONDecoder().decode(JamEnvelope.self, from: captured) {
-                switch envelope.payload {
-                case .status(let broadcast): self.onStatusReceived?(broadcast)
-                case .photo(let photo):      self.onPhotoReceived?(photo)
-                case .control(let control):  self.onControlReceived?(control)
-                case .roulette(let r):       self.onRouletteReceived?(r)
-                case .water(let w):          self.onWaterReceived?(w)
+                if let mid = envelope.messageID {
+                    // Mesh path: drop if already seen so a message never circulates,
+                    // otherwise remember it and forward with one less hop to every
+                    // OTHER connected peer (not just the host), so it can travel
+                    // A -> B -> C across a chain. Then deliver locally.
+                    if self.hasSeen(mid) { return }
+                    self.rememberSeen(mid)
+                    if envelope.ttl > 1, let s = self.mcSession {
+                        let others = s.connectedPeers.filter { $0 != sender }
+                        if !others.isEmpty {
+                            var forwarded = envelope
+                            forwarded.ttl = envelope.ttl - 1
+                            if let out = try? JSONEncoder().encode(forwarded) {
+                                try? s.send(out, toPeers: others, with: .reliable)
+                            }
+                        }
+                    }
+                    self.deliver(envelope.payload)
+                } else {
+                    // Legacy envelope (no mesh header): keep the old host-only relay
+                    // so updated and older peers interoperate.
+                    self.legacyRelay(captured, from: sender)
+                    self.deliver(envelope.payload)
                 }
             } else if let broadcast = try? JSONDecoder().decode(JamStatusBroadcast.self, from: captured) {
+                self.legacyRelay(captured, from: sender)
                 self.onStatusReceived?(broadcast)
             }
         }
+    }
+
+    // Delivers a decoded payload to the matching callback.
+    @MainActor
+    private func deliver(_ payload: JamEnvelope.Payload) {
+        switch payload {
+        case .status(let broadcast): onStatusReceived?(broadcast)
+        case .photo(let photo):      onPhotoReceived?(photo)
+        case .control(let control):  onControlReceived?(control)
+        case .roulette(let r):       onRouletteReceived?(r)
+        case .water(let w):          onWaterReceived?(w)
+        case .arcadeRound(let round): onArcadeRoundReceived?(round)
+        case .arcadeResult(let result): onArcadeResultReceived?(result)
+        }
+    }
+
+    // Legacy star relay: only the advertising host forwards, and only one hop, so
+    // pre-mesh peers (which send no messageID) still reach each other via the host.
+    @MainActor
+    private func legacyRelay(_ data: Data, from sender: MCPeerID) {
+        guard advertiser != nil, let s = mcSession else { return }
+        let others = s.connectedPeers.filter { $0 != sender }
+        if !others.isEmpty { try? s.send(data, toPeers: others, with: .reliable) }
     }
 
     nonisolated func session(_ session: MCSession, didReceive stream: InputStream, withName streamName: String, fromPeer peerID: MCPeerID) {}

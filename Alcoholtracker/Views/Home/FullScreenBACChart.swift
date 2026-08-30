@@ -20,13 +20,7 @@ struct FullScreenBACChart: View {
     private var drivingLimit: Double { profile?.drivingLimit ?? 0.5 }
 
     private var limitDate: Date? {
-        guard let p = profile else { return nil }
-        return BACCalculator.hoursUntilBAC(
-            drivingLimit,
-            drinks: session.drinks,
-            profile: p,
-            stomachStatus: session.stomachStatus
-        ).map { Date().addingTimeInterval($0 * 3600) }
+        session.hoursUntil(drivingLimit).map { Date().addingTimeInterval($0 * 3600) }
     }
 
     var body: some View {
@@ -75,7 +69,7 @@ struct FullScreenBACChart: View {
 
     private func selectedOverlay(_ pt: BACCalculator.BACPoint) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Text(String(format: "%.2f", pt.bac).replacingOccurrences(of: ".", with: ","))
+            Text(String(format: "%.2f", locale: germanLocale, pt.bac))
                 .font(.system(size: 42, weight: .light, design: .serif))
                 .foregroundStyle(Color.appAccent)
                 .monospacedDigit()
@@ -134,7 +128,7 @@ struct FullScreenBACChart: View {
                     .foregroundStyle(Color.statusRed.opacity(0.55))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 4]))
                     .annotation(position: .topLeading) {
-                        Text("\(String(format: "%.1f", drivingLimit).replacingOccurrences(of: ".", with: ",")) Promille")
+                        Text("\(String(format: "%.1f", locale: germanLocale, drivingLimit)) Promille")
                             .font(.system(size: 9, weight: .medium))
                             .foregroundStyle(Color.statusRed.opacity(0.8))
                     }
@@ -170,7 +164,7 @@ struct FullScreenBACChart: View {
                 AxisGridLine().foregroundStyle(Color.appBorder.opacity(0.3))
                 AxisValueLabel {
                     if let v = value.as(Double.self) {
-                        Text(String(format: "%.1f", v))
+                        Text(String(format: "%.1f", locale: germanLocale, v))
                             .font(.system(size: 10))
                             .foregroundStyle(Color.appTextDim)
                     }
@@ -205,7 +199,7 @@ struct FullScreenBACChart: View {
             if drivingLimit > 0 {
                 HStack(spacing: 5) {
                     Circle().fill(Color.statusRed).frame(width: 7, height: 7)
-                    Text("\(String(format: "%.1f", drivingLimit).replacingOccurrences(of: ".", with: ",")) Promille")
+                    Text("\(String(format: "%.1f", locale: germanLocale, drivingLimit)) Promille")
                         .font(.system(size: 11)).foregroundStyle(Color.appTextDim)
                 }
             }

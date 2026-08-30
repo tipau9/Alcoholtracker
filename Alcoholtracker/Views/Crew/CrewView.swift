@@ -850,7 +850,7 @@ private struct CareCard: View {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 0) {
-                    Text(String(format: "%.2f", member.estimatedBAC))
+                    Text(String(format: "%.2f", locale: germanLocale, member.estimatedBAC))
                         .font(.system(size: 38, weight: .light, design: .serif))
                         .foregroundStyle(member.bacStatus.color)
                         .monospacedDigit()
@@ -1036,7 +1036,7 @@ private struct SOSBar: View {
                 )
             }
             .buttonStyle(.plain)
-            .animation(.easeInOut(duration: 0.25), value: isActive)
+            .animation(.appSnappy, value: isActive)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)

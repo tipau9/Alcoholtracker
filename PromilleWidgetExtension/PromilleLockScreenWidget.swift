@@ -39,7 +39,7 @@ private struct PromilleLockScreenWidgetView: View {
     var body: some View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(String(format: "%.2f", entry.bac))
+                Text(String(format: "%.2f", locale: Locale(identifier: "de_DE"), entry.bac))
                     .font(.system(size: 20, weight: .semibold, design: .serif))
                     .foregroundStyle(entry.statusColor)
                     .monospacedDigit()

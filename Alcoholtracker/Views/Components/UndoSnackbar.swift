@@ -32,7 +32,7 @@ struct UndoSnackbar: View {
                     .background(Color.appAccent.opacity(0.14))
                     .clipShape(Capsule())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableChip)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)

@@ -40,25 +40,61 @@ create table if not exists public.community_drinks (
     calories        integer not null default 0,
     icon_name       text not null default 'wineglass.fill',
     status          text not null default 'pending',   -- pending | approved | rejected
+    admin_locked    boolean not null default false,
     confirmed_count integer not null default 0,
     created_at      timestamptz not null default now()
 );
 
 -- Make sure the moderation columns exist if the table predates this script.
 alter table public.community_drinks add column if not exists status          text    not null default 'pending';
+alter table public.community_drinks add column if not exists admin_locked    boolean not null default false;
 alter table public.community_drinks add column if not exists confirmed_count integer not null default 0;
 
 -- One vote per (barcode, voter). The unique PK makes re-scans idempotent.
 create table if not exists public.community_drink_votes (
     barcode    text not null,
     voter      text not null,
+    is_authenticated boolean not null default false,
     created_at timestamptz not null default now(),
     primary key (barcode, voter)
 );
 
+alter table public.community_drink_votes add column if not exists is_authenticated boolean not null default false;
+
+create table if not exists public.community_drink_submissions (
+    barcode          text not null,
+    voter            text not null,
+    is_authenticated boolean not null default false,
+    name             text not null,
+    category         text not null,
+    volume           double precision not null,
+    abv              double precision not null,
+    calories         integer not null default 0,
+    icon_name        text not null default 'wineglass.fill',
+    created_at       timestamptz not null default now(),
+    updated_at       timestamptz not null default now(),
+    primary key (barcode, voter)
+);
+
+alter table public.community_drink_submissions add column if not exists is_authenticated boolean not null default false;
+alter table public.community_drink_submissions add column if not exists updated_at timestamptz not null default now();
+
 -- Lets the hourly anti-flood count and the per-voter lookups stay cheap.
 create index if not exists community_drink_votes_voter_idx
     on public.community_drink_votes (voter, created_at);
+
+create index if not exists community_drink_submissions_barcode_auth_idx
+    on public.community_drink_submissions (barcode, is_authenticated, category);
+
+create table if not exists public.admin_blocked_voters (
+    voter      text primary key,
+    reason     text not null default '',
+    created_at timestamptz not null default now(),
+    created_by uuid references auth.users(id) on delete set null
+);
+
+alter table public.admin_blocked_voters enable row level security;
+alter table public.community_drink_submissions enable row level security;
 
 -- 2) Trusted voter identity -------------------------------------------------
 -- Derive who is voting on the SERVER instead of trusting a client string:
@@ -84,6 +120,33 @@ as $$
     );
 $$;
 
+-- Safety-critical plausibility guard. Community submissions can be wrong or
+-- malicious, but impossible category/ABV pairs must never reach auto-approval.
+create or replace function public.community_drink_abv_plausible(
+    p_category text,
+    p_abv double precision
+) returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+    select case lower(trim(coalesce(p_category, '')))
+        when 'beer'      then p_abv between 0 and 12
+        when 'wine'      then p_abv between 8 and 22
+        when 'sparkling' then p_abv between 5 and 16
+        when 'spirits'   then p_abv between 15 and 80
+        when 'liqueur'   then p_abv between 10 and 55
+        when 'shot'      then p_abv between 15 and 60
+        when 'cider'     then p_abv between 1 and 12
+        when 'fortified' then p_abv between 8 and 30
+        when 'cocktail'  then p_abv between 0 and 45
+        when 'mixed'     then p_abv between 0 and 30
+        when 'other'     then p_abv between 0 and 80
+        else false
+    end;
+$$;
+
 -- 3) RPC: validate -> insert-or-vote -> crowd auto-approval ------------------
 
 create or replace function public.contribute_drink(
@@ -101,15 +164,33 @@ security definer
 set search_path = public
 as $$
 declare
-    v_threshold  constant integer := 3;    -- distinct voters needed for auto-approval
+    v_threshold  constant integer := 5;    -- distinct voters needed for auto-approval
     v_hourly_cap constant integer := 40;   -- max votes per voter per hour (anti-flood)
     v_count      integer;
     v_recent     integer;
     v_voter      text;
+    v_is_authenticated boolean;
     v_name       text;
     v_category   text;
+    v_consensus_category text;
     v_icon       text;
 begin
+    delete from public.community_drink_submissions s
+    using public.community_drinks d
+    where d.barcode = s.barcode
+      and d.status = 'pending'
+      and d.created_at < now() - interval '30 days';
+
+    delete from public.community_drink_votes v
+    using public.community_drinks d
+    where d.barcode = v.barcode
+      and d.status = 'pending'
+      and d.created_at < now() - interval '30 days';
+
+    delete from public.community_drinks
+    where status = 'pending'
+      and created_at < now() - interval '30 days';
+
     -- --- Validate the payload (never trust the anon caller) -----------------
     if p_barcode is null or length(trim(p_barcode)) = 0 or length(p_barcode) > 64 then
         return;
@@ -131,6 +212,9 @@ begin
     if p_abv is null or p_abv < 0 or p_abv > 100 then
         return;
     end if;
+    if not public.community_drink_abv_plausible(v_category, p_abv) then
+        return;
+    end if;
     if p_volume is null or p_volume <= 0 or p_volume > 10000 then
         return;
     end if;
@@ -145,6 +229,10 @@ begin
 
     -- --- Trusted voter + flood control -------------------------------------
     v_voter := public.community_voter_id(p_voter);
+    v_is_authenticated := auth.uid() is not null;
+    if exists (select 1 from public.admin_blocked_voters where voter = v_voter) then
+        return;
+    end if;
 
     select count(*) into v_recent
         from public.community_drink_votes
@@ -164,24 +252,88 @@ begin
     on conflict (barcode) do nothing;
 
     -- Record this voter's vote (idempotent per trusted identity).
-    insert into public.community_drink_votes (barcode, voter)
-    values (p_barcode, v_voter)
-    on conflict (barcode, voter) do nothing;
+    insert into public.community_drink_votes (barcode, voter, is_authenticated)
+    values (p_barcode, v_voter, v_is_authenticated)
+    on conflict (barcode, voter) do update
+        set is_authenticated = community_drink_votes.is_authenticated or excluded.is_authenticated;
 
-    select count(*) into v_count
-        from public.community_drink_votes
-        where barcode = p_barcode;
+    insert into public.community_drink_submissions
+        (barcode, voter, is_authenticated, name, category, volume, abv, calories, icon_name)
+    values
+        (p_barcode, v_voter, v_is_authenticated, v_name, v_category, p_volume, p_abv, p_calories, v_icon)
+    on conflict (barcode, voter) do update
+        set is_authenticated = community_drink_submissions.is_authenticated or excluded.is_authenticated,
+            name = excluded.name,
+            category = excluded.category,
+            volume = excluded.volume,
+            abv = excluded.abv,
+            calories = excluded.calories,
+            icon_name = excluded.icon_name,
+            updated_at = now();
+
+    select s.category, count(*)::integer into v_consensus_category, v_count
+    from public.community_drink_submissions s
+    left join public.admin_blocked_voters b on b.voter = s.voter
+    where s.barcode = p_barcode
+      and s.is_authenticated = true
+      and b.voter is null
+    group by s.category
+    order by count(*) desc, max(s.updated_at) desc
+    limit 1;
+
+    v_count := coalesce(v_count, 0);
 
     update public.community_drinks
         set confirmed_count = v_count
-        where barcode = p_barcode;
+        where barcode = p_barcode
+          and status <> 'rejected';
 
     -- Crowd auto-approval: only promotes 'pending' rows. Never resurrects a
     -- manually 'rejected' row, never touches an already 'approved' one.
     update public.community_drinks
-        set status = 'approved'
+        set status = 'approved',
+            name = consensus.name,
+            category = consensus.category,
+            volume = consensus.volume,
+            abv = consensus.abv,
+            calories = consensus.calories,
+            icon_name = consensus.icon_name,
+            confirmed_count = v_count
+        from (
+            with trusted as (
+                select s.*
+                from public.community_drink_submissions s
+                left join public.admin_blocked_voters b on b.voter = s.voter
+                where s.barcode = p_barcode
+                  and s.is_authenticated = true
+                  and b.voter is null
+                  and s.category = v_consensus_category
+            ),
+            medians as (
+                select
+                    percentile_cont(0.5) within group (order by volume)::double precision as volume,
+                    percentile_cont(0.5) within group (order by abv)::double precision as abv,
+                    round(percentile_cont(0.5) within group (order by calories))::integer as calories
+                from trusted
+            ),
+            mode_name as (
+                select name from trusted group by name order by count(*) desc, max(updated_at) desc limit 1
+            ),
+            mode_icon as (
+                select icon_name from trusted group by icon_name order by count(*) desc, max(updated_at) desc limit 1
+            )
+            select
+                (select name from mode_name) as name,
+                v_consensus_category as category,
+                medians.volume,
+                medians.abv,
+                medians.calories,
+                coalesce((select icon_name from mode_icon), 'wineglass.fill') as icon_name
+            from medians
+        ) consensus
         where barcode = p_barcode
           and status = 'pending'
+          and admin_locked = false
           and v_count >= v_threshold;
 end;
 $$;
@@ -206,6 +358,9 @@ create policy "community_drinks read approved"
 
 -- community_voter_id is internal; do NOT expose it to anon. Only the RPC is.
 revoke all on function public.community_voter_id(text) from public, anon;
+revoke all on function public.community_drink_abv_plausible(text, double precision) from public, anon, authenticated;
+revoke all on table public.community_drink_submissions from anon, authenticated;
+revoke all on table public.admin_blocked_voters from anon, authenticated;
 -- Anon may contribute (offline-first users who never sign in). Signed-in users
 -- contribute with their own token so the vote keys on a real account id, which
 -- is far harder to sybil than an IP, hence the grant to authenticated too.

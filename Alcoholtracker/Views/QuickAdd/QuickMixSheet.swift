@@ -14,6 +14,7 @@ struct QuickMixSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(SupabaseService.self) private var supabase
     @State private var shareConfirm = false
+    @State private var showShareConfirmation = false
 
     @Query(sort: [SortDescriptor(\DrinkTemplate.usageCount, order: .reverse)])
     private var allTemplates: [DrinkTemplate]
@@ -55,7 +56,7 @@ struct QuickMixSheet: View {
         // Realistic peak of the mixed drink, consistent with the live BAC.
         return BACCalculator.projectedPeak(
             volume: spiritVol, abv: spirit.abv, category: .cocktail,
-            profile: p, stomachStatus: p.defaultStomachStatus
+            profile: p, stomachStatus: p.defaultStomachStatus, conservative: p.conservativeForApp
         )
     }
 
@@ -83,7 +84,7 @@ struct QuickMixSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Fixed header — always visible regardless of scroll position
+            // Fixed header -- always visible regardless of scroll position
             QMSHandle()
             VStack(alignment: .leading, spacing: 0) {
                 QMSHeader(title: "Quick Mix") { dismiss() }
@@ -119,7 +120,7 @@ struct QuickMixSheet: View {
                 HStack(spacing: 12) {
                     // Share this mix to the community (same self-learning DB as
                     // the cocktail creator).
-                    Button(action: shareMix) {
+                    Button { showShareConfirmation = true } label: {
                         Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(canAdd ? Color.appAccent : Color.appTextMuted)
@@ -142,6 +143,12 @@ struct QuickMixSheet: View {
         .background(Color.appBackground)
         .presentationDetents([.large])
         .presentationDragIndicator(.hidden)
+        .confirmationDialog("Mix wirklich teilen?", isPresented: $showShareConfirmation, titleVisibility: .visible) {
+            Button("Teilen") { shareMix() }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Der Mix wird an die Community-Datenbank gesendet und kann nach Bestätigung für andere sichtbar werden.")
+        }
         .alert("Mix geteilt", isPresented: $shareConfirm) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -204,7 +211,7 @@ struct QuickMixSheet: View {
                 Image(systemName: "drop.fill")
                     .font(.system(size: 12))
                     .foregroundStyle(Color.appAccent)
-                Text(String(format: "%.1f %%", effectiveABV))
+                Text(String(format: "%.1f %%", locale: germanLocale, effectiveABV))
                     .font(.appCaptionBold)
                     .foregroundStyle(Color.appTextDim)
             }
@@ -216,7 +223,7 @@ struct QuickMixSheet: View {
 
             Spacer()
         }
-        .animation(.easeOut(duration: 0.2), value: bacContribution)
+        .animation(.appGentle, value: bacContribution)
     }
 
     // MARK: Spirit
@@ -451,7 +458,7 @@ private struct QMSSpiritCard: View {
                     .multilineTextAlignment(.center)
                     .frame(width: 68)
 
-                Text(String(format: "%.0f%%", template.abv))
+                Text(String(format: "%.0f%%", locale: germanLocale, template.abv))
                     .font(.appMicro)
                     .foregroundStyle(Color.appTextMuted)
             }

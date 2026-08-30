@@ -43,7 +43,6 @@ struct BarcodeScannerView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(.white.opacity(0.7), lineWidth: 2)
                     .frame(width: 260, height: 120)
-                    .shadow(color: .white.opacity(0.3), radius: 8)
 
                 Spacer()
 

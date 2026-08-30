@@ -90,7 +90,7 @@ struct CommunityMixesSheet: View {
                 Text(row.name)
                     .font(.appBodyBold)
                     .foregroundStyle(Color.appText)
-                Text("\(row.ingredients.count) Zutaten · \(Int(row.totalVolume)) ml · \(String(format: "%.1f", row.totalAbv)) %")
+                Text("\(row.ingredients.count) Zutaten · \(Int(row.totalVolume)) ml · \(String(format: "%.1f", locale: germanLocale, row.totalAbv)) %")
                     .font(.appCaption)
                     .foregroundStyle(Color.appTextDim)
             }

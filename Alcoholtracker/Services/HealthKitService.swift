@@ -51,13 +51,40 @@ final class HealthKitService {
             type: beverages,
             quantity: HKQuantity(unit: .count(), doubleValue: standardUnits),
             start: drink.timestamp,
-            end: drink.timestamp
+            end: drink.timestamp,
+            metadata: [HKMetadataKeyExternalUUID: drink.id.uuidString]
         )
         _ = try? await store.save(sample)
     }
 
     func removeDrink(_ drink: Drink) async {
-        await removeDrinkSample(at: drink.timestamp)
+        guard isAuthorized, let beverages = beveragesType else { return }
+        // Delete by the drink's UUID so removing one drink can never take out a
+        // different sample logged within the same ±1s window. Fall back to the
+        // timestamp match for samples saved before UUID tagging existed (count 0).
+        let predicate = HKQuery.predicateForObjects(
+            withMetadataKey: HKMetadataKeyExternalUUID,
+            allowedValues: [drink.id.uuidString]
+        )
+        let deleted = (try? await store.deleteObjects(of: beverages, predicate: predicate)) ?? 0
+        if deleted == 0 {
+            await removeDrinkSample(at: drink.timestamp)
+        }
+    }
+
+    // UUID + timestamp variant: safe to call after the SwiftData model is
+    // deleted (capture id+timestamp before deletion). Same UUID-first / timestamp
+    // fallback as removeDrink(_:).
+    func removeDrink(id: UUID, timestamp: Date) async {
+        guard isAuthorized, let beverages = beveragesType else { return }
+        let predicate = HKQuery.predicateForObjects(
+            withMetadataKey: HKMetadataKeyExternalUUID,
+            allowedValues: [id.uuidString]
+        )
+        let deleted = (try? await store.deleteObjects(of: beverages, predicate: predicate)) ?? 0
+        if deleted == 0 {
+            await removeDrinkSample(at: timestamp)
+        }
     }
 
     // Timestamp-based variant: safe to call after the SwiftData model was

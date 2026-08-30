@@ -12,7 +12,10 @@ struct AmountInputSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var volume: Double
+    @State private var volumeText: String
     @State private var selectedPresetID: UUID? = nil
+    @State private var startTime = Date()
+    @State private var durationMinutes: Double = 0
 
     private let presets: [ServingSize]
     private let sliderRange: ClosedRange<Double>
@@ -23,18 +26,27 @@ struct AmountInputSheet: View {
         self.onAdd    = onAdd
         self.presets  = ServingSize.presets(for: template.category)
 
-        let range: ClosedRange<Double>
+        let baseRange: ClosedRange<Double>
         switch template.category {
-        case .beer, .cider, .mixed:          range = 100...2000
-        case .wine, .sparkling, .fortified:  range = 50...750
-        case .spirits, .liqueur:             range = 5...200
-        case .shot:                          range = 5...100
-        case .cocktail, .other:              range = 50...600
+        case .beer, .cider, .mixed, .water, .softDrink, .juice, .coffeeTea, .milk:
+            baseRange = 100...2000
+        case .wine, .sparkling, .fortified:  baseRange = 50...750
+        case .spirits, .liqueur:             baseRange = 5...200
+        case .shot:                          baseRange = 5...100
+        case .cocktail, .other:              baseRange = 50...600
         }
+
+        // Start from the user's last chosen size for this drink (so "Dose", "Flasche
+        // 0,5 L", ... is remembered), falling back to the template's nominal volume.
+        let preferred = ServingSizeMemory.volume(for: template.id) ?? template.volume
+        let largestPreset = self.presets.map(\.volumeML).max() ?? 0
+        let upperBound = max(baseRange.upperBound, preferred, template.volume, largestPreset, 5000)
+        let range = baseRange.lowerBound...upperBound
         self.sliderRange = range
 
-        let clamped = min(range.upperBound, max(range.lowerBound, template.volume))
+        let clamped = min(range.upperBound, max(range.lowerBound, preferred))
         self._volume = State(initialValue: clamped)
+        self._volumeText = State(initialValue: "\(Int(clamped))")
 
         // Use the already-created presets array so UUIDs match
         let initial = self.presets.first { abs($0.volumeML - clamped) < 0.5 }
@@ -48,8 +60,31 @@ struct AmountInputSheet: View {
         // Realistic peak this drink reaches, so the preview matches the live BAC.
         return BACCalculator.projectedPeak(
             volume: volume, abv: template.abv, category: template.category,
-            profile: p, stomachStatus: p.defaultStomachStatus
+            profile: p, stomachStatus: p.defaultStomachStatus,
+            drinkDurationMinutes: durationMinutes, conservative: p.conservativeForApp
         )
+    }
+
+    private var autoDurationMinutes: Double {
+        DrinkDurationEstimator.estimate(category: template.category, volumeML: volume)
+    }
+
+    private var effectiveDurationMinutes: Double {
+        durationMinutes > 0 ? durationMinutes : autoDurationMinutes
+    }
+
+    private var estimatedEndTime: Date {
+        startTime.addingTimeInterval(effectiveDurationMinutes * 60)
+    }
+
+    private var absorptionEndTime: Date {
+        let window = BACCalculator.absorptionWindowMinutes(
+            category: template.category,
+            volumeML: volume,
+            drinkDurationMinutes: durationMinutes,
+            gastric: profile?.defaultStomachStatus.absorptionMinutes ?? StomachStatus.light.absorptionMinutes
+        )
+        return startTime.addingTimeInterval(window * 60)
     }
 
     var body: some View {
@@ -76,7 +111,7 @@ struct AmountInputSheet: View {
                         Text(template.name)
                             .font(.appBodyBold)
                             .foregroundStyle(Color.appText)
-                        Text("\(String(format: "%.1f", template.abv)) % Alk.")
+                        Text("\(String(format: "%.1f", locale: germanLocale, template.abv)) % Alk.")
                             .font(.appCaption)
                             .foregroundStyle(Color.appTextDim)
                     }
@@ -117,8 +152,9 @@ struct AmountInputSheet: View {
                                             preset: preset,
                                             isSelected: selectedPresetID == preset.id,
                                             onTap: {
-                                                withAnimation(.spring(response: 0.25)) {
+                                                withAnimation(.appSnappy) {
                                                     volume = preset.volumeML
+                                                    volumeText = "\(Int(preset.volumeML))"
                                                     selectedPresetID = preset.id
                                                 }
                                             }
@@ -133,11 +169,22 @@ struct AmountInputSheet: View {
                             SectionLabel(text: "EIGENE MENGE")
 
                             HStack(alignment: .lastTextBaseline, spacing: 4) {
-                                Text("\(Int(volume))")
+                                TextField("0", text: $volumeText)
+                                    .keyboardType(.numberPad)
                                     .font(.system(size: 48, weight: .light, design: .serif))
                                     .foregroundStyle(Color.appText)
                                     .monospacedDigit()
-                                    .contentTransition(.numericText())
+                                    .frame(maxWidth: 150)
+                                    .onChange(of: volumeText) { _, newValue in
+                                        let filtered = newValue.filter(\.isNumber)
+                                        if filtered != newValue {
+                                            volumeText = filtered
+                                            return
+                                        }
+                                        guard let typed = Double(filtered), typed > 0 else { return }
+                                        volume = typed
+                                        selectedPresetID = presets.first { abs($0.volumeML - typed) < 0.5 }?.id
+                                    }
                                 Text("ml")
                                     .font(.system(size: 16, weight: .regular))
                                     .foregroundStyle(Color.appTextDim)
@@ -158,6 +205,7 @@ struct AmountInputSheet: View {
                             Slider(value: $volume, in: sliderRange)
                                 .tint(Color.appAccent)
                                 .onChange(of: volume) { _, newValue in
+                                    volumeText = "\(Int(newValue.rounded()))"
                                     if let id = selectedPresetID,
                                        let preset = presets.first(where: { $0.id == id }),
                                        abs(preset.volumeML - newValue) > 5 {
@@ -174,6 +222,35 @@ struct AmountInputSheet: View {
                                     .font(.appMicro)
                                     .foregroundStyle(Color.appTextDim)
                             }
+                        }
+
+                        // Drinking duration ("verzögerter Start" / sipping)
+                        VStack(alignment: .leading, spacing: 10) {
+                            SectionLabel(text: "START")
+                            DatePicker("", selection: $startTime, displayedComponents: [.hourAndMinute])
+                                .datePickerStyle(.wheel)
+                                .labelsHidden()
+                                .frame(maxWidth: .infinity)
+                                .background(Color.appCard)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .strokeBorder(Color.appBorder, lineWidth: 0.5)
+                                )
+                        }
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            SectionLabel(text: "TRINKDAUER")
+                            DurationChipRow(
+                                durationMinutes: $durationMinutes,
+                                estimatedMinutes: autoDurationMinutes
+                            )
+                            Text("Fertig ca. \(estimatedEndTime.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute()))")
+                                .font(.appMicro)
+                                .foregroundStyle(Color.appTextMuted)
+                            Text("Aufnahme ca. bis \(absorptionEndTime.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute()))")
+                                .font(.appMicro)
+                                .foregroundStyle(Color.appTextMuted)
                         }
 
                         // BAC preview
@@ -208,7 +285,11 @@ struct AmountInputSheet: View {
                             icon: "plus",
                             isDisabled: !isValid
                         ) {
-                            onAdd(Drink.from(template: template, volume: volume))
+                            // Remember this size for next time (auto-selected then).
+                            ServingSizeMemory.save(volume: volume, for: template.id)
+                            let drink = Drink.from(template: template, volume: volume, timestamp: startTime)
+                            drink.drinkDurationMinutes = durationMinutes
+                            onAdd(drink)
                             dismiss()
                         }
 

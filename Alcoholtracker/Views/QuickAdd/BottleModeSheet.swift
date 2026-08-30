@@ -49,10 +49,14 @@ private struct BottleTemplatePickerView: View {
     let onDismiss: () -> Void
     @FocusState private var searchFocused: Bool
 
+    private var bottleTemplates: [DrinkTemplate] {
+        allTemplates.filter(\.isBottleModeEligible)
+    }
+
     private var results: [DrinkTemplate] {
-        if searchQuery.isEmpty { return Array(allTemplates.prefix(60)) }
+        if searchQuery.isEmpty { return Array(bottleTemplates.prefix(60)) }
         let q = searchQuery.lowercased()
-        return Array(allTemplates.lazy.filter { $0.name.localizedStandardContains(q) }.prefix(40))
+        return Array(bottleTemplates.lazy.filter { $0.name.localizedStandardContains(q) }.prefix(40))
     }
 
     var body: some View {
@@ -107,6 +111,22 @@ private struct BottleTemplatePickerView: View {
 
                 ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: 0) {
+                        if results.isEmpty {
+                            VStack(spacing: 8) {
+                                Image(systemName: "waterbottle")
+                                    .font(.system(size: 28, weight: .light))
+                                    .foregroundStyle(Color.appTextMuted)
+                                Text("Keine Flaschen-Produkte gefunden")
+                                    .font(.appCaptionBold)
+                                    .foregroundStyle(Color.appText)
+                                Text("Aus Flasche ist nur für Produkte gedacht, die realistisch als einzelne Flasche getrunken werden.")
+                                    .font(.appMicro)
+                                    .foregroundStyle(Color.appTextMuted)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .padding(.horizontal, 28)
+                            .padding(.vertical, 40)
+                        }
                         ForEach(results) { template in
                             Button { onSelect(template) } label: {
                                 HStack(spacing: 14) {
@@ -121,7 +141,7 @@ private struct BottleTemplatePickerView: View {
                                             .font(.appBody)
                                             .foregroundStyle(Color.appText)
                                             .lineLimit(1)
-                                        Text("\(template.abv, specifier: "%.1f")% vol")
+                                        Text("\(template.abv.deFormatted(1))% vol")
                                             .font(.appCaption)
                                             .foregroundStyle(Color.appTextDim)
                                     }
@@ -143,6 +163,33 @@ private struct BottleTemplatePickerView: View {
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.hidden)
+    }
+}
+
+private extension DrinkTemplate {
+    var isBottleModeEligible: Bool {
+        switch category {
+        case .cocktail, .shot, .coffeeTea, .milk:
+            return false
+        case .beer, .wine, .sparkling, .spirits, .liqueur, .mixed, .cider, .fortified, .water, .softDrink, .juice:
+            return !nameLooksLikeNonBottleServing
+        case .other:
+            return nameLooksLikeBottleServing
+        }
+    }
+
+    private var nameLooksLikeBottleServing: Bool {
+        let n = name.lowercased()
+        return ["flasche", "bottle", "0,", "0.", "liter", " litre", " l"].contains { n.contains($0) }
+    }
+
+    private var nameLooksLikeNonBottleServing: Bool {
+        let n = name.lowercased()
+        return [
+            "dose", "can", "glas", "glass", "pint", "stange", "kölschglas",
+            "koelschglas", "becher", "krug", "maß", "mass", "vom fass",
+            "draft", "draught", "zapf", "shot", "stamper"
+        ].contains { n.contains($0) }
     }
 }
 
@@ -199,7 +246,7 @@ private struct BottleLevelView: View {
                             .font(.appBodyBold)
                             .foregroundStyle(Color.appText)
                             .lineLimit(1)
-                        Text("\(template.abv, specifier: "%.1f")% vol")
+                        Text("\(template.abv.deFormatted(1))% vol")
                             .font(.appCaption)
                             .foregroundStyle(Color.appTextDim)
                     }
@@ -224,7 +271,7 @@ private struct BottleLevelView: View {
                         .frame(maxWidth: .infinity)
                         Rectangle().fill(Color.appBorder).frame(width: 0.5, height: 40)
                         VStack(spacing: 2) {
-                            Text("+\(promilleContrib, specifier: "%.2f") ‰")
+                            Text("+\(promilleContrib.deFormatted(2)) ‰")
                                 .font(.system(size: 30, weight: .light, design: .serif))
                                 .foregroundStyle(Color.appAccent)
                                 .monospacedDigit()

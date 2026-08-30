@@ -56,8 +56,9 @@ enum StatusSkin: String, Codable, CaseIterable {
             case .sober:   return "Nüchtern"
             case .tipsy:   return "Leicht beschwipst"
             case .drunk:   return "Beschwipst"
-            case .careful: return "Aufpassen"
-            case .danger:  return "Fahruntauglich"
+            // 0,8 bis 1,5 ‰ ist bereits fahruntüchtig (über 0,5-Grenze), ab 1,5 ‰ gefährlich.
+            case .careful: return "Fahruntüchtig"
+            case .danger:  return "Gefährlich"
             }
         case .normal:
             // User-requested names, exactly as specified

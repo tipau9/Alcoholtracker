@@ -15,6 +15,9 @@ struct DayDetailSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
+    @Query(sort: [SortDescriptor(\VomitEvent.timestamp)]) private var allVomitEvents: [VomitEvent]
+    @Query(sort: [SortDescriptor(\MealEvent.timestamp)]) private var allMealEvents: [MealEvent]
+    @Query(sort: [SortDescriptor(\BreathalyzerReading.timestamp)]) private var allBreathReadings: [BreathalyzerReading]
 
     @State private var noteText: String = ""
     @State private var selectedMood: DayMood = .neutral
@@ -33,6 +36,26 @@ struct DayDetailSheet: View {
             .sorted { $0.timestamp < $1.timestamp }
     }
 
+    private var dayVomitTimes: [Date] {
+        let start = cal.date(bySettingHour: 6, minute: 0, second: 0, of: date) ?? cal.startOfDay(for: date)
+        let end   = cal.date(byAdding: .day, value: 1, to: start) ?? start
+        return allVomitEvents
+            .filter { $0.timestamp >= start && $0.timestamp < end }
+            .map(\.timestamp)
+    }
+
+    private var dayMeals: [MealEvent] {
+        let start = cal.date(bySettingHour: 6, minute: 0, second: 0, of: date) ?? cal.startOfDay(for: date)
+        let end = cal.date(byAdding: .day, value: 1, to: start) ?? start
+        return allMealEvents.filter { $0.timestamp >= start && $0.timestamp < end }
+    }
+
+    private var dayBreathReadings: [BreathalyzerReading] {
+        let start = cal.date(bySettingHour: 6, minute: 0, second: 0, of: date) ?? cal.startOfDay(for: date)
+        let end = cal.date(byAdding: .day, value: 1, to: start) ?? start
+        return allBreathReadings.filter { $0.timestamp >= start && $0.timestamp < end }
+    }
+
     private var existingNote: DayNote? {
         allNotes.first { cal.isDate($0.dayStart, inSameDayAs: date) }
     }
@@ -40,11 +63,14 @@ struct DayDetailSheet: View {
     private var peakBAC: Double {
         guard let p = profile, !dayDrinks.isEmpty else { return 0 }
         // Same computation as the calendar cell color so both always agree.
-        return BACCalculator.peakBAC(
+        return BACProjectionInput(
             drinks: dayDrinks,
             profile: p,
-            stomachStatus: p.defaultStomachStatus
-        )
+            stomachStatus: p.defaultStomachStatus,
+            conservative: p.conservativeForApp,
+            vomitTimes: dayVomitTimes,
+            mealEvents: dayMeals.map(\.value)
+        ).peakBAC()
     }
 
     private var bacStatusForDay: BACStatus {
@@ -126,6 +152,8 @@ struct DayDetailSheet: View {
                             drinkList
                         }
 
+                        if !dayMeals.isEmpty || !dayBreathReadings.isEmpty { sessionEventsCard }
+
                         noteCard
                     }
                     .padding(.horizontal, 20)
@@ -140,7 +168,9 @@ struct DayDetailSheet: View {
             DrinkEditSheet(
                 drink: drink,
                 profile: profile,
-                onSave: { volume, timestamp in updateDrink(drink, volume: volume, timestamp: timestamp) },
+                onSave: { volume, timestamp, duration in
+                    updateDrink(drink, volume: volume, timestamp: timestamp, durationMinutes: duration)
+                },
                 onDelete: { deleteDrink(drink) }
             )
         }
@@ -208,7 +238,14 @@ struct DayDetailSheet: View {
         let level: HangoverLevel = {
             guard let p = profile else { return .none }
             let water = WaterLog.loggedGlasses(forDay: date).map(Double.init)
-            return HangoverPredictor.predict(drinks: dayDrinks, profile: p, waterGlasses: water)
+            return HangoverPredictor.predict(
+                drinks: dayDrinks,
+                profile: p,
+                waterGlasses: water,
+                conservative: p.conservativeForApp,
+                vomitTimes: dayVomitTimes,
+                mealEvents: dayMeals.map(\.value)
+            )
         }()
 
         return HStack(spacing: 14) {
@@ -242,6 +279,43 @@ struct DayDetailSheet: View {
             RoundedRectangle(cornerRadius: 14)
                 .strokeBorder(level.isLethal ? level.color.opacity(0.5) : Color.appBorder, lineWidth: level.isLethal ? 1 : 0.5)
         )
+    }
+
+    private var sessionEventsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel(text: "MAHLZEITEN & MESSUNGEN")
+            VStack(spacing: 0) {
+                let events = dayMeals.map { DaySessionEvent.meal($0) }
+                    + dayBreathReadings.map { DaySessionEvent.reading($0) }
+                ForEach(events.sorted { $0.timestamp < $1.timestamp }) { event in
+                    HStack(spacing: 12) {
+                        Image(systemName: event.icon)
+                            .foregroundStyle(event.color)
+                            .frame(width: 32, height: 32)
+                            .background(event.color.opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: 9))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(event.title).font(.appCaptionBold).foregroundStyle(Color.appText)
+                            Text(event.subtitle).font(.appMicro).foregroundStyle(Color.appTextDim)
+                        }
+                        Spacer()
+                        Text(event.timestamp.formatted(date: .omitted, time: .shortened))
+                            .font(.appCaption).foregroundStyle(Color.appTextMuted)
+                    }
+                    .padding(12)
+                    .contextMenu {
+                        Button("Eintrag löschen", role: .destructive) {
+                            event.delete(from: context)
+                            try? context.save()
+                        }
+                    }
+                    Divider().background(Color.appBorder)
+                }
+            }
+            .background(Color.appCard)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.appBorder, lineWidth: 0.5))
+        }
     }
 
     // MARK: Drink list
@@ -286,7 +360,7 @@ struct DayDetailSheet: View {
                 HStack(spacing: 8) {
                     ForEach(DayMood.allCases, id: \.self) { mood in
                         Button {
-                            withAnimation(.spring(response: 0.25)) {
+                            withAnimation(.appSnappy) {
                                 selectedMood = mood
                             }
                         } label: {
@@ -335,11 +409,12 @@ struct DayDetailSheet: View {
 
     // Same calorie scaling as SessionViewModel.updateDrink so edits behave
     // identically no matter where they happen.
-    private func updateDrink(_ drink: Drink, volume: Double, timestamp: Date) {
+    private func updateDrink(_ drink: Drink, volume: Double, timestamp: Date, durationMinutes: Double) {
         guard volume > 0, drink.volume > 0 else { return }
         drink.calories = Int((Double(drink.calories) / drink.volume * volume).rounded())
         drink.volume = volume
         drink.timestamp = timestamp
+        drink.drinkDurationMinutes = durationMinutes
         try? context.save()
     }
 
@@ -373,6 +448,54 @@ struct DayDetailSheet: View {
 }
 
 // MARK: - Sub-views
+
+private enum DaySessionEvent: Identifiable {
+    case meal(MealEvent)
+    case reading(BreathalyzerReading)
+
+    var id: UUID {
+        switch self {
+        case .meal(let event): return event.id
+        case .reading(let reading): return reading.id
+        }
+    }
+    var timestamp: Date {
+        switch self {
+        case .meal(let event): return event.timestamp
+        case .reading(let reading): return reading.timestamp
+        }
+    }
+    var icon: String {
+        switch self {
+        case .meal(let event): return event.impact.icon
+        case .reading: return "wind"
+        }
+    }
+    var color: Color {
+        switch self {
+        case .meal: return Color.statusGreen
+        case .reading: return Color.statusOrange
+        }
+    }
+    var title: String {
+        switch self {
+        case .meal(let event): return event.name.isEmpty ? event.impact.title : event.name
+        case .reading(let reading): return "Gemessen: \(reading.measuredBAC.permilleString)"
+        }
+    }
+    var subtitle: String {
+        switch self {
+        case .meal(let event): return event.impact.title
+        case .reading(let reading): return "App-Schätzung: \(reading.estimatedBAC.permilleString)"
+        }
+    }
+    func delete(from context: ModelContext) {
+        switch self {
+        case .meal(let event): context.delete(event)
+        case .reading(let reading): context.delete(reading)
+        }
+    }
+}
 
 private struct DDSStat: View {
     let icon: String
@@ -428,7 +551,7 @@ private struct DDSDrinkRow: View {
                 Text(drink.name)
                     .font(.appBody)
                     .foregroundStyle(Color.appText)
-                Text("\(Int(drink.volume)) ml · \(String(format: "%.1f", drink.abv)) %")
+                Text("\(Int(drink.volume)) ml · \(String(format: "%.1f", locale: germanLocale, drink.abv)) %")
                     .font(.appMicro)
                     .foregroundStyle(Color.appTextDim)
             }
@@ -471,4 +594,3 @@ private struct DDSEmptyState: View {
         .padding(.vertical, 32)
     }
 }
-

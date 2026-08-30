@@ -69,6 +69,8 @@ final class JamService {
     // Latest round-roulette draw (locally started or received); the active jam
     // view presents the spin sheet for it and clears it on dismiss.
     var incomingRoulette: JamRoulettePayload?
+    var incomingArcadeRound: JamArcadeRoundPayload?
+    var arcadeResults: [JamArcadeResultPayload] = []
 
     // Water-chug leaderboard for the current jam (best time per participant).
     var waterScores: [WaterScore] = []
@@ -130,11 +132,31 @@ final class JamService {
 
     private var statusTimer: Timer?
     private var pollTimer: Timer?
+    private var arcadePollTimer: Timer?
     private var lastBroadcastTime: Date = .distantPast
     private var myJoinedAt: Date?
     // Draw id of the roulette already presented, so the same draw arriving over
     // both transports (Bluetooth + server poll) is shown at most once.
     private var lastRouletteID: UUID?
+    private var lastRouletteStarterID: UUID?
+    private var lastRouletteReceivedAt: Date?
+    private var lastArcadeRoundID: UUID?
+    private var lastArcadeReceivedAt: Date?
+    private var lastArcadeStarterID: UUID?
+
+    // CRDT tombstones: participants who left/were kicked recently, so a stale
+    // broadcast arriving late (e.g. after an offline peer reconnects) cannot
+    // resurrect them. Bounded by a TTL; after that a genuine rejoin is allowed.
+    private var tombstones: [UUID: Date] = [:]
+    private let tombstoneTTL: TimeInterval = 300
+
+    private func tombstone(_ id: UUID) { tombstones[id] = Date() }
+
+    private func isTombstoned(_ id: UUID) -> Bool {
+        guard let t = tombstones[id] else { return false }
+        if Date().timeIntervalSince(t) > tombstoneTTL { tombstones[id] = nil; return false }
+        return true
+    }
 
     init(supabase: SupabaseService) {
         self.supabase = supabase
@@ -168,6 +190,12 @@ final class JamService {
             case .reset:  self.waterScores.removeAll()
             case .result: self.applyWaterScore(WaterScore(id: payload.participantID, name: payload.name, ms: payload.milliseconds))
             }
+        }
+        multipeer.onArcadeRoundReceived = { [weak self] payload in
+            self?.presentArcadeRound(payload)
+        }
+        multipeer.onArcadeResultReceived = { [weak self] payload in
+            self?.applyArcadeResult(payload)
         }
     }
 
@@ -213,18 +241,144 @@ final class JamService {
         }
     }
 
+    func canRestartArcade(_ round: JamArcadeRoundPayload) -> Bool {
+        round.jamID == currentJam?.id && round.starterID == myParticipantID
+    }
+
+    func startArcade(_ game: JamArcadeGame, replacing previous: JamArcadeRoundPayload? = nil) {
+        guard let jam = currentJam else { return }
+        if let previous {
+            guard canRestartArcade(previous) else { return }
+        } else if let receivedAt = lastArcadeReceivedAt,
+                  Date().timeIntervalSince(receivedAt) <= 180 {
+            guard lastArcadeStarterID == myParticipantID else { return }
+        }
+
+        let now = Date()
+        let startAt = now.addingTimeInterval(5)
+        let signalAt = game == .reactionRoyale
+            ? startAt.addingTimeInterval(Double.random(in: 2.5...5.5))
+            : nil
+        let round = JamArcadeRoundPayload(
+            id: UUID(),
+            jamID: jam.id,
+            game: game,
+            starterID: myParticipantID,
+            starterName: supabase.myProfile?.displayName ?? UIDevice.current.name,
+            startAt: startAt,
+            signalAt: signalAt,
+            durationSeconds: game == .balanceBattle ? 10 : 5
+        )
+        multipeer.broadcastArcadeRound(round)
+        presentArcadeRound(round)
+        if jam.visibility.usesServer {
+            Task { try? await supabase.setJamArcadeRound(round) }
+        }
+    }
+
+    func submitArcadeResult(value: Double, disqualified: Bool = false) {
+        guard let jam = currentJam, let round = incomingArcadeRound else { return }
+        guard !arcadeResults.contains(where: { $0.participantID == myParticipantID && $0.roundID == round.id }) else { return }
+        let result = JamArcadeResultPayload(
+            jamID: jam.id,
+            roundID: round.id,
+            participantID: myParticipantID,
+            participantName: supabase.myProfile?.displayName ?? UIDevice.current.name,
+            value: min(600_000, max(0, value)),
+            disqualified: disqualified,
+            submittedAt: Date()
+        )
+        applyArcadeResult(result)
+        multipeer.broadcastArcadeResult(result)
+        if jam.visibility.usesServer {
+            Task { try? await supabase.submitJamArcadeResult(result) }
+        }
+    }
+
+    func closeArcade() {
+        incomingArcadeRound = nil
+        arcadeResults.removeAll()
+        if currentJam?.visibility.usesServer != true { stopArcadePolling() }
+    }
+
+    private func presentArcadeRound(_ round: JamArcadeRoundPayload) {
+        guard round.jamID == currentJam?.id else { return }
+        guard round.id != lastArcadeRoundID else { return }
+        lastArcadeRoundID = round.id
+        lastArcadeStarterID = round.starterID
+        lastArcadeReceivedAt = Date()
+        arcadeResults.removeAll()
+        incomingArcadeRound = round
+        if currentJam?.visibility.usesServer == true { startArcadePolling() }
+    }
+
+    private func applyArcadeResult(_ result: JamArcadeResultPayload) {
+        guard result.jamID == currentJam?.id,
+              result.roundID == incomingArcadeRound?.id else { return }
+        if let index = arcadeResults.firstIndex(where: { $0.participantID == result.participantID }) {
+            if result.submittedAt >= arcadeResults[index].submittedAt { arcadeResults[index] = result }
+        } else {
+            arcadeResults.append(result)
+        }
+    }
+
+    private func startArcadePolling() {
+        arcadePollTimer?.invalidate()
+        arcadePollTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in await self?.syncArcadeGame() }
+        }
+        Task { await syncArcadeGame() }
+    }
+
+    private func stopArcadePolling() {
+        arcadePollTimer?.invalidate()
+        arcadePollTimer = nil
+    }
+
+    private func syncArcadeGame() async {
+        guard let jam = currentJam, jam.visibility.usesServer else { return }
+        if let round = try? await supabase.fetchJamArcadeRound(jam.id) {
+            presentArcadeRound(round)
+        }
+        guard let round = incomingArcadeRound else { return }
+        if let results = try? await supabase.fetchJamArcadeResults(jamID: jam.id, roundID: round.id) {
+            for result in results { applyArcadeResult(result) }
+        }
+    }
+
     // MARK: Round roulette
 
     // Picks a random participant to buy the next round and broadcasts the draw so
-    // every peer shows the same spin and loser. Anyone in the jam can start one.
+    // every peer shows the same spin and loser. Anyone can start a fresh game;
+    // only its starter can replace it during the active 120-second window.
     func startRoulette() {
+        startRoulette(replacing: nil)
+    }
+
+    func canRerollRoulette(_ payload: JamRoulettePayload) -> Bool {
+        payload.jamID == currentJam?.id && payload.starterID == myParticipantID
+    }
+
+    func rerollRoulette(_ payload: JamRoulettePayload) {
+        guard canRerollRoulette(payload) else { return }
+        startRoulette(replacing: payload)
+    }
+
+    private func startRoulette(replacing previous: JamRoulettePayload?) {
         guard let jam = currentJam else { return }
+        if let previous {
+            guard previous.jamID == jam.id, previous.starterID == myParticipantID else { return }
+        } else if let receivedAt = lastRouletteReceivedAt,
+                  Date().timeIntervalSince(receivedAt) <= 120 {
+            guard lastRouletteStarterID == myParticipantID else { return }
+        }
         let names = jam.participants.map(\.displayName)
         guard names.count >= 2 else { return }
         let winner = Int.random(in: 0..<names.count)
         let starter = supabase.myProfile?.displayName ?? "Jemand"
         let payload = JamRoulettePayload(
-            jamID: jam.id, participants: names, winnerIndex: winner, starterName: starter
+            jamID: jam.id, participants: names, winnerIndex: winner,
+            starterName: starter, starterID: myParticipantID
         )
         multipeer.broadcastRoulette(payload)
         presentRoulette(payload)     // show it locally too (and record the draw id)
@@ -240,7 +394,54 @@ final class JamService {
         guard payload.jamID == currentJam?.id else { return }
         guard payload.id != lastRouletteID else { return }
         lastRouletteID = payload.id
+        lastRouletteStarterID = payload.starterID
+        lastRouletteReceivedAt = Date()
         incomingRoulette = payload
+    }
+
+    // MARK: Debug tooling (admin-only)
+    //
+    // Injects synthetic participants into the local roster so social features
+    // (roulette, water contest, roster, kick) can be tested solo without a
+    // second device. Fakes use connectionType .proximity, which syncParticipants
+    // keeps across server polls, so they persist like anonymous Bluetooth peers.
+    // Their ids are tracked so removal never touches real proximity peers.
+    private static let debugFakeNames = ["Mia", "Ben", "Lena", "Tom", "Sara",
+                                         "Jonas", "Emma", "Paul", "Lisa", "Max"]
+    private var debugFakeIDs: Set<UUID> = []
+
+    var debugFakeParticipantCount: Int {
+        guard let jam = currentJam else { return 0 }
+        return jam.participants.filter { debugFakeIDs.contains($0.id) }.count
+    }
+
+    func addFakeParticipant() {
+        guard var jam = currentJam else { return }
+        let name = Self.debugFakeNames.randomElement() ?? "Testperson"
+        let id = UUID()
+        let fake = JamParticipant(
+            id: id,
+            userID: nil,
+            displayName: name,
+            avatar: String(name.prefix(1)).uppercased(),
+            joinedAt: Date(),
+            connectionType: .proximity,
+            currentBAC: Double.random(in: 0.0...1.6),
+            currentStatus: nil,
+            hasSOSActive: false,
+            lastUpdated: Date(),
+            sharedSettings: nil
+        )
+        debugFakeIDs.insert(id)
+        jam.participants.upsert(fake)
+        currentJam = jam
+    }
+
+    func removeFakeParticipants() {
+        guard var jam = currentJam else { return }
+        jam.participants.removeAll { debugFakeIDs.contains($0.id) }
+        debugFakeIDs.removeAll()
+        currentJam = jam
     }
 
     private func appendPhoto(_ photo: JamPhotoPayload) {
@@ -374,7 +575,23 @@ final class JamService {
 
     func leaveJam() {
         guard let jam = currentJam else { return }
-        let isHost = amHost
+
+        // Ghost jam: a leaving host hands the role to an elected member instead of
+        // ending the jam, as long as someone else is still in it. handoffHost flips
+        // amHost to false, so the teardown below proceeds as a normal guest leave
+        // and the jam lives on.
+        var electedHostUserID: String? = nil
+        var electedHostName: String? = nil
+        if amHost {
+            let others = jam.participants.filter { $0.id != myParticipantID }
+            if let elected = electHost(excluding: supabase.session?.userId, from: others) {
+                handoffHost(to: elected)
+                electedHostUserID = elected.userID
+                electedHostName   = elected.displayName
+            }
+        }
+        let isHost = amHost   // false now if we just handed the role off
+
         // Tell connected peers we are leaving so they drop us right away, while
         // the session is still up. Done before stopAll() tears it down.
         multipeer.broadcastControl(
@@ -389,6 +606,13 @@ final class JamService {
         waterScores.removeAll()        // games are per-jam; do not leak into the next
         incomingRoulette = nil
         lastRouletteID = nil
+        lastRouletteStarterID = nil
+        lastRouletteReceivedAt = nil
+        incomingArcadeRound = nil
+        arcadeResults.removeAll()
+        lastArcadeRoundID = nil
+        lastArcadeStarterID = nil
+        lastArcadeReceivedAt = nil
         amHost = false
         confirmedOnServer = false
         currentJam = nil               // immediate: UI transitions to lobby right away
@@ -397,6 +621,13 @@ final class JamService {
             if isHost {
                 try? await supabase.deleteJam(jam.id)
             } else {
+                // Ghost handoff: repoint the server host to the elected member
+                // BEFORE deleting our own row, so the empty-jam/host cleanup trigger
+                // sees a different host and keeps the jam alive.
+                if let newUID = electedHostUserID {
+                    try? await supabase.updateJamHost(
+                        jamID: jam.id, hostUserID: newUID, hostName: electedHostName ?? "")
+                }
                 try? await supabase.leaveJam(jam.id)
             }
         }
@@ -419,6 +650,7 @@ final class JamService {
 
     func kickParticipant(_ participant: JamParticipant) {
         guard let jam = currentJam, canKick(participant) else { return }
+        tombstone(participant.id)   // keep a stale broadcast from re-adding them
         var mutableJam = jam
         mutableJam.participants.removeAll { $0.id == participant.id }
         currentJam = mutableJam
@@ -433,12 +665,99 @@ final class JamService {
         }
     }
 
+    // MARK: Host transfer & ghost-jam election
+
+    // Deterministic host election: every remaining client runs this and agrees on
+    // the same new host without a server round-trip. Rule (per the ghost-jam spec):
+    // the member with the LOWEST shared BAC, tie-broken by the LONGEST jam history
+    // (earliest joinedAt), then a stable id order. A member who hides their BAC
+    // (nil) is treated as the least suitable so a known-sober member wins.
+    private func electHost(excluding excludedUserID: String?, from participants: [JamParticipant]) -> JamParticipant? {
+        let candidates = participants.filter { p in
+            if let ex = excludedUserID, let uid = p.userID, uid == ex { return false }
+            return true
+        }
+        return candidates.min { a, b in
+            let abac = a.currentBAC ?? .greatestFiniteMagnitude
+            let bbac = b.currentBAC ?? .greatestFiniteMagnitude
+            if abac != bbac { return abac < bbac }
+            if a.joinedAt != b.joinedAt { return a.joinedAt < b.joinedAt }
+            return a.id.uuidString < b.id.uuidString
+        }
+    }
+
+    func canTransferHost(_ participant: JamParticipant) -> Bool {
+        guard amHost, let jam = currentJam, participant.id != myParticipantID else { return false }
+        // A server-backed jam's host must own an account row to hold the host slot.
+        if jam.visibility.usesServer && participant.userID == nil { return false }
+        return true
+    }
+
+    // Explicit, host-initiated handover (the host stays in the jam as a guest).
+    func transferHost(to participant: JamParticipant) {
+        guard let jam = currentJam, canTransferHost(participant) else { return }
+        handoffHost(to: participant)
+        if jam.visibility.usesServer, let uid = participant.userID {
+            Task { try? await supabase.updateJamHost(
+                jamID: jam.id, hostUserID: uid, hostName: participant.displayName) }
+        }
+    }
+
+    // Local + proximity handoff with no server write: updates who we show as host,
+    // drops our own host role, stops advertising, and tells peers over Bluetooth.
+    // The server write is sequenced by the caller so it cannot race a host delete.
+    private func handoffHost(to participant: JamParticipant) {
+        guard var jam = currentJam else { return }
+        jam.hostUserID = participant.userID ?? ""
+        jam.hostName   = participant.displayName
+        currentJam = jam
+        amHost = false
+        multipeer.stopAdvertising()
+        multipeer.broadcastControl(JamControl(
+            action: .transferHost, jamID: jam.id,
+            participantID: participant.id, userID: participant.userID,
+            newHostName: participant.displayName))
+    }
+
+    // Applies a host change announced by someone else (a transferHost control or a
+    // deterministic re-election). Updates the shown host everywhere; if WE are the
+    // new host, we promote ourselves: start advertising and claim the server slot.
+    private func adoptHostChange(participantID: UUID, userID: String?, name: String) {
+        guard var jam = currentJam else { return }
+        jam.hostUserID = userID ?? ""
+        jam.hostName   = name
+        currentJam = jam
+        let iAmNewHost = participantID == myParticipantID
+            || (userID != nil && userID == supabase.session?.userId)
+        guard iAmNewHost, !amHost else { return }
+        amHost = true
+        multipeer.startAdvertisingJam(jam)   // begin hosting (reuses the live session)
+        if jam.visibility.usesServer, let uid = supabase.session?.userId {
+            Task { try? await supabase.updateJamHost(jamID: jam.id, hostUserID: uid, hostName: name) }
+        }
+    }
+
+    // Ghost jam: if the current host is no longer represented in the roster (left
+    // silently, crashed, or went out of range past the staleness window), elect a
+    // replacement deterministically so the jam keeps running. Server jams only:
+    // proximity-only peers are never pruned, so "host absent" cannot be detected
+    // there without a live-connection signal. Called from syncParticipants.
+    private func reconcileHostPresence() {
+        guard let jam = currentJam, jam.visibility.usesServer, !amHost else { return }
+        guard !jam.hostUserID.isEmpty else { return }
+        let hostPresent = jam.participants.contains { $0.userID == jam.hostUserID }
+        if hostPresent { return }
+        guard let elected = electHost(excluding: jam.hostUserID, from: jam.participants) else { return }
+        adoptHostChange(participantID: elected.id, userID: elected.userID, name: elected.displayName)
+    }
+
     // MARK: Control messages received (proximity)
 
     private func handleControl(_ control: JamControl) {
         guard var jam = currentJam, jam.id == control.jamID else { return }
         switch control.action {
         case .leave:
+            tombstone(control.participantID)
             jam.participants.removeAll {
                 $0.id == control.participantID
                     || (control.userID != nil && $0.userID == control.userID)
@@ -450,12 +769,18 @@ final class JamService {
             if meTargeted {
                 leaveJam()
             } else {
+                tombstone(control.participantID)
                 jam.participants.removeAll {
                     $0.id == control.participantID
                         || (control.userID != nil && $0.userID == control.userID)
                 }
                 currentJam = jam
             }
+        case .transferHost:
+            let name = control.newHostName
+                ?? jam.participants.first(where: { $0.id == control.participantID })?.displayName
+                ?? jam.hostName
+            adoptHostChange(participantID: control.participantID, userID: control.userID, name: name)
         }
     }
 
@@ -518,14 +843,18 @@ final class JamService {
             }
         }
         if useServer {
-            // Short interval so a new participant appears in near real-time for
-            // everyone in the jam. One lightweight GET per tick.
-            pollTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
+            // Poll often enough that a new participant appears near real-time, but
+            // not so aggressively it drains battery/quota: each tick is two GETs
+            // (roster + games), so 12s is ~10 req/min instead of 24 at the old 5s.
+            pollTimer = Timer.scheduledTimer(withTimeInterval: 12, repeats: true) { [weak self] _ in
                 Task { @MainActor [weak self] in
                     await self?.syncParticipants()
                     await self?.syncJamGames()
                 }
             }
+            // Arcade rounds need to be discovered before their absolute startAt;
+            // the normal 12-second roster poll is intentionally too slow for that.
+            startArcadePolling()
         }
     }
 
@@ -534,6 +863,7 @@ final class JamService {
         statusTimer = nil
         pollTimer?.invalidate()
         pollTimer = nil
+        stopArcadePolling()
     }
 
     // MARK: Local Participant Update
@@ -572,8 +902,10 @@ final class JamService {
     // MARK: Proximity data received
 
     private func handleProximityBroadcast(_ broadcast: JamStatusBroadcast) {
+        // Do not let a late broadcast resurrect someone who just left / was kicked.
+        if isTombstoned(broadcast.participant.id) { return }
         if var jam = currentJam, jam.id == broadcast.jamID {
-            jam.participants.upsert(broadcast.participant)
+            jam.participants.upsert(broadcast.participant)   // LWW: ignores stale updates
             currentJam = jam
         } else if let idx = availableJamsNearby.firstIndex(where: { $0.id == broadcast.jamID }) {
             availableJamsNearby[idx].participants.upsert(broadcast.participant)
@@ -621,6 +953,7 @@ final class JamService {
         for p in fresh {
             if let uid = myUserID, p.userID == uid { continue }
             if p.id == myParticipantID { continue }
+            if isTombstoned(p.id) { continue }   // recently left/kicked; do not re-add
             if now.timeIntervalSince(p.lastUpdated) > 120 { continue }
             activeParticipants.append(p)
         }
@@ -633,6 +966,7 @@ final class JamService {
         let serverUserIDs = Set(activeParticipants.compactMap(\.userID))
         for p in jam.participants {
             guard p.id != myParticipantID, p.connectionType == .proximity else { continue }
+            if isTombstoned(p.id) { continue }
             if serverIDs.contains(p.id) { continue }
             if let uid = p.userID, serverUserIDs.contains(uid) { continue }
             activeParticipants.append(p)
@@ -644,6 +978,10 @@ final class JamService {
 
         mutableJam.participants = activeParticipants
         currentJam = mutableJam
+
+        // Ghost jam: if the host disappeared from the roster, elect a replacement so
+        // the session keeps running (deterministic across all remaining clients).
+        reconcileHostPresence()
     }
 
     // Pulls the server-backed mini-games (roulette draw + water leaderboard) so
@@ -653,6 +991,9 @@ final class JamService {
 
         if let draw = try? await supabase.fetchJamRoulette(jam.id) {
             presentRoulette(draw)
+        }
+        if let round = try? await supabase.fetchJamArcadeRound(jam.id) {
+            presentArcadeRound(round)
         }
         if let server = try? await supabase.fetchJamWaterScores(jam.id) {
             mergeServerWaterScores(server)

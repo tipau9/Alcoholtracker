@@ -24,6 +24,7 @@ struct StatusPill: View {
         HStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: .semibold))
+                .contentTransition(.symbolEffect(.replace.downUp))
             Text(status.label(for: skin))
                 .font(.appCaptionBold)
         }
@@ -33,7 +34,7 @@ struct StatusPill: View {
         .background(status.backgroundColor)
         .clipShape(Capsule())
         .overlay(Capsule().strokeBorder(status.color.opacity(0.3), lineWidth: 0.5))
-        .animation(.easeInOut(duration: 0.3), value: status)
+        .animation(.appSpring, value: status)
     }
 }
 

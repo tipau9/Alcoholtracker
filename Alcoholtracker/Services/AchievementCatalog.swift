@@ -82,7 +82,7 @@ enum AchievementCatalog {
 
         // --- Zeit-basiert ---
         Achievement(id: "night_owl",      title: "Nachteule",         subtitle: "Drink zwischen 0 und 4 Uhr eingetragen",        icon: "moon.stars.fill",         accent: .yellow),
-        Achievement(id: "early_bird",     title: "Fruehstuecks-Bier", subtitle: "Drink vor 12 Uhr eingetragen",                  icon: "sunrise.fill",            accent: .amber),
+        Achievement(id: "early_bird",     title: "Fruehstuecks-Bier", subtitle: "Drink zwischen 6 und 12 Uhr eingetragen",       icon: "sunrise.fill",            accent: .amber),
         Achievement(id: "silvester",      title: "Gutes Neues",       subtitle: "Drink am 31. Dezember eingetragen",             icon: "fireworks",               accent: .yellow),
         Achievement(id: "monday_drink",   title: "Montags-Freude",    subtitle: "Drink an einem Montag eingetragen",             icon: "calendar.badge.plus",     accent: .green),
 
@@ -99,6 +99,25 @@ enum AchievementCatalog {
 
     // MARK: - isEarned
 
+    // Caches the whole-history derived metrics that would otherwise be recomputed
+    // once per BAC/streak achievement within a single evaluation pass: peakDayBAC
+    // for bac_05/10/15 and soberStreak for sober_3/7/14/30. The values are lazy,
+    // so when those achievements are already unlocked the heavy work never runs.
+    // One instance is built per evaluate() pass on the main actor, so the lazy
+    // stored properties are accessed single-threaded.
+    final class EvalContext {
+        private let drinks: [Drink]
+        private let profile: UserProfile?
+
+        init(drinks: [Drink], profile: UserProfile?) {
+            self.drinks = drinks
+            self.profile = profile
+        }
+
+        lazy var peakDayBAC: Double = AchievementCatalog.peakDayBAC(drinks: drinks, profile: profile)
+        lazy var soberStreak: Int = AchievementCatalog.soberStreak(drinks: drinks)
+    }
+
     // swiftlint:disable:next cyclomatic_complexity function_body_length
     static func isEarned(
         id: String,
@@ -106,7 +125,8 @@ enum AchievementCatalog {
         templates: [DrinkTemplate],
         crew: [CrewMember],
         photos: [PhotoMemory],
-        profile: UserProfile?
+        profile: UserProfile?,
+        cache: EvalContext
     ) -> Bool {
         switch id {
 
@@ -122,7 +142,9 @@ enum AchievementCatalog {
         // Vielfalt
         case "categories_3":    return Set(drinks.map(\.categoryRaw)).count >= 3
         case "categories_5":    return Set(drinks.map(\.categoryRaw)).count >= 5
-        case "categories_all":  return Set(drinks.map(\.categoryRaw)).count >= DrinkCategory.allCases.count
+        case "categories_all":
+            let alcoholicCategories: Set<DrinkCategory> = [.beer, .wine, .sparkling, .spirits, .liqueur, .cocktail, .mixed, .shot, .cider, .fortified, .other]
+            return alcoholicCategories.isSubset(of: Set(drinks.map(\.category)))
         case "abv_spectrum":
             return drinks.contains { $0.abv < 5 }
                 && drinks.contains { $0.abv >= 5 && $0.abv <= 20 }
@@ -178,15 +200,15 @@ enum AchievementCatalog {
             return hasKolsch && hasAlt
 
         // BAC-Stufen
-        case "bac_05": return peakDayBAC(drinks: drinks, profile: profile) >= 0.5
-        case "bac_10": return peakDayBAC(drinks: drinks, profile: profile) >= 1.0
-        case "bac_15": return peakDayBAC(drinks: drinks, profile: profile) >= 1.5
+        case "bac_05": return cache.peakDayBAC >= 0.5
+        case "bac_10": return cache.peakDayBAC >= 1.0
+        case "bac_15": return cache.peakDayBAC >= 1.5
 
         // Nüchternheit-Streaks (current streak from today backwards)
-        case "sober_3":  return soberStreak(drinks: drinks) >= 3
-        case "sober_7":  return soberStreak(drinks: drinks) >= 7
-        case "sober_14": return soberStreak(drinks: drinks) >= 14
-        case "sober_30": return soberStreak(drinks: drinks) >= 30
+        case "sober_3":  return cache.soberStreak >= 3
+        case "sober_7":  return cache.soberStreak >= 7
+        case "sober_14": return cache.soberStreak >= 14
+        case "sober_30": return cache.soberStreak >= 30
 
         // Cocktails
         case "cocktails_5":
@@ -227,7 +249,7 @@ enum AchievementCatalog {
         case "night_owl":
             return drinks.contains {
                 let hour = Calendar.current.component(.hour, from: $0.timestamp)
-                return hour >= 0 && hour < 4
+                return hour < 4
             }
         case "early_bird":
             return drinks.contains {
@@ -303,14 +325,16 @@ enum AchievementCatalog {
         }
 
         if let p = profile {
-            return grouped.values.map { dayDrinks in
-                BACCalculator.peakBAC(
-                    drinks: dayDrinks,
-                    profile: p,
-                    stomachStatus: p.defaultStomachStatus
-                )
-            }.max() ?? 0.0
-        }
+        return grouped.values.map { dayDrinks in
+            BACProjectionInput(
+                drinks: dayDrinks,
+                profile: p,
+                stomachStatus: p.defaultStomachStatus,
+                conservative: p.conservativeForApp,
+                vomitTimes: []
+            ).peakBAC()
+        }.max() ?? 0.0
+    }
 
         return grouped.values.map { dayDrinks in
             let sorted = dayDrinks.sorted { $0.timestamp < $1.timestamp }

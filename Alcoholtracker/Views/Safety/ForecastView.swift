@@ -7,39 +7,48 @@ struct ForecastView: View {
 
     let drinks: [Drink]
     let profile: UserProfile
+    let vomitTimes: [Date]
+    let mealEvents: [MealEventValue]
 
     @State private var targetTime: Date = Date().addingTimeInterval(3 * 3600)
-    // Defaults to the user's driving limit in onAppear (0,5 ‰ or 0,0 ‰ in Probezeit).
-    @State private var targetBAC: Double = 0.5
+    // Seeded from the user's driving limit in init so Probezeit drivers never see a 0,5 ‰ flash.
+    @State private var targetBAC: Double
+
+    init(
+        drinks: [Drink], profile: UserProfile,
+        vomitTimes: [Date] = [], mealEvents: [MealEventValue] = []
+    ) {
+        self.drinks = drinks
+        self.profile = profile
+        self.vomitTimes = vomitTimes
+        self.mealEvents = mealEvents
+        _targetBAC = State(initialValue: profile.drivingLimit)
+    }
 
     private var hoursUntilTarget: Double {
         max(0, targetTime.timeIntervalSinceNow / 3600)
+    }
+
+    private var projectionInput: BACProjectionInput {
+        BACProjectionInput(
+            drinks: drinks,
+            profile: profile,
+            stomachStatus: profile.defaultStomachStatus,
+            conservative: profile.conservativeForSafety,
+            vomitTimes: vomitTimes,
+            mealEvents: mealEvents
+        )
     }
 
     // Full curve evaluation at the target moment so drinks still in the
     // absorption phase are counted; a linear decay from the current value
     // would underestimate the BAC and overestimate the allowed drinks.
     private var projectedBACAtTarget: Double {
-        BACCalculator.currentBAC(
-            drinks: drinks,
-            profile: profile,
-            at: targetTime,
-            stomachStatus: profile.defaultStomachStatus
-        )
+        projectionInput.currentBAC(at: targetTime)
     }
 
     private var allowedAdditionalBAC: Double {
         max(0, targetBAC - projectedBACAtTarget)
-    }
-
-    // Realistic peak one standard drink (0,33 l / 5%) reaches on its own, identical
-    // to the "+x ‰" badge in the add sheet, so both screens show the same number.
-    // Shown to the user; NOT used for the safety budget below.
-    private var oneStandardDrinkPeak: Double {
-        max(0.01, BACCalculator.projectedPeak(
-            volume: 330, abv: 5.0, category: .beer,
-            profile: profile, stomachStatus: profile.defaultStomachStatus
-        ))
     }
 
     // Conservative per-drink figure used only to count how many more drinks fit:
@@ -51,7 +60,7 @@ struct ForecastView: View {
     private var budgetPerDrinkBAC: Double {
         max(0.01, BACCalculator.bacContribution(
             volume: 330, abv: 5.0,
-            weight: profile.weight,
+            weight: profile.validatedWeight,
             distributionFactor: profile.distributionFactor
         ))
     }
@@ -88,7 +97,17 @@ struct ForecastView: View {
         )
         .onAppear {
             // Start from the user's actual driving limit (0,0 ‰ in Probezeit).
-            if profile.isProbationaryDriver { targetBAC = 0.0 }
+            targetBAC = profile.drivingLimit
+        }
+        .onChange(of: profile.isProbationaryDriver) { _, _ in
+            // The Fahr-Grenzwert segment above can flip Probezeit on/off while this
+            // view is on screen. Without this the old target (e.g. 0,5 ‰) stays
+            // selected, so in Probezeit no pill is highlighted and the result card
+            // is computed against an illegal limit until the user taps it by hand.
+            // Snap the selection to the new driving limit automatically.
+            withAnimation(.appSnappy) {
+                targetBAC = profile.drivingLimit
+            }
         }
     }
 
@@ -103,6 +122,15 @@ struct ForecastView: View {
                 .font(.appCaptionBold)
                 .foregroundStyle(Color.appAccent)
             Spacer()
+            if profile.conservativeForSafety {
+                Text("WORST-CASE")
+                    .font(.appMicro)
+                    .foregroundStyle(Color.appBackground)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.statusOrange)
+                    .clipShape(Capsule())
+            }
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
@@ -116,7 +144,7 @@ struct ForecastView: View {
                     .font(.appMicro)
                     .foregroundStyle(Color.appTextMuted)
                     .tracking(1)
-                Text("\(String(format: "%.1f", hoursUntilTarget)) h ab jetzt")
+                Text("\(String(format: "%.1f", locale: germanLocale, hoursUntilTarget)) h ab jetzt")
                     .font(.appCaption)
                     .foregroundStyle(Color.appTextDim)
             }
@@ -134,9 +162,10 @@ struct ForecastView: View {
     private var planningTargets: [(Double, String)] {
         let limit = profile.drivingLimit
         if limit <= 0.0 {
-            return [(0.0, "Fahrbereit (0,0 ‰)")]
+            return [(0.0, "Unter 0,0 ‰")]
         }
-        return [(0.0, "Nüchtern"), (limit, "Fahrbereit")]
+        let limitLabel = "Unter \(String(format: "%.1f", locale: germanLocale, limit)) ‰"
+        return [(0.0, "Nüchtern"), (limit, limitLabel)]
     }
 
     private var targetBACPicker: some View {
@@ -148,7 +177,7 @@ struct ForecastView: View {
             HStack(spacing: 8) {
                 ForEach(planningTargets, id: \.0) { limit, label in
                     Button {
-                        withAnimation(.easeInOut(duration: 0.15)) { targetBAC = limit }
+                        withAnimation(.appSnappy) { targetBAC = limit }
                     } label: {
                         Text(label)
                             .font(.appCaption)
@@ -163,7 +192,7 @@ struct ForecastView: View {
                             ))
                     }
                     .buttonStyle(.plain)
-                    .animation(.easeInOut(duration: 0.15), value: targetBAC)
+                    .animation(.appSnappy, value: targetBAC)
                 }
             }
         }
@@ -195,7 +224,7 @@ struct ForecastView: View {
                             .font(.appCaption)
                             .foregroundStyle(Color.appTextDim)
                     }
-                    Text("Standarddrinks · je ~\(String(format: "%.2f", oneStandardDrinkPeak)) ‰, konservativ gerechnet")
+                    Text("Standarddrinks · je ~\(String(format: "%.2f", locale: germanLocale, budgetPerDrinkBAC)) ‰ Budget (konservativ)")
                         .font(.appMicro)
                         .foregroundStyle(Color.appTextMuted)
                 }

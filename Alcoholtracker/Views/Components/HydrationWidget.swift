@@ -9,6 +9,13 @@ import UIKit
 
 struct HydrationWidget: View {
     let drinks: [Drink]
+    // Optional so the exact, body-water-aware status/compensation are used when a
+    // profile is available; falls back to the absolute model otherwise.
+    var profile: UserProfile? = nil
+    // Extra fluid lost to sweat on a warm night (from the weather model). Surfaced
+    // so the "trink mehr bei Wärme" adjustment is visible rather than silent.
+    var extraSweatML: Double = 0
+    var vomitCount: Int = 0
 
     // Real logged water glasses (counts into net + hangover prediction).
     @State private var loggedGlasses: Int = WaterLog.glassesToday()
@@ -18,10 +25,23 @@ struct HydrationWidget: View {
     private var mixerBonus: Double { HydrationCalculator.sessionMixerWaterContribution(drinks: drinks) }
 
     private var loggedML: Double  { Double(loggedGlasses) * WaterLog.glassML }
-    private var net: Double       { HydrationCalculator.sessionNetHydration(drinks: drinks) + loggedML }
-    private var extraWater: Int   { max(0, Int((-net).rounded())) }
+    private var net: Double       { HydrationCalculator.sessionNetHydration(drinks: drinks) + loggedML - extraSweatML }
+    private var dynamicTargetML: Int {
+        HydrationCalculator.dynamicWaterTargetMl(
+            for: drinks,
+            profile: profile,
+            extraSweatML: extraSweatML,
+            vomitCount: vomitCount
+        )
+    }
+    private var remainingTargetML: Int { max(0, dynamicTargetML - Int(loggedML.rounded())) }
+    // Exact compensation (grossed up for ADH pass-through), plus the dynamic session target.
+    private var extraWater: Int   { max(HydrationCalculator.compensationWaterMl(netML: net), remainingTargetML) }
 
-    private var status: HydrationStatus { HydrationCalculator.hydrationStatus(netML: net) }
+    private var status: HydrationStatus {
+        if let p = profile { return HydrationCalculator.hydrationStatus(netML: net, profile: p) }
+        return HydrationCalculator.hydrationStatus(netML: net)
+    }
 
     private var netColor: Color { status.color }
     private var netLabel: String { status.label }
@@ -32,6 +52,8 @@ struct HydrationWidget: View {
 
             if drinks.isEmpty {
                 emptyState
+                // Allow pre-hydration logging before the first drink of the night.
+                waterLogRow
             } else {
                 stats
                 waterLogRow
@@ -107,7 +129,7 @@ struct HydrationWidget: View {
                     .font(.appBodyBold)
                     .foregroundStyle(netColor)
                     .contentTransition(.numericText())
-                    .animation(.easeInOut(duration: 0.3), value: net)
+                    .animation(.appGentle, value: net)
 
                 Text(netLabel)
                     .font(.appMicro)
@@ -149,26 +171,26 @@ struct HydrationWidget: View {
 
             Button {
                 WaterLog.removeGlassToday()
-                withAnimation(.easeInOut(duration: 0.2)) { loggedGlasses = WaterLog.glassesToday() }
+                withAnimation(.appSnappy) { loggedGlasses = WaterLog.glassesToday() }
             } label: {
                 Image(systemName: "minus.circle.fill")
                     .font(.system(size: 24))
                     .foregroundStyle(loggedGlasses > 0 ? Color.appTextDim : Color.appBorder)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableChip)
             .disabled(loggedGlasses == 0)
             .accessibilityLabel("Glas Wasser entfernen")
 
             Button {
                 WaterLog.addGlassToday()
-                withAnimation(.easeInOut(duration: 0.2)) { loggedGlasses = WaterLog.glassesToday() }
+                withAnimation(.appSnappy) { loggedGlasses = WaterLog.glassesToday() }
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             } label: {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 24))
                     .foregroundStyle(Color.appAccent)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressableChip)
             .accessibilityLabel("Glas Wasser hinzufügen")
         }
     }
@@ -197,25 +219,38 @@ struct HydrationWidget: View {
             }
         }
         .frame(height: 8)
-        .animation(.easeInOut(duration: 0.4), value: net)
+        .animation(.appSpring, value: net)
     }
 
     // MARK: Recommendation
 
     private var recommendation: some View {
-        HStack(spacing: 8) {
-            Image(systemName: extraWater == 0 ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                .font(.system(size: 13))
-                .foregroundStyle(extraWater == 0 ? Color.statusGreen : Color.statusOrange)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Image(systemName: extraWater == 0 ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(extraWater == 0 ? Color.statusGreen : Color.statusOrange)
 
-            if extraWater == 0 {
-                Text("Kein extra Wasser nötig.")
-                    .font(.appCaption)
-                    .foregroundStyle(Color.appTextDim)
-            } else {
-                Text("Trinke noch ca. \(extraWater) ml Wasser extra.")
-                    .font(.appCaption)
-                    .foregroundStyle(Color.appTextDim)
+                if extraWater == 0 {
+                    Text("Kein extra Wasser nötig.")
+                        .font(.appCaption)
+                        .foregroundStyle(Color.appTextDim)
+                } else {
+                    Text("Trinke noch ca. \(extraWater) ml Wasser extra.")
+                        .font(.appCaption)
+                        .foregroundStyle(Color.appTextDim)
+                }
+            }
+
+            if extraSweatML > 0 {
+                HStack(spacing: 8) {
+                    Image(systemName: "thermometer.sun.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.statusOrange)
+                    Text("Inkl. ca. \(Int(extraSweatML)) ml Schweißverlust (warmes Wetter).")
+                        .font(.appCaption)
+                        .foregroundStyle(Color.appTextMuted)
+                }
             }
         }
     }
@@ -257,7 +292,7 @@ private struct HydrationRow: View {
                 .font(.appBodyBold)
                 .foregroundStyle(valueColor)
                 .contentTransition(.numericText())
-                .animation(.easeInOut(duration: 0.3), value: value)
+                .animation(.appGentle, value: value)
         }
     }
 }

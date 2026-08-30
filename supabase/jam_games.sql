@@ -41,6 +41,35 @@ create table if not exists public.jam_roulette (
     created_at    timestamptz default now()
 );
 
+-- Existing installations receive the stable starter identity without losing
+-- their current draw. Legacy rows remain null and cannot be rerolled.
+alter table public.jam_roulette
+    add column if not exists starter_id uuid;
+
+create table if not exists public.jam_arcade_rounds (
+    jam_id           uuid primary key references public.jams(id) on delete cascade,
+    round_id         uuid not null,
+    game_type        text not null,
+    starter_id       uuid not null,
+    starter_name     text,
+    start_at         timestamptz not null,
+    signal_at        timestamptz,
+    duration_seconds double precision not null,
+    created_at       timestamptz default now()
+);
+
+create table if not exists public.jam_arcade_results (
+    jam_id           uuid not null references public.jams(id) on delete cascade,
+    round_id         uuid not null,
+    participant_id   uuid not null,
+    user_id          text,
+    participant_name text,
+    value             double precision not null,
+    disqualified      boolean not null default false,
+    submitted_at      timestamptz default now(),
+    primary key (jam_id, round_id, participant_id)
+);
+
 -- =========================================================================
 -- 1. Lock both tables: RLS on, drop EVERY existing policy, add none. Only the
 --    SECURITY DEFINER functions below (which run as the table owner and bypass
@@ -49,6 +78,8 @@ create table if not exists public.jam_roulette (
 
 alter table public.jam_water_scores enable row level security;
 alter table public.jam_roulette     enable row level security;
+alter table public.jam_arcade_rounds  enable row level security;
+alter table public.jam_arcade_results enable row level security;
 
 do $$
 declare pol record;
@@ -56,7 +87,7 @@ begin
     for pol in
         select tablename, policyname from pg_policies
         where schemaname = 'public'
-          and tablename in ('jam_water_scores', 'jam_roulette')
+          and tablename in ('jam_water_scores', 'jam_roulette', 'jam_arcade_rounds', 'jam_arcade_results')
     loop
         execute format('drop policy if exists %I on public.%I', pol.policyname, pol.tablename);
     end loop;
@@ -72,7 +103,12 @@ drop function if exists public.jam_submit_water(uuid, text, integer);
 drop function if exists public.jam_reset_water(uuid);
 drop function if exists public.jam_water_board(uuid);
 drop function if exists public.jam_set_roulette(uuid, uuid, jsonb, integer, text);
+drop function if exists public.jam_set_roulette(uuid, uuid, jsonb, integer, text, uuid);
 drop function if exists public.jam_roulette(uuid);
+drop function if exists public.jam_set_arcade_round(uuid, uuid, text, uuid, text, timestamptz, timestamptz, double precision);
+drop function if exists public.jam_arcade_round(uuid);
+drop function if exists public.jam_submit_arcade_result(uuid, uuid, text, double precision, boolean);
+drop function if exists public.jam_arcade_board(uuid, uuid);
 
 -- True when the caller is a member of, or hosts, the given jam. Used as the gate
 -- in every function below so games cannot be read or written across jams.
@@ -163,18 +199,42 @@ $$;
 -- the same draw so the wheel lands on the same person everywhere.
 create or replace function public.jam_set_roulette(
     p_jam_id uuid, p_draw_id uuid, p_participants jsonb,
-    p_winner_index integer, p_starter_name text
+    p_winner_index integer, p_starter_name text, p_starter_id uuid
 )
 returns void
 language plpgsql
 security definer
 set search_path = public
 as $$
-declare n integer;
+declare
+    n integer;
+    v_existing_starter uuid;
+    v_existing_created timestamptz;
 begin
-    if not public.is_jam_member(p_jam_id) then
-        raise exception 'not a member of this jam';
+    if p_starter_id is null or not exists (
+        select 1
+        from public.jam_participants me
+        where me.id = p_starter_id
+          and me.jam_id = p_jam_id
+          and me.user_id = auth.uid()::text
+    ) then
+        raise exception 'starter does not belong to the caller';
     end if;
+
+    -- Serialize competing first draws as well as updates by locking the parent
+    -- jam row. During the 120-second active window only the original starter
+    -- may replace the draw.
+    perform 1 from public.jams where id = p_jam_id for update;
+    select r.starter_id, r.created_at
+      into v_existing_starter, v_existing_created
+      from public.jam_roulette r
+     where r.jam_id = p_jam_id;
+    if found
+       and v_existing_created > now() - interval '120 seconds'
+       and v_existing_starter is distinct from p_starter_id then
+        raise exception 'only the roulette starter may reroll';
+    end if;
+
     n := jsonb_array_length(p_participants);
     if n is null or n < 2 or n > 50 then
         raise exception 'invalid participant count';
@@ -182,14 +242,46 @@ begin
     if p_winner_index < 0 or p_winner_index >= n then
         raise exception 'winner index out of range';
     end if;
-    insert into public.jam_roulette (jam_id, draw_id, participants, winner_index, starter_name, created_at)
-    values (p_jam_id, p_draw_id, p_participants, p_winner_index, left(coalesce(p_starter_name, ''), 40), now())
+    insert into public.jam_roulette (
+        jam_id, draw_id, participants, winner_index, starter_name, starter_id, created_at
+    )
+    values (
+        p_jam_id, p_draw_id, p_participants, p_winner_index,
+        left(coalesce(p_starter_name, ''), 40), p_starter_id, now()
+    )
     on conflict (jam_id) do update
         set draw_id      = excluded.draw_id,
             participants = excluded.participants,
             winner_index = excluded.winner_index,
             starter_name = excluded.starter_name,
+            starter_id   = excluded.starter_id,
             created_at   = now();
+end $$;
+
+-- Compatibility overload for clients released before starter_id was added.
+-- The identity is derived from auth.uid(), never trusted from the old payload.
+create or replace function public.jam_set_roulette(
+    p_jam_id uuid, p_draw_id uuid, p_participants jsonb,
+    p_winner_index integer, p_starter_name text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_starter_id uuid;
+begin
+    select me.id into v_starter_id
+    from public.jam_participants me
+    where me.jam_id = p_jam_id and me.user_id = auth.uid()::text
+    limit 1;
+    if v_starter_id is null then
+        raise exception 'not a participant of this jam';
+    end if;
+    perform public.jam_set_roulette(
+        p_jam_id, p_draw_id, p_participants,
+        p_winner_index, p_starter_name, v_starter_id
+    );
 end $$;
 
 -- Read the current draw, but only if it is fresh (last 120 s). A member joining
@@ -198,19 +290,159 @@ end $$;
 create or replace function public.jam_roulette(p_jam_id uuid)
 returns table (
     draw_id uuid, participants jsonb, winner_index integer,
-    starter_name text, created_at timestamptz
+    starter_name text, starter_id uuid, created_at timestamptz
 )
 language sql
 security definer
 set search_path = public
 stable
 as $$
-    select r.draw_id, r.participants, r.winner_index, r.starter_name, r.created_at
+    select r.draw_id, r.participants, r.winner_index,
+           r.starter_name, r.starter_id, r.created_at
     from public.jam_roulette r
     where r.jam_id = p_jam_id
       and r.created_at > now() - interval '120 seconds'
       and public.is_jam_member(p_jam_id)
     limit 1
+$$;
+
+-- Shared Jam Arcade round. Absolute timestamps let every device render the same
+-- countdown/signal even when the server transport is polled rather than pushed.
+create or replace function public.jam_set_arcade_round(
+    p_jam_id uuid, p_round_id uuid, p_game_type text, p_starter_id uuid,
+    p_starter_name text, p_start_at timestamptz, p_signal_at timestamptz,
+    p_duration_seconds double precision
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    v_existing_starter uuid;
+    v_existing_created timestamptz;
+begin
+    if p_game_type not in ('perfectSecond', 'balanceBattle', 'reactionRoyale') then
+        raise exception 'invalid arcade game';
+    end if;
+    if p_duration_seconds < 1 or p_duration_seconds > 60 then
+        raise exception 'invalid duration';
+    end if;
+    if not exists (
+        select 1 from public.jam_participants me
+        where me.id = p_starter_id
+          and me.jam_id = p_jam_id
+          and me.user_id = auth.uid()::text
+    ) then
+        raise exception 'starter does not belong to the caller';
+    end if;
+
+    perform 1 from public.jams where id = p_jam_id for update;
+    select r.starter_id, r.created_at
+      into v_existing_starter, v_existing_created
+      from public.jam_arcade_rounds r where r.jam_id = p_jam_id;
+    if found
+       and v_existing_created > now() - interval '180 seconds'
+       and v_existing_starter is distinct from p_starter_id then
+        raise exception 'only the arcade starter may restart';
+    end if;
+
+    delete from public.jam_arcade_results where jam_id = p_jam_id;
+    insert into public.jam_arcade_rounds (
+        jam_id, round_id, game_type, starter_id, starter_name,
+        start_at, signal_at, duration_seconds, created_at
+    ) values (
+        p_jam_id, p_round_id, p_game_type, p_starter_id,
+        left(coalesce(p_starter_name, ''), 40), p_start_at, p_signal_at,
+        p_duration_seconds, now()
+    )
+    on conflict (jam_id) do update set
+        round_id = excluded.round_id,
+        game_type = excluded.game_type,
+        starter_id = excluded.starter_id,
+        starter_name = excluded.starter_name,
+        start_at = excluded.start_at,
+        signal_at = excluded.signal_at,
+        duration_seconds = excluded.duration_seconds,
+        created_at = now();
+end $$;
+
+create or replace function public.jam_arcade_round(p_jam_id uuid)
+returns table (
+    round_id uuid, game_type text, starter_id uuid, starter_name text,
+    start_at timestamptz, signal_at timestamptz,
+    duration_seconds double precision, created_at timestamptz
+)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+    select r.round_id, r.game_type, r.starter_id, r.starter_name,
+           r.start_at, r.signal_at, r.duration_seconds, r.created_at
+    from public.jam_arcade_rounds r
+    where r.jam_id = p_jam_id
+      and r.created_at > now() - interval '180 seconds'
+      and public.is_jam_member(p_jam_id)
+    limit 1
+$$;
+
+create or replace function public.jam_submit_arcade_result(
+    p_jam_id uuid, p_round_id uuid, p_name text,
+    p_value double precision, p_disqualified boolean
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_participant_id uuid;
+begin
+    select me.id into v_participant_id
+    from public.jam_participants me
+    where me.jam_id = p_jam_id and me.user_id = auth.uid()::text
+    limit 1;
+    if v_participant_id is null then
+        raise exception 'not a participant of this jam';
+    end if;
+    if not exists (
+        select 1 from public.jam_arcade_rounds r
+        where r.jam_id = p_jam_id and r.round_id = p_round_id
+          and r.created_at > now() - interval '180 seconds'
+    ) then
+        raise exception 'arcade round is not active';
+    end if;
+    if p_value < 0 or p_value > 600000 then
+        raise exception 'invalid result';
+    end if;
+
+    insert into public.jam_arcade_results (
+        jam_id, round_id, participant_id, user_id,
+        participant_name, value, disqualified, submitted_at
+    ) values (
+        p_jam_id, p_round_id, v_participant_id, auth.uid()::text,
+        left(coalesce(p_name, ''), 40), p_value,
+        coalesce(p_disqualified, false), now()
+    )
+    on conflict (jam_id, round_id, participant_id) do nothing;
+end $$;
+
+create or replace function public.jam_arcade_board(p_jam_id uuid, p_round_id uuid)
+returns table (
+    participant_id uuid, participant_name text, value double precision,
+    disqualified boolean, submitted_at timestamptz
+)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+    select s.participant_id, s.participant_name, s.value,
+           s.disqualified, s.submitted_at
+    from public.jam_arcade_results s
+    where s.jam_id = p_jam_id and s.round_id = p_round_id
+      and public.is_jam_member(p_jam_id)
+    order by s.disqualified asc, s.value asc, s.submitted_at asc
 $$;
 
 -- =========================================================================
@@ -221,12 +453,22 @@ revoke all on function public.is_jam_member(uuid)                              f
 revoke all on function public.jam_submit_water(uuid, text, integer)            from public, anon;
 revoke all on function public.jam_reset_water(uuid)                            from public, anon;
 revoke all on function public.jam_water_board(uuid)                            from public, anon;
+revoke all on function public.jam_set_roulette(uuid, uuid, jsonb, integer, text, uuid) from public, anon;
 revoke all on function public.jam_set_roulette(uuid, uuid, jsonb, integer, text) from public, anon;
 revoke all on function public.jam_roulette(uuid)                               from public, anon;
+revoke all on function public.jam_set_arcade_round(uuid, uuid, text, uuid, text, timestamptz, timestamptz, double precision) from public, anon;
+revoke all on function public.jam_arcade_round(uuid) from public, anon;
+revoke all on function public.jam_submit_arcade_result(uuid, uuid, text, double precision, boolean) from public, anon;
+revoke all on function public.jam_arcade_board(uuid, uuid) from public, anon;
 
 grant execute on function public.is_jam_member(uuid)                              to authenticated;
 grant execute on function public.jam_submit_water(uuid, text, integer)            to authenticated;
 grant execute on function public.jam_reset_water(uuid)                            to authenticated;
 grant execute on function public.jam_water_board(uuid)                            to authenticated;
+grant execute on function public.jam_set_roulette(uuid, uuid, jsonb, integer, text, uuid) to authenticated;
 grant execute on function public.jam_set_roulette(uuid, uuid, jsonb, integer, text) to authenticated;
 grant execute on function public.jam_roulette(uuid)                               to authenticated;
+grant execute on function public.jam_set_arcade_round(uuid, uuid, text, uuid, text, timestamptz, timestamptz, double precision) to authenticated;
+grant execute on function public.jam_arcade_round(uuid) to authenticated;
+grant execute on function public.jam_submit_arcade_result(uuid, uuid, text, double precision, boolean) to authenticated;
+grant execute on function public.jam_arcade_board(uuid, uuid) to authenticated;

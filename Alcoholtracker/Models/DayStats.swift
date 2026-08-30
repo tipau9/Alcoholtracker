@@ -19,11 +19,13 @@ struct DayStats: Identifiable {
     var totalAlcoholGrams: Double { drinks.reduce(0) { $0 + $1.alcoholGrams } }
 
     func peakBAC(profile: UserProfile) -> Double {
-        BACCalculator.peakBAC(
+        BACProjectionInput(
             drinks: drinks,
             profile: profile,
-            stomachStatus: profile.defaultStomachStatus
-        )
+            stomachStatus: profile.defaultStomachStatus,
+            conservative: profile.conservativeForApp,
+            vomitTimes: []
+        ).peakBAC()
     }
 
     func bacStatus(profile: UserProfile) -> BACStatus {

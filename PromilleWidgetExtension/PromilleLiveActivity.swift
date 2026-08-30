@@ -8,11 +8,8 @@ struct LALockScreenView: View {
     let context: ActivityViewContext<PromilleActivityAttributes>
 
     private var bac: Double { context.state.bac }
-    private var rate: Double { context.state.eliminationRate }
 
     var body: some View {
-        let warningThreshold = context.state.warningThreshold
-
         HStack(alignment: .center, spacing: 16) {
 
             // Left column: big BAC + status label
@@ -31,7 +28,7 @@ struct LALockScreenView: View {
                     .font(.system(size: 9, weight: .semibold))
                     .tracking(1.5)
                     .foregroundStyle(laStatusColor(bac))
-                if let clock = laSoberClock(bac, rate: rate, since: context.state.lastUpdated) {
+                if let clock = laSoberClock(context.state.soberAt) {
                     Text("nüchtern ~ \(clock)")
                         .font(.system(size: 10))
                         .foregroundStyle(Color(red: 0.659, green: 0.620, blue: 0.537))
@@ -48,13 +45,13 @@ struct LALockScreenView: View {
                 LATimerRow(
                     icon: "checkmark.circle.fill",
                     label: "Nüchtern",
-                    value: laCountdown(bac, threshold: 0.01, rate: rate),
+                    value: laCountdownTo(context.state.soberAt),
                     color: Color(red: 0.420, green: 0.608, blue: 0.431)
                 )
                 LATimerRow(
                     icon: "car.fill",
-                    label: "Fahrbereit",
-                    value: laCountdown(bac, threshold: warningThreshold, rate: rate),
+                    label: "Grenzwert",
+                    value: laCountdownTo(context.state.driveReadyAt),
                     color: Color(red: 0.788, green: 0.502, blue: 0.184)
                 )
             }
@@ -101,7 +98,6 @@ struct PromilleLiveActivity: Widget {
                 .widgetURL(URL(string: "promille://open"))
         } dynamicIsland: { context in
             let bac = context.state.bac
-            let rate = context.state.eliminationRate
 
             return DynamicIsland {
                 // Expanded: shown when user long-presses the island
@@ -147,13 +143,13 @@ struct PromilleLiveActivity: Widget {
                         LAExpandedTimer(
                             icon: "checkmark.circle.fill",
                             label: "Nüchtern",
-                            value: laCountdown(bac, threshold: 0.01, rate: rate),
+                            value: laCountdownTo(context.state.soberAt),
                             color: Color(red: 0.420, green: 0.608, blue: 0.431)
                         )
                         LAExpandedTimer(
                             icon: "car.fill",
-                            label: "Fahrbereit",
-                            value: laCountdown(bac, threshold: context.state.warningThreshold, rate: rate),
+                            label: "Grenzwert",
+                            value: laCountdownTo(context.state.driveReadyAt),
                             color: Color(red: 0.788, green: 0.502, blue: 0.184)
                         )
                         Spacer(minLength: 0)
@@ -234,30 +230,33 @@ private func laStatusLabel(_ bac: Double) -> String {
 }
 
 private func laFormatBAC(_ value: Double) -> String {
-    String(format: "%.2f", value).replacingOccurrences(of: ".", with: ",")
+    String(format: "%.2f", locale: Locale(identifier: "de_DE"), value)
 }
 
 private func laFormatBACShort(_ value: Double) -> String {
     if value < 0.01 { return "0,0" }
-    return String(format: "%.1f", value).replacingOccurrences(of: ".", with: ",")
+    return String(format: "%.1f", locale: Locale(identifier: "de_DE"), value)
 }
 
-// Absolute clock time the user is expected to drop below 0.01 ‰. Computed from
-// the snapshot (lastUpdated + remaining hours), so it stays correct on the lock
-// screen even without further push updates, unlike a live-drifting countdown.
-private func laSoberClock(_ bac: Double, rate: Double, since: Date) -> String? {
-    guard bac > 0.01, rate > 0 else { return nil }
-    let seconds = ((bac - 0.01) / rate) * 3600
-    let soberAt = since.addingTimeInterval(seconds)
+// Absolute clock time the user is expected to drop below the sober threshold.
+// The app computes this with the full BAC engine (covering the still-rising
+// absorption phase) and passes the resulting Date in the activity state, so it
+// stays correct on the lock screen without further push updates.
+private func laSoberClock(_ soberAt: Date?) -> String? {
+    guard let soberAt, soberAt.timeIntervalSinceNow > 60 else { return nil }
     let fmt = DateFormatter()
     fmt.locale = Locale(identifier: "de_DE")
     fmt.dateFormat = "HH:mm"
     return fmt.string(from: soberAt)
 }
 
-private func laCountdown(_ bac: Double, threshold: Double, rate: Double) -> String {
-    guard bac > threshold, rate > 0 else { return "Jetzt" }
-    let totalMin = Int(((bac - threshold) / rate) * 60)
+// Countdown to a precomputed target Date. nil means the threshold is not reached
+// within the forecast horizon; a target at/near now reads as "Jetzt".
+private func laCountdownTo(_ target: Date?) -> String {
+    guard let target else { return "> 24 h" }
+    let seconds = target.timeIntervalSinceNow
+    guard seconds > 60 else { return "Jetzt" }
+    let totalMin = Int(seconds / 60)
     let h = totalMin / 60
     let m = totalMin % 60
     if h > 0 && m > 0 { return "\(h)h \(m)m" }

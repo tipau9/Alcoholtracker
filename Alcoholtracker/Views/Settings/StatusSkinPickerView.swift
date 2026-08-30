@@ -53,7 +53,7 @@ struct StatusSkinPickerView: View {
 
                         ForEach(StatusSkin.allCases, id: \.self) { s in
                             SSPSkinCard(skin: s, isSelected: skin == s) {
-                                withAnimation(.spring(response: 0.25)) { skin = s }
+                                withAnimation(.appSnappy) { skin = s }
                             }
                         }
                     }
