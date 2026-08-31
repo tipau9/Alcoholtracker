@@ -58,6 +58,7 @@ fun CrewView(
     var showAuth by remember { mutableStateOf(false) }
     var showJam by remember { mutableStateOf(false) }
     var selectedMember by remember { mutableStateOf<CrewMemberEntity?>(null) }
+    var joiningJamID by remember { mutableStateOf<String?>(null) }
 
     val isSignedIn by supabase.isSignedIn.collectAsState()
     val myProfile by supabase.myProfile.collectAsState()
@@ -71,6 +72,9 @@ fun CrewView(
             // Read inside the loop: the profile arrives after the first
             // composition, and a captured 1.5 would outlive the real threshold.
             container.friendSync.sync(profile?.dangerThreshold ?: 1.5)
+            // Refresh joinable friend jams for the banner while not in a jam
+            // (mirrors iOS CrewView.swift's syncFriendsLoop).
+            container.jamService.refreshFriendJams(members.mapNotNull { it.friendCode })
             delay(60_000)
         }
     }
@@ -85,6 +89,7 @@ fun CrewView(
     }
 
     val currentJam by container.jamService.currentJam.collectAsState()
+    val availableJamsFromFriends by container.jamService.availableJamsFromFriends.collectAsState()
     val memories by container.photoMemoryRepository.memories.collectAsState(initial = emptyList())
     var selectedMemory by remember { mutableStateOf<PhotoMemoryEntity?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -297,6 +302,29 @@ fun CrewView(
                             )
                         }
                     }
+                }
+            }
+
+            // Active/friend jam banner (matches iOS CrewView.swift 1:1)
+            if (currentJam != null) {
+                item {
+                    ActiveJamBanner(jam = currentJam!!, onTap = { showJam = true })
+                }
+            } else {
+                items(availableJamsFromFriends, key = { it.id }) { jam ->
+                    FriendJamBanner(
+                        jam = jam,
+                        isJoining = joiningJamID == jam.id,
+                        onJoin = {
+                            if (joiningJamID == null) {
+                                joiningJamID = jam.id
+                                coroutineScope.launch {
+                                    runCatching { container.jamService.joinJamFromFriend(jam) }
+                                    joiningJamID = null
+                                }
+                            }
+                        }
+                    )
                 }
             }
 
@@ -580,6 +608,130 @@ fun CrewView(
                     )
                 }
             }
+        }
+    }
+}
+
+// Shows the jam you are currently in, so tapping jumps straight to the lobby
+// (matches iOS CrewView.swift's ActiveJamBanner 1:1).
+@Composable
+private fun ActiveJamBanner(jam: de.tipau.promille.bac.Jam, onTap: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(AppColors.accent.copy(alpha = 0.08f))
+            .border(1.dp, AppColors.accent.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+            .clickable(onClick = onTap)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(AppColors.accent.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = de.tipau.promille.ui.components.AppIcons.Waveform,
+                contentDescription = null,
+                tint = AppColors.accent,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(AppColors.statusGreen)
+                )
+                Text(
+                    text = "Aktiver Jam",
+                    color = AppColors.statusGreen,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Text(
+                text = "${maxOf(1, jam.participants.size)} Teilnehmer · Tippen zum Öffnen",
+                color = AppColors.textDim,
+                fontSize = 13.sp
+            )
+        }
+        Icon(
+            imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+            contentDescription = null,
+            tint = AppColors.textMuted,
+            modifier = Modifier.size(13.dp)
+        )
+    }
+}
+
+// Lets the user jump straight into a friend's jam from the Friends tab,
+// without opening the jam lobby first (matches iOS CrewView.swift's
+// FriendJamBanner 1:1).
+@Composable
+private fun FriendJamBanner(jam: de.tipau.promille.bac.Jam, isJoining: Boolean, onJoin: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(AppColors.accent.copy(alpha = 0.06f))
+            .border(0.8.dp, AppColors.accent.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
+            .clickable(enabled = !isJoining, onClick = onJoin)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(AppColors.accent.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = de.tipau.promille.ui.components.AppIcons.Group,
+                contentDescription = null,
+                tint = AppColors.accent,
+                modifier = Modifier.size(17.dp)
+            )
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                text = "${jam.hostName} jammt gerade",
+                color = AppColors.text,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Jam von Freunden · Tippen zum Beitreten",
+                color = AppColors.textDim,
+                fontSize = 12.sp
+            )
+        }
+        if (isJoining) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                color = AppColors.accent,
+                strokeWidth = 2.dp
+            )
+        } else {
+            Text(
+                text = "Beitreten",
+                color = AppColors.accent,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(AppColors.accent.copy(alpha = 0.12f))
+                    .border(0.5.dp, AppColors.accent.copy(alpha = 0.3f), RoundedCornerShape(50))
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            )
         }
     }
 }
