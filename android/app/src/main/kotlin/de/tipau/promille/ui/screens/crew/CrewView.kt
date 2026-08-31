@@ -109,22 +109,23 @@ fun CrewView(
     var selectedMemory by remember { mutableStateOf<PhotoMemoryEntity?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    val photoPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let {
-            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                val input = context.contentResolver.openInputStream(it) ?: return@launch
-                val file = java.io.File(context.filesDir, "memory_${System.currentTimeMillis()}.jpg")
-                input.use { inStream ->
-                    file.outputStream().use { outStream -> inStream.copyTo(outStream) }
+    // CrewView.swift:174-176 opens PhotoCaptureView rather than a bare picker,
+    // so the camera, the preview and the caption field all sit behind this.
+    var showCapture by remember { mutableStateOf(false) }
+
+    if (showCapture) {
+        PhotoCaptureSheet(
+            onDismiss = { showCapture = false },
+            onSave = { filename, caption ->
+                coroutineScope.launch {
+                    container.photoMemoryRepository.addMemory(
+                        filename = filename,
+                        bacAtTime = null,
+                        caption = caption
+                    )
                 }
-                container.photoMemoryRepository.addMemory(
-                    filename = file.absolutePath,
-                    bacAtTime = null
-                )
             }
-        }
+        )
     }
 
     if (showJam) {
@@ -456,7 +457,7 @@ fun CrewView(
             item {
                 de.tipau.promille.ui.components.PhotoMemoryStrip(
                     memories = memories,
-                    onAddPhoto = { photoPickerLauncher.launch("image/*") },
+                    onAddPhoto = { showCapture = true },
                     onSelectMemory = { selectedMemory = it }
                 )
             }
