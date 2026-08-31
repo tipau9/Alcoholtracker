@@ -44,7 +44,7 @@ class AppContainer(context: Context) {
     val sessionEventDao = database.sessionEventDao()
     private val crewMemberDao = database.crewMemberDao()
     private val dayNoteDao = database.dayNoteDao()
-    private val customMixDao = database.customMixDao()
+    val customMixDao = database.customMixDao()
     private val photoMemoryDao = database.photoMemoryDao()
     private val pendingSyncDao = database.pendingSyncDao()
 

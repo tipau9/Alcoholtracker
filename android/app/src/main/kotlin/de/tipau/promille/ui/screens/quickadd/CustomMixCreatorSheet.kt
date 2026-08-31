@@ -1,11 +1,4 @@
-
-
 package de.tipau.promille.ui.screens.quickadd
-import androidx.compose.material3.Icon
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-
-
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,21 +9,35 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
+import de.tipau.promille.data.CustomMixDao
+import de.tipau.promille.data.CustomMixEntity
 import de.tipau.promille.data.DrinkEntity
+import de.tipau.promille.data.DrinkTemplateEntity
+import de.tipau.promille.data.MixIngredient
+import de.tipau.promille.network.SupabaseService
+import de.tipau.promille.network.blobJson
+import de.tipau.promille.network.contributeMix
+import de.tipau.promille.repository.DrinkTemplateRepository
+import de.tipau.promille.ui.components.AppIcons
 import de.tipau.promille.ui.components.PrimaryButton
 import de.tipau.promille.ui.components.PromilleCard
 import de.tipau.promille.ui.components.SectionLabel
+import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
 import java.util.Locale
 import java.util.UUID
 
@@ -41,11 +48,18 @@ data class MixIngredientInput(
     var abv: String = ""
 )
 
+// Compose a cocktail mix from individual ingredients. "Sofort trinken" adds a
+// one-off drink; "Speichern" also persists a CustomMix + DrinkTemplate so it
+// appears in QuickAdd next time; "Teilen" additionally shares it to the
+// community DB via contribute_mix. Mirrors iOS's MixCreatorSheet 1:1.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomMixCreatorSheet(
     onDismiss: () -> Unit,
-    onMixCreated: (DrinkEntity) -> Unit
+    onMixCreated: (DrinkEntity) -> Unit,
+    templateRepository: DrinkTemplateRepository? = null,
+    customMixDao: CustomMixDao? = null,
+    supabase: SupabaseService? = null
 ) {
     var mixName by remember { mutableStateOf("") }
     val ingredients = remember {
@@ -54,6 +68,10 @@ fun CustomMixCreatorSheet(
             MixIngredientInput(name = "Zutat 2", volumeML = "160", abv = "0")
         )
     }
+    var showCommunity by remember { mutableStateOf(false) }
+    var shareConfirm by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     // Rechnerische Summen
     val totalVolume = ingredients.sumOf { it.volumeML.toDoubleOrNull() ?: 0.0 }
@@ -65,6 +83,48 @@ fun CustomMixCreatorSheet(
     val effectiveAbv = if (totalVolume > 0) (totalAlcoholMl / totalVolume) * 100.0 else 0.0
     val totalAlcoholGrams = totalAlcoholMl * 0.789
     val estimatedCalories = (totalAlcoholGrams * 7).toInt()
+    val isReadyToSave = totalVolume > 0 && mixName.isNotBlank()
+
+    fun buildDrink() = DrinkEntity(
+        id = UUID.randomUUID().toString(),
+        name = mixName.trim().ifEmpty { "Mix" },
+        volume = totalVolume,
+        abv = effectiveAbv,
+        calories = estimatedCalories,
+        iconName = "wineglass",
+        categoryRaw = "cocktail",
+        timestampEpochSeconds = System.currentTimeMillis() / 1000
+    )
+
+    // Persists a CustomMix + matching DrinkTemplate, same shape as an imported
+    // community row so both paths land identically in QuickAdd's template list.
+    suspend fun persistMix(name: String, ings: List<MixIngredient>) {
+        val id = UUID.randomUUID().toString()
+        customMixDao?.insert(
+            CustomMixEntity(
+                id = id,
+                name = name,
+                ingredientsJson = blobJson.encodeToString(ings),
+                createdAt = System.currentTimeMillis() / 1000
+            )
+        )
+        val vol = ings.sumOf { it.volume }
+        val alcoholMl = ings.sumOf { it.volume * (it.abv / 100.0) }
+        val abv = if (vol > 0) (alcoholMl / vol) * 100.0 else 0.0
+        val calories = (alcoholMl * 0.789 * 7).toInt()
+        templateRepository?.insertLocalTemplate(
+            DrinkTemplateEntity(
+                id = id,
+                name = name,
+                categoryRaw = "cocktail",
+                volume = vol,
+                abv = abv,
+                calories = calories,
+                iconName = "wineglass",
+                isCustom = true
+            )
+        )
+    }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -106,6 +166,25 @@ fun CustomMixCreatorSheet(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+
+            // Community entry point
+            item {
+                PromilleCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showCommunity = true }
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(AppIcons.Group, null, tint = AppColors.accent, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text("Community-Mische ansehen", color = AppColors.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        Icon(AppIcons.ChevronRight, null, tint = AppColors.textDim, modifier = Modifier.size(16.dp))
                     }
                 }
             }
@@ -263,27 +342,112 @@ fun CustomMixCreatorSheet(
                 }
             }
 
-            // Save CTA
+            // Action bar: Teilen / Sofort trinken / Speichern (mirrors iOS's MCActionBar)
             item {
                 Spacer(Modifier.height(8.dp))
-                PrimaryButton(
-                    text = "Mischung hinzufügen",
-                    enabled = totalVolume > 0 && mixName.isNotBlank(),
-                    onClick = {
-                        val entity = DrinkEntity(
-                            id = UUID.randomUUID().toString(),
-                            name = mixName.trim(),
-                            volume = totalVolume,
-                            abv = effectiveAbv,
-                            calories = estimatedCalories,
-                            iconName = "cocktail",
-                            categoryRaw = "cocktail",
-                            timestampEpochSeconds = System.currentTimeMillis() / 1000
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(AppColors.card)
+                            .border(1.dp, AppColors.border, RoundedCornerShape(18.dp))
+                            .then(
+                                if (isReadyToSave) Modifier.clickable {
+                                    val name = mixName.trim()
+                                    val ings = ingredients.map {
+                                        MixIngredient(name = it.name, abv = it.abv.toDoubleOrNull() ?: 0.0, volume = it.volumeML.toDoubleOrNull() ?: 0.0)
+                                    }
+                                    coroutineScope.launch {
+                                        persistMix(name, ings)
+                                        if (supabase != null) {
+                                            runCatching {
+                                                supabase.contributeMix(
+                                                    context = context,
+                                                    name = name,
+                                                    ingredients = ings,
+                                                    totalVolume = totalVolume,
+                                                    totalAbv = effectiveAbv,
+                                                    calories = estimatedCalories
+                                                )
+                                            }
+                                        }
+                                        shareConfirm = true
+                                    }
+                                } else Modifier
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Filled.Share,
+                            "Teilen",
+                            tint = if (isReadyToSave) AppColors.accent else AppColors.textMuted,
+                            modifier = Modifier.size(18.dp)
                         )
-                        onMixCreated(entity)
                     }
-                )
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(AppColors.card)
+                            .border(1.dp, AppColors.border, RoundedCornerShape(18.dp))
+                            .clickable(enabled = totalVolume > 0) { onMixCreated(buildDrink()) }
+                            .padding(vertical = 15.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Sofort trinken", color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    PrimaryButton(
+                        text = "Speichern",
+                        enabled = isReadyToSave,
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            val name = mixName.trim()
+                            val ings = ingredients.map {
+                                MixIngredient(name = it.name, abv = it.abv.toDoubleOrNull() ?: 0.0, volume = it.volumeML.toDoubleOrNull() ?: 0.0)
+                            }
+                            coroutineScope.launch { persistMix(name, ings) }
+                            onMixCreated(buildDrink())
+                        }
+                    )
+                }
             }
         }
+    }
+
+    if (showCommunity) {
+        CommunityMixesSheet(
+            supabase = supabase,
+            onDismiss = { showCommunity = false },
+            onImport = { row ->
+                coroutineScope.launch { persistMix(row.name, row.ingredients) }
+            }
+        )
+    }
+
+    if (shareConfirm) {
+        AlertDialog(
+            onDismissRequest = { shareConfirm = false },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = AppColors.card,
+            title = { Text("Mix geteilt", color = AppColors.text, fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "Danke! Dein Mix wird für andere sichtbar, sobald genug Leute ihn teilen oder er freigegeben wird.",
+                    color = AppColors.textDim
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { shareConfirm = false }) {
+                    Text("OK", color = AppColors.accent, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
     }
 }
