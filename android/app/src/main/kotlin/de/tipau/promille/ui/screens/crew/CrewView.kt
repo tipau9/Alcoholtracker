@@ -508,7 +508,7 @@ fun CrewView(
 
             // Highest-risk member card (matches iOS CrewView.swift's
             // needsAttention.first / CareCard 1:1).
-            if (needsAttention.isNotEmpty() && sosMembers.isEmpty()) {
+            if (needsAttention.isNotEmpty()) {
                 item {
                     CareCard(member = needsAttention.first(), nowSeconds = nowSeconds)
                 }
@@ -518,7 +518,11 @@ fun CrewView(
             // soberBuddy / SoberBuddyCard 1:1).
             soberBuddy?.let { buddy ->
                 item {
-                    SoberBuddyCard(member = buddy, canDrive = mayDrive(buddy, nowSeconds))
+                    SoberBuddyCard(
+                        member = buddy,
+                        nowSeconds = nowSeconds,
+                        canDrive = mayDrive(buddy, nowSeconds)
+                    )
                 }
             }
 
@@ -802,7 +806,7 @@ private fun CareCard(member: CrewMemberEntity, nowSeconds: Long) {
             CRAvatar(initial = member.avatarInitial, status = status, size = 48.dp)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(member.name, color = AppColors.text, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text(member.name, color = AppColors.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                 de.tipau.promille.ui.components.StatusPill(status = status)
                 if (minutes != null) {
                     Text(
@@ -812,7 +816,7 @@ private fun CareCard(member: CrewMemberEntity, nowSeconds: Long) {
                     )
                 }
             }
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(14.dp))
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = String.format(Locale.GERMANY, "%.2f", estimated),
@@ -822,7 +826,7 @@ private fun CareCard(member: CrewMemberEntity, nowSeconds: Long) {
                     fontFamily = AppSerif,
                     style = androidx.compose.ui.text.TextStyle(fontFeatureSettings = "tnum")
                 )
-                Text("‰", color = status.color, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text("‰", color = status.color, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -831,7 +835,7 @@ private fun CareCard(member: CrewMemberEntity, nowSeconds: Long) {
 // Designated-driver readiness card (matches iOS CrewView.swift's
 // SoberBuddyCard 1:1). canDrive honors the buddy's own Probezeit setting.
 @Composable
-private fun SoberBuddyCard(member: CrewMemberEntity, canDrive: Boolean) {
+private fun SoberBuddyCard(member: CrewMemberEntity, nowSeconds: Long, canDrive: Boolean) {
     val accent = if (canDrive) AppColors.statusGreen else AppColors.statusRed
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -844,7 +848,9 @@ private fun SoberBuddyCard(member: CrewMemberEntity, canDrive: Boolean) {
     ) {
         CRAvatar(
             initial = member.avatarInitial,
-            status = de.tipau.promille.bac.BacStatus.of(member.currentBAC),
+            status = de.tipau.promille.bac.BacStatus.of(
+                CrewMath.estimatedBac(member.currentBAC, member.lastDrinkTimestamp, nowSeconds)
+            ),
             size = 40.dp
         )
         Spacer(Modifier.width(14.dp))
