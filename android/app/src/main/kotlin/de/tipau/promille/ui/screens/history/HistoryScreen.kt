@@ -46,6 +46,7 @@ fun HistoryScreen(
     dayNoteRepository: DayNoteRepository,
     drinkRepository: DrinkRepository? = null,
     userProfileRepository: UserProfileRepository? = null,
+    supabase: de.tipau.promille.network.SupabaseService? = null,
     modifier: Modifier = Modifier
 ) {
     val visibleMonth by viewModel.visibleMonth.collectAsState()
@@ -56,6 +57,8 @@ fun HistoryScreen(
     var showTrends by remember { mutableStateOf(false) }
 
     val allDrinks by (drinkRepository?.getAllDrinksSorted() ?: kotlinx.coroutines.flow.flowOf(emptyList()))
+        .collectAsState(initial = emptyList())
+    val allNotes by dayNoteRepository.getNotesBetween("0000-01-01", "9999-12-31")
         .collectAsState(initial = emptyList())
     val profileEntity by (userProfileRepository?.profile ?: kotlinx.coroutines.flow.flowOf(null))
         .collectAsState(initial = null)
@@ -73,7 +76,15 @@ fun HistoryScreen(
     if (showTrends) {
         TrendsView(
             drinks = allDrinks.map { DrinkRepository.toDomainDrink(it) },
+            notes = allNotes.map {
+                de.tipau.promille.bac.DayNote(
+                    day = LocalDate.parse(it.day),
+                    text = it.text,
+                    mood = de.tipau.promille.bac.DayMood.from(it.moodRaw)
+                )
+            },
             profile = profile,
+            supabase = supabase,
             onDismiss = { showTrends = false }
         )
     }

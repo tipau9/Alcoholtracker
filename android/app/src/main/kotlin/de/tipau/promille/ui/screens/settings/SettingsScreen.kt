@@ -69,7 +69,7 @@ fun SettingsScreen(
     var showGenderDialog by remember { mutableStateOf(false) }
     var showStomachDialog by remember { mutableStateOf(false) }
     var showHomeStyleDialog by remember { mutableStateOf(false) }
-    var shareAnonymousCityInsights by remember { mutableStateOf(false) }
+    var showUpdateSheet by remember { mutableStateOf(false) }
 
     val supabase = appContainer?.supabase
     val isSignedIn by (supabase?.isSignedIn ?: MutableStateFlow(false)).collectAsState()
@@ -915,8 +915,8 @@ fun SettingsScreen(
                         SettingsToggleRow(
                             title = "Anonyme Stadtstatistiken beitragen",
                             subtitle = "Getränk, lokale Stunde sowie begrenzte BAC- und Dauerwerte teilen",
-                            checked = shareAnonymousCityInsights,
-                            onCheckedChange = { shareAnonymousCityInsights = it },
+                            checked = p.shareAnonymousCityInsights,
+                            onCheckedChange = { viewModel.updateShareAnonymousCityInsights(it) },
                             icon = AppIcons.Building
                         )
                         SettingsDivider()
@@ -939,7 +939,14 @@ fun SettingsScreen(
                 SectionLabel(text = "ÜBER")
                 PromilleCard {
                     Column {
-                        SettingsInfoRow(label = "Version", value = "0.2.4")
+                        SettingsInfoRow(label = "Version", value = de.tipau.promille.BuildConfig.VERSION_NAME)
+                        SettingsDivider()
+                        SettingsNavigationRow(
+                            title = "Nach Updates suchen",
+                            subtitle = "GitHub Releases (tipau9/Alcoholtracker)",
+                            onClick = { showUpdateSheet = true },
+                            icon = AppIcons.ArrowDown
+                        )
                         SettingsDivider()
                         SettingsNavigationRow(
                             title = "Entwickler-Optionen & Admin",
@@ -956,6 +963,12 @@ fun SettingsScreen(
                 )
             }
         }
+    }
+
+    if (showUpdateSheet) {
+        de.tipau.promille.ui.components.AppUpdateSheet(
+            onDismiss = { showUpdateSheet = false }
+        )
     }
 }
 

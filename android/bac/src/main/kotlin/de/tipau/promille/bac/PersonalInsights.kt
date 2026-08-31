@@ -57,6 +57,72 @@ data class Discovery(
     val id: String get() = "$title|$evidence"
 }
 
+// Korreliert Kater/Stimmung mit dem Peak BAC der Nacht, auf die sich die
+// Notiz bezieht. Port of HistoryViewModel.getMoodCorrelations/moodInsight/
+// peakBACsByMood (Swift).
+data class MoodCorrelation(val moodScore: Int, val averagePeakBAC: Double, val nights: Int) {
+    val id: Int get() = moodScore
+}
+
+data class MoodInsight(val goodAvg: Double, val goodNights: Int, val badAvg: Double, val badNights: Int)
+
+private fun peakBACsByMood(
+    drinks: List<Drink>,
+    notes: List<DayNote>,
+    profile: Profile,
+    zone: ZoneId
+): Map<Int, List<Double>> {
+    val drinksByDay: Map<LocalDate, List<Drink>> = drinks
+        .filter { it.abv > 0.01 }
+        .groupBy { LogicalDay.dateOf(it.timestampEpochSeconds, zone) }
+
+    val result = HashMap<Int, MutableList<Double>>()
+    for (note in notes) {
+        if (note.mood == DayMood.NEUTRAL) continue
+        val dayDrinks = drinksByDay[note.day] ?: continue
+        val peak = BacProjectionInput(
+            drinks = dayDrinks,
+            profile = profile,
+            stomachStatus = profile.defaultStomachStatus,
+            conservative = profile.conservativeForApp
+        ).peakBac()
+        result.getOrPut(note.mood.raw) { mutableListOf() }.add(peak)
+    }
+    return result
+}
+
+fun getMoodCorrelations(
+    drinks: List<Drink>,
+    notes: List<DayNote>,
+    profile: Profile,
+    zone: ZoneId = ZoneId.systemDefault()
+): List<MoodCorrelation> {
+    val byMood = peakBACsByMood(drinks, notes, profile, zone)
+    return byMood.map { (mood, bacs) ->
+        MoodCorrelation(moodScore = mood, averagePeakBAC = bacs.sum() / bacs.size, nights = bacs.size)
+    }.sortedBy { it.moodScore }
+}
+
+// nil until both buckets have >= 2 nights, so a single outlier evening never
+// produces a bogus conclusion.
+fun moodInsight(
+    drinks: List<Drink>,
+    notes: List<DayNote>,
+    profile: Profile,
+    zone: ZoneId = ZoneId.systemDefault()
+): MoodInsight? {
+    val byMood = peakBACsByMood(drinks, notes, profile, zone)
+    val good = (byMood[DayMood.HAPPY.raw] ?: emptyList()) + (byMood[DayMood.PROUD.raw] ?: emptyList())
+    val bad = (byMood[DayMood.REGRET.raw] ?: emptyList()) + (byMood[DayMood.TERRIBLE.raw] ?: emptyList())
+    if (good.size < 2 || bad.size < 2) return null
+    return MoodInsight(
+        goodAvg = good.sum() / good.size,
+        goodNights = good.size,
+        badAvg = bad.sum() / bad.size,
+        badNights = bad.size
+    )
+}
+
 data class PersonalInsights(
     val totalDrinks: Int,
     val drinkingDays: Int,
