@@ -42,6 +42,7 @@ import java.util.Locale
 import de.tipau.promille.AppSans
 import de.tipau.promille.AppSerif
 import de.tipau.promille.TabularFigures
+import de.tipau.promille.color
 
 @Composable
 fun CrewView(
@@ -83,9 +84,16 @@ fun CrewView(
     val homeMembers = remember(members) { members.filter { it.isHome } }
     val sosMembers = remember(members) { members.filter { it.sosActive } }
     val needsAttention = remember(members, nowSeconds) {
-        members.filter {
-            !it.isHome && CrewMath.careScore(it.currentBAC, it.lastDrinkTimestamp, nowSeconds) >= 40
-        }
+        members
+            .filter { !it.isHome && CrewMath.careScore(it.currentBAC, it.lastDrinkTimestamp, nowSeconds) >= 40 }
+            .sortedByDescending { CrewMath.careScore(it.currentBAC, it.lastDrinkTimestamp, nowSeconds) }
+    }
+    val soberBuddy = remember(members) { members.firstOrNull { it.isSoberBuddy && !it.isHome } }
+    // Honors the buddy's own Probezeit setting (0,0 permille) versus the
+    // standard 0,5 limit, using their limit since you cannot know it otherwise.
+    fun mayDrive(member: CrewMemberEntity, nowSeconds: Long): Boolean {
+        val estimated = CrewMath.estimatedBac(member.currentBAC, member.lastDrinkTimestamp, nowSeconds)
+        return if (member.isProbationaryDriver) estimated <= 0.005 else estimated < 0.5
     }
 
     val currentJam by container.jamService.currentJam.collectAsState()
@@ -498,35 +506,19 @@ fun CrewView(
                 }
             }
 
-            // Needs Attention Banner
+            // Highest-risk member card (matches iOS CrewView.swift's
+            // needsAttention.first / CareCard 1:1).
             if (needsAttention.isNotEmpty() && sosMembers.isEmpty()) {
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(AppColors.statusOrange.copy(alpha = 0.15f))
-                            .border(1.dp, AppColors.statusOrange.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
-                            .padding(14.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.Warning, "Warnung", tint = AppColors.statusOrange, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = "Aufmerksamkeit empfohlen",
-                                    color = AppColors.statusOrange,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "${needsAttention.joinToString { it.name }} braucht vielleicht ein Auge.",
-                                    color = AppColors.textDim,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-                    }
+                    CareCard(member = needsAttention.first(), nowSeconds = nowSeconds)
+                }
+            }
+
+            // Designated-driver readiness (matches iOS CrewView.swift's
+            // soberBuddy / SoberBuddyCard 1:1).
+            soberBuddy?.let { buddy ->
+                item {
+                    SoberBuddyCard(member = buddy, canDrive = mayDrive(buddy, nowSeconds))
                 }
             }
 
@@ -653,7 +645,7 @@ private fun ActiveJamBanner(jam: de.tipau.promille.bac.Jam, onTap: () -> Unit) {
                     text = "Aktiver Jam",
                     color = AppColors.statusGreen,
                     fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.SemiBold
                 )
             }
             Text(
@@ -706,7 +698,7 @@ private fun FriendJamBanner(jam: de.tipau.promille.bac.Jam, isJoining: Boolean, 
                 text = "${jam.hostName} jammt gerade",
                 color = AppColors.text,
                 fontSize = 17.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = "Jam von Freunden · Tippen zum Beitreten",
@@ -725,12 +717,158 @@ private fun FriendJamBanner(jam: de.tipau.promille.bac.Jam, isJoining: Boolean, 
                 text = "Beitreten",
                 color = AppColors.accent,
                 fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
                     .background(AppColors.accent.copy(alpha = 0.12f))
                     .border(0.5.dp, AppColors.accent.copy(alpha = 0.3f), RoundedCornerShape(50))
                     .padding(horizontal = 14.dp, vertical = 8.dp)
+            )
+        }
+    }
+}
+
+// Avatar initial circle, colored by BAC status (matches iOS CrewView.swift's
+// CRAvatar 1:1). Reused by CareCard and SoberBuddyCard.
+@Composable
+private fun CRAvatar(initial: String, status: de.tipau.promille.bac.BacStatus, size: androidx.compose.ui.unit.Dp) {
+    val sober = status == de.tipau.promille.bac.BacStatus.SOBER
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(status.color.copy(alpha = 0.15f))
+            .border(1.5.dp, status.color.copy(alpha = if (sober) 0.25f else 0.55f), CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = initial,
+            color = if (sober) AppColors.text else status.color,
+            fontSize = (size.value * 0.38f).sp,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+// Highest-risk member card, replacing the shared name-list banner (matches
+// iOS CrewView.swift's CareCard 1:1). Same careScore >= 40 gate, only the
+// presentation changed.
+@Composable
+private fun CareCard(member: CrewMemberEntity, nowSeconds: Long) {
+    val estimated = CrewMath.estimatedBac(member.currentBAC, member.lastDrinkTimestamp, nowSeconds)
+    val status = de.tipau.promille.bac.BacStatus.of(estimated)
+    val minutes = CrewMath.updatedMinutesAgo(member.lastDrinkTimestamp, nowSeconds)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(status.color.copy(alpha = 0.15f))
+            .border(1.dp, status.color.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(top = 12.dp, bottom = 10.dp)
+        ) {
+            Icon(
+                Icons.Filled.Warning,
+                contentDescription = null,
+                tint = status.color,
+                modifier = Modifier.size(12.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "Aufmerksamkeit nötig",
+                color = status.color,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = "Höchster Risikowert",
+                color = AppColors.textMuted,
+                fontSize = 11.sp
+            )
+        }
+        HorizontalDivider(color = AppColors.border.copy(alpha = 0.6f), thickness = 0.5.dp)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp)
+        ) {
+            CRAvatar(initial = member.avatarInitial, status = status, size = 48.dp)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(member.name, color = AppColors.text, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                de.tipau.promille.ui.components.StatusPill(status = status)
+                if (minutes != null) {
+                    Text(
+                        text = if (minutes <= 0) "Gerade aktualisiert" else "Aktualisiert vor $minutes min",
+                        color = AppColors.textDim,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = String.format(Locale.GERMANY, "%.2f", estimated),
+                    color = status.color,
+                    fontSize = 38.sp,
+                    fontWeight = FontWeight.Light,
+                    fontFamily = AppSerif,
+                    style = androidx.compose.ui.text.TextStyle(fontFeatureSettings = "tnum")
+                )
+                Text("‰", color = status.color, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+// Designated-driver readiness card (matches iOS CrewView.swift's
+// SoberBuddyCard 1:1). canDrive honors the buddy's own Probezeit setting.
+@Composable
+private fun SoberBuddyCard(member: CrewMemberEntity, canDrive: Boolean) {
+    val accent = if (canDrive) AppColors.statusGreen else AppColors.statusRed
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(accent.copy(alpha = 0.07f))
+            .border(0.8.dp, accent.copy(alpha = 0.28f), RoundedCornerShape(14.dp))
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        CRAvatar(
+            initial = member.avatarInitial,
+            status = de.tipau.promille.bac.BacStatus.of(member.currentBAC),
+            size = 40.dp
+        )
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = if (canDrive) "Fahrbereit" else "Darf nicht mehr fahren",
+                color = accent,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(member.name, color = AppColors.text, fontSize = 17.sp)
+        }
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(accent.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (canDrive) de.tipau.promille.ui.components.AppIcons.Car else Icons.Filled.Warning,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(17.dp)
             )
         }
     }
