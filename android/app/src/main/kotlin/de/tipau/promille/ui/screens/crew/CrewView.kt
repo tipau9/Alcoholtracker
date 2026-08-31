@@ -7,9 +7,11 @@ import androidx.compose.material.icons.filled.*
 
 
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -60,6 +62,8 @@ fun CrewView(
     var showJam by remember { mutableStateOf(false) }
     var selectedMember by remember { mutableStateOf<CrewMemberEntity?>(null) }
     var joiningJamID by remember { mutableStateOf<String?>(null) }
+    // Swipe-to-delete confirmation (CrewView.swift:23,138-155 memberToDelete).
+    var memberToDelete by remember { mutableStateOf<CrewMemberEntity?>(null) }
 
     val isSignedIn by supabase.isSignedIn.collectAsState()
     val myProfile by supabase.myProfile.collectAsState()
@@ -174,6 +178,28 @@ fun CrewView(
             onDelete = {
                 coroutineScope.launch {
                     crewRepository.delete(selectedMember!!)
+                }
+            }
+        )
+    }
+
+    // Swipe-to-delete confirmation (matches iOS CrewView.swift:138-155 1:1).
+    memberToDelete?.let { target ->
+        AlertDialog(
+            onDismissRequest = { memberToDelete = null },
+            title = { Text("Freund entfernen?") },
+            text = { Text("${target.name} wird aus deiner Liste entfernt.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    coroutineScope.launch { crewRepository.delete(target) }
+                    memberToDelete = null
+                }) {
+                    Text("Entfernen", color = AppColors.statusRed)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { memberToDelete = null }) {
+                    Text("Abbrechen")
                 }
             }
         )
@@ -583,11 +609,18 @@ fun CrewView(
                     SectionLabel("Unterwegs (${activeMembers.size})")
                 }
                 items(activeMembers, key = { it.id }) { member ->
-                    MemberCard(
-                        member = member,
-                        nowSeconds = nowSeconds,
-                        onClick = { selectedMember = member }
-                    )
+                    SwipeToDeleteRow(onDelete = { memberToDelete = member }) {
+                        MemberCard(
+                            member = member,
+                            nowSeconds = nowSeconds,
+                            onClick = { selectedMember = member },
+                            onToggleDriver = {
+                                coroutineScope.launch {
+                                    crewRepository.update(member.copy(isSoberBuddy = !member.isSoberBuddy))
+                                }
+                            }
+                        )
+                    }
                 }
             }
 
@@ -597,11 +630,18 @@ fun CrewView(
                     SectionLabel("Sicher zu Hause (${homeMembers.size})")
                 }
                 items(homeMembers, key = { it.id }) { member ->
-                    MemberCard(
-                        member = member,
-                        nowSeconds = nowSeconds,
-                        onClick = { selectedMember = member }
-                    )
+                    SwipeToDeleteRow(onDelete = { memberToDelete = member }) {
+                        MemberCard(
+                            member = member,
+                            nowSeconds = nowSeconds,
+                            onClick = { selectedMember = member },
+                            onToggleDriver = {
+                                coroutineScope.launch {
+                                    crewRepository.update(member.copy(isSoberBuddy = !member.isSoberBuddy))
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -880,17 +920,60 @@ private fun SoberBuddyCard(member: CrewMemberEntity, nowSeconds: Long, canDrive:
     }
 }
 
+// Reveals a red delete affordance on a leading swipe (matches iOS
+// CrewView.swift:742-786 SwipeToDeleteRow 1:1: 80dp reveal, snaps back rather
+// than deleting outright so the confirmation dialog decides).
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeToDeleteRow(onDelete: () -> Unit, content: @Composable () -> Unit) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) onDelete()
+            false
+        }
+    )
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(AppColors.statusRed),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = "Entfernen",
+                    tint = androidx.compose.ui.graphics.Color.White,
+                    modifier = Modifier
+                        .padding(end = 24.dp)
+                        .size(20.dp)
+                )
+            }
+        }
+    ) {
+        content()
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MemberCard(
     member: CrewMemberEntity,
     nowSeconds: Long,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onToggleDriver: () -> Unit
 ) {
     val estimated = CrewMath.estimatedBac(member.currentBAC, member.lastDrinkTimestamp, nowSeconds)
+    // Long-press mirrors iOS's contextMenu "Als Fahrer markieren" / "Nicht mehr
+    // Fahrer" entry (CrewView.swift:285-293); the other two entries (profile,
+    // delete) are already reachable via tap and swipe respectively.
     PromilleCard(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onToggleDriver)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
