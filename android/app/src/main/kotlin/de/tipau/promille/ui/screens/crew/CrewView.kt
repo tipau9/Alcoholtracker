@@ -22,6 +22,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -926,11 +929,16 @@ private fun SoberBuddyCard(member: CrewMemberEntity, nowSeconds: Long, canDrive:
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwipeToDeleteRow(onDelete: () -> Unit, content: @Composable () -> Unit) {
+    val density = LocalDensity.current
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             if (value == SwipeToDismissBoxValue.EndToStart) onDelete()
             false
-        }
+        },
+        // iOS triggers on a 40dp flick of an 80dp panel (CrewView.swift:776);
+        // Material3's default half-row-width threshold makes that same
+        // gesture much harder to land, so pin it to a comparable distance.
+        positionalThreshold = { with(density) { 56.dp.toPx() } }
     )
     SwipeToDismissBox(
         state = dismissState,
@@ -967,13 +975,21 @@ private fun MemberCard(
     onToggleDriver: () -> Unit
 ) {
     val estimated = CrewMath.estimatedBac(member.currentBAC, member.lastDrinkTimestamp, nowSeconds)
+    val haptics = LocalHapticFeedback.current
     // Long-press mirrors iOS's contextMenu "Als Fahrer markieren" / "Nicht mehr
     // Fahrer" entry (CrewView.swift:285-293); the other two entries (profile,
-    // delete) are already reachable via tap and swipe respectively.
+    // delete) are already reachable via tap and swipe respectively. Haptic
+    // feedback stands in for the menu's own visible affordance.
     PromilleCard(
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = onToggleDriver)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onToggleDriver()
+                }
+            )
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
