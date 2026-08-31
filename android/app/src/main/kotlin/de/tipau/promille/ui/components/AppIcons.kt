@@ -687,7 +687,8 @@ object AppIcons {
         close()
     }
 
-    val Person: ImageVector = Icons.Filled.AccountCircle
+    val House: ImageVector = Icons.Filled.Home
+    val Person: ImageVector = Icons.Filled.Person
     val Share: ImageVector = Icons.Filled.Share
     val Close: ImageVector = Icons.Filled.Close
     val Check: ImageVector = Icons.Filled.Check
