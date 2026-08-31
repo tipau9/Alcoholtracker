@@ -652,7 +652,7 @@ private fun ActiveJamBanner(jam: de.tipau.promille.bac.Jam, onTap: () -> Unit) {
                 Text(
                     text = "Aktiver Jam",
                     color = AppColors.statusGreen,
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -705,13 +705,13 @@ private fun FriendJamBanner(jam: de.tipau.promille.bac.Jam, isJoining: Boolean, 
             Text(
                 text = "${jam.hostName} jammt gerade",
                 color = AppColors.text,
-                fontSize = 14.sp,
+                fontSize = 17.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = "Jam von Freunden · Tippen zum Beitreten",
                 color = AppColors.textDim,
-                fontSize = 12.sp
+                fontSize = 13.sp
             )
         }
         if (isJoining) {
@@ -724,7 +724,7 @@ private fun FriendJamBanner(jam: de.tipau.promille.bac.Jam, isJoining: Boolean, 
             Text(
                 text = "Beitreten",
                 color = AppColors.accent,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
