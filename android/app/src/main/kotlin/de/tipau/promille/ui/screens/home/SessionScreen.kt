@@ -45,6 +45,8 @@ import java.util.UUID
 import android.content.Context
 import androidx.compose.ui.platform.LocalContext
 import de.tipau.promille.bac.LogicalDay
+import de.tipau.promille.service.AppUpdateService
+import de.tipau.promille.service.UpdateCheckResult
 import de.tipau.promille.AppSerif
 
 @Composable
@@ -115,9 +117,23 @@ fun SessionScreen(
     var showHomeEditSheet by remember { mutableStateOf(false) }
     var isWidgetEditMode by remember { mutableStateOf(false) }
     var showMorningMoodPrompt by remember { mutableStateOf(false) }
+    var availableUpdate by remember { mutableStateOf<UpdateCheckResult.UpdateAvailable?>(null) }
+    var showUpdateSheet by remember { mutableStateOf(false) }
     var amountTemplate by remember { mutableStateOf<DrinkTemplateEntity?>(null) }
 
     val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        val updateResult = AppUpdateService.checkForUpdate()
+        if (updateResult is UpdateCheckResult.UpdateAvailable) {
+            val prefs = context.getSharedPreferences("promille_prefs", Context.MODE_PRIVATE)
+            val dismissedTag = prefs.getString("dismissed_update_tag", "")
+            if (dismissedTag != updateResult.newVersion) {
+                availableUpdate = updateResult
+            }
+        }
+    }
+
     LaunchedEffect(drinks) {
         val dayNoteRepo = container?.dayNoteRepository
         if (dayNoteRepo != null) {
@@ -288,7 +304,8 @@ fun SessionScreen(
             onStartSipCounter = { template ->
                 viewModel.startSipCounter(template)
             },
-            supabase = container?.supabase
+            supabase = container?.supabase,
+            customMixDao = container?.customMixDao
         )
     }
 
@@ -761,6 +778,69 @@ fun SessionScreen(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 8.dp, start = 20.dp, end = 20.dp)
+            )
+        }
+
+        if (availableUpdate != null && !showMorningMoodPrompt) {
+            val update = availableUpdate!!
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 8.dp, start = 16.dp, end = 16.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(AppColors.card)
+                    .border(0.5.dp, AppColors.border, RoundedCornerShape(16.dp))
+                    .clickable { showUpdateSheet = true }
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(AppColors.accent.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(AppIcons.ArrowDown, null, tint = AppColors.accent, modifier = Modifier.size(18.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Update verfügbar: v${update.newVersion}",
+                        color = AppColors.text,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Tippen für Details & Download",
+                        color = AppColors.textDim,
+                        fontSize = 11.sp
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(AppColors.background)
+                        .clickable {
+                            val prefs = context.getSharedPreferences("promille_prefs", Context.MODE_PRIVATE)
+                            prefs.edit().putString("dismissed_update_tag", update.newVersion).apply()
+                            availableUpdate = null
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(14.dp))
+                }
+            }
+        }
+
+        if (showUpdateSheet) {
+            de.tipau.promille.ui.components.AppUpdateSheet(
+                onDismiss = {
+                    showUpdateSheet = false
+                    availableUpdate = null
+                }
             )
         }
 

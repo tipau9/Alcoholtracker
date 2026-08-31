@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.vector.path
 import de.tipau.promille.AppColors
 import de.tipau.promille.R
 import de.tipau.promille.bac.DrinkCategory
+import de.tipau.promille.data.CustomMixDao
 import de.tipau.promille.data.DrinkEntity
 import de.tipau.promille.data.DrinkTemplateEntity
 import de.tipau.promille.fixedSp
@@ -139,7 +140,8 @@ fun QuickAddSheet(
     onDismiss: () -> Unit,
     onDrinkAdded: (DrinkEntity) -> Unit,
     onStartSipCounter: ((DrinkTemplateEntity) -> Unit)? = null,
-    supabase: SupabaseService? = null
+    supabase: SupabaseService? = null,
+    customMixDao: CustomMixDao? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var searchQuery by remember { mutableStateOf("") }
@@ -281,7 +283,10 @@ fun QuickAddSheet(
                 showMixCreator = false
                 onDrinkAdded(drink)
                 onDismiss()
-            }
+            },
+            templateRepository = templateRepository,
+            customMixDao = customMixDao,
+            supabase = supabase
         )
     }
 
