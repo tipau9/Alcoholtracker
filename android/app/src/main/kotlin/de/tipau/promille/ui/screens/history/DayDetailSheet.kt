@@ -33,6 +33,7 @@ import de.tipau.promille.color
 import de.tipau.promille.data.DayNoteEntity
 import de.tipau.promille.repository.DayNoteRepository
 import de.tipau.promille.ui.components.AppIcons
+import de.tipau.promille.ui.components.StatusPill
 import de.tipau.promille.ui.components.SectionLabel
 import de.tipau.promille.ui.viewmodels.DayStats
 import kotlinx.coroutines.launch
@@ -303,29 +304,7 @@ fun DayDetailSheet(
                             }
                         }
 
-                        // Status Pill matching iOS StatusPill
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(bacStatus.color.copy(alpha = 0.12f))
-                                .border(0.5.dp, bacStatus.color.copy(alpha = 0.3f), CircleShape)
-                                .padding(horizontal = 14.dp, vertical = 6.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(bacStatus.color)
-                            )
-                            Text(
-                                text = bacStatus.label(statusSkin),
-                                color = bacStatus.color,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        StatusPill(status = bacStatus, skin = statusSkin)
                     }
                 }
 

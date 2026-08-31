@@ -9,7 +9,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
@@ -29,6 +28,7 @@ import de.tipau.promille.AppColors
 import de.tipau.promille.color
 import de.tipau.promille.ui.components.AppIcons
 import de.tipau.promille.ui.components.SectionLabel
+import de.tipau.promille.ui.components.StatusPill
 import de.tipau.promille.ui.viewmodels.SafetyViewModel
 import java.util.Locale
 import de.tipau.promille.AppSerif
@@ -147,21 +147,7 @@ fun SafetyScreen(
                             )
                         }
 
-                        // Status pill
-                        Box(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(status.color.copy(alpha = 0.15f))
-                                .border(0.5.dp, status.color.copy(alpha = 0.5f), CircleShape)
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = status.label(skin),
-                                color = status.color,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
+                        StatusPill(status = status, skin = skin)
                     }
 
                     HorizontalDivider(color = AppColors.border.copy(alpha = 0.5f), thickness = 0.5.dp)
