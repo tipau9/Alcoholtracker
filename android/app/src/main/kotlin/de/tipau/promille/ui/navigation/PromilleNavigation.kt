@@ -95,7 +95,8 @@ fun PromilleNavigation(
                         viewModel = historyViewModel,
                         dayNoteRepository = container.dayNoteRepository,
                         drinkRepository = container.drinkRepository,
-                        userProfileRepository = container.userProfileRepository
+                        userProfileRepository = container.userProfileRepository,
+                        supabase = container.supabase
                     )
                 }
                 Tab.CREW -> {

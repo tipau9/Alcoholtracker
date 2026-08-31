@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "4efba9d3a5f541368da813a6867d9949",
+    "identityHash": "2d8f0c3d7085d5e2399a2262cf0f7892",
     "entities": [
       {
         "tableName": "user_profile",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `weight` REAL NOT NULL, `height` REAL NOT NULL, `age` INTEGER NOT NULL, `eliminationRate` REAL NOT NULL, `emergencyContactName` TEXT, `emergencyContactPhone` TEXT, `largeText` INTEGER NOT NULL, `highContrast` INTEGER NOT NULL, `reducedMotion` INTEGER NOT NULL, `hasCompletedOnboarding` INTEGER NOT NULL, `toleranceMode` INTEGER NOT NULL, `warningThreshold` REAL NOT NULL, `tipsyThreshold` REAL NOT NULL, `drunkThreshold` REAL NOT NULL, `carefulThreshold` REAL NOT NULL, `dangerThreshold` REAL NOT NULL, `birthDate` INTEGER NOT NULL, `accentColorHex` TEXT NOT NULL, `sipVolumeML` REAL NOT NULL, `genderRaw` TEXT NOT NULL, `homeStyleRaw` TEXT NOT NULL, `activeWidgetsRaw` TEXT NOT NULL, `homeSectionOrderRaw` TEXT NOT NULL, `stomachStatusRaw` TEXT NOT NULL, `statusSkinRaw` TEXT NOT NULL, `onboardingStepsCompletedRaw` TEXT NOT NULL, `activeMedicationsRaw` TEXT NOT NULL, `healthKitEnabled` INTEGER NOT NULL, `weeklyDrinkLimit` INTEGER NOT NULL, `soberDaysGoal` INTEGER NOT NULL, `isProbationaryDriver` INTEGER NOT NULL, `drunkModeAuto` INTEGER NOT NULL, `conservativeSafety` INTEGER NOT NULL, `conservativeEverywhere` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `weight` REAL NOT NULL, `height` REAL NOT NULL, `age` INTEGER NOT NULL, `eliminationRate` REAL NOT NULL, `emergencyContactName` TEXT, `emergencyContactPhone` TEXT, `largeText` INTEGER NOT NULL, `highContrast` INTEGER NOT NULL, `reducedMotion` INTEGER NOT NULL, `hasCompletedOnboarding` INTEGER NOT NULL, `toleranceMode` INTEGER NOT NULL, `warningThreshold` REAL NOT NULL, `tipsyThreshold` REAL NOT NULL, `drunkThreshold` REAL NOT NULL, `carefulThreshold` REAL NOT NULL, `dangerThreshold` REAL NOT NULL, `birthDate` INTEGER NOT NULL, `accentColorHex` TEXT NOT NULL, `sipVolumeML` REAL NOT NULL, `genderRaw` TEXT NOT NULL, `homeStyleRaw` TEXT NOT NULL, `activeWidgetsRaw` TEXT NOT NULL, `homeSectionOrderRaw` TEXT NOT NULL, `stomachStatusRaw` TEXT NOT NULL, `statusSkinRaw` TEXT NOT NULL, `onboardingStepsCompletedRaw` TEXT NOT NULL, `activeMedicationsRaw` TEXT NOT NULL, `healthKitEnabled` INTEGER NOT NULL, `weeklyDrinkLimit` INTEGER NOT NULL, `soberDaysGoal` INTEGER NOT NULL, `isProbationaryDriver` INTEGER NOT NULL, `drunkModeAuto` INTEGER NOT NULL, `conservativeSafety` INTEGER NOT NULL, `conservativeEverywhere` INTEGER NOT NULL, `shareAnonymousCityInsights` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -215,6 +215,12 @@
           {
             "fieldPath": "conservativeEverywhere",
             "columnName": "conservativeEverywhere",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "shareAnonymousCityInsights",
+            "columnName": "shareAnonymousCityInsights",
             "affinity": "INTEGER",
             "notNull": true
           }
@@ -803,7 +809,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4efba9d3a5f541368da813a6867d9949')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2d8f0c3d7085d5e2399a2262cf0f7892')"
     ]
   }
 }

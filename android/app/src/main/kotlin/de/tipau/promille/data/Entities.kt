@@ -55,7 +55,13 @@ data class UserProfileEntity(
     val isProbationaryDriver: Boolean = false,
     val drunkModeAuto: Boolean = false,
     val conservativeSafety: Boolean = false,
-    val conservativeEverywhere: Boolean = false
+    val conservativeEverywhere: Boolean = false,
+    /*
+     * Device-local ping opt-in, matches iOS's @AppStorage toggle
+     * (SettingsView.swift:30) - default off, gates outbound city pings only,
+     * never synced as a Supabase profile column.
+     */
+    val shareAnonymousCityInsights: Boolean = false
 )
 
 @Entity(

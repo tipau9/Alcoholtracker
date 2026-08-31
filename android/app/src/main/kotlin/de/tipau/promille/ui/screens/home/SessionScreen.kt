@@ -45,6 +45,8 @@ import java.util.UUID
 import android.content.Context
 import androidx.compose.ui.platform.LocalContext
 import de.tipau.promille.bac.LogicalDay
+import de.tipau.promille.data.toDomain
+import de.tipau.promille.network.pingCityDrink
 import de.tipau.promille.service.AppUpdateService
 import de.tipau.promille.service.UpdateCheckResult
 import de.tipau.promille.AppSerif
@@ -90,6 +92,31 @@ fun SessionScreen(
         ?: kotlinx.coroutines.flow.flowOf(emptyList())).collectAsState(initial = emptyList())
     val myProfile by (container?.supabase?.myProfile
         ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
+
+    // Anonymous city-trends ping, gated by the device-local opt-in (matches
+    // HomeView.swift's pingCityTrend, called after every confirmed drink log).
+    val pingCity by de.tipau.promille.service.LocationService.currentCity.collectAsState()
+    fun pingCityTrend(drink: DrinkEntity) {
+        if (profile?.shareAnonymousCityInsights != true) return
+        val city = pingCity ?: return
+        val supabaseService = container?.supabase ?: return
+        val sessionStart = drinks.minOfOrNull { it.timestampEpochSeconds } ?: drink.timestampEpochSeconds
+        val sessionMinutes = ((System.currentTimeMillis() / 1000) - sessionStart).toInt() / 60
+        val effectiveMinutes = drink.toDomain()
+            .effectiveDrinkDurationMinutes(de.tipau.promille.bac.DrinkPaceMemory.disabled())
+        val localHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        scope.launch {
+            supabaseService.pingCityDrink(
+                city = city,
+                drinkName = drink.name,
+                category = drink.categoryRaw,
+                currentBAC = bac,
+                sessionDurationMinutes = sessionMinutes,
+                drinkDurationMinutes = Math.round(effectiveMinutes).toInt(),
+                localHour = localHour
+            )
+        }
+    }
 
     // Running ticker so careScore re-evaluates as time decays
     var nowSeconds by remember { mutableStateOf(System.currentTimeMillis() / 1000) }
@@ -199,6 +226,7 @@ fun SessionScreen(
             onDismiss = { amountTemplate = null },
             onDrinkAdded = {
                 viewModel.addDrink(it)
+                pingCityTrend(it)
                 amountTemplate = null
             }
         )
@@ -300,6 +328,7 @@ fun SessionScreen(
             onDismiss = { showQuickAdd = false },
             onDrinkAdded = { drink ->
                 viewModel.addDrink(drink)
+                pingCityTrend(drink)
             },
             onStartSipCounter = { template ->
                 viewModel.startSipCounter(template)
@@ -657,19 +686,19 @@ fun SessionScreen(
                         FavouritesStrip(
                             templates = favorites,
                             onAdd = { template ->
-                                viewModel.addDrink(
-                                    DrinkEntity(
-                                        id = UUID.randomUUID().toString(),
-                                        templateID = template.id,
-                                        name = template.name,
-                                        volume = template.volume,
-                                        abv = template.abv,
-                                        calories = template.calories,
-                                        iconName = template.iconName,
-                                        categoryRaw = template.categoryRaw,
-                                        timestampEpochSeconds = System.currentTimeMillis() / 1000
-                                    )
+                                val quickDrink = DrinkEntity(
+                                    id = UUID.randomUUID().toString(),
+                                    templateID = template.id,
+                                    name = template.name,
+                                    volume = template.volume,
+                                    abv = template.abv,
+                                    calories = template.calories,
+                                    iconName = template.iconName,
+                                    categoryRaw = template.categoryRaw,
+                                    timestampEpochSeconds = System.currentTimeMillis() / 1000
                                 )
+                                viewModel.addDrink(quickDrink)
+                                pingCityTrend(quickDrink)
                             },
                             onLongPress = { amountTemplate = it }
                         )

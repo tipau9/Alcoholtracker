@@ -82,6 +82,10 @@ class SettingsViewModel(
     fun updateDrunkModeAuto(drunkModeAuto: Boolean) {
         updateProfile { it.copy(drunkModeAuto = drunkModeAuto) }
     }
+
+    fun updateShareAnonymousCityInsights(shareAnonymousCityInsights: Boolean) {
+        updateProfile { it.copy(shareAnonymousCityInsights = shareAnonymousCityInsights) }
+    }
     
     fun updateTipsyThreshold(tipsyThreshold: Double) {
         updateProfile { it.copy(tipsyThreshold = tipsyThreshold) }

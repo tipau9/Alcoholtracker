@@ -17,18 +17,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
+import de.tipau.promille.bac.DayMood
+import de.tipau.promille.bac.DayNote
 import de.tipau.promille.bac.Drink
+import de.tipau.promille.bac.DrinkCategory
 import de.tipau.promille.bac.PersonalInsights
 import de.tipau.promille.bac.Profile
+import de.tipau.promille.bac.germanName
+import de.tipau.promille.bac.getMoodCorrelations
+import de.tipau.promille.bac.moodInsight
+import de.tipau.promille.bac.permilleString
+import de.tipau.promille.network.CityDrinkInsights
+import de.tipau.promille.network.CityDrinkTrend
+import de.tipau.promille.network.CityRankedDrink
+import de.tipau.promille.network.SupabaseService
+import de.tipau.promille.network.fetchCityInsights
+import de.tipau.promille.network.fetchCityTrends
+import de.tipau.promille.service.LocationService
 import de.tipau.promille.ui.components.AppIcons
 import de.tipau.promille.ui.components.PromilleCard
 import de.tipau.promille.ui.components.SectionLabel
 import java.util.Locale
+import kotlin.math.roundToInt
 import de.tipau.promille.AppSerif
 
 enum class InsightsPeriod(val label: String, val days: Int?) {
@@ -46,9 +62,12 @@ enum class InsightsPeriod(val label: String, val days: Int?) {
 fun TrendsView(
     drinks: List<Drink>,
     profile: Profile?,
+    notes: List<DayNote> = emptyList(),
+    supabase: SupabaseService? = null,
     onDismiss: () -> Unit
 ) {
     var selectedPeriod by remember { mutableStateOf(InsightsPeriod.DAYS_30) }
+    val context = LocalContext.current
 
     val filteredDrinks = remember(drinks, selectedPeriod) {
         val days = selectedPeriod.days
@@ -68,6 +87,50 @@ fun TrendsView(
             cutoffEpochSeconds = cutoff,
             nowEpochSeconds = now
         )
+    }
+
+    val correlations = remember(filteredDrinks, notes, profile) {
+        profile?.let { getMoodCorrelations(drinks = filteredDrinks, notes = notes, profile = it) } ?: emptyList()
+    }
+    val insight = remember(filteredDrinks, notes, profile) {
+        profile?.let { moodInsight(drinks = filteredDrinks, notes = notes, profile = it) }
+    }
+
+    // Local city trends/insights (Trends screen, matches TrendsView.swift:89-116).
+    // Not gated by shareAnonymousCityInsights: that toggle only guards the
+    // outbound ping in HomeView.swift, not this anonymous aggregate read.
+    val locationStatus by LocationService.status.collectAsState()
+    val locationCity by LocationService.currentCity.collectAsState()
+    var trendsCity by remember { mutableStateOf<String?>(null) }
+    var loadingTrends by remember { mutableStateOf(false) }
+    var cityInsights by remember { mutableStateOf<CityDrinkInsights?>(null) }
+    var cityTrends by remember { mutableStateOf<List<CityDrinkTrend>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        val known = LocationService.currentCity.value
+        if (known != null) {
+            trendsCity = known
+        } else if (LocationService.status.value != LocationService.Status.DENIED) {
+            LocationService.requestLocation(context)
+        }
+    }
+    LaunchedEffect(locationCity) {
+        if (trendsCity == null && locationCity != null) trendsCity = locationCity
+    }
+    LaunchedEffect(trendsCity, supabase) {
+        val city = trendsCity
+        if (city == null || supabase == null) return@LaunchedEffect
+        loadingTrends = true
+        runCatching { supabase.fetchCityInsights(city) }
+            .onSuccess { ins ->
+                cityInsights = ins
+                cityTrends = ins.topDrinks.map { CityDrinkTrend(it.drinkName, it.category, it.pingCount) }
+            }
+            .onFailure {
+                cityInsights = null
+                cityTrends = runCatching { supabase.fetchCityTrends(city) }.getOrDefault(emptyList())
+            }
+        loadingTrends = false
     }
 
     ModalBottomSheet(
@@ -319,9 +382,50 @@ fun TrendsView(
                         }
                     }
                 }
+
+                // Stimmungs-Korrelation / "Morgen danach" (matches TrendsView.swift:445-484).
+                if (profile != null) {
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            SectionLabel("MORGEN DANACH")
+                            PromilleCard {
+                                if (correlations.isEmpty()) {
+                                    Text(
+                                        text = "Bewerte morgens deine Nacht, um hier zu sehen, wie sich dein Promillewert auf den nächsten Tag auswirkt.",
+                                        color = AppColors.textMuted,
+                                        fontSize = 12.sp,
+                                        lineHeight = 16.sp
+                                    )
+                                } else {
+                                    val maxAvg = (correlations.maxOfOrNull { it.averagePeakBAC } ?: 0.0).coerceAtLeast(0.01)
+                                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        correlations.forEach { corr ->
+                                            MoodCorrelationRow(
+                                                mood = DayMood.from(corr.moodScore),
+                                                averagePeakBAC = corr.averagePeakBAC,
+                                                nights = corr.nights,
+                                                fraction = corr.averagePeakBAC / maxAvg
+                                            )
+                                        }
+                                        insight?.let {
+                                            Text(
+                                                text = "Deine positiv bewerteten Morgen folgten auf Abende mit im Schnitt ${it.goodAvg.permilleString()}, die negativ bewerteten auf ${it.badAvg.permilleString()}.",
+                                                color = AppColors.textDim,
+                                                fontSize = 12.sp,
+                                                lineHeight = 16.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
-            // Local Trends Card (Matches iOS TrendsView.swift:334-373 1:1)
+            // Local Trends Card (matches TrendsView.swift:334-384; branch order:
+            // denied -> loading -> insufficient sample -> insight -> cityTrends
+            // compat -> empty).
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     SectionLabel("LOKALE TRENDS")
@@ -355,7 +459,7 @@ fun TrendsView(
                                 Spacer(Modifier.width(12.dp))
                                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text(
-                                        text = "Was läuft in deiner Stadt?",
+                                        text = trendsCity?.let { "Was läuft in $it?" } ?: "Lokale Stadt-Trends",
                                         color = AppColors.text,
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.SemiBold
@@ -370,30 +474,239 @@ fun TrendsView(
 
                             HorizontalDivider(color = AppColors.border, thickness = 0.5.dp)
 
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = AppIcons.Chart,
-                                    contentDescription = null,
-                                    tint = AppColors.textMuted,
-                                    modifier = Modifier.size(16.dp)
+                            val cityIns = cityInsights
+                            when {
+                                locationStatus == LocationService.Status.DENIED -> LocalTrendsEmpty(
+                                    "Standort nicht erlaubt. Aktiviere ihn in den Einstellungen."
                                 )
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = "Noch keine Stadt-Daten verfügbar.",
-                                    color = AppColors.textMuted,
-                                    fontSize = 13.sp
+                                loadingTrends -> Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 22.dp),
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    CircularProgressIndicator(color = AppColors.accent, modifier = Modifier.size(24.dp))
+                                }
+                                // getOrElse{CityDrinkInsights()} on decode failure means a non-null
+                                // cityIns can carry minimumContributors == 0 / totalDrinks == 0; guard
+                                // both so that placeholder never renders as a real result (unlike iOS,
+                                // where a decode failure throws and skips straight to the cityTrends
+                                // compat branch).
+                                cityIns != null && !cityIns.sampleSufficient && cityIns.minimumContributors > 0 -> LocalTrendsEmpty(
+                                    "Für detaillierte Stadtwerte werden aus Datenschutzgründen mindestens ${cityIns.minimumContributors} verschiedene Teilnehmende benötigt."
                                 )
+                                cityIns != null && !(cityIns.totalDrinks == 0 && cityIns.topDrinks.isEmpty()) -> {
+                                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            MetricTile(
+                                                value = "${cityIns.totalDrinks}",
+                                                label = "Einträge",
+                                                icon = AppIcons.Drink,
+                                                iconColor = AppColors.accent,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            MetricTile(
+                                                value = cityIns.averageBAC?.permilleString() ?: "–",
+                                                label = "Ø BAC beim Loggen",
+                                                icon = AppIcons.Gauge,
+                                                iconColor = AppColors.statusOrange,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            MetricTile(
+                                                value = formatMinutes(cityIns.averageSessionMinutes ?: 0.0),
+                                                label = "Ø bisherige Session",
+                                                icon = AppIcons.History,
+                                                iconColor = AppColors.textDim,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            MetricTile(
+                                                value = formatMinutes(cityIns.averageDrinkMinutes ?: 0.0),
+                                                label = "Ø pro Drink",
+                                                icon = AppIcons.Water,
+                                                iconColor = AppColors.statusGreen,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+
+                                        if (cityIns.topDrinks.isNotEmpty()) {
+                                            LocalTrendsRanking("TOP 5 GETRÄNKE", cityIns.topDrinks.take(5).map {
+                                                Triple(it.drinkName, categoryName(it.category), it.pingCount)
+                                            })
+                                        }
+                                        if (cityIns.hourly.isNotEmpty()) {
+                                            LocalTrendsRanking(
+                                                "BELIEBTE UHRZEITEN",
+                                                cityIns.hourly.sortedByDescending { it.pingCount }.take(6).map {
+                                                    Triple("${it.hour}h", "", it.pingCount)
+                                                }
+                                            )
+                                        }
+                                        if (cityIns.categories.isNotEmpty()) {
+                                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                Text("KATEGORIEN", color = AppColors.textDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                cityIns.categories.take(5).forEach { cat ->
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween
+                                                    ) {
+                                                        Text(categoryName(cat.category), color = AppColors.text, fontSize = 13.sp)
+                                                        Text("${cat.pingCount}", color = AppColors.textDim, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        Text(
+                                            text = "Basierend auf ${cityIns.contributorCount ?: 0} anonymen Beiträgern. BAC und Dauer sind Schätzwerte beim Zeitpunkt des Eintrags.",
+                                            color = AppColors.textMuted,
+                                            fontSize = 11.sp,
+                                            lineHeight = 15.sp
+                                        )
+                                    }
+                                }
+                                cityTrends.isEmpty() -> LocalTrendsEmpty(
+                                    if (trendsCity == null) "Standort wird ermittelt …" else "Noch keine Stadt-Daten verfügbar."
+                                )
+                                else -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    LocalTrendsRanking("TOP 5 GETRÄNKE", cityTrends.take(5).map {
+                                        Triple(it.drinkName, categoryName(it.category), it.pingCount)
+                                    })
+                                    Text(
+                                        text = "Für Zeit-, BAC- und Dauerwerte muss die aktualisierte city_drink_trends.sql ausgeführt werden.",
+                                        color = AppColors.textMuted,
+                                        fontSize = 11.sp
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+private fun categoryName(raw: String): String =
+    DrinkCategory.entries.firstOrNull { it.raw == raw }?.germanName ?: raw
+
+private fun formatMinutes(value: Double): String {
+    if (value <= 0) return "–"
+    val total = value.roundToInt()
+    return if (total < 60) "$total min" else String.format(Locale.GERMANY, "%d:%02d h", total / 60, total % 60)
+}
+
+@Composable
+private fun LocalTrendsEmpty(text: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = AppIcons.Chart,
+            contentDescription = null,
+            tint = AppColors.textMuted,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(text, color = AppColors.textMuted, fontSize = 13.sp, lineHeight = 17.sp)
+    }
+}
+
+/** Rank rows with a proportional bar, matches InsightsRankingRow (TrendsView.swift:591-622). */
+@Composable
+private fun LocalTrendsRanking(title: String, items: List<Triple<String, String, Int>>) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, color = AppColors.textDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        val maximum = (items.maxOfOrNull { it.third } ?: 1).coerceAtLeast(1)
+        items.forEachIndexed { index, (name, subtitle, count) ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .background(if (index == 0) AppColors.accent else AppColors.border.copy(alpha = 0.45f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "${index + 1}",
+                        color = if (index == 0) AppColors.background else AppColors.textDim,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Text(name, color = AppColors.text, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    if (subtitle.isNotEmpty()) Text(subtitle, color = AppColors.textMuted, fontSize = 10.sp)
+                }
+                Box(
+                    modifier = Modifier
+                        .width(50.dp)
+                        .height(5.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(AppColors.accent.copy(alpha = 0.16f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(count.toFloat() / maximum.toFloat())
+                            .height(5.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(AppColors.accent)
+                    )
+                }
+                Text("$count", color = AppColors.textDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+/** One rated mood row, matches MoodCorrelationRow (TrendsView.swift:655-697). */
+@Composable
+private fun MoodCorrelationRow(mood: DayMood, averagePeakBAC: Double, nights: Int, fraction: Double) {
+    val barColor = when (mood) {
+        DayMood.HAPPY, DayMood.PROUD -> AppColors.statusGreen
+        DayMood.REGRET -> AppColors.statusOrange
+        DayMood.TERRIBLE -> AppColors.statusRed
+        DayMood.NEUTRAL -> AppColors.textMuted
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("${mood.emoji} ${mood.label}", color = AppColors.text, fontSize = 12.sp)
+            Text(
+                if (nights == 1) "1 Nacht" else "$nights Nächte",
+                color = AppColors.textMuted,
+                fontSize = 10.sp
+            )
+            Spacer(Modifier.weight(1f))
+            Text(averagePeakBAC.permilleString(), color = AppColors.text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .clip(RoundedCornerShape(50))
+                .background(AppColors.border.copy(alpha = 0.5f))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(fraction.coerceIn(0.0, 1.0).toFloat().coerceAtLeast(0.03f))
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(barColor)
+            )
         }
     }
 }
