@@ -169,6 +169,15 @@ fun activeJamRoster(
             (myUserID == null || p.userID != myUserID) &&
             p.id !in tombstonedIDs &&
             nowEpochSeconds - p.lastUpdatedEpochSeconds <= STALE_PARTICIPANT_SECONDS
+    }.map { p ->
+        // Privacy toggles only ride the Bluetooth channel, so a server row for a
+        // peer we also hear over proximity carries none. Dropping them here would
+        // read as "they turned sharing off" and wipe the detail every poll.
+        if (p.sharedSettings != null) p else p.copy(
+            sharedSettings = existingParticipants.firstOrNull {
+                it.id == p.id || (p.userID != null && it.userID == p.userID)
+            }?.sharedSettings
+        )
     }
 
     // Keep multipeer-only peers (proximity peers with no server row, e.g. a

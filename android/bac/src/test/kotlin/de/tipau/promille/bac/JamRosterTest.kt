@@ -31,6 +31,18 @@ class JamRosterTest {
     }
 
     @Test
+    fun `privacy labels split shared from hidden and ignore local preferences`() {
+        val (shared, hidden) = JamSettings(
+            shareBAC = false,
+            shareDrinkCount = false,
+            shareLocation = true,
+            allowWaves = false
+        ).privacyLabels()
+        assertEquals(listOf("Status", "Drinks", "SOS-Status", "Fotos"), shared)
+        assertEquals(listOf("Promille-Wert", "Anzahl Drinks"), hidden)
+    }
+
+    @Test
     fun `a stale broadcast never clobbers a newer status`() {
         val current = listOf(p("row-a", userID = "u1", bac = 0.9, updated = 200))
         val merged = current.upserting(p("row-a", userID = "u1", bac = 0.1, updated = 100))
@@ -150,6 +162,17 @@ class JamActiveRosterTest {
             me = me, myUserID = "u-me", tombstonedIDs = emptySet(), nowEpochSeconds = now
         )
         assertEquals(listOf("fresh", "me"), roster.map { it.id })
+    }
+
+    @Test
+    fun `a server row keeps the privacy toggles only bluetooth carries`() {
+        val known = p("a", userID = "u-a").copy(sharedSettings = JamSettings(shareBAC = false))
+        val roster = activeJamRoster(
+            serverRows = listOf(p("a", userID = "u-a")),
+            me = me, myUserID = "u-me", tombstonedIDs = emptySet(), nowEpochSeconds = now,
+            existingParticipants = listOf(known)
+        )
+        assertEquals(false, roster.first { it.id == "a" }.sharedSettings?.shareBAC)
     }
 
     @Test
@@ -285,15 +308,4 @@ class JamArcadeScoringTest {
         assertEquals(listOf("fast", "slow", "dq"), ordered.map { it.participantID })
     }
 
-    @Test
-    fun `privacy labels split shared from hidden and ignore local preferences`() {
-        val (shared, hidden) = JamSettings(
-            shareBAC = false,
-            shareDrinkCount = false,
-            shareLocation = true,
-            allowWaves = false
-        ).privacyLabels()
-        assertEquals(listOf("Status", "Drinks", "SOS-Status", "Fotos"), shared)
-        assertEquals(listOf("Promille-Wert", "Anzahl Drinks"), hidden)
-    }
 }
