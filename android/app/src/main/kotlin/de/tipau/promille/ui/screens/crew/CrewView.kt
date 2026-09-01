@@ -548,7 +548,16 @@ fun CrewView(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = if (sosOn) "Tippen zum Beenden." else "Deine Crew bekommt sofort eine Meldung.",
+                            // iOS's SOSBar is a single line that promises nothing.
+                            // This one names a recipient, so it has to name the
+                            // right one - or say that there is none.
+                            text = when {
+                                sosOn -> "Tippen zum Beenden."
+                                !isSignedIn && currentJam == null ->
+                                    "Dafür brauchst du ein Konto oder einen aktiven Jam."
+                                !isSignedIn -> "Alle im Jam sehen es sofort."
+                                else -> "Deine Crew bekommt sofort eine Meldung."
+                            },
                             color = AppColors.textDim,
                             fontSize = 12.sp
                         )
