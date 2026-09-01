@@ -268,7 +268,7 @@ private fun JamLobby(
 
         if (invitations.isNotEmpty()) {
             item { SectionLabel("EINLADUNGEN") }
-            items(invitations, key = { it.id }) { invite ->
+            items(invitations, key = { "invite-${it.id}" }) { invite ->
                 PromilleCard(Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
@@ -343,9 +343,12 @@ private fun JamLobby(
             }
         }
 
+        // A friend hosting a proximity jam while nearby shows up in both lists
+        // with the same jam id, so the keys have to be prefixed or the second
+        // section throws.
         if (nearbyJams.isNotEmpty()) {
             item { SectionLabel("IN DER NÄHE") }
-            items(nearbyJams, key = { it.id }) { nearby ->
+            items(nearbyJams, key = { "nearby-${it.id}" }) { nearby ->
                 LobbyJamRow(
                     jam = nearby,
                     nowSeconds = nowSeconds,
@@ -357,7 +360,7 @@ private fun JamLobby(
 
         if (friendJams.isNotEmpty()) {
             item { SectionLabel("VON FREUNDEN") }
-            items(friendJams, key = { it.id }) { friendJam ->
+            items(friendJams, key = { "friend-${it.id}" }) { friendJam ->
                 LobbyJamRow(
                     jam = friendJam,
                     nowSeconds = nowSeconds,
