@@ -34,6 +34,14 @@ import java.util.Base64
 import java.util.UUID
 
 /**
+ * Largest jpeg that still fits a Nearby BYTES payload once base64 has inflated
+ * it by 4/3 and the JSON envelope has been wrapped around it:
+ * 22 KB -> ~29.3 KB encoded, under the 32768 byte ceiling with room for the
+ * message id and the sender name.
+ */
+const val MAX_PHOTO_BYTES = 22_000
+
+/**
  * Port of iOS MultipeerService. MultipeerConnectivity has no Android
  * equivalent, so this rides Nearby Connections (P2P_CLUSTER - many-to-many,
  * the same shape as Multipeer's star/mesh) instead; everything above the
@@ -207,13 +215,16 @@ class MultipeerService(private val context: Context) {
         send(WireEnvelope(kind = "arcadeResult", arcadeResult = WireArcadeResult.from(payload)))
 
     /**
-     * jpeg must already be compressed/resized by the caller. iOS does that
-     * (max 1280px, quality stepped down to fit 200 KB) inside this class
-     * because UIImage lives there too; Android has no bitmap type in a
-     * service, so that step belongs in the UI layer that captures the photo.
+     * jpeg must already be compressed/resized by the caller, and it must fit
+     * MAX_PHOTO_BYTES - Nearby refuses a BYTES payload over 32 KB
+     * (Connections.MAX_BYTES_DATA_SIZE) and sendPayload swallows the refusal
+     * in runCatching, so anything larger vanishes without a trace. iOS gets to
+     * send 200 KB because MultipeerConnectivity streams; matching that here
+     * means moving photos to Payload.fromStream, which needs its own
+     * reassembly and dedup path on the receiving side.
      */
     fun broadcastPhoto(jpeg: ByteArray, senderName: String, senderBAC: Double?) {
-        if (jpeg.isEmpty() || jpeg.size > 400_000) return
+        if (jpeg.isEmpty() || jpeg.size > MAX_PHOTO_BYTES) return
         val b64 = Base64.getEncoder().encodeToString(jpeg)
         send(WireEnvelope(kind = "photo", photo = WirePhotoDto(senderName, b64, senderBAC)))
     }

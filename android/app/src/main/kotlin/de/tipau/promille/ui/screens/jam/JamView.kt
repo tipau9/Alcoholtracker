@@ -36,6 +36,21 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import de.tipau.promille.service.MultipeerService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 import de.tipau.promille.AppColors
 import de.tipau.promille.bac.Jam
 import de.tipau.promille.bac.JamArcadeGame
@@ -500,6 +515,69 @@ private fun ActiveJam(
     val arcadeResults by jamService.arcadeResults.collectAsState()
     var participantMenu by remember { mutableStateOf<JamParticipant?>(null) }
 
+    // ActiveJamView's PhotosPicker and its "Foto nicht geteilt" alert. Sharing
+    // can fail for five different reasons - no peers, photos switched off, an
+    // unreadable pick, a jam that ended meanwhile, a photo still too big at the
+    // last quality step - so the reason travels in the state instead of a flag.
+    val context = LocalContext.current
+    val receivedPhotos by jamService.receivedPhotos.collectAsState()
+    var photoError by remember { mutableStateOf<String?>(null) }
+    var fullscreenPhoto by remember { mutableStateOf<MultipeerService.JamPhotoPayload?>(null) }
+    val photoPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) scope.launch {
+            val bitmap = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it) }
+                }.getOrNull()
+            }
+            if (bitmap == null) {
+                photoError = "Das Bild konnte nicht gelesen werden."
+            } else {
+                try {
+                    jamService.sendPhoto(bitmap)
+                    // iOS also files the shared photo under the personal
+                    // memories with the permille it was taken at. That copy is
+                    // written at full quality; only the wire copy is squeezed.
+                    val path = withContext(Dispatchers.IO) {
+                        runCatching {
+                            val target = File(context.filesDir, "memory_${System.currentTimeMillis()}.jpg")
+                            target.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 85, it) }
+                            target.absolutePath
+                        }.getOrNull()
+                    }
+                    if (path != null) {
+                        container.photoMemoryRepository.addMemory(
+                            path,
+                            jamService.myCurrentBAC.value.takeIf { it > 0 }
+                        )
+                    }
+                } catch (e: Exception) {
+                    photoError = e.message ?: "Das hat nicht geklappt."
+                }
+            }
+        }
+    }
+
+    photoError?.let { message ->
+        AlertDialog(
+            onDismissRequest = { photoError = null },
+            confirmButton = {
+                TextButton(onClick = { photoError = null }) {
+                    Text("OK", color = AppColors.accent)
+                }
+            },
+            title = { Text("Foto nicht geteilt", color = AppColors.text) },
+            text = { Text(message, color = AppColors.textDim) },
+            containerColor = AppColors.card
+        )
+    }
+
+    fullscreenPhoto?.let { photo ->
+        JamPhotoViewer(photo = photo, onDismiss = { fullscreenPhoto = null })
+    }
+
     if (showInvite) {
         InviteFriendsSheet(
             friendCodes = members.mapNotNull { m -> m.friendCode?.let { m.name to it } },
@@ -793,6 +871,13 @@ private fun ActiveJam(
             }
         }
 
+        // jamPhotoStrip, only once something has actually arrived.
+        if (receivedPhotos.isNotEmpty()) {
+            item {
+                JamPhotoStrip(photos = receivedPhotos, onSelect = { fullscreenPhoto = it })
+            }
+        }
+
         // 2x2 Quick Actions Grid
         item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -804,7 +889,11 @@ private fun ActiveJam(
                             .clip(RoundedCornerShape(14.dp))
                             .background(AppColors.accent.copy(alpha = 0.1f))
                             .border(0.8.dp, AppColors.accent.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
-                            .clickable { /* Photo capture/share */ }
+                            .clickable {
+                                photoPicker.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            }
                             .padding(vertical = 14.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -915,6 +1004,134 @@ private fun ActiveJam(
                 isDestructive = true,
                 onClick = { jamService.leaveJam() }
             )
+        }
+    }
+}
+
+/**
+ * jamPhotoStrip + JamPhotoThumb. Decoding inside remember follows
+ * PhotoMemoryStrip; iOS moves it off the main thread because its photos are
+ * 200 KB, ours are capped at MAX_PHOTO_BYTES and decode in about a millisecond.
+ */
+@Composable
+private fun JamPhotoStrip(
+    photos: List<MultipeerService.JamPhotoPayload>,
+    onSelect: (MultipeerService.JamPhotoPayload) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(AppColors.card)
+            .border(0.5.dp, AppColors.border, RoundedCornerShape(16.dp))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            "Jam-Fotos",
+            color = AppColors.textDim,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            photos.forEach { photo ->
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    val bitmap = remember(photo.jpeg) {
+                        BitmapFactory.decodeByteArray(photo.jpeg, 0, photo.jpeg.size)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(AppColors.border)
+                            .clickable(enabled = bitmap != null) { onSelect(photo) }
+                    ) {
+                        if (bitmap != null) {
+                            Image(
+                                bitmap = bitmap.asImageBitmap(),
+                                contentDescription = photo.senderName,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                        val bac = photo.senderBAC
+                        if (bac != null && bac > 0) {
+                            Text(
+                                bac.permilleString(),
+                                color = Color.White,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                style = TabularFigures,
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(4.dp)
+                                    .clip(CircleShape)
+                                    .background(BacStatus.of(bac).color.copy(alpha = 0.9f))
+                                    .padding(horizontal = 5.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    Text(
+                        photo.senderName,
+                        color = AppColors.textDim,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** The fullscreen sheet ActiveJamView presents for a tapped photo. */
+@Composable
+private fun JamPhotoViewer(
+    photo: MultipeerService.JamPhotoPayload,
+    onDismiss: () -> Unit
+) {
+    val bitmap = remember(photo.jpeg) {
+        BitmapFactory.decodeByteArray(photo.jpeg, 0, photo.jpeg.size)
+    }
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center
+        ) {
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = photo.senderName,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            val bac = photo.senderBAC
+            if (bac != null && bac > 0) {
+                Text(
+                    bac.permilleString(),
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = AppSerif,
+                    style = TabularFigures,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 40.dp)
+                        .clip(CircleShape)
+                        .background(BacStatus.of(bac).color.copy(alpha = 0.85f))
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
         }
     }
 }

@@ -41,6 +41,8 @@ import de.tipau.promille.network.submitJamArcadeResult
 import de.tipau.promille.network.submitJamWaterTime
 import de.tipau.promille.network.updateJamHost
 import de.tipau.promille.network.updateMyJamStatus
+import android.graphics.Bitmap
+import de.tipau.promille.service.MAX_PHOTO_BYTES
 import de.tipau.promille.service.MultipeerService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -49,6 +51,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 import java.util.UUID
 import kotlin.random.Random
 
@@ -98,7 +101,8 @@ class JamService(
     val amHost: StateFlow<Boolean> = _amHost.asStateFlow()
 
     // Photos received from peers in the current jam, capped like iOS's
-    // receivedPhotos (~200 KB each, so this bounds memory to ~6 MB).
+    // receivedPhotos. At most MAX_PHOTO_BYTES each, so this bounds memory to
+    // well under a megabyte - iOS holds ~6 MB for the same thirty photos.
     private val _receivedPhotos = MutableStateFlow<List<MultipeerService.JamPhotoPayload>>(emptyList())
     val receivedPhotos: StateFlow<List<MultipeerService.JamPhotoPayload>> = _receivedPhotos.asStateFlow()
     private val maxReceivedPhotos = 30
@@ -189,15 +193,48 @@ class JamService(
         }
     }
 
-    /** Shares a photo with the jam over the proximity channel; disabled without connected peers. */
-    fun sendPhoto(jpeg: ByteArray) {
+    /**
+     * Shares a photo with the jam over the proximity channel; disabled without
+     * connected peers. Compressing here rather than in the picker mirrors iOS,
+     * where sendPhoto takes a UIImage and steps the quality down itself - and
+     * it keeps the wire budget next to the transport that imposes it.
+     */
+    fun sendPhoto(bitmap: Bitmap) {
         if (_currentJam.value == null) throw JamException("Kein aktiver Jam.")
         if (!mySettings.value.sharePhotos) throw JamException("Fotos teilen ist deaktiviert.")
         if (multipeer?.hasConnectedPeers != true) throw JamException("Niemand in Reichweite.")
+        val jpeg = compressForWire(bitmap) ?: throw JamException("Foto zu groß.")
         val bac = if (mySettings.value.shareBAC) myCurrentBAC.value else null
         multipeer.broadcastPhoto(jpeg, myDisplayName(), bac)
         // Own copy shown immediately, without waiting on the mesh round trip.
         appendPhoto(MultipeerService.JamPhotoPayload("Du", jpeg, bac))
+    }
+
+    /**
+     * Scales the long edge to 900 px and steps the quality down until the jpeg
+     * fits MAX_PHOTO_BYTES, null when even the last step is too big. The
+     * budget is a transport limit, not a taste one: a photo over it is dropped
+     * silently by Nearby, so the last quality step is deliberately ugly rather
+     * than absent.
+     */
+    private fun compressForWire(bitmap: Bitmap): ByteArray? {
+        val longEdge = maxOf(bitmap.width, bitmap.height)
+        val scaled = if (longEdge <= 900) bitmap else {
+            val factor = 900.0 / longEdge
+            Bitmap.createScaledBitmap(
+                bitmap,
+                (bitmap.width * factor).toInt().coerceAtLeast(1),
+                (bitmap.height * factor).toInt().coerceAtLeast(1),
+                true
+            )
+        }
+        for (quality in intArrayOf(70, 55, 40, 25, 15)) {
+            val out = ByteArrayOutputStream()
+            scaled.compress(Bitmap.CompressFormat.JPEG, quality, out)
+            val bytes = out.toByteArray()
+            if (bytes.size <= MAX_PHOTO_BYTES) return bytes
+        }
+        return null
     }
 
     /** Moderation messages arriving over the proximity channel. */
