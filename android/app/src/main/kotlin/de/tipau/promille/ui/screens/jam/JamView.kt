@@ -43,6 +43,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.window.Dialog
@@ -514,6 +515,26 @@ private fun ActiveJam(
     val arcadeRound by jamService.incomingArcadeRound.collectAsState()
     val arcadeResults by jamService.arcadeResults.collectAsState()
     var participantMenu by remember { mutableStateOf<JamParticipant?>(null) }
+    var showLeaveConfirm by remember { mutableStateOf(false) }
+    var showRouletteHint by remember { mutableStateOf(false) }
+
+    // ActiveJamView.uninvitedFriends. Matching on the display name rather than
+    // an id is what iOS does and for the same reason: friend ids are not held
+    // locally, and a participant only carries the name they joined under.
+    val participantNames = jam.participants.map { it.displayName.lowercase() }.toSet()
+    val uninvitedFriends = members
+        .filter { !it.isSelf && it.name.lowercase() !in participantNames }
+        .map { InviteCandidate(it.id, it.name, it.avatarInitial, it.friendCode) }
+    // iOS keeps the invited mark inside each chip. Here the strip is a single
+    // LazyColumn item near the top, so a chip-local remember would be thrown
+    // away the moment it scrolls off and every friend would look uninvited again.
+    val invitedIds = remember { mutableStateListOf<String>() }
+    val invite: (InviteCandidate) -> Unit = { friend ->
+        friend.friendCode?.let { code ->
+            invitedIds += friend.id
+            scope.launch { runCatching { jamService.inviteFriend(code) } }
+        }
+    }
 
     // ActiveJamView's PhotosPicker and its "Foto nicht geteilt" alert. Sharing
     // can fail for five different reasons - no peers, photos switched off, an
@@ -580,15 +601,58 @@ private fun ActiveJam(
         )
     }
 
+    if (showRouletteHint) {
+        AlertDialog(
+            onDismissRequest = { showRouletteHint = false },
+            confirmButton = {
+                TextButton(onClick = { showRouletteHint = false }) {
+                    Text("OK", color = AppColors.accent)
+                }
+            },
+            title = { Text("Noch niemand dabei", color = AppColors.text) },
+            text = {
+                Text(
+                    "Zum Auslosen einer Runde müssen mindestens 2 Leute im Jam sein. " +
+                        "Lade zuerst jemanden ein.",
+                    color = AppColors.textDim
+                )
+            },
+            containerColor = AppColors.card
+        )
+    }
+
+    if (showLeaveConfirm) {
+        AlertDialog(
+            onDismissRequest = { showLeaveConfirm = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLeaveConfirm = false
+                    jamService.leaveJam()
+                }) {
+                    Text("Verlassen", color = AppColors.statusRed)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLeaveConfirm = false }) {
+                    Text("Abbrechen", color = AppColors.textDim)
+                }
+            },
+            title = { Text("Jam verlassen?", color = AppColors.text) },
+            containerColor = AppColors.card
+        )
+    }
+
     fullscreenPhoto?.let { photo ->
         JamPhotoViewer(photo = photo, onDismiss = { fullscreenPhoto = null })
     }
 
     if (showInvite) {
         InviteFriendsSheet(
-            friendCodes = members.mapNotNull { m -> m.friendCode?.let { m.name to it } },
+            friends = uninvitedFriends,
+            jamCode = jam.code,
+            invited = invitedIds.toSet(),
             onDismiss = { showInvite = false },
-            onInvite = { code -> scope.launch { runCatching { jamService.inviteFriend(code) } } }
+            onInvite = invite
         )
     }
 
@@ -711,19 +775,24 @@ private fun ActiveJam(
                     fontSize = 13.sp
                 )
                 Spacer(Modifier.width(10.dp))
+                val canInvite = uninvitedFriends.isNotEmpty()
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .size(32.dp)
                         .clip(CircleShape)
-                        .background(AppColors.accent.copy(alpha = 0.12f))
-                        .border(0.5.dp, AppColors.accent.copy(alpha = 0.3f), CircleShape)
+                        .background(if (canInvite) AppColors.accent.copy(alpha = 0.12f) else AppColors.card)
+                        .border(
+                            0.5.dp,
+                            if (canInvite) AppColors.accent.copy(alpha = 0.3f) else AppColors.border,
+                            CircleShape
+                        )
                         .clickable { showInvite = true }
                 ) {
                     Icon(
                         imageVector = de.tipau.promille.ui.components.AppIcons.PersonPlus,
                         contentDescription = "Einladen",
-                        tint = AppColors.accent,
+                        tint = if (canInvite) AppColors.accent else AppColors.textDim,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -743,6 +812,56 @@ private fun ActiveJam(
                         tint = AppColors.textDim,
                         modifier = Modifier.size(16.dp)
                     )
+                }
+            }
+        }
+
+        // uninvitedFriendsStrip. iOS bleeds the orange tint edge to edge above the
+        // divider; this list is inset by 20.dp for every item, so it becomes a
+        // tinted card instead of restructuring the padding for one row.
+        if (uninvitedFriends.isNotEmpty()) {
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(AppColors.statusOrange.copy(alpha = 0.05f))
+                        .padding(vertical = 10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            de.tipau.promille.ui.components.AppIcons.PersonPlus,
+                            contentDescription = null,
+                            tint = AppColors.statusOrange,
+                            modifier = Modifier.size(11.dp)
+                        )
+                        Spacer(Modifier.width(5.dp))
+                        Text("Noch nicht dabei", color = AppColors.textDim, fontSize = 11.sp)
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            "Alle einladen",
+                            color = AppColors.accent,
+                            fontSize = 11.sp,
+                            modifier = Modifier.clickable { showInvite = true }
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        uninvitedFriends.forEach { friend ->
+                            FriendInviteChip(
+                                friend = friend,
+                                invited = friend.id in invitedIds,
+                                onInvite = { invite(friend) }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -935,7 +1054,13 @@ private fun ActiveJam(
                             .clip(RoundedCornerShape(14.dp))
                             .background(AppColors.card)
                             .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
-                            .clickable { scope.launch { jamService.startRoulette() } }
+                            .clickable {
+                                if (jam.participants.size >= 2) {
+                                    scope.launch { jamService.startRoulette() }
+                                } else {
+                                    showRouletteHint = true
+                                }
+                            }
                             .padding(vertical = 14.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -1008,9 +1133,70 @@ private fun ActiveJam(
             PrimaryButton(
                 text = "Jam verlassen",
                 isDestructive = true,
-                onClick = { jamService.leaveJam() }
+                onClick = { showLeaveConfirm = true }
             )
         }
+    }
+}
+
+/**
+ * FriendInviteChip (ActiveJamView.swift:788). Tapping sends the invitation right
+ * away; a friend without a friend code has no delivery address and stays inert.
+ */
+@Composable
+private fun FriendInviteChip(
+    friend: InviteCandidate,
+    invited: Boolean,
+    onInvite: () -> Unit
+) {
+    val tint = if (invited) AppColors.textMuted else AppColors.statusOrange
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(5.dp),
+        modifier = Modifier
+            .width(58.dp)
+            .clickable(enabled = !invited && friend.friendCode != null, onClick = onInvite)
+    ) {
+        Box(contentAlignment = Alignment.TopEnd) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 5.dp, end = 5.dp)
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(if (invited) AppColors.card else AppColors.statusOrange.copy(alpha = 0.14f))
+                    .border(
+                        1.dp,
+                        if (invited) AppColors.border else AppColors.statusOrange.copy(alpha = 0.4f),
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(friend.avatarInitial, color = tint, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Box(
+                modifier = Modifier
+                    .size(16.dp)
+                    .clip(CircleShape)
+                    .background(AppColors.background),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    if (invited) de.tipau.promille.ui.components.AppIcons.Check
+                    else de.tipau.promille.ui.components.AppIcons.Plus,
+                    contentDescription = null,
+                    tint = if (invited) AppColors.statusGreen else AppColors.statusOrange,
+                    modifier = Modifier.size(12.dp)
+                )
+            }
+        }
+        Text(
+            friend.name,
+            color = if (invited) AppColors.textMuted else AppColors.text,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

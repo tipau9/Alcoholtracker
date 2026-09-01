@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import de.tipau.promille.AppColors
 import de.tipau.promille.bac.JamArcadeGame
 import de.tipau.promille.bac.JamRoulettePayload
@@ -28,6 +30,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import de.tipau.promille.bac.JamVisibility
 import de.tipau.promille.bac.WaterScore
 import de.tipau.promille.bac.privacyLabels
+import de.tipau.promille.ui.components.AppIcons
 import de.tipau.promille.ui.components.PrimaryButton
 import de.tipau.promille.ui.components.PromilleCard
 import de.tipau.promille.ui.components.SectionLabel
@@ -282,16 +285,29 @@ private fun JamPrivacyToggles(settings: JamSettings, onChange: (JamSettings) -> 
     }
 }
 
-/** Sends a server invitation to a friend who is not in the jam yet. */
+/** One row of InviteFriendsSheet: a crew member who is not in the jam yet. */
+data class InviteCandidate(
+    val id: String,
+    val name: String,
+    val avatarInitial: String,
+    val friendCode: String?
+)
+
+/**
+ * InviteFriendsSheet (ActiveJamView.swift:660). Sends a server invitation to a
+ * friend who is not in the jam yet. A friend without a friend code keeps their
+ * row and loses only the notify button - the share sheet still reaches them.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InviteFriendsSheet(
-    friendCodes: List<Pair<String, String>>,
+    friends: List<InviteCandidate>,
+    jamCode: String,
+    invited: Set<String>,
     onDismiss: () -> Unit,
-    onInvite: (String) -> Unit
+    onInvite: (InviteCandidate) -> Unit
 ) {
-    val invited = remember { mutableStateListOf<String>() }
-
+    val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -332,26 +348,104 @@ fun InviteFriendsSheet(
                     Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(14.dp))
                 }
             }
-            if (friendCodes.isEmpty()) {
-                Text(
-                    "Niemand in deiner Crew hat einen Freundescode. Ohne Code kann keine Einladung zugestellt werden.",
-                    color = AppColors.textDim,
-                    fontSize = 13.sp
-                )
+            if (friends.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        AppIcons.Group,
+                        contentDescription = null,
+                        tint = AppColors.textMuted,
+                        modifier = Modifier.size(40.dp)
+                    )
+                    Text("Alle Freunde sind dabei!", color = AppColors.textDim, fontSize = 15.sp)
+                    Text(
+                        "Alle deine Crew-Mitglieder sind bereits im Jam.",
+                        color = AppColors.textMuted,
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
-            friendCodes.forEach { (name, code) ->
+            friends.forEach { friend ->
+                val sent = friend.id in invited
                 PromilleCard(Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(name, color = AppColors.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                        if (code in invited) {
-                            Text("Eingeladen", color = AppColors.statusGreen, fontSize = 13.sp)
-                        } else {
-                            TextButton(onClick = {
-                                onInvite(code)
-                                invited += code
-                            }) {
-                                Text("Einladen", color = AppColors.accent, fontWeight = FontWeight.Bold)
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(AppColors.statusOrange.copy(alpha = 0.12f))
+                                .border(1.dp, AppColors.statusOrange.copy(alpha = 0.3f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                friend.avatarInitial,
+                                color = AppColors.statusOrange,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Text(friend.name, color = AppColors.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        if (friend.friendCode != null) {
+                            val tint = if (sent) AppColors.statusGreen else AppColors.accent
+                            Row(
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(tint.copy(alpha = 0.12f))
+                                    .border(0.5.dp, tint.copy(alpha = 0.3f), CircleShape)
+                                    .clickable(enabled = !sent) { onInvite(friend) }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    if (sent) AppIcons.Check else AppIcons.Bell,
+                                    contentDescription = null,
+                                    tint = tint,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    if (sent) "Eingeladen" else "Benachrichtigen",
+                                    color = tint,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(AppColors.card)
+                                .border(0.5.dp, AppColors.border, CircleShape)
+                                .clickable {
+                                    val sendIntent = android.content.Intent().apply {
+                                        action = android.content.Intent.ACTION_SEND
+                                        putExtra(
+                                            android.content.Intent.EXTRA_TEXT,
+                                            "Tritt meinem Jam bei! Code: $jamCode"
+                                        )
+                                        type = "text/plain"
+                                    }
+                                    context.startActivity(
+                                        android.content.Intent.createChooser(sendIntent, "Jam teilen")
+                                    )
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                AppIcons.Share,
+                                contentDescription = "Jam teilen",
+                                tint = AppColors.textDim,
+                                modifier = Modifier.size(14.dp)
+                            )
                         }
                     }
                 }
