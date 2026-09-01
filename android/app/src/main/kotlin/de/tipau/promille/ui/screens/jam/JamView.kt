@@ -535,11 +535,19 @@ private fun ActiveJam(
             if (bitmap == null) {
                 photoError = "Das Bild konnte nicht gelesen werden."
             } else {
-                try {
-                    jamService.sendPhoto(bitmap)
+                // Scaling plus up to five jpeg passes; on the main thread that
+                // is a visible freeze the moment the picker closes.
+                val shared = withContext(Dispatchers.IO) {
+                    runCatching { jamService.sendPhoto(bitmap) }
+                }
+                if (shared.isFailure) {
+                    photoError = shared.exceptionOrNull()?.message ?: "Das hat nicht geklappt."
+                } else {
                     // iOS also files the shared photo under the personal
                     // memories with the permille it was taken at. That copy is
                     // written at full quality; only the wire copy is squeezed.
+                    // Outside the failure branch on purpose: the photo already
+                    // reached the jam, so a failed insert is not "nicht geteilt".
                     val path = withContext(Dispatchers.IO) {
                         runCatching {
                             val target = File(context.filesDir, "memory_${System.currentTimeMillis()}.jpg")
@@ -553,8 +561,6 @@ private fun ActiveJam(
                             jamService.myCurrentBAC.value.takeIf { it > 0 }
                         )
                     }
-                } catch (e: Exception) {
-                    photoError = e.message ?: "Das hat nicht geklappt."
                 }
             }
         }
@@ -1042,8 +1048,14 @@ private fun JamPhotoStrip(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     horizontalAlignment = Alignment.Start
                 ) {
+                    // Sampled down: the wire jpeg is 900 px on the long edge,
+                    // and thirty of those decoded whole is ~65 MB of ARGB for a
+                    // row of 80.dp squares.
                     val bitmap = remember(photo.jpeg) {
-                        BitmapFactory.decodeByteArray(photo.jpeg, 0, photo.jpeg.size)
+                        BitmapFactory.decodeByteArray(
+                            photo.jpeg, 0, photo.jpeg.size,
+                            BitmapFactory.Options().apply { inSampleSize = 4 }
+                        )
                     }
                     Box(
                         modifier = Modifier
