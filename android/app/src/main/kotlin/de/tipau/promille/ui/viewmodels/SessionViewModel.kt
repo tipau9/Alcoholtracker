@@ -18,6 +18,7 @@ import de.tipau.promille.service.LocationService
 import de.tipau.promille.service.NotificationService
 import de.tipau.promille.sync.BACPublisher
 import de.tipau.promille.sync.JamService
+import de.tipau.promille.ui.screens.home.HomeWidgetType
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -555,20 +556,29 @@ class SessionViewModel(
     }
 
     fun toggleWidget(widgetRaw: String) {
-        val currentProfile = profileEntity.value ?: return
-        val raw = currentProfile.activeWidgetsRaw
-        val list = if (raw.isBlank()) {
-            listOf("timeToLimit", "water", "calories", "drinkCount", "bacCurve", "hydration", "stomachStatus", "favStrip", "drinkHistory", "milestone", "dayStats", "safetyActions")
-        } else {
-            raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-        }.toMutableList()
+        val type = HomeWidgetType.entries.firstOrNull { it.raw == widgetRaw } ?: return
+        updateWidgets { if (type in it) it - type else it + type }
+    }
 
-        if (list.contains(widgetRaw)) {
-            list.remove(widgetRaw)
-        } else {
-            list.add(widgetRaw)
+    /**
+     * The four info tiles are one section in edit mode, as on iOS: tapping it
+     * clears all four, or restores all four (HomeView.swift:845-851).
+     */
+    fun toggleGridTiles() {
+        val grid = HomeWidgetType.gridTypes
+        updateWidgets { active ->
+            if (grid.any { it in active }) active - grid.toSet() else active + grid
         }
-        val serialized = list.joinToString(",")
-        userProfileRepository.updateDebounced { it.copy(activeWidgetsRaw = serialized) }
+    }
+
+    // This used to keep its own hardcoded copy of the widget list and its own
+    // split/join, which meant the "__none__" sentinel could only ever be half
+    // applied. One pair of functions now, HomeWidgetType's.
+    private fun updateWidgets(transform: (Set<HomeWidgetType>) -> Set<HomeWidgetType>) {
+        val currentProfile = profileEntity.value ?: return
+        val next = transform(HomeWidgetType.parseActiveWidgets(currentProfile.activeWidgetsRaw))
+        userProfileRepository.updateDebounced {
+            it.copy(activeWidgetsRaw = HomeWidgetType.serialize(next))
+        }
     }
 }

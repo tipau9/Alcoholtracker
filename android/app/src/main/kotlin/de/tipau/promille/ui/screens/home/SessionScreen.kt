@@ -603,50 +603,72 @@ fun SessionScreen(
                 EditableWidgetContainer(
                     isEditMode = isWidgetEditMode,
                     isActive = showTime || showWater || showCalories || showCount,
-                    onToggleActive = {
-                        viewModel.toggleWidget("timeToLimit")
-                    }
+                    onToggleActive = { viewModel.toggleGridTiles() }
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
+                    // Each tile follows its own switch, as iOS's HomeWidgetGrid
+                    // does. The four used to render unconditionally, so turning
+                    // Wasser, Kalorien or Drinks heute off in the edit sheet
+                    // changed nothing on screen. Building the list and chunking
+                    // it by two is what iOS's two-column LazyVGrid does with an
+                    // odd number of tiles; the trailing Spacer keeps the last
+                    // one at half width instead of letting it stretch.
+                    val drivingLimit = profile
+                        ?.let { de.tipau.promille.repository.UserProfileRepository.toProfile(it).drivingLimit } ?: 0.5
+                    val overLimit = bac > drivingLimit + 0.005
+                    val tiles = buildList<@Composable (Modifier) -> Unit> {
+                        if (showTime) add { m ->
                             val driveText = driveableIn?.let { if (it <= 0) "Nüchtern" else "in ${formatHours(it)}" } ?: "Nüchtern"
                             InfoWidget(
                                 icon = AppIcons.Car,
                                 label = if (profile?.isProbationaryDriver == true) "Bis 0,0 ‰" else "Bis 0,5 ‰",
                                 value = driveText,
-                                iconColor = AppColors.accent,
-                                modifier = Modifier.weight(1f)
+                                iconColor = if (overLimit) AppColors.statusOrange else AppColors.accent,
+                                isHighlighted = overLimit,
+                                modifier = m
                             )
-                            val waterText = if (recommendedWater <= 0) "Ausreichend" else "Noch $waterGlasses Gl."
+                        }
+                        if (showWater) add { m ->
+                            val waterText = if (recommendedWater <= 0) {
+                                "Ausreichend"
+                            } else {
+                                "$waterGlasses ${if (waterGlasses == 1) "Glas" else "Gläser"}"
+                            }
                             InfoWidget(
                                 icon = AppIcons.Water,
                                 label = "Wasser",
                                 value = waterText,
                                 iconColor = AppColors.accent,
-                                modifier = Modifier.weight(1f)
+                                modifier = m
                             )
                         }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
+                        if (showCalories) add { m ->
                             InfoWidget(
                                 icon = AppIcons.Fire,
                                 label = "Kalorien",
                                 value = "$totalCalories kcal",
                                 iconColor = AppColors.statusOrange,
-                                modifier = Modifier.weight(1f)
+                                modifier = m
                             )
+                        }
+                        if (showCount) add { m ->
                             InfoWidget(
                                 icon = AppIcons.Person,
                                 label = "Drinks heute",
                                 value = "${drinks.size}",
                                 iconColor = AppColors.statusGreen,
-                                modifier = Modifier.weight(1f)
+                                modifier = m
                             )
+                        }
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        tiles.chunked(2).forEach { row ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                row.forEach { tile -> tile(Modifier.weight(1f)) }
+                                if (row.size == 1) Spacer(Modifier.weight(1f))
+                            }
                         }
                     }
                 }

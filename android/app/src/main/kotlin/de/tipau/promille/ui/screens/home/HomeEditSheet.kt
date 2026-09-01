@@ -46,13 +46,27 @@ enum class HomeWidgetType(val raw: String, val localizedName: String, val icon: 
         val gridTypes = listOf(TIME_TO_LIMIT, WATER, CALORIES, DRINK_COUNT)
         val sectionTypes = listOf(BAC_CURVE, STOMACH_STATUS, FAV_STRIP, DRINK_HISTORY, MILESTONE, DAY_STATS, SAFETY_ACTIONS)
 
+        // WidgetType.explicitNoneRaw (UserProfile.swift:122). The literal
+        // has to match: activeWidgetsRaw syncs across platforms
+        // (HistorySyncService.kt:329). Without it, serialize(emptySet())
+        // writes "" and parse reads that back as "all on", so turning every
+        // widget off resurrected all of them on the next read.
+        const val EXPLICIT_NONE_RAW = "__none__"
+
         fun parseActiveWidgets(raw: String): Set<HomeWidgetType> {
+            if (raw == EXPLICIT_NONE_RAW) return emptySet()
+            // Blank is Android's column default (Entities.kt:46), so it means
+            // a fresh profile, not a legacy one. iOS's preWidgetDefault is
+            // deliberately not ported here: its fresh profiles are written
+            // with the full list (UserProfile.swift:442), so over there blank
+            // only ever means pre-widget-system.
             if (raw.isBlank()) return entries.toSet()
             val tokens = raw.split(",").map { it.trim() }
             return entries.filter { tokens.contains(it.raw) }.toSet()
         }
 
         fun serialize(widgets: Set<HomeWidgetType>): String {
+            if (widgets.isEmpty()) return EXPLICIT_NONE_RAW
             return widgets.joinToString(",") { it.raw }
         }
     }
