@@ -1,5 +1,6 @@
 package de.tipau.promille.bac
 
+import java.util.Locale
 import kotlin.math.max
 
 /**
@@ -53,5 +54,30 @@ object CrewMath {
         val minutes = updatedMinutesAgo(lastUpdateEpochSeconds, nowEpochSeconds)
         if (minutes != null && minutes < 10 && estimated > 1.0) score += 10
         return score
+    }
+
+    /**
+     * "Stand vor 2:15 Stunden" and friends, mirrors
+     * FriendProfileSheet.swift:517-545. The friend's permille is decayed, so the
+     * age of the reading is what tells the reader how much of the number is
+     * measurement and how much is arithmetic.
+     */
+    fun updateStatusText(minutes: Int): String = when {
+        minutes <= 0 -> "Stand jetzt"
+        minutes < 60 -> "Stand vor $minutes min"
+        minutes < 1440 -> {
+            val hours = minutes / 60
+            val rest = minutes % 60
+            val hourWord = if (hours == 1) "Stunde" else "Stunden"
+            if (rest == 0) "Stand vor $hours $hourWord"
+            else String.format(Locale.GERMAN, "Stand vor %d:%02d %s", hours, rest, hourWord)
+        }
+        else -> {
+            val days = minutes / 1440
+            val restHours = (minutes % 1440) / 60
+            val dayPart = if (days == 1) "1 Tag" else "$days Tagen"
+            val hourPart = if (restHours == 1) "1 Stunde" else "$restHours Stunden"
+            if (restHours == 0) "Stand vor $dayPart" else "Stand vor $dayPart und $hourPart"
+        }
     }
 }

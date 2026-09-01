@@ -183,7 +183,8 @@ fun CrewView(
                 coroutineScope.launch {
                     crewRepository.delete(selectedMember!!)
                 }
-            }
+            },
+            supabase = supabase
         )
     }
 

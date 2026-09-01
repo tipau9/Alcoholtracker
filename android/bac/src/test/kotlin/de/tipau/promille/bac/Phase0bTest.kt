@@ -405,4 +405,16 @@ class CrewMathTest {
         // Same value, but published half an hour ago: no bonus, and decayed.
         assertEquals(60, CrewMath.careScore(1.2, now - 1800, now))
     }
+
+    @Test
+    fun `the age of a reading reads the same as on iOS`() {
+        assertEquals("Stand jetzt", CrewMath.updateStatusText(0))
+        assertEquals("Stand vor 45 min", CrewMath.updateStatusText(45))
+        assertEquals("Stand vor 1 Stunde", CrewMath.updateStatusText(60))
+        assertEquals("Stand vor 2:05 Stunden", CrewMath.updateStatusText(125))
+        assertEquals("Stand vor 3 Stunden", CrewMath.updateStatusText(180))
+        assertEquals("Stand vor 1 Tag", CrewMath.updateStatusText(1440))
+        assertEquals("Stand vor 1 Tag und 1 Stunde", CrewMath.updateStatusText(1500))
+        assertEquals("Stand vor 2 Tagen und 2 Stunden", CrewMath.updateStatusText(3000))
+    }
 }
