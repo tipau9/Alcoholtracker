@@ -95,7 +95,8 @@ fun PromilleNavigation(
                         de.tipau.promille.ui.screens.home.SessionScreen(
                             viewModel = sessionViewModel,
                             templateRepository = container.drinkTemplateRepository,
-                            container = container
+                            container = container,
+                            onOpenCrew = { selectedTab = Tab.CREW }
                         )
                     }
                     Tab.HISTORY -> {

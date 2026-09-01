@@ -56,6 +56,7 @@ fun SessionScreen(
     viewModel: SessionViewModel,
     templateRepository: DrinkTemplateRepository,
     container: de.tipau.promille.di.AppContainer? = null,
+    onOpenCrew: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val bac by viewModel.currentBAC.collectAsState()
@@ -452,7 +453,10 @@ fun SessionScreen(
 
             if (needsAttention.isNotEmpty() && !isWidgetEditMode) {
                 item {
-                    CrewAlertBanner(names = needsAttention, onClick = { /* Crew tab */ })
+                    // iOS's banner is inert (HomeView.swift:494 passes no
+                    // closure) with a decorative chevron. This one has a real
+                    // ripple, so the chevron has to lead somewhere.
+                    CrewAlertBanner(names = needsAttention, onClick = onOpenCrew)
                 }
             }
 

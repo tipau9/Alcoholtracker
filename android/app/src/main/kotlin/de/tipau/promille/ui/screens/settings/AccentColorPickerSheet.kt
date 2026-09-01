@@ -217,22 +217,12 @@ fun RgbColorPickerSheet(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                // Eyedropper (Pipette)
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.card)
-                        .clickable { /* Eyedropper */ },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = AppIcons.Eyedropper,
-                        contentDescription = "Pipette",
-                        tint = AppColors.accent,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
+                // iOS has no eyedropper here, and this one was never wired.
+                // A real one needs MediaProjection to read a screen pixel,
+                // for a sheet that already has a wheel, a hex field and the
+                // presets. Spacer, not nothing: SpaceBetween needs the
+                // counterweight or the title slides left.
+                Spacer(Modifier.size(32.dp))
 
                 // Centered Title
                 Text(
