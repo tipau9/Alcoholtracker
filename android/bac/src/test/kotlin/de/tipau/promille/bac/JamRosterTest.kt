@@ -185,6 +185,18 @@ class JamActiveRosterTest {
     }
 
     @Test
+    fun `a lobby row ages from just started through minutes into hours`() {
+        assertEquals("Gerade gestartet", jamLobbyRelativeTime(now, now))
+        assertEquals("Gerade gestartet", jamLobbyRelativeTime(now - 59, now))
+        assertEquals("vor 1 min", jamLobbyRelativeTime(now - 60, now))
+        assertEquals("vor 59 min", jamLobbyRelativeTime(now - 59 * 60, now))
+        assertEquals("vor 1 h", jamLobbyRelativeTime(now - 60 * 60, now))
+        assertEquals("vor 3 h", jamLobbyRelativeTime(now - 200 * 60, now))
+        // A clock that jumped backwards must not read as hours old.
+        assertEquals("Gerade gestartet", jamLobbyRelativeTime(now + 120, now))
+    }
+
+    @Test
     fun `a vanished own row reads as a kick, a present one does not`() {
         assertTrue(wasKickedFromJam(listOf(p("a")), "me", "u-me"))
         assertFalse(wasKickedFromJam(listOf(p("a"), p("x", userID = "u-me")), "me", "u-me"))

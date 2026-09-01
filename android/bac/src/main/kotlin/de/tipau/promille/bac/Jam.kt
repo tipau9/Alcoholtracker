@@ -106,6 +106,20 @@ data class Jam(
 )
 
 /**
+ * "Gerade gestartet" / "vor 5 min" / "vor 2 h" under a lobby row, mirrors
+ * LobbyJamRow.relativeTime. A jam nobody joined an hour ago is probably over,
+ * so the age is what tells the reader whether a row is worth tapping.
+ */
+fun jamLobbyRelativeTime(createdAtEpochSeconds: Long, nowEpochSeconds: Long): String {
+    val minutes = (nowEpochSeconds - createdAtEpochSeconds) / 60
+    return when {
+        minutes < 1 -> "Gerade gestartet"
+        minutes < 60 -> "vor $minutes min"
+        else -> "vor ${minutes / 60} h"
+    }
+}
+
+/**
  * Last writer wins upsert: an incoming row only replaces an existing one when it
  * is at least as fresh. That makes the roster an LWW map, so a stale broadcast
  * arriving late after an offline reconnect cannot clobber a newer status and

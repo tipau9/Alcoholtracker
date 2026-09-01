@@ -24,6 +24,7 @@ import de.tipau.promille.bac.JamArcadeGame
 import de.tipau.promille.bac.JamRoulettePayload
 import de.tipau.promille.bac.JamParticipant
 import de.tipau.promille.bac.JamSettings
+import androidx.compose.ui.graphics.vector.ImageVector
 import de.tipau.promille.bac.JamVisibility
 import de.tipau.promille.bac.WaterScore
 import de.tipau.promille.bac.privacyLabels
@@ -113,12 +114,7 @@ fun CreateJamSheet(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = when (option) {
-                                    JamVisibility.PROXIMITY_AND_CODE -> de.tipau.promille.ui.components.AppIcons.Waveform
-                                    JamVisibility.FRIENDS_ONLY -> de.tipau.promille.ui.components.AppIcons.PersonPlus
-                                    JamVisibility.CODE_ONLY -> Icons.Filled.Lock
-                                    JamVisibility.PROXIMITY_ONLY -> de.tipau.promille.ui.components.AppIcons.Location
-                                },
+                                imageVector = jamVisibilityIcon(option),
                                 contentDescription = null,
                                 tint = AppColors.accent,
                                 modifier = Modifier.size(16.dp)
@@ -628,4 +624,12 @@ fun ArcadePickerSheet(onDismiss: () -> Unit, onPick: (JamArcadeGame) -> Unit) {
             }
         }
     }
+}
+
+/** Jam.JamVisibility.icon, shared by the create sheet and the lobby rows. */
+internal fun jamVisibilityIcon(visibility: JamVisibility): ImageVector = when (visibility) {
+    JamVisibility.PROXIMITY_AND_CODE -> de.tipau.promille.ui.components.AppIcons.Waveform
+    JamVisibility.FRIENDS_ONLY -> de.tipau.promille.ui.components.AppIcons.PersonPlus
+    JamVisibility.CODE_ONLY -> Icons.Filled.Lock
+    JamVisibility.PROXIMITY_ONLY -> de.tipau.promille.ui.components.AppIcons.Location
 }

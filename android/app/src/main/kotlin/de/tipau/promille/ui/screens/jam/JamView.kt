@@ -22,6 +22,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -41,6 +42,7 @@ import de.tipau.promille.bac.JamArcadeGame
 import de.tipau.promille.bac.JamParticipant
 import de.tipau.promille.bac.JamSettings
 import de.tipau.promille.bac.JamVisibility
+import de.tipau.promille.bac.jamLobbyRelativeTime
 import de.tipau.promille.bac.permilleString
 import de.tipau.promille.di.AppContainer
 import de.tipau.promille.ui.components.PrimaryButton
@@ -54,11 +56,12 @@ import de.tipau.promille.TabularFigures
 /**
  * Port of JamLobbyView + ActiveJamView over the server transport.
  *
- * The lobby's "in der Nähe" section (browsing [JamService.nearbyJams] via
- * [JamService.startNearbyDiscovery]) has no UI yet, so a PROXIMITY_ONLY jam
- * can only be reached by whoever already has it as currentJam - creating and
- * code-based joining both work, discovery browsing does not. Left out rather
- * than shown empty and broken.
+ * iOS browses for nearby jams unconditionally in onAppear; here discovery is
+ * only started when the proximity grants are already in hand. Prompting on tab
+ * entry would spend the permission dialog at the point where it explains
+ * itself least, and two dismissals latch it shut for the create flow that
+ * actually needs it. Without the grants Nearby's startDiscovery is a silent
+ * no-op anyway, so the section simply stays empty until a jam was created once.
  */
 private fun proximityPermissions(): Array<String> = buildList {
     if (Build.VERSION.SDK_INT >= 31) {
@@ -120,6 +123,7 @@ private fun JamLobby(
     val scope = rememberCoroutineScope()
     val invitations by jamService.invitations.collectAsState()
     val friendJams by jamService.availableJamsFromFriends.collectAsState()
+    val nearbyJams by jamService.nearbyJams.collectAsState()
 
     var codeInput by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
@@ -157,6 +161,27 @@ private fun JamLobby(
             proximityLauncher.launch(proximityPermissions())
         } else {
             run { jamService.createJam(visibility, settings) }
+        }
+    }
+
+    // Not keyed on anything: startBrowsing clears the discovered list, so a
+    // recomposition key that churns would wipe the rows under the user.
+    DisposableEffect(Unit) {
+        if (hasProximityPermissions(context)) jamService.startNearbyDiscovery()
+        onDispose {
+            // Joining swaps the lobby for ActiveJam and the browser that join
+            // just started has to survive that, or no proximity peer is ever
+            // found during the jam.
+            if (jamService.currentJam.value == null) jamService.stopNearbyDiscovery()
+        }
+    }
+
+    // The row subtitles age; iOS redraws them from a 60 second TimelineView.
+    var nowSeconds by remember { mutableStateOf(System.currentTimeMillis() / 1000) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(60_000)
+            nowSeconds = System.currentTimeMillis() / 1000
         }
     }
 
@@ -318,35 +343,33 @@ private fun JamLobby(
             }
         }
 
-        if (friendJams.isNotEmpty()) {
-            item { SectionLabel("VON FREUNDEN") }
-            items(friendJams, key = { it.id }) { friendJam ->
-                PromilleCard(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable(enabled = !busy) { run { jamService.joinJamFromFriend(friendJam) } }
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                friendJam.hostName,
-                                color = AppColors.text,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                "${maxOf(1, friendJam.participants.size)} Teilnehmer",
-                                color = AppColors.textDim,
-                                fontSize = 12.sp
-                            )
-                        }
-                        Text("Beitreten", color = AppColors.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
+        if (nearbyJams.isNotEmpty()) {
+            item { SectionLabel("IN DER NÄHE") }
+            items(nearbyJams, key = { it.id }) { nearby ->
+                LobbyJamRow(
+                    jam = nearby,
+                    nowSeconds = nowSeconds,
+                    enabled = !busy,
+                    onJoin = { run { jamService.joinNearbyJam(nearby) } }
+                )
             }
         }
 
-        if (invitations.isEmpty() && friendJams.isEmpty()) {
+        if (friendJams.isNotEmpty()) {
+            item { SectionLabel("VON FREUNDEN") }
+            items(friendJams, key = { it.id }) { friendJam ->
+                LobbyJamRow(
+                    jam = friendJam,
+                    nowSeconds = nowSeconds,
+                    enabled = !busy,
+                    onJoin = { run { jamService.joinJamFromFriend(friendJam) } }
+                )
+            }
+        }
+
+        // Pending invitations do not count as content, same as iOS: an invite
+        // plus no reachable jam shows both the invite and the hint.
+        if (nearbyJams.isEmpty() && friendJams.isEmpty()) {
             item {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -357,7 +380,7 @@ private fun JamLobby(
                     Icon(de.tipau.promille.ui.components.AppIcons.EmojiEvents, null, tint = AppColors.accent, modifier = Modifier.size(40.dp))
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        "Kein Jam von Freunden.",
+                        "Niemand in der Nähe oder von Freunden.",
                         color = AppColors.text,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold
@@ -369,6 +392,80 @@ private fun JamLobby(
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * One joinable jam, shared by both lists. iOS groups the rows into a single
+ * card with dividers; here each row is its own PromilleCard because the list is
+ * a LazyColumn and a grouped card would have to be one item.
+ */
+@Composable
+private fun LobbyJamRow(
+    jam: Jam,
+    nowSeconds: Long,
+    enabled: Boolean,
+    onJoin: () -> Unit
+) {
+    PromilleCard(
+        Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled, onClick = onJoin)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(AppColors.accent.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    jamVisibilityIcon(jam.visibility),
+                    contentDescription = null,
+                    tint = AppColors.accent,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Column(Modifier.weight(1f)) {
+                Text(
+                    jam.hostName,
+                    color = AppColors.text,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // The host is always there, so never show "0 Teilnehmer"
+                    // before the roster has synced in.
+                    Text(
+                        "${maxOf(1, jam.participants.size)} Teilnehmer",
+                        color = AppColors.textDim,
+                        fontSize = 12.sp
+                    )
+                    Text("·", color = AppColors.textMuted, fontSize = 12.sp)
+                    Text(
+                        jamLobbyRelativeTime(jam.createdAtEpochSeconds, nowSeconds),
+                        color = AppColors.textMuted,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+            Text(
+                "Beitreten",
+                color = AppColors.accent,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .alpha(if (enabled) 1f else 0.45f)
+                    .clip(CircleShape)
+                    .background(AppColors.accent.copy(alpha = 0.12f))
+                    .border(0.5.dp, AppColors.accent.copy(alpha = 0.3f), CircleShape)
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            )
         }
     }
 }
