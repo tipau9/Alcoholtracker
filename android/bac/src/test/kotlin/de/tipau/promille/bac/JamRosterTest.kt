@@ -284,4 +284,16 @@ class JamArcadeScoringTest {
         )
         assertEquals(listOf("fast", "slow", "dq"), ordered.map { it.participantID })
     }
+
+    @Test
+    fun `privacy labels split shared from hidden and ignore local preferences`() {
+        val (shared, hidden) = JamSettings(
+            shareBAC = false,
+            shareDrinkCount = false,
+            shareLocation = true,
+            allowWaves = false
+        ).privacyLabels()
+        assertEquals(listOf("Status", "Drinks", "SOS-Status", "Fotos"), shared)
+        assertEquals(listOf("Promille-Wert", "Anzahl Drinks"), hidden)
+    }
 }

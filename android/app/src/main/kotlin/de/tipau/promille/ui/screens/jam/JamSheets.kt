@@ -26,6 +26,7 @@ import de.tipau.promille.bac.JamParticipant
 import de.tipau.promille.bac.JamSettings
 import de.tipau.promille.bac.JamVisibility
 import de.tipau.promille.bac.WaterScore
+import de.tipau.promille.bac.privacyLabels
 import de.tipau.promille.ui.components.PrimaryButton
 import de.tipau.promille.ui.components.PromilleCard
 import de.tipau.promille.ui.components.SectionLabel
@@ -363,7 +364,14 @@ fun InviteFriendsSheet(
     }
 }
 
-/** Host powers, reachable by long pressing a participant row. */
+private enum class ParticipantAction { KICK, TRANSFER }
+
+/**
+ * Privacy detail plus host powers, reachable by long pressing a participant row.
+ * Port of ParticipantPrivacySheet (JamPrivacySheets.swift:65) as a dialog rather
+ * than a sheet, which is where this screen already puts host actions.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ParticipantActionsDialog(
     participant: JamParticipant,
@@ -373,34 +381,114 @@ fun ParticipantActionsDialog(
     onTransfer: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    // Kick and host handover are both one way, so neither fires straight off the
+    // tap: iOS gates each behind its own confirmation.
+    var confirming by remember { mutableStateOf<ParticipantAction?>(null) }
+
+    confirming?.let { action ->
+        val kick = action == ParticipantAction.KICK
+        AlertDialog(
+            onDismissRequest = { confirming = null },
+            containerColor = AppColors.card,
+            title = {
+                Text(
+                    if (kick) "Teilnehmer entfernen?" else "Host übergeben?",
+                    color = AppColors.text,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    if (kick) "${participant.displayName} wird aus dem Jam entfernt."
+                    else "${participant.displayName} wird zum Host. Du bleibst als Teilnehmer im Jam.",
+                    color = AppColors.textDim,
+                    fontSize = 13.sp
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirming = null
+                    if (kick) onKick() else onTransfer()
+                }) {
+                    Text(
+                        if (kick) "Entfernen" else "Host übergeben",
+                        color = if (kick) AppColors.statusRed else AppColors.accent
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirming = null }) {
+                    Text("Abbrechen", color = AppColors.textDim)
+                }
+            }
+        )
+        return
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = AppColors.card,
-        title = { Text(participant.displayName, color = AppColors.text, fontWeight = FontWeight.Bold) },
-        text = {
-            if (!canKick && !canTransfer) {
-                Text("Nur der Host kann Teilnehmer verwalten.", color = AppColors.textDim, fontSize = 13.sp)
-            } else {
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(AppColors.border),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(participant.avatar, color = AppColors.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                }
                 Column {
+                    Text(participant.displayName, color = AppColors.text, fontWeight = FontWeight.Bold)
+                    Text(participant.connectionType.label, color = AppColors.textDim, fontSize = 12.sp)
+                }
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                val settings = participant.sharedSettings
+                if (settings == null) {
+                    // Settings ride the Bluetooth channel only, so server-synced
+                    // members arrive without them.
+                    Text(
+                        "Privatsphäre-Details sind nur bei direkter Bluetooth-Verbindung sichtbar. " +
+                            "Verborgene Werte bleiben trotzdem verborgen.",
+                        color = AppColors.textDim,
+                        fontSize = 13.sp
+                    )
+                } else {
+                    val (shared, hidden) = settings.privacyLabels()
+                    if (shared.isNotEmpty()) {
+                        PrivacyTagGroup("${participant.displayName} teilt:", shared, AppColors.statusGreen)
+                    }
+                    if (hidden.isNotEmpty()) {
+                        PrivacyTagGroup("Verbirgt:", hidden, AppColors.textMuted)
+                    }
+                }
+
+                if (!canKick && !canTransfer) {
+                    Text("Nur der Host kann Teilnehmer verwalten.", color = AppColors.textDim, fontSize = 13.sp)
+                } else {
                     if (canTransfer) {
                         Text(
-                            "Host übertragen",
+                            "Host übergeben",
                             color = AppColors.accent,
                             fontSize = 15.sp,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable(onClick = onTransfer)
+                                .clickable { confirming = ParticipantAction.TRANSFER }
                                 .padding(vertical = 12.dp)
                         )
                     }
                     if (canKick) {
                         Text(
-                            "Aus dem Jam entfernen",
+                            "Aus Jam entfernen",
                             color = AppColors.statusRed,
                             fontSize = 15.sp,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable(onClick = onKick)
+                                .clickable { confirming = ParticipantAction.KICK }
                                 .padding(vertical = 12.dp)
                         )
                     }
@@ -408,9 +496,34 @@ fun ParticipantActionsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Abbrechen", color = AppColors.textDim) }
+            TextButton(onClick = onDismiss) { Text("Schließen", color = AppColors.textDim) }
         }
     )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PrivacyTagGroup(title: String, items: List<String>, color: Color) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, color = AppColors.textDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items.forEach { item ->
+                Text(
+                    item,
+                    color = color,
+                    fontSize = 12.sp,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(color.copy(alpha = 0.1f))
+                        .border(0.5.dp, color.copy(alpha = 0.25f), CircleShape)
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                )
+            }
+        }
+    }
 }
 
 /** Jam is a sheet out of Crew on both platforms, never its own tab. */

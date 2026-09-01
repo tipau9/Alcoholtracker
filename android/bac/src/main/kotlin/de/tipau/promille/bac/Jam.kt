@@ -61,6 +61,25 @@ data class JamSettings(
     val autoAcceptFriends: Boolean = true
 )
 
+/**
+ * Splits the toggles into the values a member shares and the ones they hide,
+ * mirroring ParticipantPrivacySheet (JamPrivacySheets.swift:75-97). Only the six
+ * roster visible values: location, waves and auto accept are local preferences,
+ * never values another member sees.
+ */
+fun JamSettings.privacyLabels(): Pair<List<String>, List<String>> {
+    val flags = listOf(
+        shareBAC to "Promille-Wert",
+        shareStatus to "Status",
+        shareDrinks to "Drinks",
+        shareDrinkCount to "Anzahl Drinks",
+        shareSOSStatus to "SOS-Status",
+        sharePhotos to "Fotos"
+    )
+    return flags.filter { it.first }.map { it.second } to
+        flags.filterNot { it.first }.map { it.second }
+}
+
 data class JamParticipant(
     val id: String,
     val userID: String? = null,

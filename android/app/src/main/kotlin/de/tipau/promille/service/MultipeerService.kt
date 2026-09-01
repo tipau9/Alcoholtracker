@@ -343,10 +343,12 @@ class MultipeerService(private val context: Context) {
 // polymorphism needs a registered subclass module, and a flat envelope with one
 // populated field per kind is the same data with none of that setup.
 //
-// WireParticipant deliberately drops sharedSettings: the sender already nulls
-// currentBAC/currentStatus/hasSOSActive per their own privacy toggles before
-// broadcasting (see JamService.makeMyParticipant), so nothing downstream needs
-// the toggle values themselves, only their already-applied effect.
+// WireParticipant carries the sender's privacy toggles as WireSettings, matching
+// iOS, which puts a whole JamParticipant in its status broadcast. The values are
+// already nulled per those toggles before broadcasting (see
+// JamService.makeMyParticipant); the flags themselves are what the participant
+// privacy detail renders, and only the Bluetooth channel has them - the server
+// roster leaves sharedSettings null.
 
 @Serializable
 private data class WireEnvelope(
@@ -376,20 +378,48 @@ private data class WireParticipant(
     val currentBAC: Double? = null,
     val currentStatus: String? = null,
     val hasSOSActive: Boolean = false,
-    val lastUpdatedEpochSeconds: Long = 0
+    val lastUpdatedEpochSeconds: Long = 0,
+    val sharedSettings: WireSettings? = null
 ) {
     fun toParticipant() = JamParticipant(
         id = id, userID = userID, displayName = displayName, avatar = avatar,
         joinedAtEpochSeconds = joinedAtEpochSeconds,
         connectionType = JamConnectionType.from(connectionType),
         currentBAC = currentBAC, currentStatus = currentStatus, hasSOSActive = hasSOSActive,
-        lastUpdatedEpochSeconds = lastUpdatedEpochSeconds, sharedSettings = null
+        lastUpdatedEpochSeconds = lastUpdatedEpochSeconds,
+        sharedSettings = sharedSettings?.toSettings()
     )
 
     companion object {
         fun from(p: JamParticipant) = WireParticipant(
             p.id, p.userID, p.displayName, p.avatar, p.joinedAtEpochSeconds,
-            p.connectionType.raw, p.currentBAC, p.currentStatus, p.hasSOSActive, p.lastUpdatedEpochSeconds
+            p.connectionType.raw, p.currentBAC, p.currentStatus, p.hasSOSActive,
+            p.lastUpdatedEpochSeconds, p.sharedSettings?.let { WireSettings.from(it) }
+        )
+    }
+}
+
+// Only the six shared-value flags: the rest of JamSettings is local preference
+// (location, waves, auto accept) and stays out of the broadcast.
+@Serializable
+private data class WireSettings(
+    val shareBAC: Boolean = true,
+    val shareStatus: Boolean = true,
+    val shareDrinks: Boolean = true,
+    val shareDrinkCount: Boolean = true,
+    val shareSOSStatus: Boolean = true,
+    val sharePhotos: Boolean = true
+) {
+    fun toSettings() = JamSettings(
+        shareBAC = shareBAC, shareStatus = shareStatus, shareDrinks = shareDrinks,
+        shareDrinkCount = shareDrinkCount, shareSOSStatus = shareSOSStatus,
+        sharePhotos = sharePhotos
+    )
+
+    companion object {
+        fun from(s: JamSettings) = WireSettings(
+            s.shareBAC, s.shareStatus, s.shareDrinks, s.shareDrinkCount,
+            s.shareSOSStatus, s.sharePhotos
         )
     }
 }
