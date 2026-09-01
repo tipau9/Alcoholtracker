@@ -51,6 +51,9 @@ import de.tipau.promille.ui.components.SectionLabel
 import de.tipau.promille.ui.screens.auth.AuthGateSheet
 import kotlinx.coroutines.launch
 import de.tipau.promille.AppSans
+import de.tipau.promille.AppSerif
+import de.tipau.promille.bac.BacStatus
+import de.tipau.promille.color
 import de.tipau.promille.TabularFigures
 
 /**
@@ -757,12 +760,31 @@ private fun ActiveJam(
                                     }
                                 }
                             }
-                            Text(
-                                text = participant.currentBAC?.permilleString() ?: "Teilt keinen Wert",
-                                color = AppColors.textDim,
-                                fontSize = 12.sp
-                            )
+                            // ActiveParticipantRow.statusText: a participant who
+                            // shares their status but no number still says something.
+                            val status = participant.currentStatus
+                            if (status != null && participant.sharedSettings?.shareStatus != false) {
+                                Text(status, color = AppColors.textDim, fontSize = 12.sp)
+                            }
                         }
+                        // ActiveParticipantRow.bacText/bacColor. A withheld value and
+                        // one that has not arrived yet read differently on purpose:
+                        // "Lädt..." is worth waiting for, "BAC verborgen" is not.
+                        val hidesBac = participant.sharedSettings?.shareBAC == false
+                        val bac = participant.currentBAC
+                        Text(
+                            text = when {
+                                hidesBac -> "BAC verborgen"
+                                bac == null -> "Lädt..."
+                                else -> bac.permilleString()
+                            },
+                            color = if (hidesBac || bac == null) AppColors.textMuted
+                                    else BacStatus.of(bac).color,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Light,
+                            fontFamily = AppSerif,
+                            style = TabularFigures
+                        )
                     }
                     if (index < jam.participants.lastIndex) {
                         Divider(color = AppColors.border, thickness = 0.5.dp, modifier = Modifier.padding(start = 68.dp))
