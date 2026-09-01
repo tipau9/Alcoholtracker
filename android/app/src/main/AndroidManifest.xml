@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Sideloads the update APK pulled from GitHub Releases (AppUpdateService). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- registerDefaultNetworkCallback, which retriggers the offline sync drain. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Friend SOS and high-permille alerts. Runtime-requested from Crew. -->
