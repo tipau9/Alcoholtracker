@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -42,6 +43,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateJamSheet(
+    isSignedIn: Boolean,
     onDismiss: () -> Unit,
     onCreate: (JamVisibility, JamSettings) -> Unit
 ) {
@@ -51,7 +53,16 @@ fun CreateJamSheet(
         JamVisibility.CODE_ONLY,
         JamVisibility.PROXIMITY_ONLY
     )
-    var visibility by remember { mutableStateOf(JamVisibility.PROXIMITY_AND_CODE) }
+    // CreateJamSheet.isLocked. Everything but the pure Bluetooth jam needs a
+    // server row, so signed out it is the only choice left - and the default,
+    // the way iOS falls back in onAppear. The sheet is built fresh per open,
+    // so the remember initialiser is that fallback.
+    fun isLocked(option: JamVisibility) = option.usesServer && !isSignedIn
+    var visibility by remember {
+        mutableStateOf(
+            if (isSignedIn) JamVisibility.PROXIMITY_AND_CODE else JamVisibility.PROXIMITY_ONLY
+        )
+    }
     var settings by remember { mutableStateOf(JamSettings()) }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -102,10 +113,12 @@ fun CreateJamSheet(
             ) {
                 choices.forEachIndexed { index, option ->
                     val selected = option == visibility
+                    val locked = isLocked(option)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { visibility = option }
+                            .alpha(if (locked) 0.45f else 1f)
+                            .clickable(enabled = !locked) { visibility = option }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -137,7 +150,14 @@ fun CreateJamSheet(
                                 fontSize = 12.sp
                             )
                         }
-                        if (selected) {
+                        if (locked) {
+                            Icon(
+                                imageVector = AppIcons.Lock,
+                                contentDescription = "Anmeldung nötig",
+                                tint = AppColors.textMuted,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        } else if (selected) {
                             Icon(
                                 imageVector = Icons.Filled.Check,
                                 contentDescription = null,
@@ -150,6 +170,14 @@ fun CreateJamSheet(
                         Divider(color = AppColors.border, thickness = 0.5.dp, modifier = Modifier.padding(start = 62.dp))
                     }
                 }
+            }
+
+            if (!isSignedIn) {
+                Text(
+                    "Ohne Anmeldung ist nur der Offline-Modus über Bluetooth verfügbar.",
+                    color = AppColors.textMuted,
+                    fontSize = 12.sp
+                )
             }
 
             SectionLabel("WAS TEILST DU?")

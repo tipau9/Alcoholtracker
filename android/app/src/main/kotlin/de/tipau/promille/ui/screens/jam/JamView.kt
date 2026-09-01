@@ -170,8 +170,19 @@ private fun JamLobby(
     var pendingCreate by remember { mutableStateOf<Pair<JamVisibility, JamSettings>?>(null) }
     val proximityLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) {
-        pendingCreate?.let { (visibility, settings) -> run { jamService.createJam(visibility, settings) } }
+    ) { grants ->
+        pendingCreate?.let { (visibility, settings) ->
+            // A denied grant still leaves a working jam as long as the server
+            // carries it. PROXIMITY_ONLY has nothing else to fall back on:
+            // startAdvertisingJam would swallow the failure and the host would
+            // sit in a jam nobody can ever discover.
+            when {
+                grants.values.all { it } || visibility.usesServer ->
+                    run { jamService.createJam(visibility, settings) }
+                else ->
+                    error = "Ohne Bluetooth-Berechtigung kann dich niemand in der Nähe finden."
+            }
+        }
         pendingCreate = null
     }
     fun createJam(visibility: JamVisibility, settings: JamSettings) {
@@ -214,6 +225,7 @@ private fun JamLobby(
 
     if (showCreate) {
         CreateJamSheet(
+            isSignedIn = isSignedIn,
             onDismiss = { showCreate = false },
             onCreate = { visibility, settings ->
                 showCreate = false
@@ -261,7 +273,7 @@ private fun JamLobby(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            "Jams laufen über den Server, dafür braucht es ein Konto.",
+                            "Für Jams über den Server brauchst du ein Konto.",
                             color = AppColors.textDim,
                             fontSize = 12.sp
                         )
@@ -322,7 +334,7 @@ private fun JamLobby(
         item {
             PrimaryButton(
                 text = "Eigenen Jam erstellen",
-                enabled = isSignedIn && !busy,
+                enabled = !busy,
                 onClick = { showCreate = true }
             )
         }
