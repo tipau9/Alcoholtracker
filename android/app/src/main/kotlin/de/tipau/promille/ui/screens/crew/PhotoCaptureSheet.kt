@@ -73,6 +73,16 @@ fun PhotoCaptureSheet(
 
     val canSave = staged != null && !isSaving
 
+    // Backing out has to take the staging file with it, otherwise every
+    // abandoned pick leaves a full-size JPEG in the cache directory. Done
+    // inline rather than in a coroutine: rememberCoroutineScope is cancelled
+    // as this leaves composition, which would drop the delete.
+    fun dismiss() {
+        staged?.delete()
+        staged = null
+        onDismiss()
+    }
+
     // PhotoCaptureView.swift:95 hides the camera button when no camera exists.
     val hasCamera = remember {
         context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
@@ -122,7 +132,7 @@ fun PhotoCaptureSheet(
     }
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { dismiss() },
         sheetState = sheetState,
         containerColor = Color.Transparent,
         scrimColor = Color.Black.copy(alpha = 0.65f),
@@ -174,7 +184,7 @@ fun PhotoCaptureSheet(
                             .clip(CircleShape)
                             .background(AppColors.card)
                             .border(0.5.dp, AppColors.border, CircleShape)
-                            .clickable(onClick = onDismiss),
+                            .clickable(onClick = { dismiss() }),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
