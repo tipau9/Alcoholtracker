@@ -70,6 +70,11 @@ fun CrewView(
 
     val isSignedIn by supabase.isSignedIn.collectAsState()
     val myProfile by supabase.myProfile.collectAsState()
+    // CrewView.sosActive: the friend-wide flag or the jam one. The jam flow is
+    // the reason this bar cannot be hidden while signed out - JamService puts
+    // mySOSActive on the wire for every participant that shares it.
+    val jamSOSActive by container.jamService.mySOSActive.collectAsState()
+    var showSOSInfo by remember { mutableStateOf(false) }
 
     // The ticker also re-renders the list, which matters: every permille shown
     // here is a decayed value and would otherwise freeze at its fetched number.
@@ -205,6 +210,42 @@ fun CrewView(
             dismissButton = {
                 TextButton(onClick = { memberToDelete = null }) {
                     Text("Abbrechen")
+                }
+            }
+        )
+    }
+
+    // CrewView.swift:131-137. Neither channel open, so explain rather than
+    // flip a switch that reaches nobody.
+    if (showSOSInfo) {
+        AlertDialog(
+            onDismissRequest = { showSOSInfo = false },
+            title = { Text("SOS") },
+            text = {
+                Text(
+                    "SOS erreicht deine Freunde, sobald du angemeldet bist. " +
+                        "Ohne Anmeldung funktioniert SOS nur in einem aktiven Jam."
+                )
+            },
+            confirmButton = {
+                Row {
+                    TextButton(onClick = {
+                        showSOSInfo = false
+                        showAuth = true
+                    }) {
+                        Text("Anmelden", color = AppColors.accent)
+                    }
+                    TextButton(onClick = {
+                        showSOSInfo = false
+                        showJam = true
+                    }) {
+                        Text("Jam öffnen", color = AppColors.accent)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSOSInfo = false }) {
+                    Text("Abbrechen", color = AppColors.textDim)
                 }
             }
         )
@@ -463,44 +504,54 @@ fun CrewView(
                 )
             }
 
-            // Own SOS. Mirrored on the server so friends see it on their devices.
-            if (isSignedIn) {
-                item {
-                    val sosOn = myProfile?.sosActive == true
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(
-                                if (sosOn) AppColors.statusRed.copy(alpha = 0.20f)
-                                else AppColors.card
-                            )
-                            .border(
-                                if (sosOn) 1.5.dp else 0.5.dp,
-                                if (sosOn) AppColors.statusRed else AppColors.border,
-                                RoundedCornerShape(14.dp)
-                            )
-                            .clickable {
-                                coroutineScope.launch { runCatching { supabase.setSOS(!sosOn) } }
+            // Own SOS. Mirrored on the server so friends see it on their
+            // devices, and on the jam wire for the people around you. Hiding it
+            // while signed out cut off the jam half, which needs no account.
+            item {
+                val sosOn = myProfile?.sosActive == true || jamSOSActive
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            if (sosOn) AppColors.statusRed.copy(alpha = 0.20f)
+                            else AppColors.card
+                        )
+                        .border(
+                            if (sosOn) 1.5.dp else 0.5.dp,
+                            if (sosOn) AppColors.statusRed else AppColors.border,
+                            RoundedCornerShape(14.dp)
+                        )
+                        .clickable {
+                            // CrewView.toggleSOS.
+                            if (!isSignedIn && currentJam == null) {
+                                showSOSInfo = true
+                            } else {
+                                if (isSignedIn) {
+                                    coroutineScope.launch { runCatching { supabase.setSOS(!sosOn) } }
+                                }
+                                if (currentJam != null) {
+                                    container.jamService.mySOSActive.value = !sosOn
+                                }
                             }
-                            .padding(14.dp)
-                    ) {
-                        Icon(Icons.Filled.Warning, "SOS", tint = AppColors.statusRed, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                text = if (sosOn) "SOS ist aktiv" else "SOS senden",
-                                color = if (sosOn) AppColors.statusRed else AppColors.text,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = if (sosOn) "Tippen zum Beenden." else "Deine Crew bekommt sofort eine Meldung.",
-                                color = AppColors.textDim,
-                                fontSize = 12.sp
-                            )
                         }
+                        .padding(14.dp)
+                ) {
+                    Icon(Icons.Filled.Warning, "SOS", tint = AppColors.statusRed, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = if (sosOn) "SOS ist aktiv" else "SOS senden",
+                            color = if (sosOn) AppColors.statusRed else AppColors.text,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (sosOn) "Tippen zum Beenden." else "Deine Crew bekommt sofort eine Meldung.",
+                            color = AppColors.textDim,
+                            fontSize = 12.sp
+                        )
                     }
                 }
             }
