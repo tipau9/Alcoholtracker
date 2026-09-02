@@ -86,17 +86,18 @@ fun DurationChipRow(
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Text(
+                            // iOS: .appCaption, no weight override (was
+                            // 12sp Medium here).
                             text = option.first,
                             color = textColor,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
+                            style = de.tipau.promille.AppText.caption,
                             textAlign = TextAlign.Center
                         )
                         if (option.second == 0.0 && estimatedMinutes != null) {
                             Text(
                                 text = formatDuration(estimatedMinutes),
                                 color = textColor,
-                                fontSize = 10.sp,
+                                style = de.tipau.promille.AppText.micro,
                                 textAlign = TextAlign.Center
                             )
                         }
@@ -149,10 +150,10 @@ fun DurationChipRow(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
+                        // iOS: .appCaptionBold (13sp SemiBold) - was 12sp Bold.
                         text = "Eigene Dauer",
                         color = customTextColor,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
+                        style = de.tipau.promille.AppText.captionBold
                     )
                 }
             }
@@ -169,10 +170,10 @@ fun DurationChipRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
+                        // iOS: .appCaptionBold - was 12sp Bold.
                         text = formatDuration(durationMinutes),
                         color = AppColors.text,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
+                        style = de.tipau.promille.AppText.captionBold
                     )
 
                     // Minus button

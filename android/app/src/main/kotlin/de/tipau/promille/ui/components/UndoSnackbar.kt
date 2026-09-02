@@ -54,9 +54,10 @@ fun UndoSnackbar(
             )
 
             Text(
+                // iOS: .appCaption (13sp) - was 12sp here.
                 text = label,
                 color = AppColors.text,
-                fontSize = 12.sp,
+                style = de.tipau.promille.AppText.caption,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
@@ -71,10 +72,10 @@ fun UndoSnackbar(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
+                    // iOS: .appCaptionBold (13sp SemiBold) - was 12sp Bold.
                     text = "Rückgängig",
                     color = AppColors.accent,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.captionBold
                 )
             }
         }

@@ -62,8 +62,7 @@ fun PrimaryButton(
             }
             Text(
                 text = text,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 17.sp
+                style = de.tipau.promille.AppText.bodyBold
             )
         }
     }
@@ -101,7 +100,7 @@ fun PromilleFAB(
         ) {
             Icon(icon, null, modifier = Modifier.size(15.dp))
             Spacer(Modifier.width(8.dp))
-            Text(text, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+            Text(text, style = de.tipau.promille.AppText.bodyBold)
         }
     }
 }

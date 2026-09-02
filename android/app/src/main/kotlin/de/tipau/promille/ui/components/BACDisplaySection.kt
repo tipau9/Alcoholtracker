@@ -143,7 +143,7 @@ fun BACDisplaySection(
                     Text(
                         text = "‰",
                         color = AppColors.textDim,
-                        fontSize = 13.sp,
+                        style = de.tipau.promille.AppText.caption,
                         modifier = Modifier.offset(y = (-4).dp)
                     )
                 }
@@ -171,7 +171,7 @@ fun BACDisplaySection(
                     Text(
                         text = "Immer sichtbar",
                         color = AppColors.textMuted,
-                        fontSize = 11.sp
+                        style = de.tipau.promille.AppText.micro
                     )
                 }
             }

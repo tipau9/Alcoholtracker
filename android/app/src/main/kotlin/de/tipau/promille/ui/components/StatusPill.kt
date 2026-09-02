@@ -85,8 +85,7 @@ fun StatusPill(
         Text(
             text = status.label(skin),
             color = color,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold
+            style = de.tipau.promille.AppText.captionBold
         )
     }
 }

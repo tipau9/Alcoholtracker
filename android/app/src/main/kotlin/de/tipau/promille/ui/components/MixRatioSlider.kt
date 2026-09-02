@@ -144,15 +144,16 @@ fun MixRatioSlider(
                         .background(AppColors.accent)
                 )
                 Text(
+                    // iOS: .appCaption - was 12sp.
                     text = "Spirituose",
                     color = AppColors.textDim,
-                    fontSize = 12.sp
+                    style = de.tipau.promille.AppText.caption
                 )
                 Text(
+                    // iOS: .appCaptionBold (SemiBold, not Bold) - was 12sp Bold.
                     text = "${(spiritFraction * 100).toInt()}%",
                     color = AppColors.text,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.captionBold
                 )
             }
 
@@ -162,15 +163,16 @@ fun MixRatioSlider(
                 horizontalArrangement = Arrangement.spacedBy(5.dp)
             ) {
                 Text(
+                    // iOS: .appCaptionBold (SemiBold, not Bold) - was 12sp Bold.
                     text = "${((1 - spiritFraction) * 100).toInt()}%",
                     color = AppColors.text,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.captionBold
                 )
                 Text(
+                    // iOS: .appCaption - was 12sp.
                     text = "Mixer",
                     color = AppColors.textDim,
-                    fontSize = 12.sp
+                    style = de.tipau.promille.AppText.caption
                 )
                 Box(
                     modifier = Modifier

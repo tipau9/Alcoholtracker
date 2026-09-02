@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import de.tipau.promille.AppColors
+import de.tipau.promille.AppSerif
 import de.tipau.promille.data.PhotoMemoryEntity
 import java.io.File
 import java.time.Instant
@@ -100,10 +101,10 @@ fun PhotoDetailDialog(
                     }
 
                     Text(
+                        // iOS: .appCaption, no weight override (was Medium).
                         text = timeFormatter.format(Instant.ofEpochSecond(memory.timestamp)),
                         color = AppColors.textDim,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
+                        style = de.tipau.promille.AppText.caption
                     )
 
                     Box(
@@ -142,10 +143,14 @@ fun PhotoDetailDialog(
                             .padding(horizontal = 16.dp, vertical = 6.dp)
                     ) {
                         Text(
+                            // Fixed artistic size, matches iOS's
+                            // .system(size: 13, weight: .semibold, design: .serif)
+                            // (PhotoDetailView.swift:68) - not an AppText token.
                             text = String.format(Locale.GERMANY, "%.2f ‰ beim Teilen", memory.bacAtTime),
                             color = AppColors.accent,
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = AppSerif
                         )
                     }
                 }
@@ -168,16 +173,20 @@ fun PhotoDetailDialog(
                                 .clip(RoundedCornerShape(16.dp))
                         )
                     } else {
-                        Text("Foto konnte nicht geladen werden", color = AppColors.textDim, fontSize = 14.sp)
+                        // No iOS counterpart (local bitmap decode failure is
+                        // Android-only); AppText.body matches the caption
+                        // below it, the closest role in this file.
+                        Text("Foto konnte nicht geladen werden", color = AppColors.textDim, style = de.tipau.promille.AppText.body)
                     }
                 }
 
                 // Optional Caption
                 if (!memory.caption.isNullOrBlank()) {
                     Text(
+                        // iOS: .appBody (17sp) - was 14sp here.
                         text = memory.caption,
                         color = AppColors.text,
-                        fontSize = 14.sp,
+                        style = de.tipau.promille.AppText.body,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 24.dp, vertical = 16.dp)
