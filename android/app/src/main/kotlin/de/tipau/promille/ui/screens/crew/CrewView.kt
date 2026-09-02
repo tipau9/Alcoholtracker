@@ -96,9 +96,14 @@ fun CrewView(
     val homeMembers = remember(members) { members.filter { it.isHome } }
     val sosMembers = remember(members) { members.filter { it.sosActive } }
     val needsAttention = remember(members, nowSeconds) {
+        // careScore cached once per member instead of recomputed for filter
+        // and sort separately; this recomputes every second off the ticker.
         members
-            .filter { !it.isHome && CrewMath.careScore(it.currentBAC, it.lastDrinkTimestamp, nowSeconds) >= 40 }
-            .sortedByDescending { CrewMath.careScore(it.currentBAC, it.lastDrinkTimestamp, nowSeconds) }
+            .filter { !it.isHome }
+            .map { it to CrewMath.careScore(it.currentBAC, it.lastDrinkTimestamp, nowSeconds) }
+            .filter { it.second >= 40 }
+            .sortedByDescending { it.second }
+            .map { it.first }
     }
     val soberBuddy = remember(members) { members.firstOrNull { it.isSoberBuddy && !it.isHome } }
     // Honors the buddy's own Probezeit setting (0,0 permille) versus the

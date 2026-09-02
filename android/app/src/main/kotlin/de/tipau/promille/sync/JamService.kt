@@ -401,6 +401,10 @@ class JamService(
         _currentJam.value = null
         _amHost.value = false
         confirmedOnServer = false
+        // A jam-only SOS must not outlive the jam: a signed-out user has no
+        // other path to clear it (CrewView's tap handler only opens the info
+        // dialog when there's no jam and no account).
+        mySOSActive.value = false
         // Games are per jam and must not leak into the next one.
         _waterScores.value = emptyList()
         _incomingRoulette.value = null
