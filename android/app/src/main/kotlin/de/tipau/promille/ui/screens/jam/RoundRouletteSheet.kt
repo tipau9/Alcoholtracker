@@ -120,13 +120,25 @@ fun RoundRouletteSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = "JAM ROULETTE",
-                        color = GoldAccent,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 2.sp
-                    )
+                    // Decorative crown next to the title, matching iOS's
+                    // HStack(spacing: 8) { Image("crown.fill"); Text(...) }
+                    // (RoundRouletteSheet.swift:99-103) - not host-tied here.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            de.tipau.promille.ui.components.AppIcons.Crown,
+                            contentDescription = null,
+                            tint = GoldAccent,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "JAM ROULETTE",
+                            color = GoldAccent,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 2.sp
+                        )
+                    }
                     Text(
                         text = if (finished) "Die Kugel hat entschieden" else "${payload.starterName} lässt das Rad drehen",
                         color = Color.White.copy(alpha = 0.62f),

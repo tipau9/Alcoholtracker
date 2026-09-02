@@ -996,11 +996,19 @@ private fun ActiveJam(
                                     )
                                     if (isHost) {
                                         Spacer(Modifier.width(6.dp))
-                                        Box(
-                                            Modifier
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
                                                 .background(AppColors.accent.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
                                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                                         ) {
+                                            Icon(
+                                                de.tipau.promille.ui.components.AppIcons.Crown,
+                                                contentDescription = null,
+                                                tint = AppColors.accent,
+                                                modifier = Modifier.size(9.dp)
+                                            )
+                                            Spacer(Modifier.width(3.dp))
                                             Text("Host", color = AppColors.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                         }
                                     }

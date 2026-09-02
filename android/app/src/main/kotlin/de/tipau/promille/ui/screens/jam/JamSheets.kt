@@ -588,27 +588,52 @@ fun ParticipantActionsDialog(
                 if (!canKick && !canTransfer) {
                     Text("Nur der Host kann Teilnehmer verwalten.", color = AppColors.textDim, fontSize = 13.sp)
                 } else {
+                    // Pill buttons matching iOS's tinted-background/border
+                    // rows (JamPrivacySheets.swift:164-201), rather than
+                    // the plain clickable text this used to be.
                     if (canTransfer) {
-                        Text(
-                            "Host übergeben",
-                            color = AppColors.accent,
-                            fontSize = 15.sp,
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(AppColors.accent.copy(alpha = 0.1f))
+                                .border(1.dp, AppColors.accent.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
                                 .clickable { confirming = ParticipantAction.TRANSFER }
-                                .padding(vertical = 12.dp)
-                        )
+                                .padding(vertical = 14.dp)
+                        ) {
+                            Icon(
+                                de.tipau.promille.ui.components.AppIcons.Crown,
+                                contentDescription = null,
+                                tint = AppColors.accent,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Host übergeben", color = AppColors.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        }
                     }
                     if (canKick) {
-                        Text(
-                            "Aus Jam entfernen",
-                            color = AppColors.statusRed,
-                            fontSize = 15.sp,
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(AppColors.statusRed.copy(alpha = 0.1f))
+                                .border(1.dp, AppColors.statusRed.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
                                 .clickable { confirming = ParticipantAction.KICK }
-                                .padding(vertical = 12.dp)
-                        )
+                                .padding(vertical = 14.dp)
+                        ) {
+                            Icon(
+                                de.tipau.promille.ui.components.AppIcons.PersonXmark,
+                                contentDescription = null,
+                                tint = AppColors.statusRed,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Aus Jam entfernen", color = AppColors.statusRed, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
             }

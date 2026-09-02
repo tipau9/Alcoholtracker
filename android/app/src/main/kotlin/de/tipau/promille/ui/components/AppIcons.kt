@@ -1028,6 +1028,52 @@ object AppIcons {
         close()
     }
 
+    /** crown.fill: the host indicator, currently missing everywhere. */
+    val Crown: ImageVector = buildIcon("Crown") {
+        moveTo(3f, 18f)
+        lineTo(3f, 7f)
+        lineTo(8f, 12f)
+        lineTo(12f, 4f)
+        lineTo(16f, 12f)
+        lineTo(21f, 7f)
+        lineTo(21f, 18f)
+        close()
+    }
+
+    /** person.fill.xmark: the "remove participant" action. */
+    val PersonXmark: ImageVector = buildIcon("PersonXmark") {
+        // Head, shifted left to leave room for the x badge on the right.
+        moveTo(10f, 12f)
+        curveToRelative(2.21f, 0f, 4f, -1.79f, 4f, -4f)
+        reflectiveCurveToRelative(-1.79f, -4f, -4f, -4f)
+        reflectiveCurveToRelative(-4f, 1.79f, -4f, 4f)
+        reflectiveCurveToRelative(1.79f, 4f, 4f, 4f)
+        close()
+        // Shoulders
+        moveTo(10f, 14f)
+        curveToRelative(-2.67f, 0f, -8f, 1.34f, -8f, 4f)
+        verticalLineToRelative(2f)
+        horizontalLineToRelative(13f)
+        verticalLineToRelative(-2f)
+        curveToRelative(0f, -0.83f, -0.51f, -1.54f, -1.24f, -2.13f)
+        curveToRelative(-1.09f, -1.16f, -2.55f, -1.87f, -3.76f, -1.87f)
+        close()
+        // X badge, bottom-right
+        moveTo(15.4f, 13.6f)
+        lineTo(17.5f, 15.7f)
+        lineTo(19.6f, 13.6f)
+        lineTo(21f, 15f)
+        lineTo(18.9f, 17.1f)
+        lineTo(21f, 19.2f)
+        lineTo(19.6f, 20.6f)
+        lineTo(17.5f, 18.5f)
+        lineTo(15.4f, 20.6f)
+        lineTo(14f, 19.2f)
+        lineTo(16.1f, 17.1f)
+        lineTo(14f, 15f)
+        close()
+    }
+
     val Key: ImageVector = buildIcon("Key") {
         moveTo(12.65f, 10f)
         curveTo(11.83f, 7.67f, 9.61f, 6f, 7f, 6f)
