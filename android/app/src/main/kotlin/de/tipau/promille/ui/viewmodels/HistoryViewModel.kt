@@ -8,6 +8,7 @@ import de.tipau.promille.repository.DrinkRepository
 import de.tipau.promille.repository.UserProfileRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
@@ -111,6 +112,26 @@ class HistoryViewModel(
 
     fun goToCurrentMonth() {
         visibleMonth.value = YearMonth.now()
+    }
+
+    fun deleteDrink(drink: de.tipau.promille.bac.Drink) {
+        viewModelScope.launch {
+            drinkRepository.deleteDrink(
+                de.tipau.promille.data.DrinkEntity(
+                    id = drink.id,
+                    name = drink.name,
+                    volume = drink.volumeML,
+                    abv = drink.abv,
+                    calories = drink.calories,
+                    iconName = drink.iconName,
+                    categoryRaw = drink.category.name.lowercase(),
+                    timestampEpochSeconds = drink.timestampEpochSeconds,
+                    templateID = drink.templateId,
+                    mixerVolume = drink.mixerVolumeML,
+                    mixerWaterContent = drink.mixerWaterContentPercent
+                )
+            )
+        }
     }
 }
 

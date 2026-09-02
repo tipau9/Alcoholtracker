@@ -95,6 +95,7 @@ fun HistoryScreen(
             dayNoteRepository = dayNoteRepository,
             profile = profile,
             statusSkin = statusSkin,
+            onDeleteDrink = { viewModel.deleteDrink(it) },
             onDismiss = { selectedDayStats = null }
         )
     }

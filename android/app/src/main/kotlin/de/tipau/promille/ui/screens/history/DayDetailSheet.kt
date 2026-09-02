@@ -41,6 +41,9 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+
 private enum class DayMoodOption(val raw: Int, val emoji: String, val label: String, val iconRes: Int) {
     NEUTRAL(0, "😐", "Kein Urteil", R.drawable.ic_mood_neutral),
     HAPPY(1, "😄", "Guter Abend", R.drawable.ic_mood_happy),
@@ -56,6 +59,7 @@ fun DayDetailSheet(
     dayNoteRepository: DayNoteRepository,
     profile: Profile? = null,
     statusSkin: StatusSkin = StatusSkin.STANDARD,
+    onDeleteDrink: ((de.tipau.promille.bac.Drink) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -397,55 +401,11 @@ fun DayDetailSheet(
                 item {
                     SectionLabel("GETRÄNKE")
                 }
-                items(dayStats.drinks) { drink ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(AppColors.card)
-                            .border(0.5.dp, AppColors.border, RoundedCornerShape(12.dp))
-                            .padding(14.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(RoundedCornerShape(9.dp))
-                                    .background(AppColors.accent.copy(alpha = 0.12f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = AppIcons.Drink,
-                                    contentDescription = null,
-                                    tint = AppColors.accent,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    // iOS: .appBody, no weight override - was
-                                    // 15sp Medium here, neither matches.
-                                    text = drink.name,
-                                    color = AppColors.text,
-                                    style = de.tipau.promille.AppText.body
-                                )
-                                Text(
-                                    text = String.format(
-                                        Locale.GERMANY,
-                                        "%.0f ml · %.1f %%",
-                                        drink.volumeML,
-                                        drink.abv
-                                    ),
-                                    color = AppColors.textDim,
-                                    style = de.tipau.promille.AppText.micro
-                                )
-                            }
-                        }
-                    }
+                items(dayStats.drinks, key = { it.id }) { drink ->
+                    DayDetailDrinkRow(
+                        drink = drink,
+                        onDelete = onDeleteDrink?.let { callback -> { callback(drink) } }
+                    )
                 }
             }
 
@@ -518,4 +478,96 @@ fun DayDetailSheet(
         }
     }
 }
+}
+
+/**
+ * 1:1 mirror of iOS DayDetailSheet drink row with long-press context menu (DayDetailSheet.swift:284-319).
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun DayDetailDrinkRow(
+    drink: de.tipau.promille.bac.Drink,
+    onDelete: (() -> Unit)?
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(AppColors.card)
+            .border(0.5.dp, AppColors.border, RoundedCornerShape(12.dp))
+            .combinedClickable(
+                onClick = {},
+                onLongClick = { if (onDelete != null) menuExpanded = true }
+            )
+            .padding(14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(AppColors.accent.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = AppIcons.Drink,
+                    contentDescription = null,
+                    tint = AppColors.accent,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = drink.name,
+                    color = AppColors.text,
+                    style = de.tipau.promille.AppText.body
+                )
+                Text(
+                    text = String.format(
+                        Locale.GERMANY,
+                        "%.0f ml · %.1f %%",
+                        drink.volumeML,
+                        drink.abv
+                    ),
+                    color = AppColors.textDim,
+                    style = de.tipau.promille.AppText.micro
+                )
+            }
+        }
+
+        if (onDelete != null) {
+            de.tipau.promille.ui.components.AppDropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            "Eintrag löschen",
+                            color = AppColors.statusRed,
+                            style = de.tipau.promille.AppText.captionBold
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = AppIcons.Trash,
+                            contentDescription = null,
+                            tint = AppColors.statusRed,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onDelete()
+                    }
+                )
+            }
+        }
+    }
 }
