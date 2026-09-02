@@ -105,7 +105,11 @@ fun HomeEditSheet(
     }
     // Every Speichern rewrites the whole string, so anything only iOS knows
     // about has to ride along.
-    val foreignWidgets = remember { HomeWidgetType.foreignTokens(profile?.activeWidgetsRaw ?: "") }
+    // Keyed, unlike the line above: a stale set of switches is visible and the
+    // user can correct it, a stale foreign list silently deletes iOS's widgets.
+    val foreignWidgets = remember(profile?.activeWidgetsRaw) {
+        HomeWidgetType.foreignTokens(profile?.activeWidgetsRaw ?: "")
+    }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
