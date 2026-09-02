@@ -133,13 +133,9 @@ fun BarcodeCandidateSheet(
                         Text(text = category.germanName, color = AppColors.text, style = de.tipau.promille.AppText.body, modifier = Modifier.weight(1f))
                         Icon(AppIcons.ChevronDown, contentDescription = null, tint = AppColors.textDim, modifier = Modifier.size(14.dp))
                     }
-                    DropdownMenu(
+                    de.tipau.promille.ui.components.AppDropdownMenu(
                         expanded = categoryMenuOpen,
-                        onDismissRequest = { categoryMenuOpen = false },
-                        shape = RoundedCornerShape(20.dp),
-                        containerColor = AppColors.card,
-                        border = androidx.compose.foundation.BorderStroke(0.5.dp, AppColors.border),
-                        shadowElevation = 8.dp
+                        onDismissRequest = { categoryMenuOpen = false }
                     ) {
                         DrinkCategory.entries.forEach { c ->
                             DropdownMenuItem(
