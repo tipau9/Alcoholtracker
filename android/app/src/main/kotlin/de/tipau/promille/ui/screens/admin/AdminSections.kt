@@ -34,7 +34,8 @@ fun AdminQueueRow(
     onToggleSelection: () -> Unit,
     onApprove: () -> Unit,
     onReject: () -> Unit,
-    onBlockVoter: (String) -> Unit
+    onBlockVoter: (String) -> Unit,
+    onEdit: (() -> Unit)? = null
 ) {
     PromilleCard(Modifier.fillMaxWidth()) {
         Column {
@@ -68,6 +69,13 @@ fun AdminQueueRow(
                 }
                 TextButton(onClick = onReject) {
                     Text("Ablehnen", color = AppColors.statusRed, style = de.tipau.promille.AppText.captionBold)
+                }
+                // iOS: pencil "Edit" button opens AdminDrinkEditor/AdminMixEditor for
+                // this item (AdminView.swift:826-829).
+                onEdit?.let {
+                    TextButton(onClick = it) {
+                        Text("Bearbeiten", color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
+                    }
                 }
                 // The contributing device id lives in the payload; without it
                 // there is nobody to block, so the action is hidden entirely.
@@ -126,7 +134,7 @@ fun AdminBulkActionBar(
 }
 
 @Composable
-fun AdminCatalogRow(item: AdminQueueItem) {
+fun AdminCatalogRow(item: AdminQueueItem, onEdit: (() -> Unit)? = null) {
     PromilleCard(Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -142,6 +150,13 @@ fun AdminCatalogRow(item: AdminQueueItem) {
                 },
                 style = de.tipau.promille.AppText.captionBold
             )
+            // iOS: pencil "Edit" button (AdminView.swift:826-829).
+            onEdit?.let {
+                Spacer(Modifier.width(8.dp))
+                TextButton(onClick = it) {
+                    Text("Bearbeiten", color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
+                }
+            }
         }
     }
 }
@@ -168,10 +183,20 @@ fun AdminReportRow(report: AdminReport, onResolve: (String) -> Unit) {
     }
 }
 
+/** iOS: the whole row is a Button that opens AdminFlagEditor - there's no quick
+ * toggle here, editing (including flipping "Aktiv") happens in the sheet
+ * (AdminView.swift:948-978). */
 @Composable
-fun AdminFlagRow(flag: AdminFeatureFlag, onToggle: (Boolean) -> Unit) {
-    PromilleCard(Modifier.fillMaxWidth()) {
+fun AdminFlagRow(flag: AdminFeatureFlag, onEdit: () -> Unit) {
+    PromilleCard(Modifier.fillMaxWidth().clickable(onClick = onEdit)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Filled.CheckCircle,
+                contentDescription = null,
+                tint = if (flag.enabled) AppColors.statusGreen else AppColors.textMuted.copy(alpha = 0.35f),
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(flag.key, color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
@@ -190,11 +215,11 @@ fun AdminFlagRow(flag: AdminFeatureFlag, onToggle: (Boolean) -> Unit) {
                     Text(flag.description, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                 }
             }
-            de.tipau.promille.ui.components.AppSwitch(
-                checked = flag.enabled,
-                onCheckedChange = onToggle,
-                activeColor = AppColors.accent,
-                inactiveColor = AppColors.card
+            Icon(
+                imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                contentDescription = null,
+                tint = AppColors.textMuted,
+                modifier = Modifier.size(16.dp)
             )
         }
     }

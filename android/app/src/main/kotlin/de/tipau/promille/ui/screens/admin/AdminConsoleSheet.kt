@@ -59,6 +59,23 @@ fun AdminConsoleSheet(
 
     var searchTerm by remember { mutableStateOf("") }
 
+    // The 5 admin editor sheets (AdminEditors.kt) - AdminView.swift's
+    // showFlagEditor/editingDrink/editingMix/showRoleEditor/showBlockEditor.
+    var editingFlag by remember { mutableStateOf<de.tipau.promille.network.AdminFeatureFlag?>(null) }
+    var showFlagEditor by remember { mutableStateOf(false) }
+    var editingDrink by remember { mutableStateOf<de.tipau.promille.network.AdminQueueItem?>(null) }
+    var editingMix by remember { mutableStateOf<de.tipau.promille.network.AdminQueueItem?>(null) }
+    var showRoleEditor by remember { mutableStateOf(false) }
+    var showBlockEditor by remember { mutableStateOf(false) }
+
+    // iOS: edit(_:) dispatches on item.itemType (AdminView.swift:555-561).
+    fun editQueueItem(item: de.tipau.promille.network.AdminQueueItem) {
+        when (item.itemType) {
+            "drink" -> editingDrink = item
+            "mix" -> editingMix = item
+        }
+    }
+
     // Debounced: the field fires per keystroke, and two responses landing out
     // of order would settle the list on a prefix of what was typed.
     LaunchedEffect(searchTerm) {
@@ -223,7 +240,10 @@ fun AdminConsoleSheet(
                                 onToggleSelection = { viewModel.toggleSelection(item.id) },
                                 onApprove = { viewModel.setModerationStatus(item, "approved") },
                                 onReject = { viewModel.setModerationStatus(item, "rejected") },
-                                onBlockVoter = { viewModel.blockVoter(it) }
+                                onBlockVoter = { viewModel.blockVoter(it) },
+                                onEdit = if (item.itemType == "drink" || item.itemType == "mix") {
+                                    { editQueueItem(item) }
+                                } else null
                             )
                         }
                     }
@@ -250,7 +270,14 @@ fun AdminConsoleSheet(
                     if (catalog.isEmpty()) {
                         item { AdminEmpty("Kein Eintrag gefunden.") }
                     } else {
-                        items(catalog, key = { it.id }) { AdminCatalogRow(it) }
+                        items(catalog, key = { it.id }) { item ->
+                            AdminCatalogRow(
+                                item = item,
+                                onEdit = if (item.itemType == "drink" || item.itemType == "mix") {
+                                    { editQueueItem(item) }
+                                } else null
+                            )
+                        }
                     }
                 }
 
@@ -265,17 +292,42 @@ fun AdminConsoleSheet(
                 }
 
                 AdminSection.FLAGS -> {
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SectionLabel("FEATURE FLAGS")
+                            // iOS: "plus.circle.fill" opens AdminFlagEditor(flag: nil) (swift:321-329).
+                            IconButton(onClick = { editingFlag = null; showFlagEditor = true }) {
+                                Icon(Icons.Filled.AddCircle, contentDescription = "Flag anlegen", tint = AppColors.accent)
+                            }
+                        }
+                    }
                     if (flags.isEmpty()) {
                         item { AdminEmpty("Keine Feature Flags.") }
                     } else {
                         items(flags, key = { it.key }) { flag ->
-                            AdminFlagRow(flag) { viewModel.setFlag(flag, it) }
+                            AdminFlagRow(flag) { editingFlag = flag; showFlagEditor = true }
                         }
                     }
                 }
 
                 AdminSection.SECURITY -> {
-                    item { SectionLabel("ADMIN-ROLLEN") }
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SectionLabel("ADMIN-ROLLEN")
+                            // iOS: "person.badge.plus" opens AdminRoleEditor (swift:344-352).
+                            IconButton(onClick = { showRoleEditor = true }) {
+                                Icon(Icons.Filled.Add, contentDescription = "Rolle setzen", tint = AppColors.accent)
+                            }
+                        }
+                    }
                     if (adminUsers.isEmpty()) {
                         item { AdminEmpty("Keine Rollen vergeben.") }
                     } else {
@@ -283,7 +335,19 @@ fun AdminConsoleSheet(
                             AdminUserRow(user) { viewModel.setUserRole(user.userID, it) }
                         }
                     }
-                    item { SectionLabel("BLOCKLIST") }
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SectionLabel("BLOCKLIST")
+                            // iOS: "hand.raised.fill" opens AdminBlockEditor (swift:370-378).
+                            IconButton(onClick = { showBlockEditor = true }) {
+                                Icon(Icons.Filled.Add, contentDescription = "Blockieren", tint = AppColors.accent)
+                            }
+                        }
+                    }
                     if (blockedVoters.isEmpty()) {
                         item { AdminEmpty("Niemand gesperrt.") }
                     } else {
@@ -308,6 +372,46 @@ fun AdminConsoleSheet(
         }
     }
 }
+
+    if (showFlagEditor) {
+        AdminFlagEditorDialog(
+            flag = editingFlag,
+            onDismiss = { showFlagEditor = false },
+            onSave = { key, enabled, isPublic, value, description ->
+                viewModel.saveFlag(key, enabled, isPublic, value, description)
+            }
+        )
+    }
+    editingDrink?.let { item ->
+        AdminDrinkEditorDialog(
+            item = item,
+            onDismiss = { editingDrink = null },
+            onSave = { name, category, volume, abv, calories, iconName ->
+                viewModel.updateDrink(item.id, name, category, volume, abv, calories, iconName)
+            }
+        )
+    }
+    editingMix?.let { item ->
+        AdminMixEditorDialog(
+            item = item,
+            onDismiss = { editingMix = null },
+            onSave = { name, ingredients, totalVolume, totalAbv, calories ->
+                viewModel.updateMix(item.id, name, ingredients, totalVolume, totalAbv, calories)
+            }
+        )
+    }
+    if (showRoleEditor) {
+        AdminRoleEditorDialog(
+            onDismiss = { showRoleEditor = false },
+            onSave = { userID, role -> viewModel.setRole(userID, role) }
+        )
+    }
+    if (showBlockEditor) {
+        AdminBlockEditorDialog(
+            onDismiss = { showBlockEditor = false },
+            onSave = { voter, reason -> viewModel.blockVoterAwait(voter, reason) }
+        )
+    }
 }
 
 @Composable

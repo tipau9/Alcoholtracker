@@ -27,6 +27,8 @@ import de.tipau.promille.network.setAdminFeatureFlag
 import de.tipau.promille.network.setAdminModerationStatus
 import de.tipau.promille.network.setAdminUserRole
 import de.tipau.promille.network.setAdminVoterBlock
+import de.tipau.promille.network.updateAdminDrink
+import de.tipau.promille.network.updateAdminMix
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -208,6 +210,42 @@ class AdminViewModel(private val supabase: SupabaseService) : ViewModel() {
     fun setUserRole(userID: String, role: String) = act {
         supabase.setAdminUserRole(userID, role)
         _adminUsers.value = supabase.fetchAdminUsers()
+    }
+
+    // The 5 admin editor sheets (AdminEditors.kt) need to keep their dialog open
+    // and show an inline error on failure, only dismissing on success - the
+    // fire-and-forget act() pattern above can't do that (it swallows the
+    // exception into the top-level error banner and returns immediately). These
+    // are genuine suspend functions the dialog awaits directly.
+
+    /** Full create/edit path - unlike [setFlag] this can also change the key,
+     * value and description, not just flip the switch. */
+    suspend fun saveFlag(key: String, enabled: Boolean, isPublic: Boolean, value: String, description: String) {
+        supabase.setAdminFeatureFlag(key, enabled, isPublic, value, description)
+        _flags.value = supabase.fetchAdminFeatureFlags()
+    }
+
+    suspend fun updateDrink(id: String, name: String, category: String, volume: Double, abv: Double, calories: Int, iconName: String?) {
+        supabase.updateAdminDrink(id, name, category, volume, abv, calories, iconName)
+        reloadModeration()
+        _catalog.value = supabase.fetchAdminContent(search = catalogSearch.value)
+    }
+
+    suspend fun updateMix(id: String, name: String, ingredients: kotlinx.serialization.json.JsonElement, totalVolume: Double, totalABV: Double, calories: Int) {
+        supabase.updateAdminMix(id, name, ingredients, totalVolume, totalABV, calories)
+        reloadModeration()
+        _catalog.value = supabase.fetchAdminContent(search = catalogSearch.value)
+    }
+
+    suspend fun setRole(userID: String, role: String) {
+        supabase.setAdminUserRole(userID, role)
+        _adminUsers.value = supabase.fetchAdminUsers()
+    }
+
+    suspend fun blockVoterAwait(voter: String, reason: String) {
+        supabase.setAdminVoterBlock(voter, blocked = true, reason = reason)
+        _blockedVoters.value = supabase.fetchAdminBlockedVoters()
+        reloadModeration()
     }
 
     private fun act(block: suspend () -> Unit) {
