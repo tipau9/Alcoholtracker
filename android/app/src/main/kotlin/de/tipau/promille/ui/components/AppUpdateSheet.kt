@@ -373,24 +373,17 @@ fun AppUpdateSheet(
                             Text(cur.message, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                             Spacer(Modifier.height(8.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                                Button(
+                                SecondaryButton(
+                                    text = "Schließen",
                                     onClick = onDismiss,
-                                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.card, contentColor = AppColors.text),
-                                    shape = RoundedCornerShape(14.dp),
                                     modifier = Modifier.weight(1f)
-                                ) {
-                                    Text("Schließen")
-                                }
-                                Button(
+                                )
+                                PrimaryButton(
+                                    text = "Wiederholen",
                                     onClick = { startCheck() },
-                                    colors = ButtonDefaults.buttonColors(containerColor = AppColors.accent, contentColor = Color.White),
-                                    shape = RoundedCornerShape(14.dp),
+                                    icon = Icons.Filled.Refresh,
                                     modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(Icons.Filled.Refresh, null, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(6.dp))
-                                    Text("Wiederholen")
-                                }
+                                )
                             }
                         }
                     }

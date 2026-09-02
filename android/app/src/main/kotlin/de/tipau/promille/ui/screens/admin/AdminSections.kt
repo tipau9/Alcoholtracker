@@ -64,25 +64,17 @@ fun AdminQueueRow(
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onApprove) {
-                    Text("Freigeben", color = AppColors.statusGreen, style = de.tipau.promille.AppText.captionBold)
-                }
-                TextButton(onClick = onReject) {
-                    Text("Ablehnen", color = AppColors.statusRed, style = de.tipau.promille.AppText.captionBold)
-                }
+                de.tipau.promille.ui.components.AdminActionButton("Freigeben", onClick = onApprove, tint = AppColors.statusGreen)
+                de.tipau.promille.ui.components.AdminActionButton("Ablehnen", onClick = onReject, tint = AppColors.statusRed)
                 // iOS: pencil "Edit" button opens AdminDrinkEditor/AdminMixEditor for
                 // this item (AdminView.swift:826-829).
                 onEdit?.let {
-                    TextButton(onClick = it) {
-                        Text("Bearbeiten", color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
-                    }
+                    de.tipau.promille.ui.components.AdminActionButton("Bearbeiten", onClick = it, tint = AppColors.textDim)
                 }
                 // The contributing device id lives in the payload; without it
                 // there is nobody to block, so the action is hidden entirely.
                 contributorOf(item)?.let { voter ->
-                    TextButton(onClick = { onBlockVoter(voter) }) {
-                        Text("Voter sperren", color = AppColors.statusOrange, style = de.tipau.promille.AppText.captionBold)
-                    }
+                    de.tipau.promille.ui.components.AdminActionButton("Voter sperren", onClick = { onBlockVoter(voter) }, tint = AppColors.statusOrange)
                 }
             }
         }
@@ -111,25 +103,20 @@ fun AdminBulkActionBar(
             .border(0.5.dp, AppColors.border, RoundedCornerShape(12.dp))
             .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
-        TextButton(onClick = onToggleAll) {
-            Text(
-                if (allSelected) "Keine" else "Alle",
-                color = AppColors.accent,
-                style = de.tipau.promille.AppText.captionBold
-            )
-        }
+        de.tipau.promille.ui.components.AdminActionButton(
+            if (allSelected) "Keine" else "Alle",
+            onClick = onToggleAll,
+            tint = AppColors.accent
+        )
         Text(
             "$selectedCount ausgewählt",
             color = AppColors.textDim,
             style = de.tipau.promille.AppText.caption,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
         )
-        TextButton(onClick = onApprove, enabled = selectedCount > 0) {
-            Text("Freigeben", color = AppColors.statusGreen, style = de.tipau.promille.AppText.captionBold)
-        }
-        TextButton(onClick = onReject, enabled = selectedCount > 0) {
-            Text("Ablehnen", color = AppColors.statusRed, style = de.tipau.promille.AppText.captionBold)
-        }
+        de.tipau.promille.ui.components.AdminActionButton("Freigeben", onClick = onApprove, tint = AppColors.statusGreen, enabled = selectedCount > 0)
+        Spacer(Modifier.width(6.dp))
+        de.tipau.promille.ui.components.AdminActionButton("Ablehnen", onClick = onReject, tint = AppColors.statusRed, enabled = selectedCount > 0)
     }
 }
 
@@ -153,9 +140,7 @@ fun AdminCatalogRow(item: AdminQueueItem, onEdit: (() -> Unit)? = null) {
             // iOS: pencil "Edit" button (AdminView.swift:826-829).
             onEdit?.let {
                 Spacer(Modifier.width(8.dp))
-                TextButton(onClick = it) {
-                    Text("Bearbeiten", color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
-                }
+                de.tipau.promille.ui.components.AdminActionButton("Bearbeiten", onClick = it, tint = AppColors.textDim)
             }
         }
     }
@@ -171,13 +156,10 @@ fun AdminReportRow(report: AdminReport, onResolve: (String) -> Unit) {
                 color = AppColors.textDim,
                 style = de.tipau.promille.AppText.caption
             )
+            Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = { onResolve("resolved") }) {
-                    Text("Erledigt", color = AppColors.statusGreen, style = de.tipau.promille.AppText.captionBold)
-                }
-                TextButton(onClick = { onResolve("dismissed") }) {
-                    Text("Verworfen", color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
-                }
+                de.tipau.promille.ui.components.AdminActionButton("Erledigt", onClick = { onResolve("resolved") }, tint = AppColors.statusGreen)
+                de.tipau.promille.ui.components.AdminActionButton("Verworfen", onClick = { onResolve("dismissed") }, tint = AppColors.textDim)
             }
         }
     }
@@ -274,9 +256,7 @@ fun AdminBlockedVoterRow(voter: AdminBlockedVoter, onUnblock: () -> Unit) {
                     Text(voter.reason, color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
                 }
             }
-            TextButton(onClick = onUnblock) {
-                Text("Entsperren", color = AppColors.accent, style = de.tipau.promille.AppText.captionBold)
-            }
+            de.tipau.promille.ui.components.AdminActionButton("Entsperren", onClick = onUnblock, tint = AppColors.accent)
         }
     }
 }

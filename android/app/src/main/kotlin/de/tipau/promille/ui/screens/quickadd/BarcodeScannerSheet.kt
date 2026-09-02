@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.tipau.promille.ui.components.PrimaryButton
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import de.tipau.promille.AppColors
@@ -142,17 +143,11 @@ fun BarcodeScannerSheet(
                     )
 
                     if (simulatedBarcode.isNotBlank()) {
-                        Button(
+                        PrimaryButton(
+                            text = "Suchen",
                             onClick = { onBarcodeDetected(simulatedBarcode.trim()) },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = AppColors.accent,
-                                contentColor = AppColors.background
-                            ),
-                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Suchen", fontWeight = FontWeight.Bold)
-                        }
+                        )
                     }
                 }
             }
