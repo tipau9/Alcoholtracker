@@ -52,29 +52,28 @@ fun AdminQueueRow(
                     Text(
                         item.title,
                         color = AppColors.text,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
+                        style = de.tipau.promille.AppText.bodyBold
                     )
-                    Text(item.subtitle, color = AppColors.textDim, fontSize = 12.sp)
+                    Text(item.subtitle, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                     Text(
                         "${item.itemType} · ${item.confirmedCount} Bestätigungen",
                         color = AppColors.textMuted,
-                        fontSize = 11.sp
+                        style = de.tipau.promille.AppText.micro
                     )
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = onApprove) {
-                    Text("Freigeben", color = AppColors.statusGreen, fontSize = 13.sp)
+                    Text("Freigeben", color = AppColors.statusGreen, style = de.tipau.promille.AppText.captionBold)
                 }
                 TextButton(onClick = onReject) {
-                    Text("Ablehnen", color = AppColors.statusRed, fontSize = 13.sp)
+                    Text("Ablehnen", color = AppColors.statusRed, style = de.tipau.promille.AppText.captionBold)
                 }
                 // The contributing device id lives in the payload; without it
                 // there is nobody to block, so the action is hidden entirely.
                 contributorOf(item)?.let { voter ->
                     TextButton(onClick = { onBlockVoter(voter) }) {
-                        Text("Voter sperren", color = AppColors.statusOrange, fontSize = 13.sp)
+                        Text("Voter sperren", color = AppColors.statusOrange, style = de.tipau.promille.AppText.captionBold)
                     }
                 }
             }
@@ -108,20 +107,20 @@ fun AdminBulkActionBar(
             Text(
                 if (allSelected) "Keine" else "Alle",
                 color = AppColors.accent,
-                fontSize = 13.sp
+                style = de.tipau.promille.AppText.captionBold
             )
         }
         Text(
             "$selectedCount ausgewählt",
             color = AppColors.textDim,
-            fontSize = 12.sp,
+            style = de.tipau.promille.AppText.caption,
             modifier = Modifier.weight(1f)
         )
         TextButton(onClick = onApprove, enabled = selectedCount > 0) {
-            Text("Freigeben", color = AppColors.statusGreen, fontSize = 13.sp)
+            Text("Freigeben", color = AppColors.statusGreen, style = de.tipau.promille.AppText.captionBold)
         }
         TextButton(onClick = onReject, enabled = selectedCount > 0) {
-            Text("Ablehnen", color = AppColors.statusRed, fontSize = 13.sp)
+            Text("Ablehnen", color = AppColors.statusRed, style = de.tipau.promille.AppText.captionBold)
         }
     }
 }
@@ -131,8 +130,8 @@ fun AdminCatalogRow(item: AdminQueueItem) {
     PromilleCard(Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(item.title, color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                Text(item.subtitle, color = AppColors.textDim, fontSize = 12.sp)
+                Text(item.title, color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
+                Text(item.subtitle, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
             }
             Text(
                 item.status,
@@ -141,8 +140,7 @@ fun AdminCatalogRow(item: AdminQueueItem) {
                     "rejected" -> AppColors.statusRed
                     else -> AppColors.statusOrange
                 },
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
+                style = de.tipau.promille.AppText.captionBold
             )
         }
     }
@@ -152,18 +150,18 @@ fun AdminCatalogRow(item: AdminQueueItem) {
 fun AdminReportRow(report: AdminReport, onResolve: (String) -> Unit) {
     PromilleCard(Modifier.fillMaxWidth()) {
         Column {
-            Text(report.reason, color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text(report.reason, color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
             Text(
                 "${report.itemType} · ${report.status}",
                 color = AppColors.textDim,
-                fontSize = 12.sp
+                style = de.tipau.promille.AppText.caption
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = { onResolve("resolved") }) {
-                    Text("Erledigt", color = AppColors.statusGreen, fontSize = 13.sp)
+                    Text("Erledigt", color = AppColors.statusGreen, style = de.tipau.promille.AppText.captionBold)
                 }
                 TextButton(onClick = { onResolve("dismissed") }) {
-                    Text("Verworfen", color = AppColors.textDim, fontSize = 13.sp)
+                    Text("Verworfen", color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
                 }
             }
         }
@@ -176,7 +174,7 @@ fun AdminFlagRow(flag: AdminFeatureFlag, onToggle: (Boolean) -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(flag.key, color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Text(flag.key, color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
                     if (flag.isPublic) {
                         Spacer(Modifier.width(6.dp))
                         Box(
@@ -184,12 +182,12 @@ fun AdminFlagRow(flag: AdminFeatureFlag, onToggle: (Boolean) -> Unit) {
                                 .background(AppColors.accent.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
-                            Text("public", color = AppColors.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text("public", color = AppColors.accent, style = de.tipau.promille.AppText.micro)
                         }
                     }
                 }
                 if (flag.description.isNotEmpty()) {
-                    Text(flag.description, color = AppColors.textDim, fontSize = 12.sp)
+                    Text(flag.description, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                 }
             }
             de.tipau.promille.ui.components.AppSwitch(
@@ -210,8 +208,7 @@ fun AdminUserRow(user: AdminUserRole, onSetRole: (String) -> Unit) {
             Text(
                 user.userID,
                 color = AppColors.text,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold
+                style = de.tipau.promille.AppText.caption
             )
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 roles.forEach { role ->
@@ -233,7 +230,7 @@ fun AdminUserRow(user: AdminUserRole, onSetRole: (String) -> Unit) {
                         Text(
                             role,
                             color = if (active) AppColors.accent else AppColors.textDim,
-                            fontSize = 12.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
                 }
@@ -247,13 +244,13 @@ fun AdminBlockedVoterRow(voter: AdminBlockedVoter, onUnblock: () -> Unit) {
     PromilleCard(Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(voter.voter, color = AppColors.text, fontSize = 12.sp)
+                Text(voter.voter, color = AppColors.text, style = de.tipau.promille.AppText.caption)
                 if (voter.reason.isNotEmpty()) {
-                    Text(voter.reason, color = AppColors.textDim, fontSize = 11.sp)
+                    Text(voter.reason, color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
                 }
             }
             TextButton(onClick = onUnblock) {
-                Text("Entsperren", color = AppColors.accent, fontSize = 13.sp)
+                Text("Entsperren", color = AppColors.accent, style = de.tipau.promille.AppText.captionBold)
             }
         }
     }
@@ -263,14 +260,14 @@ fun AdminBlockedVoterRow(voter: AdminBlockedVoter, onUnblock: () -> Unit) {
 fun AdminAuditRow(entry: AdminAuditEntry) {
     PromilleCard(Modifier.fillMaxWidth()) {
         Column {
-            Text(entry.action, color = AppColors.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text(entry.action, color = AppColors.text, style = de.tipau.promille.AppText.captionBold)
             Text(
                 listOfNotNull(entry.itemType, entry.itemID, entry.createdAtRaw).joinToString(" · "),
                 color = AppColors.textDim,
-                fontSize = 11.sp
+                style = de.tipau.promille.AppText.micro
             )
             entry.note?.takeIf { it.isNotEmpty() }?.let {
-                Text(it, color = AppColors.textMuted, fontSize = 11.sp)
+                Text(it, color = AppColors.textMuted, style = de.tipau.promille.AppText.micro)
             }
         }
     }

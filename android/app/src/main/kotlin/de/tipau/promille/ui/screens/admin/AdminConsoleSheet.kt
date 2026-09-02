@@ -104,11 +104,11 @@ fun AdminConsoleSheet(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // iOS: .appHeadline
                     Text(
                         "Admin",
                         color = AppColors.text,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        style = de.tipau.promille.AppText.headline
                     )
                     if (isLoading) {
                         CircularProgressIndicator(
@@ -118,7 +118,8 @@ fun AdminConsoleSheet(
                         )
                     } else {
                         TextButton(onClick = { viewModel.reloadAll() }) {
-                            Text("Neu laden", color = AppColors.accent, fontSize = 13.sp)
+                            // iOS: .appCaption
+                            Text("Neu laden", color = AppColors.accent, style = de.tipau.promille.AppText.caption)
                         }
                     }
                 }
@@ -126,16 +127,17 @@ fun AdminConsoleSheet(
 
             if (!isAdmin) {
                 item {
+                    // iOS: .appCaption
                     Text(
                         "Kein Adminzugang für dieses Konto. Die Serverabschnitte bleiben leer, die Debug-Werkzeuge funktionieren trotzdem.",
                         color = AppColors.statusOrange,
-                        fontSize = 12.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
             }
 
             error?.let { message ->
-                item { Text(message, color = AppColors.statusRed, fontSize = 12.sp) }
+                item { Text(message, color = AppColors.statusRed, style = de.tipau.promille.AppText.caption) }
             }
 
             if (metrics.isNotEmpty()) {
@@ -154,13 +156,13 @@ fun AdminConsoleSheet(
                                         Text(
                                             "${metric.value}",
                                             color = AppColors.accent,
-                                            fontSize = 20.sp,
-                                            fontWeight = FontWeight.Bold
+                                            style = de.tipau.promille.AppText.headline.merge(de.tipau.promille.TabularFigures)
                                         )
+                                        // iOS: .appMicro
                                         Text(
                                             AdminViewModel.metricLabel(metric.metric),
                                             color = AppColors.textDim,
-                                            fontSize = 11.sp
+                                            style = de.tipau.promille.AppText.micro
                                         )
                                     }
                                 }
@@ -189,11 +191,11 @@ fun AdminConsoleSheet(
                                 .clickable { section = candidate }
                                 .padding(horizontal = 12.dp, vertical = 7.dp)
                         ) {
+                            // iOS: .appCaptionBold
                             Text(
                                 candidate.title,
                                 color = if (active) AppColors.accent else AppColors.textDim,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
+                                style = de.tipau.promille.AppText.captionBold
                             )
                         }
                     }
@@ -232,8 +234,9 @@ fun AdminConsoleSheet(
                         OutlinedTextField(
                             value = searchTerm,
                             onValueChange = { searchTerm = it },
-                            placeholder = { Text("Suchen", color = AppColors.textMuted) },
+                            placeholder = { Text("Suchen", color = AppColors.textMuted, style = de.tipau.promille.AppText.body) },
                             singleLine = true,
+                            textStyle = de.tipau.promille.AppText.body.copy(color = AppColors.text),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = AppColors.text,
                                 unfocusedTextColor = AppColors.text,
@@ -309,10 +312,11 @@ fun AdminConsoleSheet(
 
 @Composable
 private fun AdminEmpty(text: String) {
+    // iOS: .appCaption
     Text(
         text,
         color = AppColors.textMuted,
-        fontSize = 13.sp,
+        style = de.tipau.promille.AppText.caption,
         modifier = Modifier.padding(vertical = 20.dp)
     )
 }
