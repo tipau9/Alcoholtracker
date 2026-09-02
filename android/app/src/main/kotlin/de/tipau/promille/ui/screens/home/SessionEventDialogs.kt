@@ -31,10 +31,13 @@ fun BreathalyzerDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Android-only AlertDialog (iOS's breath test flow isn't a
+                // 1:1 match); appCaption matches this sweep's other
+                // dialog-instruction text.
                 Text(
                     text = "Trage den real gemessenen Wert deines Atemalkoholtesters ein:",
                     color = AppColors.textDim,
-                    fontSize = 13.sp
+                    style = de.tipau.promille.AppText.caption
                 )
                 OutlinedTextField(
                     value = measuredStr,
@@ -102,16 +105,19 @@ fun VomitConfirmDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // No 1:1 iOS source: iOS's vomit tracker is a full-screen
+                // card (HomeView.swift:1444-1451), this is a compact
+                // AlertDialog instead. appBodyBold/appCaption match this
+                // sweep's other dialog emphasis/body pairing.
                 Text(
                     text = if (vomitCountToday > 0) "Heute bereits $vomitCountToday× protokolliert." else "Noch nicht protokolliert.",
                     color = AppColors.text,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp
+                    style = de.tipau.promille.AppText.bodyBold
                 )
                 Text(
                     text = "Es wird nur noch nicht aufgenommener Alkohol berücksichtigt. Der aktuelle Blutalkoholwert fällt dadurch nicht schlagartig.",
                     color = AppColors.textDim,
-                    fontSize = 12.sp,
+                    style = de.tipau.promille.AppText.caption,
                     lineHeight = 16.sp
                 )
             }
