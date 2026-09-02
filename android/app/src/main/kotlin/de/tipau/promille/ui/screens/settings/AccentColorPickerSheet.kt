@@ -225,11 +225,12 @@ fun RgbColorPickerSheet(
                 Spacer(Modifier.size(32.dp))
 
                 // Centered Title
+                // No iOS source (iOS delegates to the system ColorPicker);
+                // appBodyBold matches this app's other sheet-header style.
                 Text(
                     text = "Farben",
                     color = AppColors.text,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.bodyBold
                 )
 
                 // Close Button (iOS style)
@@ -277,8 +278,7 @@ fun RgbColorPickerSheet(
                             Text(
                                 text = tab.title,
                                 color = if (isSelected) AppColors.text else AppColors.textDim,
-                                fontSize = 13.sp,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                                style = if (isSelected) de.tipau.promille.AppText.captionBold else de.tipau.promille.AppText.caption
                             )
                         }
                     }
@@ -551,8 +551,10 @@ private fun AppleSpectrumColorPickerTab(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Helligkeit", color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                Text("${(brightness * 100).toInt()} %", color = AppColors.textDim, fontSize = 14.sp, fontWeight = FontWeight.Normal)
+                // No iOS source; matches SettingsSliderRow's label/value
+                // pairing (appBody / appCaptionBold) elsewhere in the app.
+                Text("Helligkeit", color = AppColors.text, style = de.tipau.promille.AppText.body)
+                Text("${(brightness * 100).toInt()} %", color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
             }
 
             val pureColorAtHue = Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, saturation, 1.0f)))
@@ -661,11 +663,12 @@ private fun AppleSlidersColorPickerTab(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // No iOS source for this whole hex row (system ColorPicker only
+            // on iOS); appBody/appBodyBold match this sheet's other rows.
             Text(
                 text = "Hex-Farbcode",
                 color = AppColors.text,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
+                style = de.tipau.promille.AppText.body
             )
 
             Row(
@@ -675,23 +678,18 @@ private fun AppleSlidersColorPickerTab(
                 Text(
                     text = "#",
                     color = AppColors.textDim,
-                    fontSize = 14.sp,
-                    fontFamily = AppSans,
-                    style = TabularFigures,
-                    fontWeight = FontWeight.SemiBold
+                    style = de.tipau.promille.AppText.bodyBold.merge(TabularFigures)
                 )
                 BasicTextField(
                     value = hexInput,
                     onValueChange = onHexChanged,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
-                    textStyle = TextStyle(
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = AppSans,
-                        fontFeatureSettings = "tnum",
-                        color = AppColors.text,
-                        textAlign = TextAlign.Start
+                    textStyle = de.tipau.promille.AppText.bodyBold.merge(TabularFigures).merge(
+                        TextStyle(
+                            color = AppColors.text,
+                            textAlign = TextAlign.Start
+                        )
                     ),
                     cursorBrush = SolidColor(AppColors.accent),
                     modifier = Modifier.width(72.dp)
@@ -719,8 +717,7 @@ private fun AppleRgbChannelRow(
             Text(
                 text = label,
                 color = AppColors.text,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
+                style = de.tipau.promille.AppText.body
             )
             // iOS Numerical Value Badge
             Box(
@@ -733,10 +730,7 @@ private fun AppleRgbChannelRow(
                 Text(
                     text = value.toString(),
                     color = AppColors.text,
-                    fontSize = 13.sp,
-                    fontFamily = AppSans,
-                    style = TabularFigures,
-                    fontWeight = FontWeight.SemiBold
+                    style = de.tipau.promille.AppText.captionBold.merge(TabularFigures)
                 )
             }
         }

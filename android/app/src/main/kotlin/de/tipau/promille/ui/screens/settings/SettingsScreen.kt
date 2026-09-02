@@ -219,7 +219,9 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = label, color = if (p.genderRaw == g.raw) AppColors.accent else AppColors.text, fontSize = 16.sp)
+                            // No iOS text source (native Picker menu item);
+                            // appBody matches STGenderRow's own label style.
+                            Text(text = label, color = if (p.genderRaw == g.raw) AppColors.accent else AppColors.text, style = de.tipau.promille.AppText.body)
                             if (p.genderRaw == g.raw) {
                                 Icon(AppIcons.Check, contentDescription = null, tint = AppColors.accent, modifier = Modifier.size(18.dp))
                             }
@@ -259,7 +261,7 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = status.germanName, color = if (p.stomachStatusRaw == status.raw) AppColors.accent else AppColors.text, fontSize = 16.sp)
+                            Text(text = status.germanName, color = if (p.stomachStatusRaw == status.raw) AppColors.accent else AppColors.text, style = de.tipau.promille.AppText.body)
                             if (p.stomachStatusRaw == status.raw) {
                                 Icon(AppIcons.Check, contentDescription = null, tint = AppColors.accent, modifier = Modifier.size(18.dp))
                             }
@@ -299,7 +301,7 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = style.localizedName, color = if (p.homeStyleRaw == style.raw) AppColors.accent else AppColors.text, fontSize = 16.sp)
+                            Text(text = style.localizedName, color = if (p.homeStyleRaw == style.raw) AppColors.accent else AppColors.text, style = de.tipau.promille.AppText.body)
                             if (p.homeStyleRaw == style.raw) {
                                 Icon(AppIcons.Check, contentDescription = null, tint = AppColors.accent, modifier = Modifier.size(18.dp))
                             }
@@ -367,11 +369,14 @@ fun SettingsScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (isSignedIn && myProfile != null) {
                         Text(
+                            // iOS: .appTitle (22sp SemiBold) - was 20sp Bold.
                             text = myProfile?.displayName?.ifBlank { "Kein Name" } ?: "Kein Name",
                             color = AppColors.text,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.title
                         )
+                        // Fixed literal on iOS too (.caption, monospaced,
+                        // bold, tracking 2) - no monospace font resource
+                        // exists on Android, so size/weight stay as-is.
                         Text(
                             text = myProfile?.friendCode ?: "",
                             color = AppColors.accent,
@@ -381,15 +386,16 @@ fun SettingsScreen(
                         )
                     } else {
                         Text(
+                            // iOS: .appTitle - was 20sp Bold.
                             text = "Profil",
                             color = AppColors.text,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.title
                         )
                         Text(
+                            // iOS: .appCaption - was 12sp.
                             text = "Kein Konto verbunden",
                             color = AppColors.textDim,
-                            fontSize = 12.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
                 }
@@ -410,15 +416,16 @@ fun SettingsScreen(
                     modifier = Modifier.size(14.dp)
                 )
                 Text(
+                    // iOS: .appCaptionBold (SemiBold, not Bold) - was 12sp Bold.
                     text = "$unlockedCount/49",
                     color = AppColors.accent,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.captionBold
                 )
                 Text(
+                    // iOS: .appMicro - was 10sp.
                     text = "Achievements",
                     color = AppColors.textDim,
-                    fontSize = 10.sp
+                    style = de.tipau.promille.AppText.micro
                 )
             }
         }
@@ -633,10 +640,11 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
+                                // iOS: .appBodyBold (17sp SemiBold) - was
+                                // 15sp Bold.
                                 text = "Eigene Farbe (RGB)",
                                 color = AppColors.text,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
+                                style = de.tipau.promille.AppText.bodyBold
                             )
                             val currentColor = ACCENT_COLOR_OPTIONS.find { it.hex.equals(p.accentColorHex, ignoreCase = true) }?.color
                                 ?: try { Color(android.graphics.Color.parseColor("#${p.accentColorHex.ifBlank { "C9802F" }}")) } catch (e: Exception) { AppColors.accent }
@@ -722,7 +730,7 @@ fun SettingsScreen(
                         Text(
                             text = "Standard: 25 ml. Aus einer Flasche eher 20 ml, aus einem Glas eher 30 ml.",
                             color = AppColors.textDim,
-                            fontSize = 11.sp,
+                            style = de.tipau.promille.AppText.micro,
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
                     }
@@ -738,14 +746,15 @@ fun SettingsScreen(
                 ) {
                     SectionLabel(text = "STATUS-SCHWELLEN")
                     TextButton(onClick = { viewModel.resetThresholds() }, contentPadding = PaddingValues(0.dp)) {
-                        Text(text = "Zurücksetzen", color = AppColors.textDim, fontSize = 12.sp)
+                        // iOS: .appCaption - was 12sp.
+                        Text(text = "Zurücksetzen", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                     }
                 }
 
                 Text(
                     text = "Passe an, ab welchem Promille-Wert du in den jeweiligen Status wechselst. Nüchtern beginnt immer bei 0,00 ‰.",
                     color = AppColors.textDim,
-                    fontSize = 11.sp
+                    style = de.tipau.promille.AppText.micro
                 )
 
                 PromilleCard {
@@ -930,7 +939,7 @@ fun SettingsScreen(
                 Text(
                     text = "Persönliche Trends bleiben lokal. Stadtwerte werden nur nach deiner Zustimmung übertragen und erst ab mindestens fünf verschiedenen Beiträgern angezeigt. Fotos bleiben ausschließlich auf deinem Gerät.",
                     color = AppColors.textDim,
-                    fontSize = 11.sp
+                    style = de.tipau.promille.AppText.micro
                 )
             }
 
@@ -959,7 +968,7 @@ fun SettingsScreen(
                 Text(
                     text = "Diese App liefert Schätzwerte nach dem Widmark-Modell. Sie ersetzt keinen Atemtest und keine medizinische Beurteilung. Im Zweifel nicht fahren.",
                     color = AppColors.textDim,
-                    fontSize = 11.sp
+                    style = de.tipau.promille.AppText.micro
                 )
             }
         }

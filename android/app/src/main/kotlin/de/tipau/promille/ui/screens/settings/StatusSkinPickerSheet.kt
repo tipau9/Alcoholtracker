@@ -68,15 +68,16 @@ fun StatusSkinPickerSheet(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
+                        // iOS: .appHeadline (28sp SemiBold) - was 20sp Bold.
                         text = "Status-Skin",
                         color = AppColors.text,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        style = de.tipau.promille.AppText.headline
                     )
                     Text(
+                        // iOS: .appCaption - was 12sp.
                         text = "Wähle die Bezeichnungen für deinen Promille-Status.",
                         color = AppColors.textDim,
-                        fontSize = 12.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
                 Box(
@@ -116,16 +117,17 @@ fun StatusSkinPickerSheet(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
+                                        // iOS: .appBodyBold (17sp) - was 15sp.
                                         text = skin.displayName,
                                         color = if (isSelected) AppColors.accent else AppColors.text,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold
+                                        style = de.tipau.promille.AppText.bodyBold
                                     )
                                     Spacer(Modifier.height(2.dp))
                                     Text(
+                                        // iOS: .appCaption - was 12sp.
                                         text = skin.skinDescription,
                                         color = AppColors.textDim,
-                                        fontSize = 12.sp
+                                        style = de.tipau.promille.AppText.caption
                                     )
                                 }
                                 if (isSelected) {
@@ -147,9 +149,12 @@ fun StatusSkinPickerSheet(
                                             .padding(horizontal = 8.dp, vertical = 4.dp)
                                     ) {
                                         Text(
+                                            // iOS: fixed 10sp Medium (not a
+                                            // token) - was 11sp here.
                                             text = skin.label(status),
                                             color = AppColors.textDim,
-                                            fontSize = 11.sp
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Medium
                                         )
                                     }
                                 }
