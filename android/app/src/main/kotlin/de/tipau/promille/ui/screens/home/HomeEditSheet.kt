@@ -230,16 +230,11 @@ fun HomeEditSheet(
                                     )
                                 }
 
-                                Slider(
+                                de.tipau.promille.ui.components.AppSlider(
                                     value = warningThreshold,
                                     onValueChange = { warningThreshold = ((it * 20f).roundToInt() / 20f) },
                                     valueRange = 0.2f..1.5f,
-                                    steps = 25,
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = AppColors.accent,
-                                        activeTrackColor = AppColors.accent,
-                                        inactiveTrackColor = AppColors.border
-                                    )
+                                    steps = 25
                                 )
 
                                 Row(

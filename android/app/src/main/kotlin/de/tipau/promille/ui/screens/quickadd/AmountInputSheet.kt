@@ -383,19 +383,14 @@ fun AmountInputSheet(
                     }
                 }
 
-                Slider(
+                de.tipau.promille.ui.components.AppSlider(
                     value = volume.toFloat(),
                     onValueChange = { newValue ->
                         volume = newValue.toDouble()
                         volumeText = newValue.toInt().toString()
                         selectedPresetID = presets.firstOrNull { kotlin.math.abs(it.volumeML - volume) < 5.0 }?.id
                     },
-                    valueRange = sliderRange,
-                    colors = SliderDefaults.colors(
-                        thumbColor = AppColors.text,
-                        activeTrackColor = AppColors.accent,
-                        inactiveTrackColor = AppColors.border
-                    )
+                    valueRange = sliderRange
                 )
 
                 Row(

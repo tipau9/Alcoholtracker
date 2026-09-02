@@ -167,15 +167,10 @@ fun ForecastView(
                         )
                     }
                 }
-                Slider(
+                de.tipau.promille.ui.components.AppSlider(
                     value = targetHoursAhead,
                     onValueChange = { targetHoursAhead = it },
-                    valueRange = 0.5f..12f,
-                    colors = SliderDefaults.colors(
-                        thumbColor = AppColors.accent,
-                        activeTrackColor = AppColors.accent,
-                        inactiveTrackColor = AppColors.border
-                    )
+                    valueRange = 0.5f..12f
                 )
             }
 

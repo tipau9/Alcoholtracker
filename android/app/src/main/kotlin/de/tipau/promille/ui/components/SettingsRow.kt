@@ -288,34 +288,13 @@ fun SettingsSliderRow(
             )
         }
         Spacer(Modifier.height(4.dp))
-        Slider(
+        AppSlider(
             value = value,
             onValueChange = onValueChange,
             valueRange = valueRange,
             steps = steps,
-            interactionSource = interactionSource,
-            thumb = {
-                Box(
-                    modifier = Modifier
-                        .size(20.dp)
-                        .shadow(2.dp, CircleShape)
-                        .background(Color.White, CircleShape)
-                        .border(0.5.dp, Color(0x22000000), CircleShape)
-                )
-            },
-            track = { sliderState ->
-                SliderDefaults.Track(
-                    sliderState = sliderState,
-                    modifier = Modifier.height(4.dp),
-                    colors = SliderDefaults.colors(
-                        activeTrackColor = activeColor,
-                        inactiveTrackColor = AppColors.border,
-                        activeTickColor = Color.Transparent,
-                        inactiveTickColor = Color.Transparent
-                    )
-                )
-            },
-            modifier = Modifier.fillMaxWidth()
+            activeColor = activeColor,
+            interactionSource = interactionSource
         )
         if (minLabel.isNotEmpty() || maxLabel.isNotEmpty()) {
             Row(

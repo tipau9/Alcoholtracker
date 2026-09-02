@@ -540,15 +540,10 @@ private fun BottleLevelContent(
                             )
                         }
 
-                        Slider(
+                        de.tipau.promille.ui.components.AppSlider(
                             value = currentLevel.toFloat(),
                             onValueChange = { currentLevel = min(it.toDouble(), startLevel) },
-                            valueRange = 0f..startLevel.toFloat().coerceAtLeast(0.01f),
-                            colors = SliderDefaults.colors(
-                                thumbColor = AppColors.accent,
-                                activeTrackColor = AppColors.accent,
-                                inactiveTrackColor = AppColors.border
-                            )
+                            valueRange = 0f..startLevel.toFloat().coerceAtLeast(0.01f)
                         )
 
                         LevelButtonRow(
