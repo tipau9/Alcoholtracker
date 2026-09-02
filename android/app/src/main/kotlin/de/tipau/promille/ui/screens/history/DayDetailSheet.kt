@@ -40,7 +40,6 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import de.tipau.promille.AppSerif
 
 private enum class DayMoodOption(val raw: Int, val emoji: String, val label: String, val iconRes: Int) {
     NEUTRAL(0, "😐", "Kein Urteil", R.drawable.ic_mood_neutral),
@@ -131,16 +130,16 @@ fun DayDetailSheet(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
+                            // iOS: .appHeadline (DayDetailSheet.swift:118) -
+                            // sans, not the AppSerif/Bold this used to be.
                             text = dateTitle,
                             color = AppColors.text,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = AppSerif
+                            style = de.tipau.promille.AppText.headline
                         )
                         Text(
                             text = subtitle,
                             color = AppColors.textDim,
-                            fontSize = 13.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
 
@@ -189,7 +188,7 @@ fun DayDetailSheet(
                         Text(
                             text = "Kein Alkohol an diesem Tag.",
                             color = AppColors.textMuted,
-                            fontSize = 13.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
                 }
@@ -226,15 +225,16 @@ fun DayDetailSheet(
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
+                                        // iOS DDSStat: value is .appBodyBold
+                                        // (SemiBold, not the Bold this had).
                                         text = String.format(Locale.GERMANY, "%.2f ‰", peakBAC),
                                         color = bacStatus.color,
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.Bold
+                                        style = de.tipau.promille.AppText.bodyBold
                                     )
                                     Text(
                                         text = "Spitzen-BAC",
                                         color = AppColors.textDim,
-                                        fontSize = 11.sp
+                                        style = de.tipau.promille.AppText.micro
                                     )
                                 }
 
@@ -260,13 +260,12 @@ fun DayDetailSheet(
                                     Text(
                                         text = "${dayStats.drinkCount}",
                                         color = AppColors.text,
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.Bold
+                                        style = de.tipau.promille.AppText.bodyBold
                                     )
                                     Text(
                                         text = "Drinks",
                                         color = AppColors.textDim,
-                                        fontSize = 11.sp
+                                        style = de.tipau.promille.AppText.micro
                                     )
                                 }
 
@@ -292,13 +291,12 @@ fun DayDetailSheet(
                                     Text(
                                         text = "${dayStats.totalCalories}",
                                         color = AppColors.text,
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.Bold
+                                        style = de.tipau.promille.AppText.bodyBold
                                     )
                                     Text(
                                         text = "Kalorien",
                                         color = AppColors.textDim,
-                                        fontSize = 11.sp
+                                        style = de.tipau.promille.AppText.micro
                                     )
                                 }
                             }
@@ -388,19 +386,19 @@ fun DayDetailSheet(
                                 Text(
                                     text = "Kater-Prognose",
                                     color = AppColors.textDim,
-                                    fontSize = 11.sp
+                                    style = de.tipau.promille.AppText.micro
                                 )
                                 Text(
+                                    // iOS: .appCaptionBold (SemiBold, not Bold).
                                     text = level.germanLabel,
                                     color = if (level.isLethal) levelColor else AppColors.text,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
+                                    style = de.tipau.promille.AppText.captionBold
                                 )
                                 if (level.isLethal) {
                                     Text(
                                         text = "Solche Werte sind lebensgefährlich. Im Zweifel Notruf 112.",
                                         color = AppColors.textDim,
-                                        fontSize = 11.sp
+                                        style = de.tipau.promille.AppText.micro
                                     )
                                 }
                             }
@@ -442,10 +440,11 @@ fun DayDetailSheet(
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
+                                    // iOS: .appBody, no weight override - was
+                                    // 15sp Medium here, neither matches.
                                     text = drink.name,
                                     color = AppColors.text,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Medium
+                                    style = de.tipau.promille.AppText.body
                                 )
                                 Text(
                                     text = String.format(
@@ -455,7 +454,7 @@ fun DayDetailSheet(
                                         drink.abv
                                     ),
                                     color = AppColors.textDim,
-                                    fontSize = 12.sp
+                                    style = de.tipau.promille.AppText.micro
                                 )
                             }
                         }
@@ -525,7 +524,7 @@ fun DayDetailSheet(
                             Text(
                                 "Kurze Notiz zum Abend...",
                                 color = AppColors.textMuted,
-                                fontSize = 14.sp
+                                style = de.tipau.promille.AppText.body
                             )
                         },
                         minLines = 3,
