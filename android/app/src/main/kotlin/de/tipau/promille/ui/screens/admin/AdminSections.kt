@@ -217,29 +217,15 @@ fun AdminUserRow(user: AdminUserRole, onSetRole: (String) -> Unit) {
                 color = AppColors.text,
                 style = de.tipau.promille.AppText.caption
             )
+            Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 roles.forEach { role ->
-                    val active = role == user.role
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                if (active) AppColors.accent.copy(alpha = 0.15f) else AppColors.background,
-                                RoundedCornerShape(8.dp)
-                            )
-                            .border(
-                                0.5.dp,
-                                if (active) AppColors.accent else AppColors.border,
-                                RoundedCornerShape(8.dp)
-                            )
-                            .clickable(enabled = !active) { onSetRole(role) }
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                    ) {
-                        Text(
-                            role,
-                            color = if (active) AppColors.accent else AppColors.textDim,
-                            style = de.tipau.promille.AppText.caption
-                        )
-                    }
+                    de.tipau.promille.ui.components.AppChip(
+                        label = role,
+                        isSelected = role == user.role,
+                        shape = RoundedCornerShape(8.dp),
+                        onClick = { onSetRole(role) }
+                    )
                 }
             }
         }

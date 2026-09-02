@@ -43,6 +43,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import de.tipau.promille.ui.components.pressable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.painterResource
 import de.tipau.promille.R
@@ -596,7 +597,7 @@ private fun ONGenderCard(
                 if (isSelected) AppColors.accent else AppColors.border,
                 RoundedCornerShape(24.dp)
             )
-            .clickable(onClick = onTap)
+            .pressable(onClick = onTap)
             .padding(14.dp)
     ) {
         // Selected Checkmark Top Right

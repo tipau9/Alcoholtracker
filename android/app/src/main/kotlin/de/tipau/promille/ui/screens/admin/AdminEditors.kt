@@ -68,23 +68,12 @@ private fun AdminChipPicker(options: List<Pair<String, String>>, selected: Strin
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         options.forEach { (value, label) ->
-            val active = value == selected
-            Box(
-                modifier = Modifier
-                    .background(
-                        if (active) AppColors.accent.copy(alpha = 0.15f) else AppColors.background,
-                        RoundedCornerShape(8.dp)
-                    )
-                    .border(
-                        0.5.dp,
-                        if (active) AppColors.accent else AppColors.border,
-                        RoundedCornerShape(8.dp)
-                    )
-                    .clickable(enabled = !active) { onSelect(value) }
-                    .padding(horizontal = 10.dp, vertical = 5.dp)
-            ) {
-                Text(label, color = if (active) AppColors.accent else AppColors.textDim, style = AppText.caption)
-            }
+            de.tipau.promille.ui.components.AppChip(
+                label = label,
+                isSelected = value == selected,
+                shape = RoundedCornerShape(8.dp),
+                onClick = { onSelect(value) }
+            )
         }
     }
 }
