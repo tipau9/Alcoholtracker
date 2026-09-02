@@ -246,7 +246,11 @@ fun FriendProfileSheet(
 
                         else -> {
                             Icon(
-                                if (sharesData) Icons.Filled.Info else Icons.Filled.Lock,
+                                // sharesData: sharing is on but nothing has
+                                // arrived yet (antenna, no signal). Otherwise
+                                // it's off on their end (eye, hidden).
+                                if (sharesData) de.tipau.promille.ui.components.AppIcons.RadioWaveSlash
+                                else de.tipau.promille.ui.components.AppIcons.EyeSlash,
                                 contentDescription = null,
                                 tint = AppColors.textMuted,
                                 modifier = Modifier.size(20.dp)
@@ -279,7 +283,8 @@ fun FriendProfileSheet(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                if (followsMe) Icons.Filled.Person else Icons.Filled.Search,
+                                if (followsMe) de.tipau.promille.ui.components.AppIcons.Group
+                                else de.tipau.promille.ui.components.AppIcons.PersonQuestionMark,
                                 contentDescription = null,
                                 tint = tint,
                                 modifier = Modifier.size(18.dp)
@@ -379,7 +384,7 @@ fun FriendProfileSheet(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Icon(
-                            Icons.Filled.Info,
+                            de.tipau.promille.ui.components.AppIcons.CloudSlash,
                             contentDescription = null,
                             tint = AppColors.textMuted,
                             modifier = Modifier.size(18.dp)

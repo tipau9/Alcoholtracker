@@ -794,6 +794,118 @@ object AppIcons {
         close()
     }
 
+    /**
+     * antenna.radiowaves.left.and.right.slash: RadioWave's exact geometry
+     * plus a diagonal bar, same convention Material's own `_off` icons use
+     * (wifi_off, visibility_off) for "the base thing, crossed out".
+     */
+    val RadioWaveSlash: ImageVector = buildIcon("RadioWaveSlash") {
+        moveTo(12f, 12f)
+        curveToRelative(-1.1f, 0f, -2f, 0.9f, -2f, 2f)
+        reflectiveCurveToRelative(0.9f, 2f, 2f, 2f)
+        reflectiveCurveToRelative(2f, -0.9f, 2f, -2f)
+        reflectiveCurveToRelative(-0.9f, -2f, -2f, -2f)
+        close()
+        moveTo(4.93f, 4.93f)
+        lineTo(3.51f, 3.51f)
+        curveTo(1.36f, 5.67f, 0f, 8.68f, 0f, 12f)
+        reflectiveCurveToRelative(1.36f, 6.33f, 3.51f, 8.49f)
+        lineToRelative(1.42f, -1.42f)
+        curveTo(3.18f, 17.31f, 2f, 14.8f, 2f, 12f)
+        reflectiveCurveToRelative(1.18f, -5.31f, 2.93f, -7.07f)
+        close()
+        moveTo(20.49f, 3.51f)
+        lineToRelative(-1.42f, 1.42f)
+        curveTo(20.82f, 6.69f, 22f, 9.2f, 22f, 12f)
+        reflectiveCurveToRelative(-1.18f, 5.31f, -2.93f, 7.07f)
+        lineToRelative(1.42f, 1.42f)
+        curveTo(22.64f, 18.33f, 24f, 15.32f, 24f, 12f)
+        reflectiveCurveToRelative(-1.36f, -6.33f, -3.51f, -8.49f)
+        close()
+        // Diagonal slash, corner to corner.
+        moveTo(1.22f, 21.22f)
+        lineTo(2.78f, 22.78f)
+        lineTo(22.78f, 2.78f)
+        lineTo(21.22f, 1.22f)
+        close()
+    }
+
+    /** eye.slash.fill: a solid eye silhouette, crossed out. */
+    val EyeSlash: ImageVector = buildIcon("EyeSlash") {
+        moveTo(12f, 6.5f)
+        curveToRelative(-5f, 0f, -9.27f, 3.11f, -11f, 7.5f)
+        curveToRelative(1.73f, 4.39f, 6f, 7.5f, 11f, 7.5f)
+        reflectiveCurveToRelative(9.27f, -3.11f, 11f, -7.5f)
+        curveToRelative(-1.73f, -4.39f, -6f, -7.5f, -11f, -7.5f)
+        close()
+        moveTo(12f, 18f)
+        curveToRelative(-2.21f, 0f, -4f, -1.79f, -4f, -4f)
+        reflectiveCurveToRelative(1.79f, -4f, 4f, -4f)
+        reflectiveCurveToRelative(4f, 1.79f, 4f, 4f)
+        reflectiveCurveToRelative(-1.79f, 4f, -4f, 4f)
+        close()
+        moveTo(1.22f, 21.22f)
+        lineTo(2.78f, 22.78f)
+        lineTo(22.78f, 2.78f)
+        lineTo(21.22f, 1.22f)
+        close()
+    }
+
+    /** icloud.slash: a rounded cloud, crossed out. */
+    val CloudSlash: ImageVector = buildIcon("CloudSlash") {
+        moveTo(19.35f, 10.04f)
+        curveTo(18.67f, 6.59f, 15.64f, 4f, 12f, 4f)
+        curveToRelative(-2.86f, 0f, -5.34f, 1.61f, -6.59f, 4f)
+        curveTo(2.35f, 8.36f, 0f, 10.91f, 0f, 14f)
+        curveToRelative(0f, 3.31f, 2.69f, 6f, 6f, 6f)
+        horizontalLineToRelative(13f)
+        curveToRelative(2.76f, 0f, 5f, -2.24f, 5f, -5f)
+        curveToRelative(0f, -2.64f, -2.05f, -4.78f, -4.65f, -4.96f)
+        close()
+        moveTo(1.22f, 21.22f)
+        lineTo(2.78f, 22.78f)
+        lineTo(22.78f, 2.78f)
+        lineTo(21.22f, 1.22f)
+        close()
+    }
+
+    /** person.fill.questionmark: not-yet-mutual friendship status. */
+    val PersonQuestionMark: ImageVector = buildIcon("PersonQuestionMark") {
+        // Head, shifted left to leave room for the "?" on the right.
+        moveTo(9f, 11f)
+        curveToRelative(1.93f, 0f, 3.5f, -1.57f, 3.5f, -3.5f)
+        reflectiveCurveTo(10.93f, 4f, 9f, 4f)
+        reflectiveCurveTo(5.5f, 5.57f, 5.5f, 7.5f)
+        reflectiveCurveTo(7.07f, 11f, 9f, 11f)
+        close()
+        // Shoulders
+        moveTo(9f, 13f)
+        curveToRelative(-2.34f, 0f, -7f, 1.17f, -7f, 3.5f)
+        verticalLineTo(19f)
+        horizontalLineToRelative(14f)
+        verticalLineToRelative(-2.5f)
+        curveToRelative(0f, -2.33f, -4.66f, -3.5f, -7f, -3.5f)
+        close()
+        // Question mark hook
+        moveTo(16.4f, 4.9f)
+        curveToRelative(0f, -1.16f, 0.94f, -2.1f, 2.1f, -2.1f)
+        reflectiveCurveToRelative(2.1f, 0.94f, 2.1f, 2.1f)
+        curveToRelative(0f, 1.13f, -0.77f, 1.63f, -1.42f, 2.09f)
+        curveToRelative(-0.55f, 0.39f, -0.98f, 0.75f, -0.98f, 1.51f)
+        horizontalLineToRelative(-1.4f)
+        curveToRelative(0f, -1.24f, 0.62f, -1.76f, 1.19f, -2.16f)
+        curveToRelative(0.5f, -0.36f, 0.91f, -0.65f, 0.91f, -1.44f)
+        curveToRelative(0f, -0.39f, -0.32f, -0.7f, -0.7f, -0.7f)
+        reflectiveCurveToRelative(-0.7f, 0.31f, -0.7f, 0.7f)
+        horizontalLineTo(16.4f)
+        close()
+        moveTo(17.8f, 9.3f)
+        horizontalLineToRelative(1.4f)
+        verticalLineToRelative(1.4f)
+        horizontalLineToRelative(-1.4f)
+        close()
+    }
+
     val Gauge: ImageVector = buildIcon("Gauge") {
         moveTo(20.38f, 8.57f)
         lineToRelative(-1.23f, 1.85f)
