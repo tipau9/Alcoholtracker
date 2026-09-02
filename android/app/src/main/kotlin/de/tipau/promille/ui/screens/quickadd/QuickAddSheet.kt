@@ -546,37 +546,14 @@ fun QuickAddSheet(
             ) {
                 items(CATEGORIES) { cat ->
                     val isSelected = (selectedCategory == null && cat.key == "all") || (selectedCategory == cat.key)
-                    Row(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(if (isSelected) AppColors.accent else AppColors.card)
-                            .border(
-                                width = if (isSelected) 1.dp else 0.5.dp,
-                                color = if (isSelected) AppColors.accent else AppColors.border,
-                                shape = CircleShape
-                            )
-                            .clickable {
-                                selectedCategory = if (cat.key == "all" || selectedCategory == cat.key) null else cat.key
-                            }
-                            .padding(horizontal = 12.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        if (cat.iconRes != null) {
-                            Icon(
-                                painter = painterResource(cat.iconRes),
-                                contentDescription = null,
-                                tint = if (isSelected) AppColors.background else AppColors.textDim,
-                                modifier = Modifier.size(11.dp)
-                            )
+                    de.tipau.promille.ui.components.AppChip(
+                        label = cat.label,
+                        isSelected = isSelected,
+                        iconPainter = cat.iconRes?.let { painterResource(it) },
+                        onClick = {
+                            selectedCategory = if (cat.key == "all" || selectedCategory == cat.key) null else cat.key
                         }
-                        // iOS: .appCaptionBold (QuickAddSheet.swift:842).
-                        Text(
-                            text = cat.label,
-                            color = if (isSelected) AppColors.background else AppColors.textDim,
-                            style = de.tipau.promille.AppText.captionBold
-                        )
-                    }
+                    )
                 }
             }
 

@@ -1082,21 +1082,11 @@ private fun ONFavoritesPage(
         ) {
             categories.forEach { (catKey, catLabel) ->
                 val isOn = selectedCategory == catKey
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(if (isOn) AppColors.accent else AppColors.card)
-                        .border(0.5.dp, if (isOn) Color.Transparent else AppColors.border, CircleShape)
-                        .clickable { selectedCategory = if (isOn && catKey != null) null else catKey }
-                        .padding(horizontal = 14.dp, vertical = 7.dp)
-                ) {
-                    // iOS: .appCaptionBold (OnboardingView.swift:811).
-                    Text(
-                        text = catLabel,
-                        color = if (isOn) AppColors.background else AppColors.textDim,
-                        style = de.tipau.promille.AppText.captionBold
-                    )
-                }
+                de.tipau.promille.ui.components.AppChip(
+                    label = catLabel,
+                    isSelected = isOn,
+                    onClick = { selectedCategory = if (isOn && catKey != null) null else catKey }
+                )
             }
         }
 
@@ -1111,30 +1101,14 @@ private fun ONFavoritesPage(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 selectedTemplates.forEach { t ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(AppColors.accent.copy(alpha = 0.12f))
-                            .border(0.5.dp, AppColors.accent.copy(alpha = 0.5f), CircleShape)
-                            .clickable { viewModel.removeFavorite(t.id) }
-                            .padding(horizontal = 12.dp, vertical = 7.dp)
-                    ) {
-                        // iOS: .appCaption (OnboardingView.swift:727).
-                        Text(
-                            text = t.name,
-                            color = AppColors.text,
-                            style = de.tipau.promille.AppText.caption,
-                            maxLines = 1
-                        )
-                        Icon(
-                            imageVector = Icons.Filled.Close,
-                            contentDescription = "Entfernen",
-                            tint = AppColors.textDim,
-                            modifier = Modifier.size(10.dp)
-                        )
-                    }
+                    de.tipau.promille.ui.components.AppChip(
+                        label = t.name,
+                        isSelected = true,
+                        selectedColor = AppColors.accent.copy(alpha = 0.12f),
+                        selectedTextColor = AppColors.text,
+                        onClick = { viewModel.removeFavorite(t.id) },
+                        icon = Icons.Filled.Close
+                    )
                 }
             }
         }

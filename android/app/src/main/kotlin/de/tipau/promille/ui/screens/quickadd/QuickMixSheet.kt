@@ -330,22 +330,11 @@ fun QuickMixSheet(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             volumePresets.forEach { vol ->
-                                val isSelected = totalVolumeMl == vol
-                                Box(
-                                    modifier = Modifier
-                                        .clip(CircleShape)
-                                        .background(if (isSelected) AppColors.accent else AppColors.card)
-                                        .border(0.5.dp, if (isSelected) AppColors.accent else AppColors.border, CircleShape)
-                                        .clickable { totalVolumeMl = vol }
-                                        .padding(horizontal = 14.dp, vertical = 8.dp)
-                                ) {
-                                    // iOS: .appCaptionBold (QuickMixSheet.swift:481).
-                                    Text(
-                                        text = "${vol.toInt()} ml",
-                                        color = if (isSelected) AppColors.background else AppColors.textDim,
-                                        style = de.tipau.promille.AppText.captionBold
-                                    )
-                                }
+                                de.tipau.promille.ui.components.AppChip(
+                                    label = "${vol.toInt()} ml",
+                                    isSelected = totalVolumeMl == vol,
+                                    onClick = { totalVolumeMl = vol }
+                                )
                             }
                         }
                     }
@@ -362,40 +351,18 @@ fun QuickMixSheet(
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        val isAllSelected = mixerCategory == null
-                        Box(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(if (isAllSelected) AppColors.accent else AppColors.card)
-                                .border(0.5.dp, if (isAllSelected) AppColors.accent else AppColors.border, CircleShape)
-                                .clickable { mixerCategory = null }
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
-                        ) {
-                            // iOS: .appCaptionBold (QuickMixSheet.swift:481).
-                            Text(
-                                text = "Alle",
-                                color = if (isAllSelected) AppColors.background else AppColors.textDim,
-                                style = de.tipau.promille.AppText.captionBold
-                            )
-                        }
+                        de.tipau.promille.ui.components.AppChip(
+                            label = "Alle",
+                            isSelected = mixerCategory == null,
+                            onClick = { mixerCategory = null }
+                        )
 
                         MixerCategory.entries.forEach { cat ->
-                            val isCatSelected = mixerCategory == cat
-                            Box(
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .background(if (isCatSelected) AppColors.accent else AppColors.card)
-                                    .border(0.5.dp, if (isCatSelected) AppColors.accent else AppColors.border, CircleShape)
-                                    .clickable { mixerCategory = if (mixerCategory == cat) null else cat }
-                                    .padding(horizontal = 14.dp, vertical = 8.dp)
-                            ) {
-                                // iOS: .appCaptionBold (QuickMixSheet.swift:481).
-                                Text(
-                                    text = cat.germanName,
-                                    color = if (isCatSelected) AppColors.background else AppColors.textDim,
-                                    style = de.tipau.promille.AppText.captionBold
-                                )
-                            }
+                            de.tipau.promille.ui.components.AppChip(
+                                label = cat.germanName,
+                                isSelected = mixerCategory == cat,
+                                onClick = { mixerCategory = if (mixerCategory == cat) null else cat }
+                            )
                         }
                     }
 
