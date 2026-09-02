@@ -21,9 +21,13 @@ import de.tipau.promille.AppColors
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
+
 /**
  * 1:1 mirror of PrimaryButton.swift in iOS.
  * Full-width accent button with 20.dp rounded corners for primary actions.
+ * Applies .pressable feedback (Motion.swift:47).
  */
 @Composable
 fun PrimaryButton(
@@ -35,6 +39,7 @@ fun PrimaryButton(
     enabled: Boolean = true
 ) {
     val haptic = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
     val baseColor = if (isDestructive) AppColors.statusRed else AppColors.accent
 
     Button(
@@ -43,6 +48,7 @@ fun PrimaryButton(
             onClick()
         },
         enabled = enabled,
+        interactionSource = interactionSource,
         colors = ButtonDefaults.buttonColors(
             containerColor = baseColor,
             contentColor = AppColors.background,
@@ -51,7 +57,9 @@ fun PrimaryButton(
         ),
         shape = RoundedCornerShape(20.dp),
         contentPadding = PaddingValues(vertical = 16.dp, horizontal = 20.dp),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .pressableEffect(interactionSource, enabled = enabled)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -71,6 +79,7 @@ fun PrimaryButton(
 /**
  * 1:1 mirror of FABButton.swift in iOS.
  * Floating capsule action button.
+ * Applies .pressable feedback (Motion.swift:47).
  */
 @Composable
 fun PromilleFAB(
@@ -80,11 +89,13 @@ fun PromilleFAB(
     icon: ImageVector = AppIcons.Plus
 ) {
     val haptic = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
     Button(
         onClick = {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             onClick()
         },
+        interactionSource = interactionSource,
         colors = ButtonDefaults.buttonColors(
             containerColor = AppColors.accent,
             contentColor = AppColors.background
@@ -92,7 +103,7 @@ fun PromilleFAB(
         shape = CircleShape, // Capsule
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
         contentPadding = PaddingValues(horizontal = 22.dp, vertical = 15.dp),
-        modifier = modifier
+        modifier = modifier.pressableEffect(interactionSource)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
