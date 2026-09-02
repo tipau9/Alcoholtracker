@@ -198,12 +198,11 @@ fun SessionScreen(
         )
     }
 
-    // Achievement toast. The service exposes the unlocked set, not an event, so
-    // the newly added id is the difference against what was already on screen.
+    // Achievement toast (HomeView.swift:200-217, 2702-2744).
     val unlockedIds by (container?.achievementService?.unlockedIds
         ?: kotlinx.coroutines.flow.MutableStateFlow(emptySet<String>())).collectAsState()
     var seenAchievements by remember { mutableStateOf<Set<String>?>(null) }
-    var unlockToast by remember { mutableStateOf<String?>(null) }
+    var unlockedAchievementToast by remember { mutableStateOf<Pair<de.tipau.promille.bac.Achievement, Int>?>(null) }
     LaunchedEffect(unlockedIds) {
         val seen = seenAchievements
         if (seen == null) {
@@ -211,13 +210,16 @@ fun SessionScreen(
             seenAchievements = unlockedIds
             return@LaunchedEffect
         }
-        val fresh = (unlockedIds - seen).firstOrNull()
+        val freshIds = (unlockedIds - seen).toList()
         seenAchievements = unlockedIds
-        if (fresh != null) {
-            unlockToast = de.tipau.promille.bac.AchievementCatalog.ALL
-                .firstOrNull { it.id == fresh }?.title ?: fresh
-            delay(3000)
-            unlockToast = null
+        if (freshIds.isNotEmpty()) {
+            val firstAchievement = de.tipau.promille.bac.AchievementCatalog.ALL
+                .firstOrNull { it.id == freshIds.first() }
+            if (firstAchievement != null) {
+                unlockedAchievementToast = firstAchievement to freshIds.size
+                delay(4000)
+                unlockedAchievementToast = null
+            }
         }
     }
 
@@ -892,14 +894,22 @@ fun SessionScreen(
             )
         }
 
-        val currentToast = unlockToast
-        if (currentToast != null) {
-            AchievementToast(
-                title = currentToast,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 12.dp, start = 20.dp, end = 20.dp)
-            )
+        // Floating Achievement Unlock Toast (bottom-rising toast matching iOS HomeView.swift:200-217)
+        AnimatedVisibility(
+            visible = unlockedAchievementToast != null && activeSipDrink == null,
+            enter = if (reducedMotion) fadeIn() else slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = if (reducedMotion) fadeOut() else slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = if (undoAction != null) 148.dp else 84.dp)
+        ) {
+            unlockedAchievementToast?.let { (achievement, count) ->
+                de.tipau.promille.ui.components.AchievementUnlockToast(
+                    achievement = achievement,
+                    count = count,
+                    onDismiss = { unlockedAchievementToast = null }
+                )
+            }
         }
 
         // Floating Sip Counter Overlay (replaces bottom area while counting)
