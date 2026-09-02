@@ -102,17 +102,10 @@ fun SettingsToggleRow(
             }
         }
         Spacer(Modifier.width(12.dp))
-        Switch(
+        AppSwitch(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = iconColor,
-                uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = AppColors.border,
-                uncheckedBorderColor = Color.Transparent,
-                checkedBorderColor = Color.Transparent
-            )
+            activeColor = iconColor
         )
     }
 }

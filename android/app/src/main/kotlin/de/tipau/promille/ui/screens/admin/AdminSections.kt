@@ -192,15 +192,11 @@ fun AdminFlagRow(flag: AdminFeatureFlag, onToggle: (Boolean) -> Unit) {
                     Text(flag.description, color = AppColors.textDim, fontSize = 12.sp)
                 }
             }
-            Switch(
+            de.tipau.promille.ui.components.AppSwitch(
                 checked = flag.enabled,
                 onCheckedChange = onToggle,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = AppColors.background,
-                    checkedTrackColor = AppColors.accent,
-                    uncheckedThumbColor = AppColors.textDim,
-                    uncheckedTrackColor = AppColors.card
-                )
+                activeColor = AppColors.accent,
+                inactiveColor = AppColors.card
             )
         }
     }

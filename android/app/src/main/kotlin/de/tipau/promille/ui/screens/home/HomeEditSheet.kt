@@ -376,15 +376,11 @@ private fun ToggleGroup(
                             )
                         }
 
-                        Switch(
+                        de.tipau.promille.ui.components.AppSwitch(
                             checked = isOn,
                             onCheckedChange = { onToggle(wt, it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = AppColors.accent,
-                                checkedTrackColor = AppColors.accent.copy(alpha = 0.3f),
-                                uncheckedThumbColor = AppColors.textDim,
-                                uncheckedTrackColor = AppColors.background
-                            )
+                            activeColor = AppColors.accent,
+                            inactiveColor = AppColors.background
                         )
                     }
 
