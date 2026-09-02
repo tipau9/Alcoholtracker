@@ -145,7 +145,11 @@ fun MinimalHomeView(
                     DropdownMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false },
-                        modifier = Modifier.background(AppColors.card)
+                        shape = RoundedCornerShape(16.dp),
+                        containerColor = AppColors.card,
+                        border = androidx.compose.foundation.BorderStroke(0.5.dp, AppColors.border),
+                        shadowElevation = 8.dp,
+                        modifier = Modifier.background(AppColors.card, RoundedCornerShape(16.dp))
                     ) {
                         DropdownMenuItem(
                             text = { Text("Detaillierter Modus", color = AppColors.text) },

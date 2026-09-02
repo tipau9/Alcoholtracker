@@ -140,7 +140,10 @@ fun BarcodeCandidateSheet(
                     DropdownMenu(
                         expanded = categoryMenuOpen,
                         onDismissRequest = { categoryMenuOpen = false },
-                        containerColor = AppColors.card
+                        shape = RoundedCornerShape(16.dp),
+                        containerColor = AppColors.card,
+                        border = androidx.compose.foundation.BorderStroke(0.5.dp, AppColors.border),
+                        shadowElevation = 8.dp
                     ) {
                         DrinkCategory.entries.forEach { c ->
                             DropdownMenuItem(
