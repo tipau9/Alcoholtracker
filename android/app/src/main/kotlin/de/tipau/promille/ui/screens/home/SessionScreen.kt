@@ -436,14 +436,15 @@ fun SessionScreen(
                                 Text(
                                     text = "Trink-Tempo",
                                     color = AppColors.textDim,
-                                    fontSize = 11.sp
+                                    style = de.tipau.promille.AppText.micro
                                 )
                                 Text(
+                                    // iOS: .appCaptionBold (SemiBold, not
+                                    // Bold).
                                     text = pacingWarning!!,
                                     color = AppColors.text,
-                                    fontSize = 13.sp,
-                                    lineHeight = 17.sp,
-                                    fontWeight = FontWeight.Bold
+                                    style = de.tipau.promille.AppText.captionBold,
+                                    lineHeight = 17.sp
                                 )
                             }
                         }
@@ -777,7 +778,7 @@ fun SessionScreen(
                 Text(
                     text = "Widmark-Schätzwert. Müdigkeit, Medikamente und individuelle Faktoren können stark abweichen. Kein Ersatz für einen Atemtest. Im Zweifel nicht fahren.",
                     color = AppColors.textMuted,
-                    fontSize = 11.sp,
+                    style = de.tipau.promille.AppText.micro,
                     lineHeight = 15.sp,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     modifier = Modifier
@@ -861,16 +862,17 @@ fun SessionScreen(
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
+                    // Android-only (AppUpdateService has no iOS source);
+                    // appBodyBold/appMicro match this sweep's banner pairing.
                     Text(
                         text = "Update verfügbar: v${update.newVersion}",
                         color = AppColors.text,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
+                        style = de.tipau.promille.AppText.bodyBold
                     )
                     Text(
                         text = "Tippen für Details & Download",
                         color = AppColors.textDim,
-                        fontSize = 11.sp
+                        style = de.tipau.promille.AppText.micro
                     )
                 }
                 Box(
