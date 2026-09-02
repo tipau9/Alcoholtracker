@@ -906,6 +906,34 @@ object AppIcons {
         close()
     }
 
+    /**
+     * xmark.circle.fill. Not in material-icons-core (only the extended
+     * artifact this project doesn't depend on has Cancel), so hand-built:
+     * a filled circle with the X cut out, same EvenOdd technique
+     * StatusPill.kt's XOctagon uses.
+     */
+    val XCircle: ImageVector = buildIcon("XCircle", fillType = PathFillType.EvenOdd) {
+        moveTo(12f, 2f)
+        curveTo(6.48f, 2f, 2f, 6.48f, 2f, 12f)
+        reflectiveCurveToRelative(4.48f, 10f, 10f, 10f)
+        reflectiveCurveToRelative(10f, -4.48f, 10f, -10f)
+        reflectiveCurveTo(17.52f, 2f, 12f, 2f)
+        close()
+        moveTo(15.59f, 7f)
+        lineTo(12f, 10.59f)
+        lineTo(8.41f, 7f)
+        lineTo(7f, 8.41f)
+        lineTo(10.59f, 12f)
+        lineTo(7f, 15.59f)
+        lineTo(8.41f, 17f)
+        lineTo(12f, 13.41f)
+        lineTo(15.59f, 17f)
+        lineTo(17f, 15.59f)
+        lineTo(13.41f, 12f)
+        lineTo(17f, 8.41f)
+        close()
+    }
+
     val Gauge: ImageVector = buildIcon("Gauge") {
         moveTo(20.38f, 8.57f)
         lineToRelative(-1.23f, 1.85f)
