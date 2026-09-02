@@ -17,7 +17,7 @@ import de.tipau.promille.AppColors
 import de.tipau.promille.PromilleApplication
 import de.tipau.promille.ui.components.AppIcons
 import de.tipau.promille.ui.screens.achievements.AchievementsScreen
-import de.tipau.promille.ui.screens.admin.AdminConsoleSheet
+import de.tipau.promille.ui.screens.admin.AdminScreen
 import de.tipau.promille.ui.screens.settings.SettingsScreen
 import de.tipau.promille.ui.viewmodels.SettingsViewModel
 
@@ -123,7 +123,7 @@ fun PromilleNavigation(
                         )
                     }
                     Tab.ADMIN -> {
-                        // Rendered as the modal sheet below; nothing sits under it.
+                        de.tipau.promille.ui.screens.admin.AdminScreen(container = container)
                     }
                 }
             }
@@ -174,13 +174,6 @@ fun PromilleNavigation(
             }
             }
         }
-    }
-
-    if (selectedTab == Tab.ADMIN) {
-        AdminConsoleSheet(
-            container = container,
-            onDismiss = { selectedTab = Tab.HOME }
-        )
     }
 
     if (showAchievements) {

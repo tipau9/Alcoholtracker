@@ -35,11 +35,10 @@ import de.tipau.promille.ui.viewmodels.AdminViewModel
  * SECURITY DEFINER RPC that checks the caller again, so hiding a tab is
  * convenience, never the protection.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminConsoleSheet(
+fun AdminScreen(
     container: AppContainer,
-    onDismiss: () -> Unit
+    modifier: Modifier = Modifier
 ) {
     val viewModel = remember { AdminViewModel(container.supabase) }
     var section by remember { mutableStateOf(AdminSection.MODERATION) }
@@ -89,32 +88,13 @@ fun AdminConsoleSheet(
         if (isAdmin) viewModel.reloadAll()
     }
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = Color.Transparent,
-        scrimColor = Color.Black.copy(alpha = 0.65f),
-        dragHandle = null
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(top = 16.dp, bottom = 36.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 24.dp, top = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(AppColors.background)
-                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
-        ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.92f)
-                    .padding(horizontal = 20.dp),
-                contentPadding = PaddingValues(top = 20.dp, bottom = 36.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
                 item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -362,8 +342,6 @@ fun AdminConsoleSheet(
                 }
             }
         }
-    }
-}
 
     if (showFlagEditor) {
         AdminFlagEditorDialog(

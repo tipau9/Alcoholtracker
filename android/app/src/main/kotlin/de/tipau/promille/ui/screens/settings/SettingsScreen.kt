@@ -62,7 +62,6 @@ fun SettingsScreen(
 
     var showStatusSkinPicker by remember { mutableStateOf(false) }
     var showRgbColorPicker by remember { mutableStateOf(false) }
-    var showAdminView by remember { mutableStateOf(false) }
     var showAuth by remember { mutableStateOf(false) }
     var showDeleteAccountConfirm by remember { mutableStateOf(false) }
     var showDeletePhotosConfirm by remember { mutableStateOf(false) }
@@ -134,13 +133,6 @@ fun SettingsScreen(
                     Text("Abbrechen", color = AppColors.textDim)
                 }
             }
-        )
-    }
-
-    if (showAdminView && appContainer != null) {
-        de.tipau.promille.ui.screens.admin.AdminConsoleSheet(
-            container = appContainer,
-            onDismiss = { showAdminView = false }
         )
     }
 
@@ -955,13 +947,6 @@ fun SettingsScreen(
                             subtitle = "GitHub Releases (tipau9/Alcoholtracker)",
                             onClick = { showUpdateSheet = true },
                             icon = AppIcons.ArrowDown
-                        )
-                        SettingsDivider()
-                        SettingsNavigationRow(
-                            title = "Entwickler-Optionen & Admin",
-                            subtitle = "Testdaten, DB-Status und Debug-Werkzeuge",
-                            onClick = { showAdminView = true },
-                            icon = AppIcons.Settings
                         )
                     }
                 }
