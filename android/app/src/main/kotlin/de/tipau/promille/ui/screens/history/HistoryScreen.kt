@@ -117,12 +117,11 @@ fun HistoryScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                // iOS: .appHeadline (HistoryView.swift:145).
                 Text(
                     text = "Verlauf",
                     color = AppColors.text,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = AppSerif
+                    style = de.tipau.promille.AppText.headline
                 )
                 Box(
                     modifier = Modifier
@@ -155,11 +154,11 @@ fun HistoryScreen(
                             .padding(horizontal = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
+                        // iOS: .appMicro (HistoryView.swift:166).
                         Text(
                             text = "Heute",
                             color = AppColors.accent,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold
+                            style = de.tipau.promille.AppText.micro
                         )
                     }
                 }
@@ -176,11 +175,11 @@ fun HistoryScreen(
                     Text("‹", color = AppColors.textDim, fontSize = 18.sp)
                 }
 
+                // iOS: .appCaptionBold (HistoryView.swift:189).
                 Text(
                     text = visibleMonth.format(monthFormatter),
                     color = AppColors.text,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = de.tipau.promille.AppText.captionBold,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .defaultMinSize(minWidth = 90.dp)
@@ -343,16 +342,16 @@ fun HistoryScreen(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text = "Tage",
-                                    color = AppColors.textDim,
-                                    fontSize = 11.sp
-                                )
+                                // iOS HVSummaryTile: value is .appBodyBold.monospacedDigit(), label is .appMicro
                                 Text(
                                     text = "${monthStats.drinkDays}",
                                     color = AppColors.text,
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.Bold
+                                    style = de.tipau.promille.AppText.bodyBold.merge(de.tipau.promille.TabularFigures)
+                                )
+                                Text(
+                                    text = "Tage",
+                                    color = AppColors.textDim,
+                                    style = de.tipau.promille.AppText.micro
                                 )
                             }
 
@@ -376,15 +375,14 @@ fun HistoryScreen(
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 Text(
-                                    text = "Drinks",
-                                    color = AppColors.textDim,
-                                    fontSize = 11.sp
+                                    text = "${monthStats.totalDrinks}",
+                                    color = AppColors.text,
+                                    style = de.tipau.promille.AppText.bodyBold.merge(de.tipau.promille.TabularFigures)
                                 )
                                 Text(
-                                    text = "${monthStats.totalDrinks}",
-                                    color = AppColors.accent,
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.Bold
+                                    text = "Drinks",
+                                    color = AppColors.textDim,
+                                    style = de.tipau.promille.AppText.micro
                                 )
                             }
 
@@ -408,15 +406,14 @@ fun HistoryScreen(
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 Text(
-                                    text = "Kalorien",
-                                    color = AppColors.textDim,
-                                    fontSize = 11.sp
-                                )
-                                Text(
                                     text = "${monthStats.totalCalories}",
                                     color = AppColors.text,
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.Bold
+                                    style = de.tipau.promille.AppText.bodyBold.merge(de.tipau.promille.TabularFigures)
+                                )
+                                Text(
+                                    text = "Kalorien",
+                                    color = AppColors.textDim,
+                                    style = de.tipau.promille.AppText.micro
                                 )
                             }
                         }
@@ -455,10 +452,11 @@ fun HistoryScreen(
                                             .background(st.color.copy(alpha = 0.30f))
                                             .border(0.5.dp, st.color, CircleShape)
                                     )
+                                    // iOS: .appMicro (HistoryView.swift:122).
                                     Text(
                                         text = st.label(statusSkin),
                                         color = AppColors.textDim,
-                                        fontSize = 11.sp,
+                                        style = de.tipau.promille.AppText.micro,
                                         maxLines = 1
                                     )
                                 }
@@ -497,8 +495,7 @@ fun HistoryScreen(
                                     Text(
                                         text = day.date.format(dayFormatter),
                                         color = AppColors.text,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold
+                                        style = de.tipau.promille.AppText.bodyBold
                                     )
                                     if (day.hadAlcohol) {
                                         Box(
@@ -511,8 +508,7 @@ fun HistoryScreen(
                                             Text(
                                                 text = statusLabel,
                                                 color = status.color,
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Medium
+                                                style = de.tipau.promille.AppText.micro
                                             )
                                         }
                                     }
@@ -521,7 +517,7 @@ fun HistoryScreen(
                                 Text(
                                     text = "${day.drinkCount} Getränke · ${String.format(Locale.GERMAN, "%.1f g", day.totalAlcoholGrams)} Alkohol · ${day.totalCalories} kcal",
                                     color = AppColors.textDim,
-                                    fontSize = 12.sp
+                                    style = de.tipau.promille.AppText.caption
                                 )
                             }
                             Text("›", color = AppColors.textMuted, fontSize = 22.sp)
