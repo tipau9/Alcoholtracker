@@ -130,8 +130,8 @@ fun AppUpdateSheet(
                         }
                         Spacer(Modifier.width(12.dp))
                         Column {
-                            Text("App-Update", color = AppColors.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text("GitHub Releases (tipau9)", color = AppColors.textDim, fontSize = 12.sp)
+                            Text("App-Update", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
+                            Text("GitHub Releases (tipau9)", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                         }
                     }
                     Box(
@@ -158,7 +158,7 @@ fun AppUpdateSheet(
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             CircularProgressIndicator(color = AppColors.accent, modifier = Modifier.size(36.dp))
-                            Text("Suche nach Updates auf GitHub...", color = AppColors.textDim, fontSize = 14.sp)
+                            Text("Suche nach Updates auf GitHub...", color = AppColors.textDim, style = de.tipau.promille.AppText.body)
                         }
                     }
 
@@ -179,11 +179,11 @@ fun AppUpdateSheet(
                             ) {
                                 Icon(Icons.Filled.Check, null, tint = AppColors.statusGreen, modifier = Modifier.size(28.dp))
                             }
-                            Text("App ist aktuell", color = AppColors.text, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                            Text("App ist aktuell", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
                             Text(
                                 text = "Du nutzt bereits die neueste Version (v${cur.version}).",
                                 color = AppColors.textDim,
-                                fontSize = 13.sp
+                                style = de.tipau.promille.AppText.caption
                             )
                             Spacer(Modifier.height(8.dp))
                             PrimaryButton(
@@ -202,8 +202,8 @@ fun AppUpdateSheet(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Icon(Icons.Filled.Info, null, tint = AppColors.statusOrange, modifier = Modifier.size(36.dp))
-                            Text("Release ${cur.version} verfügbar", color = AppColors.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            Text("Auf GitHub ist ein neueres Release vorhanden, es enthält jedoch kein direktes APK-Asset.", color = AppColors.textDim, fontSize = 13.sp)
+                            Text("Release ${cur.version} verfügbar", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
+                            Text("Auf GitHub ist ein neueres Release vorhanden, es enthält jedoch kein direktes APK-Asset.", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                             Spacer(Modifier.height(8.dp))
                             PrimaryButton(
                                 text = "Auf GitHub ansehen",
@@ -233,11 +233,11 @@ fun AppUpdateSheet(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column {
-                                    Text("Version v${cur.releaseResult.newVersion}", color = AppColors.accent, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                                    Text("Aktuell: v${cur.releaseResult.currentVersion}", color = AppColors.textDim, fontSize = 12.sp)
+                                    Text("Version v${cur.releaseResult.newVersion}", color = AppColors.accent, style = de.tipau.promille.AppText.bodyBold)
+                                    Text("Aktuell: v${cur.releaseResult.currentVersion}", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                                 }
                                 if (sizeMb.isNotBlank()) {
-                                    Text(sizeMb, color = AppColors.textMuted, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    Text(sizeMb, color = AppColors.textMuted, style = de.tipau.promille.AppText.captionBold)
                                 }
                             }
 
@@ -254,8 +254,8 @@ fun AppUpdateSheet(
                                         .verticalScroll(rememberScrollState()),
                                     verticalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    Text("ÄNDERUNGEN", color = AppColors.textDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                    Text(release.body.trim(), color = AppColors.text, fontSize = 13.sp)
+                                    Text("ÄNDERUNGEN", color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
+                                    Text(release.body.trim(), color = AppColors.text, style = de.tipau.promille.AppText.caption)
                                 }
                             }
 
@@ -305,7 +305,7 @@ fun AppUpdateSheet(
                                 .padding(vertical = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            Text("Lade Version v${cur.releaseResult.newVersion} herunter...", color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            Text("Lade Version v${cur.releaseResult.newVersion} herunter...", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
                             LinearProgressIndicator(
                                 progress = { cur.progress },
                                 modifier = Modifier
@@ -319,8 +319,8 @@ fun AppUpdateSheet(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("$pct %", color = AppColors.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                Text("$downloadedMb MB von $totalMb", color = AppColors.textDim, fontSize = 12.sp)
+                                Text("$pct %", color = AppColors.accent, style = de.tipau.promille.AppText.captionBold)
+                                Text("$downloadedMb MB von $totalMb", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                             }
                         }
                     }
@@ -342,8 +342,8 @@ fun AppUpdateSheet(
                             ) {
                                 Icon(AppIcons.ArrowDown, null, tint = AppColors.accent, modifier = Modifier.size(28.dp))
                             }
-                            Text("Download bereit zur Installation", color = AppColors.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            Text("Tippe unten, um das Update zu installieren.", color = AppColors.textDim, fontSize = 13.sp)
+                            Text("Download bereit zur Installation", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
+                            Text("Tippe unten, um das Update zu installieren.", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                             Spacer(Modifier.height(4.dp))
                             PrimaryButton(
                                 text = "Jetzt installieren",
@@ -369,8 +369,8 @@ fun AppUpdateSheet(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text("Update-Prüfung fehlgeschlagen", color = AppColors.statusRed, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            Text(cur.message, color = AppColors.textDim, fontSize = 13.sp)
+                            Text("Update-Prüfung fehlgeschlagen", color = AppColors.statusRed, style = de.tipau.promille.AppText.bodyBold)
+                            Text(cur.message, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                             Spacer(Modifier.height(8.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                                 Button(
