@@ -501,67 +501,45 @@ fun ParticipantActionsDialog(
 
     confirming?.let { action ->
         val kick = action == ParticipantAction.KICK
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { confirming = null },
-            containerColor = AppColors.card,
-            title = {
-                Text(
-                    if (kick) "Teilnehmer entfernen?" else "Host übergeben?",
-                    color = AppColors.text,
-                    style = de.tipau.promille.AppText.headline
-                )
+            title = if (kick) "Teilnehmer entfernen?" else "Host übergeben?",
+            text = if (kick) "${participant.displayName} wird aus dem Jam entfernt."
+                else "${participant.displayName} wird zum Host. Du bleibst als Teilnehmer im Jam.",
+            confirmText = if (kick) "Entfernen" else "Host übergeben",
+            isDestructive = kick,
+            onConfirm = {
+                confirming = null
+                if (kick) onKick() else onTransfer()
             },
-            text = {
-                Text(
-                    if (kick) "${participant.displayName} wird aus dem Jam entfernt."
-                    else "${participant.displayName} wird zum Host. Du bleibst als Teilnehmer im Jam.",
-                    color = AppColors.textDim,
-                    style = de.tipau.promille.AppText.caption
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    confirming = null
-                    if (kick) onKick() else onTransfer()
-                }) {
-                    Text(
-                        if (kick) "Entfernen" else "Host übergeben",
-                        color = if (kick) AppColors.statusRed else AppColors.accent,
-                        style = de.tipau.promille.AppText.bodyBold
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirming = null }) {
-                    Text("Abbrechen", color = AppColors.textDim, style = de.tipau.promille.AppText.body)
-                }
-            }
+            dismissText = "Abbrechen"
         )
         return
     }
 
-    AlertDialog(
+    de.tipau.promille.ui.components.AppAlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = AppColors.card,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.border),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(participant.avatar, color = AppColors.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                }
-                Column {
-                    Text(participant.displayName, color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
-                    Text(participant.connectionType.label, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
-                }
-            }
-        },
-        text = {
+        title = participant.displayName,
+        dismissText = null,
+        confirmText = "Schließen",
+        onConfirm = onDismiss,
+        content = {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(AppColors.border),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(participant.avatar, color = AppColors.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    Column {
+                        Text(participant.connectionType.label, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
+                    }
+                }
+
                 val settings = participant.sharedSettings
                 if (settings == null) {
                     // Settings ride the Bluetooth channel only, so server-synced
@@ -634,9 +612,6 @@ fun ParticipantActionsDialog(
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Schließen", color = AppColors.textDim, style = de.tipau.promille.AppText.body) }
         }
     )
 }

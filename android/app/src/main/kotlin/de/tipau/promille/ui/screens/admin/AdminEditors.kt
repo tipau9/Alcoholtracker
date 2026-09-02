@@ -1,8 +1,5 @@
 package de.tipau.promille.ui.screens.admin
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -19,6 +16,7 @@ import de.tipau.promille.AppColors
 import de.tipau.promille.AppText
 import de.tipau.promille.network.AdminFeatureFlag
 import de.tipau.promille.network.AdminQueueItem
+import de.tipau.promille.ui.components.AppAlertDialog
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -29,14 +27,8 @@ import kotlinx.serialization.json.Json as KotlinJson
 /**
  * Port of AdminView.swift's 5 private editor sheets (AdminFlagEditor,
  * AdminDrinkEditor, AdminMixEditor, AdminRoleEditor, AdminBlockEditor;
- * AdminView.swift:1099-1598). iOS uses a NavigationStack Form with a
- * cancellation/confirmation toolbar - there's no direct Android analogue, so
- * these use the themed AlertDialog pattern already established for this
- * codebase's other dialogs (RoundedCornerShape(20.dp), AppColors.card,
- * 0.5dp border - e.g. CrewView.kt:203-223).
+ * AdminView.swift:1099-1598). Uses AppAlertDialog for iOS dialog parity.
  */
-private val AdminDialogShape = RoundedCornerShape(20.dp)
-
 @Composable
 private fun AdminField(
     label: String,
@@ -129,29 +121,25 @@ fun AdminFlagEditorDialog(
         else flag.enabled != enabled || flag.isPublic != isPublic
 
     if (showConfirm) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showConfirm = false },
-            shape = AdminDialogShape,
-            modifier = Modifier.border(0.5.dp, AppColors.border, AdminDialogShape),
-            containerColor = AppColors.card,
-            title = { Text("Feature Flag ändern?", color = AppColors.text) },
-            text = { Text("Diese Änderung kann sofort alle Clients betreffen.", color = AppColors.textDim) },
-            confirmButton = {
-                TextButton(onClick = { showConfirm = false; commit() }) {
-                    Text("Änderung speichern", color = if (isPublic) AppColors.accent else AppColors.statusRed)
-                }
-            },
-            dismissButton = { TextButton(onClick = { showConfirm = false }) { Text("Abbrechen", color = AppColors.textDim) } }
+            title = "Feature Flag ändern?",
+            text = "Diese Änderung kann sofort alle Clients betreffen.",
+            confirmText = "Änderung speichern",
+            isDestructive = !isPublic,
+            onConfirm = { showConfirm = false; commit() },
+            dismissText = "Abbrechen"
         )
     }
 
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
-        shape = AdminDialogShape,
-        modifier = Modifier.border(0.5.dp, AppColors.border, AdminDialogShape),
-        containerColor = AppColors.card,
-        title = { Text(if (flag == null) "Flag anlegen" else "Flag bearbeiten", color = AppColors.text) },
-        text = {
+        title = if (flag == null) "Flag anlegen" else "Flag bearbeiten",
+        confirmText = "Speichern",
+        confirmEnabled = key.trim().isNotEmpty() && !isSaving,
+        onConfirm = { if (needsConfirmation) showConfirm = true else commit() },
+        dismissText = "Abbrechen",
+        content = {
             AdminFormScroll {
                 AdminField("key", key, { key = it })
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -166,24 +154,15 @@ fun AdminFlagEditorDialog(
                 AdminField("JSON-Wert", value, { value = it }, singleLine = false, monospace = true)
                 errorText?.let { Text(it, color = AppColors.statusRed, style = AppText.caption) }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { if (needsConfirmation) showConfirm = true else commit() },
-                enabled = key.trim().isNotEmpty() && !isSaving
-            ) { Text("Speichern", color = AppColors.accent) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss, enabled = !isSaving) { Text("Abbrechen", color = AppColors.textDim) } }
+        }
     )
 }
 
 // MARK: - 2. Drink editor (AdminView.swift:1195-1300)
 
 private val DrinkCategories = listOf(
-    "beer" to "Bier", "wine" to "Wein", "sparkling" to "Sekt", "spirits" to "Spirituose",
-    "liqueur" to "Likör", "cocktail" to "Cocktail", "mixed" to "Mischgetränk", "shot" to "Shot",
-    "cider" to "Cider", "fortified" to "Likörwein", "water" to "Wasser", "softDrink" to "Softdrink",
-    "juice" to "Saft", "coffeeTea" to "Kaffee/Tee", "milk" to "Milch", "other" to "Sonstiges"
+    "beer" to "Bier", "wine" to "Wein", "spirits" to "Spirituosen",
+    "cocktail" to "Cocktail", "shot" to "Shot", "other" to "Sonstiges"
 )
 
 @Composable
@@ -193,7 +172,7 @@ fun AdminDrinkEditorDialog(
     onSave: suspend (name: String, category: String, volume: Double, abv: Double, calories: Int, iconName: String?) -> Unit
 ) {
     var name by remember { mutableStateOf(item.payload.textField("name") ?: item.title) }
-    var category by remember { mutableStateOf(item.payload.textField("category") ?: "other") }
+    var category by remember { mutableStateOf(item.payload.textField("category") ?: "beer") }
     var volume by remember { mutableStateOf(item.payload.textField("volume") ?: "") }
     var abv by remember { mutableStateOf(item.payload.textField("abv") ?: "") }
     var calories by remember { mutableStateOf(item.payload.intFieldOrZero("calories")) }
@@ -207,13 +186,24 @@ fun AdminDrinkEditorDialog(
     val parsedCalories = calories.toIntOrNull()?.takeIf { it >= 0 }
     val isValid = parsedVolume != null && parsedAbv != null && parsedCalories != null && name.trim().isNotEmpty()
 
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
-        shape = AdminDialogShape,
-        modifier = Modifier.border(0.5.dp, AppColors.border, AdminDialogShape),
-        containerColor = AppColors.card,
-        title = { Text("Drink korrigieren", color = AppColors.text) },
-        text = {
+        title = "Drink korrigieren",
+        confirmText = "Speichern",
+        confirmEnabled = isValid && !isSaving,
+        onConfirm = {
+            scope.launch {
+                isSaving = true
+                errorText = null
+                runCatching {
+                    onSave(name.trim(), category, parsedVolume!!, parsedAbv!!, parsedCalories!!, iconName.trim().ifEmpty { null })
+                }.onSuccess { onDismiss() }
+                    .onFailure { errorText = it.message ?: "Drink konnte nicht gespeichert werden." }
+                isSaving = false
+            }
+        },
+        dismissText = "Abbrechen",
+        content = {
             AdminFormScroll {
                 AdminField("Name", name, { name = it })
                 Text("Kategorie", color = AppColors.textDim, style = AppText.caption)
@@ -224,24 +214,7 @@ fun AdminDrinkEditorDialog(
                 AdminField("Icon", iconName, { iconName = it })
                 errorText?.let { Text(it, color = AppColors.statusRed, style = AppText.caption) }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    scope.launch {
-                        isSaving = true
-                        errorText = null
-                        runCatching {
-                            onSave(name.trim(), category, parsedVolume!!, parsedAbv!!, parsedCalories!!, iconName.trim().ifEmpty { null })
-                        }.onSuccess { onDismiss() }
-                            .onFailure { errorText = it.message ?: "Drink konnte nicht gespeichert werden." }
-                        isSaving = false
-                    }
-                },
-                enabled = isValid && !isSaving
-            ) { Text("Speichern", color = AppColors.accent) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss, enabled = !isSaving) { Text("Abbrechen", color = AppColors.textDim) } }
+        }
     )
 }
 
@@ -273,13 +246,28 @@ fun AdminMixEditorDialog(
     val isValid = parsedVolume != null && parsedAbv != null && parsedCalories != null &&
         parsedIngredients != null && name.trim().isNotEmpty()
 
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
-        shape = AdminDialogShape,
-        modifier = Modifier.border(0.5.dp, AppColors.border, AdminDialogShape),
-        containerColor = AppColors.card,
-        title = { Text("Mix korrigieren", color = AppColors.text) },
-        text = {
+        title = "Mix korrigieren",
+        confirmText = "Speichern",
+        confirmEnabled = isValid && !isSaving,
+        onConfirm = {
+            scope.launch {
+                isSaving = true
+                errorText = null
+                if (parsedIngredients == null || parsedVolume == null || parsedAbv == null || parsedCalories == null) {
+                    errorText = "Bitte prüfe Name, Zutaten, Volumen, ABV und Kalorien."
+                } else {
+                    runCatching {
+                        onSave(name.trim(), parsedIngredients, parsedVolume, parsedAbv, parsedCalories)
+                    }.onSuccess { onDismiss() }
+                        .onFailure { errorText = it.message ?: "Mix konnte nicht gespeichert werden." }
+                }
+                isSaving = false
+            }
+        },
+        dismissText = "Abbrechen",
+        content = {
             AdminFormScroll {
                 AdminField("Name", name, { name = it })
                 AdminField("Zutaten JSON", ingredients, { ingredients = it }, singleLine = false, monospace = true)
@@ -288,35 +276,14 @@ fun AdminMixEditorDialog(
                 AdminField("Kalorien", calories, { calories = it }, keyboardType = KeyboardType.Number)
                 errorText?.let { Text(it, color = AppColors.statusRed, style = AppText.caption) }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    scope.launch {
-                        isSaving = true
-                        errorText = null
-                        if (parsedIngredients == null || parsedVolume == null || parsedAbv == null || parsedCalories == null) {
-                            errorText = "Bitte prüfe Name, Zutaten, Volumen, ABV und Kalorien."
-                        } else {
-                            runCatching { onSave(name.trim(), parsedIngredients, parsedVolume, parsedAbv, parsedCalories) }
-                                .onSuccess { onDismiss() }
-                                .onFailure { errorText = it.message ?: "Mix konnte nicht gespeichert werden." }
-                        }
-                        isSaving = false
-                    }
-                },
-                enabled = isValid && !isSaving
-            ) { Text("Speichern", color = AppColors.accent) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss, enabled = !isSaving) { Text("Abbrechen", color = AppColors.textDim) } }
+        }
     )
 }
 
-// MARK: - 4. Role editor (AdminView.swift:1467-1541)
+// MARK: - 4. Role editor (AdminView.swift:1425-1538)
 
 private val AdminRoles = listOf(
-    "super_admin" to "super_admin", "moderator" to "moderator", "support" to "support",
-    "readonly" to "readonly", "none" to "none"
+    "none" to "Kein Admin", "admin" to "Admin", "super_admin" to "Super-Admin"
 )
 
 @Composable
@@ -325,13 +292,15 @@ fun AdminRoleEditorDialog(
     onSave: suspend (userID: String, role: String) -> Unit
 ) {
     var userID by remember { mutableStateOf("") }
-    var role by remember { mutableStateOf("readonly") }
+    var role by remember { mutableStateOf("admin") }
     var isSaving by remember { mutableStateOf(false) }
     var errorText by remember { mutableStateOf<String?>(null) }
     var showConfirm by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    // iOS: trimmed uuid regex check (swift:1473-1478).
     val trimmedID = userID.trim()
-    val isValidID = runCatching { java.util.UUID.fromString(trimmedID) }.isSuccess
+    val isValidID = trimmedID.matches(Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"))
 
     fun commit() {
         scope.launch {
@@ -346,46 +315,32 @@ fun AdminRoleEditorDialog(
 
     // iOS: confirm before granting super_admin or removing a role entirely (swift:1500-1518).
     if (showConfirm) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showConfirm = false },
-            shape = AdminDialogShape,
-            modifier = Modifier.border(0.5.dp, AppColors.border, AdminDialogShape),
-            containerColor = AppColors.card,
-            title = { Text("Admin-Rolle setzen?", color = AppColors.text) },
-            text = { Text("Ziel: $trimmedID", color = AppColors.textDim) },
-            confirmButton = {
-                TextButton(onClick = { showConfirm = false; commit() }) {
-                    Text(
-                        if (role == "none") "Admin entfernen" else "Super-Admin vergeben",
-                        color = if (role == "none") AppColors.statusRed else AppColors.accent
-                    )
-                }
-            },
-            dismissButton = { TextButton(onClick = { showConfirm = false }) { Text("Abbrechen", color = AppColors.textDim) } }
+            title = "Admin-Rolle setzen?",
+            text = "Ziel: $trimmedID",
+            confirmText = if (role == "none") "Admin entfernen" else "Super-Admin vergeben",
+            isDestructive = role == "none",
+            onConfirm = { showConfirm = false; commit() },
+            dismissText = "Abbrechen"
         )
     }
 
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
-        shape = AdminDialogShape,
-        modifier = Modifier.border(0.5.dp, AppColors.border, AdminDialogShape),
-        containerColor = AppColors.card,
-        title = { Text("Rolle setzen", color = AppColors.text) },
-        text = {
+        title = "Rolle setzen",
+        confirmText = "Speichern",
+        confirmEnabled = isValidID && !isSaving,
+        onConfirm = { if (role == "super_admin" || role == "none") showConfirm = true else commit() },
+        dismissText = "Abbrechen",
+        content = {
             AdminFormScroll {
                 AdminField("User UUID", userID, { userID = it })
                 Text("Rolle", color = AppColors.textDim, style = AppText.caption)
                 AdminChipPicker(AdminRoles, role) { role = it }
                 errorText?.let { Text(it, color = AppColors.statusRed, style = AppText.caption) }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { if (role == "super_admin" || role == "none") showConfirm = true else commit() },
-                enabled = isValidID && !isSaving
-            ) { Text("Speichern", color = AppColors.accent) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss, enabled = !isSaving) { Text("Abbrechen", color = AppColors.textDim) } }
+        }
     )
 }
 
@@ -402,34 +357,28 @@ fun AdminBlockEditorDialog(
     var errorText by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    AlertDialog(
+    AppAlertDialog(
         onDismissRequest = onDismiss,
-        shape = AdminDialogShape,
-        modifier = Modifier.border(0.5.dp, AppColors.border, AdminDialogShape),
-        containerColor = AppColors.card,
-        title = { Text("Blockieren", color = AppColors.text) },
-        text = {
+        title = "Blockieren",
+        confirmText = "Speichern",
+        confirmEnabled = voter.trim().isNotEmpty() && !isSaving,
+        onConfirm = {
+            scope.launch {
+                isSaving = true
+                errorText = null
+                runCatching { onSave(voter.trim(), reason.trim()) }
+                    .onSuccess { onDismiss() }
+                    .onFailure { errorText = it.message ?: "Block konnte nicht gespeichert werden." }
+                isSaving = false
+            }
+        },
+        dismissText = "Abbrechen",
+        content = {
             AdminFormScroll {
                 AdminField("Voter/User/IP-Fingerprint", voter, { voter = it })
                 AdminField("Grund", reason, { reason = it }, singleLine = false)
                 errorText?.let { Text(it, color = AppColors.statusRed, style = AppText.caption) }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    scope.launch {
-                        isSaving = true
-                        errorText = null
-                        runCatching { onSave(voter.trim(), reason.trim()) }
-                            .onSuccess { onDismiss() }
-                            .onFailure { errorText = it.message ?: "Block konnte nicht gespeichert werden." }
-                        isSaving = false
-                    }
-                },
-                enabled = voter.trim().isNotEmpty() && !isSaving
-            ) { Text("Speichern", color = AppColors.accent) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss, enabled = !isSaving) { Text("Abbrechen", color = AppColors.textDim) } }
+        }
     )
 }

@@ -737,23 +737,15 @@ private fun DrunkVomitPanel(
     var showConfirmation by remember { mutableStateOf(false) }
 
     if (showConfirmation) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showConfirmation = false },
-            containerColor = AppColors.card,
-            title = { Text("Übergeben jetzt protokollieren?", color = AppColors.text, fontWeight = FontWeight.Bold) },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.logVomit()
-                    showConfirmation = false
-                }) {
-                    Text("Protokollieren", color = AppColors.statusOrange, fontWeight = FontWeight.Bold)
-                }
+            title = "Übergeben jetzt protokollieren?",
+            confirmText = "Protokollieren",
+            onConfirm = {
+                viewModel.logVomit()
+                showConfirmation = false
             },
-            dismissButton = {
-                TextButton(onClick = { showConfirmation = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
-                }
-            }
+            dismissText = "Abbrechen"
         )
     }
 

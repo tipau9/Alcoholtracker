@@ -200,65 +200,51 @@ fun CrewView(
 
     // Swipe-to-delete confirmation (matches iOS CrewView.swift:138-155 1:1).
     memberToDelete?.let { target ->
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { memberToDelete = null },
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp)),
-            containerColor = AppColors.card,
-            title = { Text("Freund entfernen?", color = AppColors.text) },
-            text = { Text("${target.name} wird aus deiner Liste entfernt.", color = AppColors.textDim) },
-            confirmButton = {
-                TextButton(onClick = {
-                    coroutineScope.launch { crewRepository.delete(target) }
-                    memberToDelete = null
-                }) {
-                    Text("Entfernen", color = AppColors.statusRed)
-                }
+            title = "Freund entfernen?",
+            text = "${target.name} wird aus deiner Liste entfernt.",
+            confirmText = "Entfernen",
+            isDestructive = true,
+            onConfirm = {
+                coroutineScope.launch { crewRepository.delete(target) }
+                memberToDelete = null
             },
-            dismissButton = {
-                TextButton(onClick = { memberToDelete = null }) {
-                    Text("Abbrechen", color = AppColors.textDim)
-                }
-            }
+            dismissText = "Abbrechen"
         )
     }
 
     // CrewView.swift:131-137. Neither channel open, so explain rather than
     // flip a switch that reaches nobody.
     if (showSOSInfo) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showSOSInfo = false },
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp)),
-            containerColor = AppColors.card,
-            title = { Text("SOS", color = AppColors.text) },
-            text = {
-                Text(
-                    "SOS erreicht deine Freunde, sobald du angemeldet bist. " +
-                        "Ohne Anmeldung funktioniert SOS nur in einem aktiven Jam.",
-                    color = AppColors.textDim
+            title = "SOS",
+            text = "SOS erreicht deine Freunde, sobald du angemeldet bist. " +
+                "Ohne Anmeldung funktioniert SOS nur in einem aktiven Jam.",
+            dismissText = "Abbrechen",
+            buttons = {
+                de.tipau.promille.ui.components.SecondaryButton(
+                    text = "Abbrechen",
+                    onClick = { showSOSInfo = false },
+                    modifier = Modifier.weight(1f)
                 )
-            },
-            confirmButton = {
-                Row {
-                    TextButton(onClick = {
-                        showSOSInfo = false
-                        showAuth = true
-                    }) {
-                        Text("Anmelden", color = AppColors.accent)
-                    }
-                    TextButton(onClick = {
+                de.tipau.promille.ui.components.SecondaryButton(
+                    text = "Jam",
+                    onClick = {
                         showSOSInfo = false
                         showJam = true
-                    }) {
-                        Text("Jam öffnen", color = AppColors.accent)
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSOSInfo = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
-                }
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+                de.tipau.promille.ui.components.PrimaryButton(
+                    text = "Anmelden",
+                    onClick = {
+                        showSOSInfo = false
+                        showAuth = true
+                    },
+                    modifier = Modifier.weight(1f)
+                )
             }
         )
     }

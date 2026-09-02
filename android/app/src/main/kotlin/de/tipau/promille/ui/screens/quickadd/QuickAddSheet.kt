@@ -932,13 +932,28 @@ private fun CustomBrandDialog(
     var volume by remember { mutableStateOf("330") }
     var abv by remember { mutableStateOf("5.0") }
 
-    AlertDialog(
+    de.tipau.promille.ui.components.AppAlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp)),
-        containerColor = AppColors.card,
-        title = { Text("Eigene Marke", color = AppColors.text, fontWeight = FontWeight.Bold) },
-        text = {
+        title = "Eigene Marke",
+        confirmText = "Hinzufügen",
+        onConfirm = {
+            val volNum = volume.toDoubleOrNull() ?: 330.0
+            val abvNum = abv.replace(',', '.').toDoubleOrNull() ?: 5.0
+            val cals = (volNum * (abvNum / 100.0) * 0.789 * 7).toInt()
+            val drink = DrinkEntity(
+                id = UUID.randomUUID().toString(),
+                name = name.ifBlank { "Eigenes Getränk" },
+                volume = volNum,
+                abv = abvNum,
+                calories = cals,
+                iconName = "other",
+                categoryRaw = "other",
+                timestampEpochSeconds = System.currentTimeMillis() / 1000
+            )
+            onCreated(drink)
+        },
+        dismissText = "Abbrechen",
+        content = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 de.tipau.promille.ui.components.AppTextField(
                     value = name,
@@ -967,33 +982,6 @@ private fun CustomBrandDialog(
                         modifier = Modifier.weight(1f)
                     )
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val volNum = volume.toDoubleOrNull() ?: 330.0
-                    val abvNum = abv.replace(',', '.').toDoubleOrNull() ?: 5.0
-                    val cals = (volNum * (abvNum / 100.0) * 0.789 * 7).toInt()
-                    val drink = DrinkEntity(
-                        id = UUID.randomUUID().toString(),
-                        name = name.ifBlank { "Eigenes Getränk" },
-                        volume = volNum,
-                        abv = abvNum,
-                        calories = cals,
-                        iconName = "other",
-                        categoryRaw = "other",
-                        timestampEpochSeconds = System.currentTimeMillis() / 1000
-                    )
-                    onCreated(drink)
-                }
-            ) {
-                Text("Hinzufügen", color = AppColors.accent, fontWeight = FontWeight.SemiBold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Abbrechen", color = AppColors.textDim)
             }
         }
     )

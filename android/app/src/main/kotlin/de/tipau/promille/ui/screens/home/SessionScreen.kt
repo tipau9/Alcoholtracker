@@ -300,26 +300,17 @@ fun SessionScreen(
     }
 
     if (showResetDialog) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showResetDialog = false },
-            containerColor = AppColors.card,
-            title = { Text("Sitzung zurücksetzen?", color = AppColors.text, fontWeight = FontWeight.Bold) },
-            text = { Text("Alle heutigen Getränke und Ereignisse werden gelöscht.", color = AppColors.textDim) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.resetSession()
-                        showResetDialog = false
-                    }
-                ) {
-                    Text("Zurücksetzen", color = AppColors.statusRed, fontWeight = FontWeight.Bold)
-                }
+            title = "Sitzung zurücksetzen?",
+            text = "Alle heutigen Getränke und Ereignisse werden gelöscht.",
+            confirmText = "Zurücksetzen",
+            isDestructive = true,
+            onConfirm = {
+                viewModel.resetSession()
+                showResetDialog = false
             },
-            dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
-                }
-            }
+            dismissText = "Abbrechen"
         )
     }
 

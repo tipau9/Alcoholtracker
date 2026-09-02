@@ -8,7 +8,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -16,18 +15,22 @@ import de.tipau.promille.AppColors
 import de.tipau.promille.AppText
 
 /**
- * 1:1 mirror of custom themed alert dialogs in iOS.
+ * 1:1 mirror of custom themed alert dialogs in iOS (e.g. AdminView.swift:112, SettingsView.swift:210).
  * 20dp rounded corners, card background, 0.5dp border, formatted actions.
  */
 @Composable
 fun AppAlertDialog(
     onDismissRequest: () -> Unit,
     title: String,
+    modifier: Modifier = Modifier,
     text: String? = null,
     confirmText: String = "OK",
-    onConfirm: () -> Unit,
+    onConfirm: () -> Unit = {},
     dismissText: String? = "Abbrechen",
+    onDismiss: (() -> Unit)? = onDismissRequest,
     isDestructive: Boolean = false,
+    confirmEnabled: Boolean = true,
+    buttons: (@Composable RowScope.() -> Unit)? = null,
     content: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     Dialog(
@@ -41,7 +44,7 @@ fun AppAlertDialog(
             contentAlignment = Alignment.Center
         ) {
             Column(
-                modifier = Modifier
+                modifier = modifier
                     .fillMaxWidth()
                     .background(AppColors.card, RoundedCornerShape(20.dp))
                     .border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp))
@@ -63,26 +66,35 @@ fun AppAlertDialog(
                 if (content != null) {
                     content()
                 }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    if (dismissText != null) {
-                        SecondaryButton(
-                            text = dismissText,
-                            onClick = onDismissRequest,
+                if (buttons != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        content = buttons
+                    )
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        if (dismissText != null && onDismiss != null) {
+                            SecondaryButton(
+                                text = dismissText,
+                                onClick = onDismiss,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        PrimaryButton(
+                            text = confirmText,
+                            onClick = {
+                                onConfirm()
+                                onDismissRequest()
+                            },
+                            enabled = confirmEnabled,
+                            isDestructive = isDestructive,
                             modifier = Modifier.weight(1f)
                         )
                     }
-                    PrimaryButton(
-                        text = confirmText,
-                        onClick = {
-                            onConfirm()
-                            onDismissRequest()
-                        },
-                        isDestructive = isDestructive,
-                        modifier = Modifier.weight(1f)
-                    )
                 }
             }
         }

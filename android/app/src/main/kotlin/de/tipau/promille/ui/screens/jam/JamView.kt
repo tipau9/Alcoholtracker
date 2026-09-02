@@ -602,57 +602,38 @@ private fun ActiveJam(
     }
 
     photoError?.let { message ->
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { photoError = null },
-            confirmButton = {
-                TextButton(onClick = { photoError = null }) {
-                    Text("OK", color = AppColors.accent)
-                }
-            },
-            title = { Text("Foto nicht geteilt", color = AppColors.text) },
-            text = { Text(message, color = AppColors.textDim) },
-            containerColor = AppColors.card
+            title = "Foto nicht geteilt",
+            text = message,
+            confirmText = "OK",
+            onConfirm = { photoError = null },
+            dismissText = null
         )
     }
 
     if (showRouletteHint) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showRouletteHint = false },
-            confirmButton = {
-                TextButton(onClick = { showRouletteHint = false }) {
-                    Text("OK", color = AppColors.accent)
-                }
-            },
-            title = { Text("Noch niemand dabei", color = AppColors.text) },
-            text = {
-                Text(
-                    "Zum Auslosen einer Runde müssen mindestens 2 Leute im Jam sein. " +
-                        "Lade zuerst jemanden ein.",
-                    color = AppColors.textDim
-                )
-            },
-            containerColor = AppColors.card
+            title = "Noch niemand dabei",
+            text = "Zum Auslosen einer Runde müssen mindestens 2 Leute im Jam sein. Lade zuerst jemanden ein.",
+            confirmText = "OK",
+            onConfirm = { showRouletteHint = false },
+            dismissText = null
         )
     }
 
     if (showLeaveConfirm) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showLeaveConfirm = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    showLeaveConfirm = false
-                    jamService.leaveJam()
-                }) {
-                    Text("Verlassen", color = AppColors.statusRed)
-                }
+            title = "Jam verlassen?",
+            confirmText = "Verlassen",
+            isDestructive = true,
+            onConfirm = {
+                showLeaveConfirm = false
+                jamService.leaveJam()
             },
-            dismissButton = {
-                TextButton(onClick = { showLeaveConfirm = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
-                }
-            },
-            title = { Text("Jam verlassen?", color = AppColors.text) },
-            containerColor = AppColors.card
+            dismissText = "Abbrechen"
         )
     }
 

@@ -826,41 +826,18 @@ fun SafetyActionsCard(
     var showSOSConfirm by remember { mutableStateOf(false) }
 
     if (showSOSConfirm) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showSOSConfirm = false },
-            containerColor = AppColors.card,
-            title = {
-                Text(
-                    if (sosActive) "SOS beenden?" else "SOS an deine Freunde senden?",
-                    color = AppColors.text,
-                    style = de.tipau.promille.AppText.bodyBold
-                )
+            title = if (sosActive) "SOS beenden?" else "SOS an deine Freunde senden?",
+            text = if (sosActive) "Deine Freunde sehen dann kein SOS mehr."
+                else "Deine Freunde werden benachrichtigt, dass du Hilfe brauchst.",
+            confirmText = if (sosActive) "SOS beenden" else "SOS senden",
+            isDestructive = true,
+            onConfirm = {
+                showSOSConfirm = false
+                onToggleSOS()
             },
-            text = {
-                Text(
-                    if (sosActive) "Deine Freunde sehen dann kein SOS mehr."
-                    else "Deine Freunde werden benachrichtigt, dass du Hilfe brauchst.",
-                    color = AppColors.textDim,
-                    style = de.tipau.promille.AppText.caption
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showSOSConfirm = false
-                    onToggleSOS()
-                }) {
-                    Text(
-                        if (sosActive) "SOS beenden" else "SOS senden",
-                        color = AppColors.statusRed,
-                        style = de.tipau.promille.AppText.captionBold
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSOSConfirm = false }) {
-                    Text("Abbrechen", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
-                }
-            }
+            dismissText = "Abbrechen"
         )
     }
 
@@ -1318,26 +1295,17 @@ fun DrinkRowView(
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     if (showDeleteConfirm) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            containerColor = AppColors.card,
-            title = { Text("Drink löschen?", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold) },
-            text = { Text("\"${drink.name}\" wirklich aus der Liste entfernen?", color = AppColors.textDim, style = de.tipau.promille.AppText.caption) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteConfirm = false
-                        onDelete()
-                    }
-                ) {
-                    Text("Löschen", color = AppColors.statusRed, style = de.tipau.promille.AppText.captionBold)
-                }
+            title = "Drink löschen?",
+            text = "\"${drink.name}\" wirklich aus der Liste entfernen?",
+            confirmText = "Löschen",
+            isDestructive = true,
+            onConfirm = {
+                showDeleteConfirm = false
+                onDelete()
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Abbrechen", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
-                }
-            }
+            dismissText = "Abbrechen"
         )
     }
 

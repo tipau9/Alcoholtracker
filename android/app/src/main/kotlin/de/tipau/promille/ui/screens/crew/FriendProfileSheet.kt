@@ -583,31 +583,27 @@ private fun MutualFriendChip(friend: FriendProfile) {
 @Composable
 private fun AchievementDetailDialog(achievement: Achievement, onDismiss: () -> Unit) {
     val color = accentColor(achievement.accent)
-    AlertDialog(
+    de.tipau.promille.ui.components.AppAlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = AppColors.background,
-        icon = {
-            Box(
-                modifier = Modifier
-                    .size(88.dp)
-                    .clip(CircleShape)
-                    .background(color.copy(alpha = 0.13f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("\u2713", color = color, fontSize = 34.sp, fontWeight = FontWeight.Bold)
-            }
-        },
-        title = {
-            // iOS: .appHeadline (swift:597).
-            Text(achievement.title, color = AppColors.text, style = de.tipau.promille.AppText.headline)
-        },
-        text = {
+        title = achievement.title,
+        dismissText = null,
+        confirmText = "Schließen",
+        onConfirm = onDismiss,
+        content = {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // iOS: .appCaption (swift:605).
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(color.copy(alpha = 0.13f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("\u2713", color = color, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                }
                 Text(achievement.subtitle, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                 Row(
                     modifier = Modifier
@@ -623,15 +619,8 @@ private fun AchievementDetailDialog(achievement: Achievement, onDismiss: () -> U
                         tint = AppColors.statusGreen,
                         modifier = Modifier.size(14.dp)
                     )
-                    // iOS: .appCaptionBold (swift:620).
                     Text("Freigeschaltet", color = AppColors.statusGreen, style = de.tipau.promille.AppText.captionBold)
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                // iOS: .appCaptionBold.
-                Text("Schließen", color = AppColors.accent, style = de.tipau.promille.AppText.captionBold)
             }
         }
     )

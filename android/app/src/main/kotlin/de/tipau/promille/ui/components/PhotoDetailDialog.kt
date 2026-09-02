@@ -196,27 +196,18 @@ fun PhotoDetailDialog(
         }
 
         if (showDeleteConfirm) {
-            AlertDialog(
+            AppAlertDialog(
                 onDismissRequest = { showDeleteConfirm = false },
-                containerColor = AppColors.card,
-                title = { Text("Foto löschen?", color = AppColors.text, fontWeight = FontWeight.Bold) },
-                text = { Text("Möchtest du diese Erinnerung wirklich löschen?", color = AppColors.textDim) },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showDeleteConfirm = false
-                            onDelete()
-                            onDismiss()
-                        }
-                    ) {
-                        Text("Löschen", color = AppColors.statusRed, fontWeight = FontWeight.Bold)
-                    }
+                title = "Foto löschen?",
+                text = "Möchtest du diese Erinnerung wirklich löschen?",
+                confirmText = "Löschen",
+                isDestructive = true,
+                onConfirm = {
+                    showDeleteConfirm = false
+                    onDelete()
+                    onDismiss()
                 },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteConfirm = false }) {
-                        Text("Abbrechen", color = AppColors.textDim)
-                    }
-                }
+                dismissText = "Abbrechen"
             )
         }
     }

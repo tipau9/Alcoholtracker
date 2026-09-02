@@ -400,22 +400,13 @@ fun CustomMixCreatorSheet(
     }
 
     if (shareConfirm) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { shareConfirm = false },
-            shape = RoundedCornerShape(20.dp),
-            containerColor = AppColors.card,
-            title = { Text("Mix geteilt", color = AppColors.text, fontWeight = FontWeight.Bold) },
-            text = {
-                Text(
-                    "Danke! Dein Mix wird für andere sichtbar, sobald genug Leute ihn teilen oder er freigegeben wird.",
-                    color = AppColors.textDim
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { shareConfirm = false }) {
-                    Text("OK", color = AppColors.accent, fontWeight = FontWeight.Bold)
-                }
-            }
+            title = "Mix geteilt",
+            text = "Danke! Dein Mix wird für andere sichtbar, sobald genug Leute ihn teilen oder er freigegeben wird.",
+            confirmText = "OK",
+            onConfirm = { shareConfirm = false },
+            dismissText = null
         )
     }
 }

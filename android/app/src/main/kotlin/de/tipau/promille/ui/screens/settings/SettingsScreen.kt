@@ -83,56 +83,31 @@ fun SettingsScreen(
     }
 
     if (showDeleteAccountConfirm && supabase != null) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showDeleteAccountConfirm = false },
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp)),
-            containerColor = AppColors.card,
-            title = { Text("Konto wirklich löschen?", color = AppColors.text) },
-            text = {
-                Text(
-                    "Diese Aktion kann nicht rückgängig gemacht werden. Alle deine Online-Daten werden unwiderruflich gelöscht.",
-                    color = AppColors.textDim
-                )
+            title = "Konto wirklich löschen?",
+            text = "Diese Aktion kann nicht rückgängig gemacht werden. Alle deine Online-Daten werden unwiderruflich gelöscht.",
+            confirmText = "Löschen",
+            isDestructive = true,
+            onConfirm = {
+                showDeleteAccountConfirm = false
+                coroutineScope.launch { runCatching { supabase.deleteAccount() } }
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeleteAccountConfirm = false
-                    coroutineScope.launch { runCatching { supabase.deleteAccount() } }
-                }) { Text("Löschen", color = AppColors.statusRed) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteAccountConfirm = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
-                }
-            }
+            dismissText = "Abbrechen"
         )
     }
 
     if (showDeletePhotosConfirm) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showDeletePhotosConfirm = false },
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp)),
-            containerColor = AppColors.card,
-            title = { Text("Fotos löschen?", color = AppColors.text) },
-            text = {
-                Text(
-                    "Alle gespeicherten Erinnerungsfotos werden dauerhaft gelöscht.",
-                    color = AppColors.textDim
-                )
+            title = "Fotos löschen?",
+            text = "Alle gespeicherten Erinnerungsfotos werden dauerhaft gelöscht.",
+            confirmText = "Löschen",
+            isDestructive = true,
+            onConfirm = {
+                showDeletePhotosConfirm = false
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeletePhotosConfirm = false
-                    // Delete photos action
-                }) { Text("Löschen", color = AppColors.statusRed) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeletePhotosConfirm = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
-                }
-            }
+            dismissText = "Abbrechen"
         )
     }
 
@@ -185,13 +160,18 @@ fun SettingsScreen(
     }
 
     if (showGenderDialog) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showGenderDialog = false },
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp)),
-            containerColor = AppColors.card,
-            title = { Text("Geschlecht wählen", color = AppColors.text) },
-            text = {
+            title = "Geschlecht wählen",
+            dismissText = "Abbrechen",
+            buttons = {
+                de.tipau.promille.ui.components.SecondaryButton(
+                    text = "Abbrechen",
+                    onClick = { showGenderDialog = false },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            content = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(
                         Gender.MALE to "Männlich",
@@ -211,8 +191,6 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // No iOS text source (native Picker menu item);
-                            // appBody matches STGenderRow's own label style.
                             Text(text = label, color = if (p.genderRaw == g.raw) AppColors.accent else AppColors.text, style = de.tipau.promille.AppText.body)
                             if (p.genderRaw == g.raw) {
                                 Icon(AppIcons.Check, contentDescription = null, tint = AppColors.accent, modifier = Modifier.size(18.dp))
@@ -220,24 +198,23 @@ fun SettingsScreen(
                         }
                     }
                 }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showGenderDialog = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
-                }
             }
         )
     }
 
     if (showStomachDialog) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showStomachDialog = false },
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp)),
-            containerColor = AppColors.card,
-            title = { Text("Standard-Magenfüllung", color = AppColors.text) },
-            text = {
+            title = "Standard-Magenfüllung",
+            dismissText = "Abbrechen",
+            buttons = {
+                de.tipau.promille.ui.components.SecondaryButton(
+                    text = "Abbrechen",
+                    onClick = { showStomachDialog = false },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            content = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     StomachStatus.entries.forEach { status ->
                         Row(
@@ -260,24 +237,23 @@ fun SettingsScreen(
                         }
                     }
                 }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showStomachDialog = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
-                }
             }
         )
     }
 
     if (showHomeStyleDialog) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showHomeStyleDialog = false },
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp)),
-            containerColor = AppColors.card,
-            title = { Text("Home-Ansicht wählen", color = AppColors.text) },
-            text = {
+            title = "Home-Ansicht wählen",
+            dismissText = "Abbrechen",
+            buttons = {
+                de.tipau.promille.ui.components.SecondaryButton(
+                    text = "Abbrechen",
+                    onClick = { showHomeStyleDialog = false },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            content = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     HomeStyle.entries.forEach { style ->
                         Row(
@@ -299,12 +275,6 @@ fun SettingsScreen(
                             }
                         }
                     }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showHomeStyleDialog = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
                 }
             }
         )

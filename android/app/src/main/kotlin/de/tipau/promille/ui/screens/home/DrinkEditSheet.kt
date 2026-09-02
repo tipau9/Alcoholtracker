@@ -362,28 +362,18 @@ fun DrinkEditSheet(
     }
 
     if (showDeleteConfirm) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Drink wirklich entfernen?", color = AppColors.text, fontWeight = FontWeight.Bold) },
-            text = { Text("Dieser Eintrag wird dauerhaft aus deiner Session und der Historie gelöscht.", color = AppColors.textDim) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteConfirm = false
-                        onDelete()
-                        onDismiss()
-                    }
-                ) {
-                    Text("Entfernen", color = AppColors.statusRed, fontWeight = FontWeight.Bold)
-                }
+            title = "Drink wirklich entfernen?",
+            text = "Dieser Eintrag wird dauerhaft aus deiner Session und der Historie gelöscht.",
+            confirmText = "Entfernen",
+            isDestructive = true,
+            onConfirm = {
+                showDeleteConfirm = false
+                onDelete()
+                onDismiss()
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
-                }
-            },
-            containerColor = AppColors.card,
-            shape = RoundedCornerShape(20.dp)
+            dismissText = "Abbrechen"
         )
     }
 }

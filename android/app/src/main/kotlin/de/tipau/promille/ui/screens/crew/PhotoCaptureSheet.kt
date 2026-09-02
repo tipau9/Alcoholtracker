@@ -348,20 +348,13 @@ fun PhotoCaptureSheet(
 
     // :180-184.
     if (showSaveError) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showSaveError = false },
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp)),
-            title = { Text("Speichern fehlgeschlagen", style = de.tipau.promille.AppText.bodyBold) },
-            text = {
-                Text("Das Foto konnte nicht gespeichert werden. Prüfe den freien Speicherplatz.", style = de.tipau.promille.AppText.caption)
-            },
-            confirmButton = {
-                TextButton(onClick = { showSaveError = false }) { Text("OK", style = de.tipau.promille.AppText.captionBold) }
-            },
-            containerColor = AppColors.card,
-            titleContentColor = AppColors.text,
-            textContentColor = AppColors.textDim
+            title = "Speichern fehlgeschlagen",
+            text = "Das Foto konnte nicht gespeichert werden. Prüfe den freien Speicherplatz.",
+            confirmText = "OK",
+            onConfirm = { showSaveError = false },
+            dismissText = null
         )
     }
 }
