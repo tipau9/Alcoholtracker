@@ -67,21 +67,7 @@ fun MorningMoodPrompt(
                 )
             }
 
-            Box(
-                modifier = Modifier
-                    .size(26.dp)
-                    .clip(CircleShape)
-                    .background(AppColors.background.copy(alpha = 0.6f))
-                    .clickable(onClick = onDismiss),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Schließen",
-                    tint = AppColors.textDim,
-                    modifier = Modifier.size(13.dp)
-                )
-            }
+            AppIconCloseButton(onDismiss = onDismiss)
         }
 
         Row(

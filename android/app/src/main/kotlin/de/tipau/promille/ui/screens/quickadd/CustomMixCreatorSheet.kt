@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
+import de.tipau.promille.ui.components.pressable
 import de.tipau.promille.data.CustomMixDao
 import de.tipau.promille.data.CustomMixEntity
 import de.tipau.promille.data.DrinkEntity
@@ -296,13 +297,12 @@ fun CustomMixCreatorSheet(
                             Box(
                                 modifier = Modifier
                                     .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(AppColors.background)
-                                    .border(1.dp, AppColors.border, CircleShape)
-                                    .clickable { ingredients.removeAt(index) },
+                                    .pressable(scale = 0.92f, onClick = { ingredients.removeAt(index) })
+                                    .background(AppColors.card, CircleShape)
+                                    .border(0.5.dp, AppColors.border, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Filled.Close, "Entfernen", tint = AppColors.statusRed, modifier = Modifier.size(14.dp))
+                                Icon(AppIcons.Close, "Entfernen", tint = AppColors.statusRed, modifier = Modifier.size(14.dp))
                             }
                         }
                     }

@@ -134,17 +134,7 @@ fun AppUpdateSheet(
                             Text("GitHub Releases (tipau9)", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                         }
                     }
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.card)
-                            .border(0.5.dp, AppColors.border, CircleShape)
-                            .clickable(onClick = onDismiss),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(14.dp))
-                    }
+                    AppIconCloseButton(onDismiss = onDismiss)
                 }
 
                 // Content State Machine

@@ -143,25 +143,12 @@ fun DayDetailSheet(
                         )
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.card)
-                            .border(0.5.dp, AppColors.border, CircleShape)
-                            .clickable {
-                                saveNote()
-                                onDismiss()
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Close,
-                            contentDescription = "Schließen",
-                            tint = AppColors.textDim,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
+                    de.tipau.promille.ui.components.AppIconCloseButton(
+                        onDismiss = {
+                            saveNote()
+                            onDismiss()
+                        }
+                    )
                 }
             }
 

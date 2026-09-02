@@ -87,24 +87,7 @@ fun SipCounterView(
                 )
             }
 
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onCancel
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Abbrechen",
-                    modifier = Modifier.size(22.dp),
-                    tint = AppColors.textMuted
-                )
-            }
+            AppIconCloseButton(onDismiss = onCancel)
         }
 
         // Counter
@@ -148,14 +131,9 @@ fun SipCounterView(
             Box(
                 modifier = Modifier
                     .size(56.dp)
-                    .clip(CircleShape)
-                    .background(AppColors.background)
-                    .border(1.dp, AppColors.border, CircleShape)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onRemoveSip
-                    ),
+                    .pressable(scale = 0.92f, onClick = onRemoveSip)
+                    .background(AppColors.card, CircleShape)
+                    .border(0.5.dp, AppColors.border, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -172,13 +150,8 @@ fun SipCounterView(
             Box(
                 modifier = Modifier
                     .size(90.dp)
-                    .clip(CircleShape)
-                    .background(AppColors.accent)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onAddSip
-                    ),
+                    .pressable(scale = 0.94f, onClick = onAddSip)
+                    .background(AppColors.accent, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

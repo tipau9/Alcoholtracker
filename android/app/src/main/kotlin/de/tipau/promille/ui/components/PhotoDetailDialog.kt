@@ -76,29 +76,7 @@ fun PhotoDetailDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .clickable(onClickLabel = "Schließen", onClick = onDismiss),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(AppColors.card)
-                                .border(0.5.dp, AppColors.border, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Close,
-                                contentDescription = "Schließen",
-                                tint = AppColors.text,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
+                    AppIconCloseButton(onDismiss = onDismiss)
 
                     Text(
                         // iOS: .appCaption, no weight override (was Medium).

@@ -404,17 +404,7 @@ fun QuickAddSheet(
                     color = AppColors.text,
                     style = de.tipau.promille.AppText.headline
                 )
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.card)
-                        .border(0.5.dp, AppColors.border, CircleShape)
-                        .clickable(onClick = onDismiss),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(14.dp))
-                }
+                de.tipau.promille.ui.components.AppIconCloseButton(onDismiss = onDismiss)
             }
 
             // Search Bar + Barcode Button matching iOS HStack
@@ -1047,22 +1037,7 @@ private fun SipTemplatePicker(
                         style = de.tipau.promille.AppText.bodyBold,
                         modifier = Modifier.weight(1f)
                     )
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.card)
-                            .border(0.5.dp, AppColors.border, CircleShape)
-                            .clickable { onDismiss() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Close,
-                            contentDescription = "Schließen",
-                            tint = AppColors.textDim,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
+                    de.tipau.promille.ui.components.AppIconCloseButton(onDismiss = onDismiss)
                 }
 
             // Search bar: matching iOS .padding(.horizontal, 14).padding(.vertical, 10)

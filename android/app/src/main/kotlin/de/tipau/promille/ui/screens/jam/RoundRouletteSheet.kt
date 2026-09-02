@@ -161,21 +161,7 @@ fun RoundRouletteSheet(
                     )
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .clickable(onClick = onClose),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = "Schließen",
-                        tint = Color.White.copy(alpha = 0.72f),
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
+                de.tipau.promille.ui.components.AppIconCloseButton(onDismiss = onClose)
             }
 
             Spacer(Modifier.height(16.dp))

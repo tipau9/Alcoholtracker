@@ -95,28 +95,7 @@ fun FullScreenBacChart(
                     )
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .clickable(onClickLabel = "Schließen", onClick = onDismiss),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.card),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Close,
-                            contentDescription = "Schließen",
-                            tint = AppColors.textDim,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
+                AppIconCloseButton(onDismiss = onDismiss)
             }
 
             // Selected Point Overlay (Scrubbing HUD)
