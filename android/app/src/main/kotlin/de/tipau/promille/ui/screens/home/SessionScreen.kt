@@ -398,50 +398,10 @@ fun SessionScreen(
                 }
             }
 
-            // Pacing Warning
+            // Pacing Warning (HomeView.swift:529-534, 2748-2779)
             if (pacingWarning != null && !isWidgetEditMode) {
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(AppColors.card)
-                            .border(0.5.dp, AppColors.statusOrange.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(AppColors.statusOrange.copy(alpha = 0.12f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = AppIcons.Water,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = AppColors.statusOrange
-                                )
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(
-                                    text = "Trink-Tempo",
-                                    color = AppColors.textDim,
-                                    style = de.tipau.promille.AppText.micro
-                                )
-                                Text(
-                                    // iOS: .appCaptionBold (SemiBold, not
-                                    // Bold).
-                                    text = pacingWarning!!,
-                                    color = AppColors.text,
-                                    style = de.tipau.promille.AppText.captionBold,
-                                    lineHeight = 17.sp
-                                )
-                            }
-                        }
-                    }
+                    de.tipau.promille.ui.components.PacingHintBanner(message = pacingWarning!!)
                 }
             }
 

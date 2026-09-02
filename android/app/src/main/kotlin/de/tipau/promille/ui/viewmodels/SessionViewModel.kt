@@ -232,14 +232,11 @@ class SessionViewModel(
     fun hoursUntil(target: Double): Double? =
         projection.value?.hoursUntil(target, System.currentTimeMillis() / 1000)
 
-    val pacingWarning: StateFlow<String?> = combine(drinks, currentBAC) { list, bac ->
-        if (list.size >= 3 && bac > 0.5) {
-            val recentMinutes = 60
-            val recentThreshold = System.currentTimeMillis() / 1000 - recentMinutes * 60
-            val drinksLastHour = list.count { it.timestampEpochSeconds >= recentThreshold }
-            if (drinksLastHour >= 3) {
-                "Du trinkst gerade schnell ($drinksLastHour Drinks in der letzten Stunde). Gönn dir ein Glas Wasser!"
-            } else null
+    val pacingWarning: StateFlow<String?> = combine(rawDrinks, ticker) { list, now ->
+        val halfHourAgo = now - 30 * 60
+        val recentDrinks = list.filter { it.timestampEpochSeconds >= halfHourAgo && it.abv > 0 }
+        if (recentDrinks.size >= 2) {
+            "${recentDrinks.size} Drinks in 30 Minuten. Zeit für ein Glas Wasser!"
         } else null
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
