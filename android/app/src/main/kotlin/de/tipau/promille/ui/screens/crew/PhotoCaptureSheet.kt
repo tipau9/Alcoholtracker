@@ -349,6 +349,8 @@ fun PhotoCaptureSheet(
     if (showSaveError) {
         AlertDialog(
             onDismissRequest = { showSaveError = false },
+            shape = RoundedCornerShape(20.dp),
+            modifier = Modifier.border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp)),
             title = { Text("Speichern fehlgeschlagen") },
             text = {
                 Text("Das Foto konnte nicht gespeichert werden. Prüfe den freien Speicherplatz.")

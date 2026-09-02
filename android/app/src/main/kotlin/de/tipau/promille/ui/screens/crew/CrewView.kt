@@ -202,8 +202,11 @@ fun CrewView(
     memberToDelete?.let { target ->
         AlertDialog(
             onDismissRequest = { memberToDelete = null },
-            title = { Text("Freund entfernen?") },
-            text = { Text("${target.name} wird aus deiner Liste entfernt.") },
+            shape = RoundedCornerShape(20.dp),
+            modifier = Modifier.border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp)),
+            containerColor = AppColors.card,
+            title = { Text("Freund entfernen?", color = AppColors.text) },
+            text = { Text("${target.name} wird aus deiner Liste entfernt.", color = AppColors.textDim) },
             confirmButton = {
                 TextButton(onClick = {
                     coroutineScope.launch { crewRepository.delete(target) }
@@ -214,7 +217,7 @@ fun CrewView(
             },
             dismissButton = {
                 TextButton(onClick = { memberToDelete = null }) {
-                    Text("Abbrechen")
+                    Text("Abbrechen", color = AppColors.textDim)
                 }
             }
         )
@@ -225,11 +228,15 @@ fun CrewView(
     if (showSOSInfo) {
         AlertDialog(
             onDismissRequest = { showSOSInfo = false },
-            title = { Text("SOS") },
+            shape = RoundedCornerShape(20.dp),
+            modifier = Modifier.border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp)),
+            containerColor = AppColors.card,
+            title = { Text("SOS", color = AppColors.text) },
             text = {
                 Text(
                     "SOS erreicht deine Freunde, sobald du angemeldet bist. " +
-                        "Ohne Anmeldung funktioniert SOS nur in einem aktiven Jam."
+                        "Ohne Anmeldung funktioniert SOS nur in einem aktiven Jam.",
+                    color = AppColors.textDim
                 )
             },
             confirmButton = {
