@@ -174,27 +174,16 @@ fun AdminScreen(
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(AdminSection.entries) { candidate ->
                         val active = candidate == section
-                        Box(
-                            modifier = Modifier
-                                .background(
-                                    if (active) AppColors.accent.copy(alpha = 0.15f) else AppColors.card,
-                                    RoundedCornerShape(10.dp)
-                                )
-                                .border(
-                                    0.5.dp,
-                                    if (active) AppColors.accent else AppColors.border,
-                                    RoundedCornerShape(10.dp)
-                                )
-                                .clickable { section = candidate }
-                                .padding(horizontal = 12.dp, vertical = 7.dp)
-                        ) {
-                            // iOS: .appCaptionBold
-                            Text(
-                                candidate.title,
-                                color = if (active) AppColors.accent else AppColors.textDim,
-                                style = de.tipau.promille.AppText.captionBold
-                            )
-                        }
+                        de.tipau.promille.ui.components.AppChip(
+                            label = candidate.title,
+                            isSelected = active,
+                            onClick = { section = candidate },
+                            shape = RoundedCornerShape(10.dp),
+                            selectedColor = AppColors.accent.copy(alpha = 0.15f),
+                            selectedTextColor = AppColors.accent,
+                            unselectedColor = AppColors.card,
+                            unselectedTextColor = AppColors.textDim
+                        )
                     }
                 }
             }

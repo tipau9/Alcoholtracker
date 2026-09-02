@@ -485,48 +485,16 @@ fun QuickAddSheet(
 
             // Tab Picker (Getränke / Mische) - visible only when not searching
             if (searchQuery.isEmpty()) {
-                Row(
+                de.tipau.promille.ui.components.AppSegmentedControl(
+                    items = listOf(QATab.DRINKS, QATab.MIXES),
+                    selectedItem = activeTab,
+                    onItemSelected = { activeTab = it },
+                    labelProvider = { tab -> if (tab == QATab.DRINKS) "Getränke" else "Mische" },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                         .padding(bottom = 8.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(AppColors.card)
-                        .padding(3.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (activeTab == QATab.DRINKS) AppColors.accent else Color.Transparent)
-                            .clickable { activeTab = QATab.DRINKS }
-                            .padding(vertical = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // iOS: .appCaptionBold (QuickAddSheet.swift:1249).
-                        Text(
-                            "Getränke",
-                            color = if (activeTab == QATab.DRINKS) AppColors.background else AppColors.textDim,
-                            style = de.tipau.promille.AppText.captionBold
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (activeTab == QATab.MIXES) AppColors.accent else Color.Transparent)
-                            .clickable { activeTab = QATab.MIXES }
-                            .padding(vertical = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // iOS: .appCaptionBold (QuickAddSheet.swift:1249).
-                        Text(
-                            "Mische",
-                            color = if (activeTab == QATab.MIXES) AppColors.background else AppColors.textDim,
-                            style = de.tipau.promille.AppText.captionBold
-                        )
-                    }
-                }
+                )
             }
 
             // Categories Strip
