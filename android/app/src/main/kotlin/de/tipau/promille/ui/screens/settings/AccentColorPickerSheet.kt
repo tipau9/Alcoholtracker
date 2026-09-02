@@ -233,57 +233,17 @@ fun RgbColorPickerSheet(
                     style = de.tipau.promille.AppText.bodyBold
                 )
 
-                // Close Button (iOS style)
-                Box(
-                    modifier = Modifier
-                        .size(30.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.card)
-                        .clickable(onClick = onDismiss),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = "Schließen",
-                        tint = AppColors.textDim,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
+                de.tipau.promille.ui.components.AppIconCloseButton(onDismiss = onDismiss)
             }
 
             // 2. iOS Segmented Control (Gitter | Spektrum | Schieberegler)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(34.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(AppColors.card)
-                    .padding(2.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    ColorPickerTab.values().forEach { tab ->
-                        val isSelected = selectedTab == tab
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(if (isSelected) AppColors.border else Color.Transparent)
-                                .clickable { selectedTab = tab },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = tab.title,
-                                color = if (isSelected) AppColors.text else AppColors.textDim,
-                                style = if (isSelected) de.tipau.promille.AppText.captionBold else de.tipau.promille.AppText.caption
-                            )
-                        }
-                    }
-                }
-            }
+            de.tipau.promille.ui.components.AppSegmentedControl(
+                items = ColorPickerTab.entries,
+                selectedItem = selectedTab,
+                onItemSelected = { selectedTab = it },
+                labelProvider = { it.title },
+                modifier = Modifier.fillMaxWidth()
+            )
 
             // 3. Tab Content (Grid / Spectrum / Sliders)
             Box(
