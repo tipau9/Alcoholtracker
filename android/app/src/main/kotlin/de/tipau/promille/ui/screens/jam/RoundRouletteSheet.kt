@@ -132,17 +132,19 @@ fun RoundRouletteSheet(
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
+                            // iOS: .system(size: 13, weight: .black, design: .rounded) + tracking 2.2 (RoundRouletteSheet.swift:104).
                             text = "JAM ROULETTE",
                             color = GoldAccent,
-                            fontSize = 14.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Black,
-                            letterSpacing = 2.sp
+                            letterSpacing = 2.2.sp
                         )
                     }
                     Text(
+                        // iOS: .appCaption (RoundRouletteSheet.swift:108).
                         text = if (finished) "Die Kugel hat entschieden" else "${payload.starterName} lässt das Rad drehen",
                         color = Color.White.copy(alpha = 0.62f),
-                        fontSize = 12.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
 
@@ -269,16 +271,17 @@ fun RoundRouletteSheet(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
+                            // iOS: .system(size: 27, weight: .black, design: .rounded) (RoundRouletteSheet.swift:132).
                             text = winnerName,
                             color = Color.White,
-                            fontSize = 24.sp,
+                            fontSize = 27.sp,
                             fontWeight = FontWeight.Black
                         )
                         Text(
+                            // iOS: .appBodyBold (RoundRouletteSheet.swift:137).
                             text = "muss die nächste Runde ausgeben! 🍻",
                             color = GoldAccent,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.bodyBold
                         )
                     }
                 }
@@ -296,7 +299,8 @@ fun RoundRouletteSheet(
                         strokeWidth = 2.5.dp
                     )
                     Spacer(Modifier.width(10.dp))
-                    Text("Kugel läuft …", color = Color.White.copy(alpha = 0.78f), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    // iOS: .appBodyBold (RoundRouletteSheet.swift:159).
+                    Text("Kugel läuft …", color = Color.White.copy(alpha = 0.78f), style = de.tipau.promille.AppText.bodyBold)
                 }
             }
 
@@ -324,7 +328,7 @@ fun RoundRouletteSheet(
                     ) {
                         Icon(Icons.Filled.Refresh, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Nochmal", fontWeight = FontWeight.Bold)
+                        Text("Nochmal", style = de.tipau.promille.AppText.bodyBold)
                     }
                 }
 
@@ -338,7 +342,7 @@ fun RoundRouletteSheet(
                         contentColor = NavyBackground
                     )
                 ) {
-                    Text("Runde ausgeben", fontWeight = FontWeight.Bold)
+                    Text("Runde ausgeben", style = de.tipau.promille.AppText.bodyBold)
                 }
             }
         }

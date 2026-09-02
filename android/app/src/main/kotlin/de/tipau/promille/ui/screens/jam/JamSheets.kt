@@ -90,13 +90,12 @@ fun CreateJamSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = onDismiss) {
-                    Text("Abbrechen", color = AppColors.accent, fontSize = 15.sp)
+                    Text("Abbrechen", color = AppColors.accent, style = de.tipau.promille.AppText.body)
                 }
                 Text(
                     "Jam erstellen",
                     color = AppColors.text,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.headline
                 )
                 Spacer(Modifier.width(60.dp))
             }
@@ -141,13 +140,12 @@ fun CreateJamSheet(
                             Text(
                                 option.raw,
                                 color = AppColors.text,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold
+                                style = de.tipau.promille.AppText.bodyBold
                             )
                             Text(
                                 option.description,
                                 color = AppColors.textDim,
-                                fontSize = 12.sp
+                                style = de.tipau.promille.AppText.caption
                             )
                         }
                         if (locked) {
@@ -176,7 +174,7 @@ fun CreateJamSheet(
                 Text(
                     "Ohne Anmeldung ist nur der Offline-Modus über Bluetooth verfügbar.",
                     color = AppColors.textMuted,
-                    fontSize = 12.sp
+                    style = de.tipau.promille.AppText.caption
                 )
             }
 
@@ -247,14 +245,13 @@ fun JamPrivacySheet(
                 Text(
                     "Meine Privatsphäre",
                     color = AppColors.text,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.headline
                 )
                 TextButton(onClick = {
                     onApply(draft)
                     onDismiss()
                 }) {
-                    Text("Fertig", color = AppColors.accent, fontWeight = FontWeight.Bold)
+                    Text("Fertig", color = AppColors.accent, style = de.tipau.promille.AppText.bodyBold)
                 }
             }
             Divider(color = AppColors.border, thickness = 0.5.dp)
@@ -359,10 +356,10 @@ fun InviteFriendsSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Freunde einladen",
+                    // iOS: .appHeadline (ActiveJamView.swift:660).
+                    text = "Freunde einladen",
                     color = AppColors.text,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.headline
                 )
                 Box(
                     modifier = Modifier
@@ -390,11 +387,11 @@ fun InviteFriendsSheet(
                         tint = AppColors.textMuted,
                         modifier = Modifier.size(40.dp)
                     )
-                    Text("Alle Freunde sind dabei!", color = AppColors.textDim, fontSize = 15.sp)
+                    Text("Alle Freunde sind dabei!", color = AppColors.textDim, style = de.tipau.promille.AppText.bodyBold)
                     Text(
                         "Alle deine Crew-Mitglieder sind bereits im Jam.",
                         color = AppColors.textMuted,
-                        fontSize = 12.sp,
+                        style = de.tipau.promille.AppText.caption,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -419,7 +416,7 @@ fun InviteFriendsSheet(
                             )
                         }
                         Spacer(Modifier.width(12.dp))
-                        Text(friend.name, color = AppColors.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        Text(friend.name, color = AppColors.text, style = de.tipau.promille.AppText.body, modifier = Modifier.weight(1f))
                         if (friend.friendCode != null) {
                             val tint = if (sent) AppColors.statusGreen else AppColors.accent
                             Row(
@@ -441,8 +438,7 @@ fun InviteFriendsSheet(
                                 Text(
                                     if (sent) "Eingeladen" else "Benachrichtigen",
                                     color = tint,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
+                                    style = de.tipau.promille.AppText.captionBold
                                 )
                             }
                             Spacer(Modifier.width(8.dp))
@@ -512,7 +508,7 @@ fun ParticipantActionsDialog(
                 Text(
                     if (kick) "Teilnehmer entfernen?" else "Host übergeben?",
                     color = AppColors.text,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.headline
                 )
             },
             text = {
@@ -520,7 +516,7 @@ fun ParticipantActionsDialog(
                     if (kick) "${participant.displayName} wird aus dem Jam entfernt."
                     else "${participant.displayName} wird zum Host. Du bleibst als Teilnehmer im Jam.",
                     color = AppColors.textDim,
-                    fontSize = 13.sp
+                    style = de.tipau.promille.AppText.caption
                 )
             },
             confirmButton = {
@@ -530,13 +526,14 @@ fun ParticipantActionsDialog(
                 }) {
                     Text(
                         if (kick) "Entfernen" else "Host übergeben",
-                        color = if (kick) AppColors.statusRed else AppColors.accent
+                        color = if (kick) AppColors.statusRed else AppColors.accent,
+                        style = de.tipau.promille.AppText.bodyBold
                     )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirming = null }) {
-                    Text("Abbrechen", color = AppColors.textDim)
+                    Text("Abbrechen", color = AppColors.textDim, style = de.tipau.promille.AppText.body)
                 }
             }
         )
@@ -558,8 +555,8 @@ fun ParticipantActionsDialog(
                     Text(participant.avatar, color = AppColors.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Column {
-                    Text(participant.displayName, color = AppColors.text, fontWeight = FontWeight.Bold)
-                    Text(participant.connectionType.label, color = AppColors.textDim, fontSize = 12.sp)
+                    Text(participant.displayName, color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
+                    Text(participant.connectionType.label, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                 }
             }
         },
@@ -573,7 +570,7 @@ fun ParticipantActionsDialog(
                         "Privatsphäre-Details sind nur bei direkter Bluetooth-Verbindung sichtbar. " +
                             "Verborgene Werte bleiben trotzdem verborgen.",
                         color = AppColors.textDim,
-                        fontSize = 13.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 } else {
                     val (shared, hidden) = settings.privacyLabels()
@@ -586,7 +583,7 @@ fun ParticipantActionsDialog(
                 }
 
                 if (!canKick && !canTransfer) {
-                    Text("Nur der Host kann Teilnehmer verwalten.", color = AppColors.textDim, fontSize = 13.sp)
+                    Text("Nur der Host kann Teilnehmer verwalten.", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                 } else {
                     // Pill buttons matching iOS's tinted-background/border
                     // rows (JamPrivacySheets.swift:164-201), rather than
@@ -610,7 +607,7 @@ fun ParticipantActionsDialog(
                                 modifier = Modifier.size(15.dp)
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text("Host übergeben", color = AppColors.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Host übergeben", color = AppColors.accent, style = de.tipau.promille.AppText.bodyBold)
                         }
                     }
                     if (canKick) {
@@ -632,14 +629,14 @@ fun ParticipantActionsDialog(
                                 modifier = Modifier.size(15.dp)
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text("Aus Jam entfernen", color = AppColors.statusRed, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Aus Jam entfernen", color = AppColors.statusRed, style = de.tipau.promille.AppText.bodyBold)
                         }
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Schließen", color = AppColors.textDim) }
+            TextButton(onClick = onDismiss) { Text("Schließen", color = AppColors.textDim, style = de.tipau.promille.AppText.body) }
         }
     )
 }
@@ -648,7 +645,7 @@ fun ParticipantActionsDialog(
 @Composable
 private fun PrivacyTagGroup(title: String, items: List<String>, color: Color) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, color = AppColors.textDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text(title, color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -657,7 +654,7 @@ private fun PrivacyTagGroup(title: String, items: List<String>, color: Color) {
                 Text(
                     item,
                     color = color,
-                    fontSize = 12.sp,
+                    style = de.tipau.promille.AppText.caption,
                     modifier = Modifier
                         .clip(CircleShape)
                         .background(color.copy(alpha = 0.1f))
@@ -712,11 +709,11 @@ fun ArcadePickerSheet(onDismiss: () -> Unit, onPick: (JamArcadeGame) -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("Jam Arcade", color = AppColors.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("Jam Arcade", color = AppColors.text, style = de.tipau.promille.AppText.headline)
                     Text(
                         "Alle im Jam spielen die gleiche Runde, zur gleichen Sekunde.",
                         color = AppColors.textDim,
-                        fontSize = 13.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
                 Box(
@@ -763,8 +760,8 @@ fun ArcadePickerSheet(onDismiss: () -> Unit, onPick: (JamArcadeGame) -> Unit) {
                     }
                     Spacer(Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(game.title, color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                        Text(game.subtitle, color = AppColors.textDim, fontSize = 12.sp)
+                        Text(game.title, color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
+                        Text(game.subtitle, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                     }
                     Text("›", color = AppColors.textMuted, fontSize = 20.sp)
                 }

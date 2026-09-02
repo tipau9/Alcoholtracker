@@ -244,11 +244,13 @@ private fun JamLobby(
     ) {
         item {
             Column {
-                Text("Jam", color = AppColors.text, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                // iOS: .appHeadline (JamLobbyView.swift:150).
+                Text("Jam", color = AppColors.text, style = de.tipau.promille.AppText.headline)
+                // iOS: .appCaption (JamLobbyView.swift:153).
                 Text(
                     "Verbinde dich mit deiner Crew",
                     color = AppColors.textDim,
-                    fontSize = 13.sp
+                    style = de.tipau.promille.AppText.caption
                 )
             }
         }
@@ -269,13 +271,12 @@ private fun JamLobby(
                         Text(
                             "Anmelden zum Jammen",
                             color = AppColors.accent,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.bodyBold
                         )
                         Text(
                             "Für Jams über den Server brauchst du ein Konto.",
                             color = AppColors.textDim,
-                            fontSize = 12.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
                     Text("›", color = AppColors.accent, fontSize = 20.sp)
@@ -292,7 +293,8 @@ private fun JamLobby(
                         .border(0.5.dp, AppColors.statusRed.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
                         .padding(12.dp)
                 ) {
-                    Text(it, color = AppColors.statusRed, fontSize = 13.sp)
+                    // iOS: .appCaption (JamLobbyView.swift:252).
+                    Text(it, color = AppColors.statusRed, style = de.tipau.promille.AppText.caption)
                 }
             }
         }
@@ -304,15 +306,15 @@ private fun JamLobby(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(
-                                "${invite.hostName} lädt dich ein",
+                                // iOS: .appBody (JamLobbyView.swift:105).
+                                text = "${invite.hostName} lädt dich ein",
                                 color = AppColors.text,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold
+                                style = de.tipau.promille.AppText.body
                             )
                             Text(
                                 "Code: ${invite.jamCode}",
                                 color = AppColors.textDim,
-                                fontSize = 12.sp
+                                style = de.tipau.promille.AppText.caption
                             )
                         }
                         TextButton(onClick = {
@@ -321,7 +323,8 @@ private fun JamLobby(
                                 jamService.dismissInvitation(invite.id)
                             }
                         }) {
-                            Text("Beitreten", color = AppColors.accent, fontWeight = FontWeight.Bold)
+                            // iOS: .appCaptionBold (JamLobbyView.swift:121).
+                            Text("Beitreten", color = AppColors.accent, style = de.tipau.promille.AppText.captionBold)
                         }
                         TextButton(onClick = { run { jamService.dismissInvitation(invite.id) } }) {
                             Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(16.dp))
@@ -369,7 +372,8 @@ private fun JamLobby(
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Beitreten", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    // iOS: .appCaptionBold (JamLobbyView.swift:238).
+                    Text("Beitreten", style = de.tipau.promille.AppText.captionBold)
                 }
             }
         }
@@ -413,16 +417,17 @@ private fun JamLobby(
                 ) {
                     Icon(de.tipau.promille.ui.components.AppIcons.EmojiEvents, null, tint = AppColors.accent, modifier = Modifier.size(40.dp))
                     Spacer(Modifier.height(10.dp))
+                    // iOS: .appCaption (JamLobbyView.swift:308).
                     Text(
                         "Niemand in der Nähe oder von Freunden.",
                         color = AppColors.text,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold
+                        style = de.tipau.promille.AppText.caption
                     )
+                    // iOS: .appCaption (JamLobbyView.swift:312).
                     Text(
                         "Starte selbst einen Jam oder gib einen Code ein.",
                         color = AppColors.textDim,
-                        fontSize = 13.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
             }
@@ -466,33 +471,34 @@ private fun LobbyJamRow(
                 )
             }
             Column(Modifier.weight(1f)) {
+                // iOS: .appBodyBold (JamLobbyView.swift:398).
                 Text(
                     jam.hostName,
                     color = AppColors.text,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
+                    style = de.tipau.promille.AppText.bodyBold
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     // The host is always there, so never show "0 Teilnehmer"
                     // before the roster has synced in.
+                    // iOS: .appCaption (JamLobbyView.swift:404).
                     Text(
                         "${maxOf(1, jam.participants.size)} Teilnehmer",
                         color = AppColors.textDim,
-                        fontSize = 12.sp
+                        style = de.tipau.promille.AppText.caption
                     )
-                    Text("·", color = AppColors.textMuted, fontSize = 12.sp)
+                    Text("·", color = AppColors.textMuted, style = de.tipau.promille.AppText.caption)
                     Text(
                         jamLobbyRelativeTime(jam.createdAtEpochSeconds, nowSeconds),
                         color = AppColors.textMuted,
-                        fontSize = 12.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
             }
+            // iOS: .appCaptionBold (JamLobbyView.swift:418).
             Text(
                 "Beitreten",
                 color = AppColors.accent,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
+                style = de.tipau.promille.AppText.captionBold,
                 modifier = Modifier
                     .alpha(if (enabled) 1f else 0.45f)
                     .clip(CircleShape)
@@ -754,11 +760,13 @@ private fun ActiveJam(
                 de.tipau.promille.ui.components.SOSGlyph(tint = Color.White, size = 15.dp)
                 Spacer(Modifier.width(10.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Text("SOS aktiv", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    // iOS: .appCaptionBold (ActiveJamView.swift:528).
+                    Text("SOS aktiv", color = Color.White, style = de.tipau.promille.AppText.captionBold)
+                    // iOS: .appCaption (ActiveJamView.swift:531).
                     Text(
                         sosParticipants.joinToString(", ") { it.displayName },
                         color = Color.White.copy(alpha = 0.85f),
-                        fontSize = 12.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
             }
@@ -794,11 +802,11 @@ private fun ActiveJam(
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        // iOS: .appBodyBold (ActiveJamView.swift:231).
                         Text(
                             jam.hostName,
                             color = AppColors.text,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.bodyBold
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
@@ -808,13 +816,15 @@ private fun ActiveJam(
                                     .background(AppColors.statusGreen)
                             )
                             Spacer(Modifier.width(4.dp))
-                            Text("Jam aktiv", color = AppColors.statusGreen, fontSize = 12.sp)
+                            // iOS: .appCaption (ActiveJamView.swift:238).
+                            Text("Jam aktiv", color = AppColors.statusGreen, style = de.tipau.promille.AppText.caption)
                         }
                     }
+                    // iOS: .appCaption (ActiveJamView.swift:244).
                     Text(
                         "${jam.participants.size}",
                         color = AppColors.textDim,
-                        fontSize = 13.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                     Spacer(Modifier.width(10.dp))
                     val canInvite = uninvitedFriends.isNotEmpty()
@@ -881,12 +891,14 @@ private fun ActiveJam(
                                 modifier = Modifier.size(11.dp)
                             )
                             Spacer(Modifier.width(5.dp))
-                            Text("Noch nicht dabei", color = AppColors.textDim, fontSize = 11.sp)
+                            // iOS: .appMicro (ActiveJamView.swift:194).
+                            Text("Noch nicht dabei", color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
                             Spacer(Modifier.weight(1f))
+                            // iOS: .appMicro (ActiveJamView.swift:199).
                             Text(
                                 "Alle einladen",
                                 color = AppColors.accent,
-                                fontSize = 11.sp,
+                                style = de.tipau.promille.AppText.micro,
                                 modifier = Modifier.clickable { showInvite = true }
                             )
                         }
@@ -921,8 +933,10 @@ private fun ActiveJam(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Jam Code", color = AppColors.textDim, fontSize = 12.sp)
+                        // iOS: .appCaption (ActiveJamView.swift:279).
+                        Text("Jam Code", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                         Text(
+                            // iOS: .system(.title2, design: .monospaced, weight: .bold) (ActiveJamView.swift:282).
                             jam.code,
                             color = AppColors.text,
                             fontSize = 22.sp,
@@ -979,20 +993,21 @@ private fun ActiveJam(
                                     )
                             ) {
                                 Text(
+                                    // iOS: .system(size: 15, weight: .semibold) (ActiveJamView.swift:570).
                                     participant.displayName.take(1).uppercase(),
                                     color = if (participant.hasSOSActive) AppColors.statusRed else AppColors.accent,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
+                                    // iOS: .appBody (ActiveJamView.swift:594).
                                     Text(
                                         participant.displayName,
                                         color = AppColors.text,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.SemiBold
+                                        style = de.tipau.promille.AppText.body
                                     )
                                     if (isHost) {
                                         Spacer(Modifier.width(6.dp))
@@ -1009,7 +1024,7 @@ private fun ActiveJam(
                                                 modifier = Modifier.size(9.dp)
                                             )
                                             Spacer(Modifier.width(3.dp))
-                                            Text("Host", color = AppColors.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                            Text("Host", color = AppColors.accent, style = de.tipau.promille.AppText.micro.copy(fontWeight = FontWeight.Bold))
                                         }
                                     }
                                 }
@@ -1017,7 +1032,8 @@ private fun ActiveJam(
                                 // shares their status but no number still says something.
                                 val status = participant.currentStatus
                                 if (status != null && participant.sharedSettings?.shareStatus != false) {
-                                    Text(status, color = AppColors.textDim, fontSize = 12.sp)
+                                    // iOS: .appCaption (ActiveJamView.swift:602).
+                                    Text(status, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                                 }
                             }
                             // ActiveParticipantRow.bacText/bacColor. A withheld value and
@@ -1074,7 +1090,8 @@ private fun ActiveJam(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Icon(de.tipau.promille.ui.components.AppIcons.Camera, null, tint = AppColors.accent, modifier = Modifier.size(20.dp))
-                                Text("Foto teilen", color = AppColors.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                // iOS: .appCaption (ActiveJamView.swift:355).
+                                Text("Foto teilen", color = AppColors.accent, style = de.tipau.promille.AppText.caption)
                             }
                         }
 
@@ -1091,7 +1108,8 @@ private fun ActiveJam(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Icon(de.tipau.promille.ui.components.AppIcons.Water, null, tint = AppColors.accent, modifier = Modifier.size(20.dp))
-                                Text("Wasser", color = AppColors.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                // iOS: .appCaption (ActiveJamView.swift:634).
+                                Text("Wasser", color = AppColors.text, style = de.tipau.promille.AppText.caption)
                             }
                         }
                     }
@@ -1116,7 +1134,8 @@ private fun ActiveJam(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Icon(de.tipau.promille.ui.components.AppIcons.Dice, null, tint = AppColors.accent, modifier = Modifier.size(20.dp))
-                                Text("Runde", color = AppColors.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                // iOS: .appCaption (ActiveJamView.swift:634).
+                                Text("Runde", color = AppColors.text, style = de.tipau.promille.AppText.caption)
                             }
                         }
 
@@ -1146,11 +1165,11 @@ private fun ActiveJam(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Icon(de.tipau.promille.ui.components.AppIcons.Shield, null, tint = sosTint, modifier = Modifier.size(20.dp))
+                                // iOS: .appCaption (ActiveJamView.swift:634).
                                 Text(
                                     if (sosOn) "SOS aktiv" else "SOS",
                                     color = sosTint,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                    style = de.tipau.promille.AppText.caption
                                 )
                             }
                         }
@@ -1174,7 +1193,8 @@ private fun ActiveJam(
                     ) {
                         Icon(de.tipau.promille.ui.components.AppIcons.Gamepad, null, tint = AppColors.accent, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(12.dp))
-                        Text("Jam Arcade", color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                        // iOS: .appBodyBold (ActiveJamView.swift:389).
+                        Text("Jam Arcade", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold, modifier = Modifier.weight(1f))
                         Text("›", color = AppColors.textMuted, fontSize = 20.sp)
                     }
 
@@ -1191,7 +1211,8 @@ private fun ActiveJam(
                     ) {
                         Icon(de.tipau.promille.ui.components.AppIcons.PersonPlus, null, tint = AppColors.accent, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(12.dp))
-                        Text("Freunde einladen", color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                        // iOS: .appBodyBold (ActiveJamView.swift:392).
+                        Text("Freunde einladen", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold, modifier = Modifier.weight(1f))
                         Text("›", color = AppColors.textMuted, fontSize = 20.sp)
                     }
                 }
@@ -1288,11 +1309,11 @@ private fun JamPhotoStrip(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        // iOS: .appCaptionBold (ActiveJamView.swift:326).
         Text(
             "Jam-Fotos",
             color = AppColors.textDim,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold
+            style = de.tipau.promille.AppText.captionBold
         )
         Row(
             modifier = Modifier.horizontalScroll(rememberScrollState()),
