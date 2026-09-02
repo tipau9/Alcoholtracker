@@ -22,6 +22,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
@@ -42,6 +43,8 @@ import kotlin.math.sin
 // is a casino wheel, not app chrome. These are RoundRouletteSheet.swift:410-416
 // converted from its 0-1 components.
 private val NavyBackground = Color(0xFF0E1A26)   // flatNavy
+private val FlatBezel = Color(0xFF15222E)        // flatBezel - the dark bowl the ball runs against
+private val FlatCenterDisc = Color(0xFF0B1521)   // flatCenter
 private val GoldAccent = Color(0xFFF5C426)       // flatYellow
 private val WinnerGreen = Color(0xFF529E47)      // flatGreen
 private val SegmentColors = listOf(
@@ -203,71 +206,133 @@ fun RoundRouletteSheet(
                             liveRegion = LiveRegionMode.Polite
                         }
                 ) {
+                    // Flat top-down wheel: dark bezel with the ball track, a thin donut
+                    // segment band (not a full pie), a dark center disc, and a yellow
+                    // four-spoke hub - matches iOS's FlatRouletteWheel/FlatSegmentBand/
+                    // FlatNameRing/FlatHubCross (RoundRouletteSheet.swift:424-627), just
+                    // built as one Canvas instead of 4 layered views. Ball physics are a
+                    // deliberate scope cut - see the D2 commit body.
                     val center = Offset(size.width / 2, size.height / 2)
                     val radius = size.width / 2
+                    val bandOuter = radius * 0.91f   // iOS: outer = size*0.455 (swift:507)
+                    val bandInner = bandOuter * 0.76f // iOS: inner = outer*0.76 (swift:507)
 
-                    // 1. Wheel Outer Rim
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.12f),
-                        radius = radius,
-                        style = Stroke(width = 6.dp.toPx())
-                    )
+                    // 1. Static bezel - its margin doubles as the ball's rim track.
+                    drawCircle(color = FlatBezel, radius = radius, center = center)
 
-                    // 2. Wheel Segments
-                    participants.forEachIndexed { index, name ->
-                        val startAngle = currentAngle + index.toFloat() * sweepAngle
-                        val segColor = SegmentColors[index % SegmentColors.size]
-
-                        drawArc(
-                            color = if (finished && index == winnerIndex) WinnerGreen else segColor,
-                            startAngle = startAngle,
-                            sweepAngle = sweepAngle,
-                            useCenter = true,
-                            topLeft = Offset(0f, 0f),
-                            size = Size(size.width, size.height)
-                        )
-
-                        // Segment divider line
-                        val rad = Math.toRadians(startAngle.toDouble())
-                        val endX = center.x + radius * cos(rad).toFloat()
-                        val endY = center.y + radius * sin(rad).toFloat()
-                        drawLine(
-                            color = Color.White.copy(alpha = 0.2f),
-                            start = center,
-                            end = Offset(endX, endY),
-                            strokeWidth = 1.5.dp.toPx()
-                        )
-
-                        // Segment Name Text
-                        val midRad = Math.toRadians((startAngle + sweepAngle / 2f).toDouble())
-                        val textDist = radius * 0.65f
-                        val textX = center.x + textDist * cos(midRad).toFloat()
-                        val textY = center.y + textDist * sin(midRad).toFloat()
-
-                        val truncated = if (name.length > 8) name.substring(0, 7) + "…" else name
-                        drawText(
-                            textMeasurer = textMeasurer,
-                            text = truncated,
-                            topLeft = Offset(textX - 20.dp.toPx(), textY - 8.dp.toPx()),
-                            style = TextStyle(
-                                color = if (finished && index == winnerIndex) NavyBackground else Color.White,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
+                    // 2. Static deflector diamonds on the rim track (swift:447-460).
+                    val diamondSize = radius * 0.052f
+                    for (i in 0 until 8) {
+                        val angle = Math.toRadians((i * 45).toDouble())
+                        val track = radius * 0.955f
+                        val dx = center.x + track * sin(angle).toFloat()
+                        val dy = center.y - track * cos(angle).toFloat()
+                        rotate(45f, pivot = Offset(dx, dy)) {
+                            drawRect(
+                                color = Color.White.copy(alpha = 0.13f),
+                                topLeft = Offset(dx - diamondSize / 2, dy - diamondSize / 2),
+                                size = Size(diamondSize, diamondSize)
                             )
-                        )
+                        }
                     }
 
-                    // 3. Center Hub
-                    drawCircle(
-                        color = NavyBackground,
-                        radius = 24.dp.toPx()
-                    )
-                    drawCircle(
-                        color = GoldAccent,
-                        radius = 8.dp.toPx()
-                    )
+                    // 3. Spinning face - band + names + hub rotate together as one unit,
+                    // exactly like iOS's ZStack { FlatSegmentBand; FlatNameRing; FlatHubCross }
+                    // .rotationEffect(rotation) (swift:466-477). The winner-alignment math
+                    // itself (currentAngle, per-segment index*sweepAngle) is untouched.
+                    rotate(currentAngle, pivot = center) {
+                        participants.forEachIndexed { index, name ->
+                            val startAngle = index.toFloat() * sweepAngle
+                            val isWinner = finished && index == winnerIndex
+                            val segColor = if (isWinner) WinnerGreen else SegmentColors[index % SegmentColors.size]
 
-                    // 4. Top Indicator Pin
+                            // Donut wedge: full pie slice out to bandOuter, hole punched
+                            // by the center disc drawn afterwards.
+                            drawArc(
+                                color = segColor,
+                                startAngle = startAngle,
+                                sweepAngle = sweepAngle,
+                                useCenter = true,
+                                topLeft = Offset(center.x - bandOuter, center.y - bandOuter),
+                                size = Size(bandOuter * 2, bandOuter * 2)
+                            )
+                            drawArc(
+                                color = FlatBezel,
+                                startAngle = startAngle,
+                                sweepAngle = sweepAngle,
+                                useCenter = true,
+                                topLeft = Offset(center.x - bandOuter, center.y - bandOuter),
+                                size = Size(bandOuter * 2, bandOuter * 2),
+                                style = Stroke(width = 2.dp.toPx())
+                            )
+                            if (isWinner) {
+                                drawArc(
+                                    color = Color.White.copy(alpha = 0.45f),
+                                    startAngle = startAngle,
+                                    sweepAngle = sweepAngle,
+                                    useCenter = true,
+                                    topLeft = Offset(center.x - bandOuter, center.y - bandOuter),
+                                    size = Size(bandOuter * 2, bandOuter * 2),
+                                    style = Stroke(width = 2.5.dp.toPx())
+                                )
+                            }
+                        }
+
+                        // Punch the donut hole.
+                        drawCircle(color = FlatCenterDisc, radius = bandInner, center = center)
+
+                        // Tangential name labels along the band (swift:537-576).
+                        participants.forEachIndexed { index, name ->
+                            val midDeg = index.toFloat() * sweepAngle + sweepAngle / 2f
+                            val midRad = Math.toRadians(midDeg.toDouble())
+                            val labelRadius = (bandInner + bandOuter) / 2f
+                            val textX = center.x + labelRadius * cos(midRad).toFloat()
+                            val textY = center.y + labelRadius * sin(midRad).toFloat()
+                            val isWinner = finished && index == winnerIndex
+
+                            val truncated = if (name.length > 8) name.substring(0, 7) + "…" else name
+                            val fontSizeSp = (84f / numSegments).coerceIn(8f, 12f) // swift:544
+                            rotate(midDeg + 90f, pivot = Offset(textX, textY)) {
+                                drawText(
+                                    textMeasurer = textMeasurer,
+                                    text = truncated,
+                                    topLeft = Offset(textX - 20.dp.toPx(), textY - (fontSizeSp / 2).sp.toPx()),
+                                    style = TextStyle(
+                                        color = if (isWinner) NavyBackground else Color.White,
+                                        fontSize = fontSizeSp.sp,
+                                        fontWeight = FontWeight.Black
+                                    )
+                                )
+                            }
+                        }
+
+                        // Yellow four-spoke hub with end knobs and an open center ring
+                        // (swift:579-627). Sized relative to the band's inner radius so it
+                        // sits inside the punched hole.
+                        val hubSpokeLength = radius * 0.386f
+                        val hubKnobRadius = radius * 0.042f
+                        val hubLineWidth = radius * 0.034f
+                        for (i in 0 until 4) {
+                            val angle = Math.toRadians((i * 90 + 45).toDouble())
+                            val tip = Offset(
+                                center.x + hubSpokeLength * cos(angle).toFloat(),
+                                center.y + hubSpokeLength * sin(angle).toFloat()
+                            )
+                            drawLine(
+                                color = GoldAccent,
+                                start = center,
+                                end = tip,
+                                strokeWidth = hubLineWidth,
+                                cap = androidx.compose.ui.graphics.StrokeCap.Round
+                            )
+                            drawCircle(color = GoldAccent, radius = hubKnobRadius, center = tip)
+                        }
+                        val hubRingRadius = radius * 0.1008f
+                        drawCircle(color = GoldAccent, radius = hubRingRadius, center = center)
+                        drawCircle(color = FlatCenterDisc, radius = hubRingRadius * 0.45f, center = center)
+                    }
+
+                    // 4. Top Indicator Pin (static, unrotated).
                     val pinSize = 14.dp.toPx()
                     drawCircle(
                         color = GoldAccent,
