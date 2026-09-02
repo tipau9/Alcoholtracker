@@ -13,7 +13,6 @@ import de.tipau.promille.network.AdminQueueItem
 import de.tipau.promille.network.AdminReport
 import de.tipau.promille.network.AdminUserRole
 import de.tipau.promille.network.SupabaseService
-import kotlinx.serialization.json.JsonNull
 import de.tipau.promille.network.fetchAdminAuditLog
 import de.tipau.promille.network.fetchAdminBlockedVoters
 import de.tipau.promille.network.fetchAdminContent
@@ -191,20 +190,6 @@ class AdminViewModel(private val supabase: SupabaseService) : ViewModel() {
         supabase.resolveAdminReport(id, status)
         _reports.value = supabase.fetchAdminReports()
         _metrics.value = supabase.fetchAdminMetrics()
-    }
-
-    fun setFlag(flag: AdminFeatureFlag, enabled: Boolean) = act {
-        // The RPC overwrites the whole row, so the existing payload has to be
-        // sent back verbatim or flipping the switch would erase it. A null
-        // payload goes back as blank, which the API turns into an empty object.
-        supabase.setAdminFeatureFlag(
-            key = flag.key,
-            enabled = enabled,
-            isPublic = flag.isPublic,
-            value = if (flag.value is JsonNull) "" else flag.value.toString(),
-            description = flag.description
-        )
-        _flags.value = supabase.fetchAdminFeatureFlags()
     }
 
     fun setUserRole(userID: String, role: String) = act {
