@@ -46,27 +46,17 @@ private fun AdminField(
     singleLine: Boolean = true,
     monospace: Boolean = false
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label, style = AppText.caption) },
-        singleLine = singleLine,
-        maxLines = if (singleLine) 1 else 8,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        // No mono face in this app's type system - AppText.caption reads close
-        // enough for a JSON textarea.
-        textStyle = (if (monospace) AppText.caption else AppText.body).copy(color = AppColors.text),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = AppColors.text,
-            unfocusedTextColor = AppColors.text,
-            focusedBorderColor = AppColors.accent,
-            unfocusedBorderColor = AppColors.border,
-            cursorColor = AppColors.accent,
-            focusedLabelColor = AppColors.accent,
-            unfocusedLabelColor = AppColors.textDim
-        ),
-        modifier = Modifier.fillMaxWidth()
-    )
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(label, style = AppText.caption, color = AppColors.textDim)
+        de.tipau.promille.ui.components.AppTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = singleLine,
+            maxLines = if (singleLine) 1 else 8,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            textStyle = (if (monospace) AppText.caption else AppText.body)
+        )
+    }
 }
 
 /** Row of selectable pills - the Android stand-in for iOS's Picker, reusing

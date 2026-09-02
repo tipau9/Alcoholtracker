@@ -133,18 +133,11 @@ fun BarcodeScannerSheet(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    OutlinedTextField(
+                    de.tipau.promille.ui.components.AppTextField(
                         value = simulatedBarcode,
                         onValueChange = { simulatedBarcode = it },
-                        placeholder = { Text("EAN manuell eingeben...", color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp) },
+                        placeholder = "EAN manuell eingeben...",
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedBorderColor = AppColors.accent,
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
-                            cursorColor = AppColors.accent
-                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
 

@@ -251,19 +251,11 @@ fun AdminConsoleSheet(
 
                 AdminSection.CATALOG -> {
                     item {
-                        OutlinedTextField(
+                        de.tipau.promille.ui.components.AppTextField(
                             value = searchTerm,
                             onValueChange = { searchTerm = it },
-                            placeholder = { Text("Suchen", color = AppColors.textMuted, style = de.tipau.promille.AppText.body) },
+                            placeholder = "Suchen",
                             singleLine = true,
-                            textStyle = de.tipau.promille.AppText.body.copy(color = AppColors.text),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = AppColors.text,
-                                unfocusedTextColor = AppColors.text,
-                                focusedBorderColor = AppColors.accent,
-                                unfocusedBorderColor = AppColors.border,
-                                cursorColor = AppColors.accent
-                            ),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }

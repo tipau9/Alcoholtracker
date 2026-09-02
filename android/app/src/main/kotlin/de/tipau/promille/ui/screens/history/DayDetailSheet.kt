@@ -514,31 +514,16 @@ fun DayDetailSheet(
                     }
 
                     // Text field
-                    OutlinedTextField(
+                    de.tipau.promille.ui.components.AppTextField(
                         value = noteText,
                         onValueChange = {
                             noteText = it
                             saveNote()
                         },
-                        placeholder = {
-                            Text(
-                                "Kurze Notiz zum Abend...",
-                                color = AppColors.textMuted,
-                                style = de.tipau.promille.AppText.body
-                            )
-                        },
+                        placeholder = "Kurze Notiz zum Abend...",
+                        singleLine = false,
                         minLines = 3,
                         maxLines = 5,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = AppColors.card,
-                            unfocusedContainerColor = AppColors.card,
-                            focusedTextColor = AppColors.text,
-                            unfocusedTextColor = AppColors.text,
-                            focusedBorderColor = AppColors.accent,
-                            unfocusedBorderColor = AppColors.border,
-                            cursorColor = AppColors.accent
-                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

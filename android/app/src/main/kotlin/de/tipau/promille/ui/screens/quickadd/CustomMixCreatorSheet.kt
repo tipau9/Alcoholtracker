@@ -193,18 +193,11 @@ fun CustomMixCreatorSheet(
             // Mix Name
             item {
                 SectionLabel("Name des Mixes")
-                OutlinedTextField(
+                de.tipau.promille.ui.components.AppTextField(
                     value = mixName,
                     onValueChange = { mixName = it },
-                    placeholder = { Text("z. B. Gin Tonic, Cuba Libre", color = AppColors.textMuted) },
+                    placeholder = "z. B. Gin Tonic, Cuba Libre",
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = AppColors.text,
-                        unfocusedTextColor = AppColors.text,
-                        focusedBorderColor = AppColors.accent,
-                        unfocusedBorderColor = AppColors.border,
-                        cursorColor = AppColors.accent
-                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -261,7 +254,6 @@ fun CustomMixCreatorSheet(
                             .clickable {
                                 ingredients.add(MixIngredientInput(name = "Zutat ${ingredients.size + 1}", volumeML = "100", abv = "0"))
                             }
-                            .padding(vertical = 4.dp)
                     )
                 }
             }
@@ -273,17 +265,11 @@ fun CustomMixCreatorSheet(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            OutlinedTextField(
+                            de.tipau.promille.ui.components.AppTextField(
                                 value = item.name,
                                 onValueChange = { item.name = it },
-                                placeholder = { Text("Zutat Name", color = AppColors.textMuted) },
+                                placeholder = "Zutat Name",
                                 singleLine = true,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedTextColor = AppColors.text,
-                                    unfocusedTextColor = AppColors.text,
-                                    focusedBorderColor = AppColors.accent,
-                                    unfocusedBorderColor = AppColors.border
-                                ),
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(Modifier.height(8.dp))
@@ -291,32 +277,22 @@ fun CustomMixCreatorSheet(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                OutlinedTextField(
+                                de.tipau.promille.ui.components.AppTextField(
                                     value = item.volumeML,
                                     onValueChange = { item.volumeML = it.filter { c -> c.isDigit() } },
-                                    label = { Text("Menge (ml)", color = AppColors.textDim, style = de.tipau.promille.AppText.caption) },
+                                    placeholder = "Menge (ml)",
+                                    trailingIcon = { Text("ml", color = AppColors.textDim, style = de.tipau.promille.AppText.caption) },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     singleLine = true,
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedTextColor = AppColors.text,
-                                        unfocusedTextColor = AppColors.text,
-                                        focusedBorderColor = AppColors.accent,
-                                        unfocusedBorderColor = AppColors.border
-                                    ),
                                     modifier = Modifier.weight(1f)
                                 )
-                                OutlinedTextField(
+                                de.tipau.promille.ui.components.AppTextField(
                                     value = item.abv,
                                     onValueChange = { item.abv = it.filter { c -> c.isDigit() || c == '.' || c == ',' } },
-                                    label = { Text("Vol. %", color = AppColors.textDim, style = de.tipau.promille.AppText.caption) },
+                                    placeholder = "Vol. %",
+                                    trailingIcon = { Text("%", color = AppColors.textDim, style = de.tipau.promille.AppText.caption) },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     singleLine = true,
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedTextColor = AppColors.text,
-                                        unfocusedTextColor = AppColors.text,
-                                        focusedBorderColor = AppColors.accent,
-                                        unfocusedBorderColor = AppColors.border
-                                    ),
                                     modifier = Modifier.weight(1f)
                                 )
                             }

@@ -104,17 +104,11 @@ fun BarcodeCandidateSheet(
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 SectionLabel(text = "NAME")
-                OutlinedTextField(
+                de.tipau.promille.ui.components.AppTextField(
                     value = name,
                     onValueChange = { name = it },
-                    placeholder = { Text("Produktname", color = AppColors.textDim) },
+                    placeholder = "Produktname",
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = AppColors.text,
-                        unfocusedTextColor = AppColors.text,
-                        focusedBorderColor = AppColors.accent,
-                        unfocusedBorderColor = AppColors.border
-                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -160,37 +154,25 @@ fun BarcodeCandidateSheet(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     SectionLabel(text = "MENGE")
-                    OutlinedTextField(
+                    de.tipau.promille.ui.components.AppTextField(
                         value = volumeText,
                         onValueChange = { volumeText = it.filter { c -> c.isDigit() } },
-                        placeholder = { Text("330", color = AppColors.textDim) },
-                        suffix = { Text("ml", color = AppColors.textDim) },
+                        placeholder = "330",
+                        trailingIcon = { Text("ml", color = AppColors.textDim, style = de.tipau.promille.AppText.body) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = AppColors.text,
-                            unfocusedTextColor = AppColors.text,
-                            focusedBorderColor = AppColors.accent,
-                            unfocusedBorderColor = AppColors.border
-                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     SectionLabel(text = "ALKOHOL")
-                    OutlinedTextField(
+                    de.tipau.promille.ui.components.AppTextField(
                         value = abvText,
                         onValueChange = { abvText = it.filter { c -> c.isDigit() || c == '.' || c == ',' } },
-                        placeholder = { Text("5,0", color = AppColors.textDim) },
-                        suffix = { Text("%", color = AppColors.textDim) },
+                        placeholder = "5,0",
+                        trailingIcon = { Text("%", color = AppColors.textDim, style = de.tipau.promille.AppText.body) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = AppColors.text,
-                            unfocusedTextColor = AppColors.text,
-                            focusedBorderColor = AppColors.accent,
-                            unfocusedBorderColor = AppColors.border
-                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

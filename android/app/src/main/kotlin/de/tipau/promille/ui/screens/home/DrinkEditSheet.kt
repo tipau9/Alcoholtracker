@@ -207,36 +207,15 @@ fun DrinkEditSheet(
                 // Volume Section
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionLabel(text = "MENGE")
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(AppColors.card)
-                            .border(0.5.dp, AppColors.border, RoundedCornerShape(12.dp))
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextField(
-                            value = volumeText,
-                            onValueChange = { volumeText = it },
-                            placeholder = { Text("ml", color = AppColors.textMuted) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                focusedTextColor = AppColors.text,
-                                unfocusedTextColor = AppColors.text,
-                                cursorColor = AppColors.accent
-                            ),
-                            modifier = Modifier.weight(1f)
-                        )
-                        // iOS: fixed 14sp SemiBold (not a token) - was
-                        // 16sp Bold here.
-                        Text("ml", color = AppColors.textDim, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    }
+                    de.tipau.promille.ui.components.AppTextField(
+                        value = volumeText,
+                        onValueChange = { volumeText = it },
+                        placeholder = "ml",
+                        trailingIcon = { Text("ml", color = AppColors.textDim, fontSize = 14.sp, fontWeight = FontWeight.SemiBold) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
 
                 // Mix details card if cocktail/mixed

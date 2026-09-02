@@ -960,46 +960,30 @@ private fun CustomBrandDialog(
         title = { Text("Eigene Marke", color = AppColors.text, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
+                de.tipau.promille.ui.components.AppTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Getränkename", color = AppColors.textDim) },
+                    placeholder = "Getränkename",
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = AppColors.text,
-                        unfocusedTextColor = AppColors.text,
-                        focusedBorderColor = AppColors.accent,
-                        unfocusedBorderColor = AppColors.border
-                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
+                    de.tipau.promille.ui.components.AppTextField(
                         value = volume,
                         onValueChange = { volume = it.filter { c -> c.isDigit() } },
-                        label = { Text("Menge (ml)", color = AppColors.textDim) },
+                        placeholder = "Menge",
+                        trailingIcon = { Text("ml", color = AppColors.textDim, style = de.tipau.promille.AppText.caption) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = AppColors.text,
-                            unfocusedTextColor = AppColors.text,
-                            focusedBorderColor = AppColors.accent,
-                            unfocusedBorderColor = AppColors.border
-                        ),
                         modifier = Modifier.weight(1f)
                     )
-                    OutlinedTextField(
+                    de.tipau.promille.ui.components.AppTextField(
                         value = abv,
                         onValueChange = { abv = it.filter { c -> c.isDigit() || c == '.' || c == ',' } },
-                        label = { Text("Vol. %", color = AppColors.textDim) },
+                        placeholder = "Vol.",
+                        trailingIcon = { Text("%", color = AppColors.textDim, style = de.tipau.promille.AppText.caption) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = AppColors.text,
-                            unfocusedTextColor = AppColors.text,
-                            focusedBorderColor = AppColors.accent,
-                            unfocusedBorderColor = AppColors.border
-                        ),
                         modifier = Modifier.weight(1f)
                     )
                 }

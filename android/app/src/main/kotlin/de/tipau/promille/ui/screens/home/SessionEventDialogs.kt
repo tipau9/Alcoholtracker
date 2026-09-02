@@ -39,32 +39,19 @@ fun BreathalyzerDialog(
                     color = AppColors.textDim,
                     style = de.tipau.promille.AppText.caption
                 )
-                OutlinedTextField(
+                de.tipau.promille.ui.components.AppTextField(
                     value = measuredStr,
                     onValueChange = { measuredStr = it.filter { c -> c.isDigit() || c == '.' || c == ',' } },
-                    label = { Text("Gemessener Wert (‰)", color = AppColors.textDim) },
+                    placeholder = "Gemessener Wert (‰)",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = AppColors.text,
-                        unfocusedTextColor = AppColors.text,
-                        focusedBorderColor = AppColors.accent,
-                        unfocusedBorderColor = AppColors.border,
-                        cursorColor = AppColors.accent
-                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
-                OutlinedTextField(
+                de.tipau.promille.ui.components.AppTextField(
                     value = note,
                     onValueChange = { note = it },
-                    label = { Text("Notiz / Gerät (optional)", color = AppColors.textDim) },
+                    placeholder = "Notiz / Gerät (optional)",
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = AppColors.text,
-                        unfocusedTextColor = AppColors.text,
-                        focusedBorderColor = AppColors.accent,
-                        unfocusedBorderColor = AppColors.border
-                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
             }

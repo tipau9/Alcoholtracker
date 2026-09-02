@@ -348,19 +348,12 @@ private fun JamLobby(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                OutlinedTextField(
+                de.tipau.promille.ui.components.AppTextField(
                     value = codeInput,
                     onValueChange = { codeInput = it.uppercase() },
-                    placeholder = { Text("Code", color = AppColors.textMuted) },
+                    placeholder = "Code",
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = AppColors.text,
-                        unfocusedTextColor = AppColors.text,
-                        focusedBorderColor = AppColors.accent,
-                        unfocusedBorderColor = AppColors.border,
-                        cursorColor = AppColors.accent
-                    ),
                     modifier = Modifier.weight(1f)
                 )
                 Button(

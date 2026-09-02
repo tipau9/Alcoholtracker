@@ -112,29 +112,11 @@ fun MealLoggingSheet(
                 }
 
                 // Food Name Field
-                OutlinedTextField(
+                de.tipau.promille.ui.components.AppTextField(
                     value = mealName,
                     onValueChange = { mealName = it },
-                    placeholder = {
-                        // No iOS source (native Form row on iOS, no custom
-                        // font); appBody matches this sheet's other text.
-                        Text(
-                            "Was gab es? (z.B. Pizza, Döner, Nüsse)",
-                            color = AppColors.textMuted,
-                            style = de.tipau.promille.AppText.body
-                        )
-                    },
+                    placeholder = "Was gab es? (z.B. Pizza, Döner, Nüsse)",
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = AppColors.card,
-                        unfocusedContainerColor = AppColors.card,
-                        focusedTextColor = AppColors.text,
-                        unfocusedTextColor = AppColors.text,
-                        focusedBorderColor = AppColors.accent,
-                        unfocusedBorderColor = AppColors.border,
-                        cursorColor = AppColors.accent
-                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
 

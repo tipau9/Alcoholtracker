@@ -113,19 +113,11 @@ fun RidePickerSheet(
 
             // Destination Field (optional)
             SectionLabel("Zielort (optional)")
-            OutlinedTextField(
+            de.tipau.promille.ui.components.AppTextField(
                 value = destination,
                 onValueChange = { destination = it },
-                placeholder = { Text("z.B. Hauptbahnhof, Heimatadresse", color = AppColors.textMuted, style = de.tipau.promille.AppText.body) },
+                placeholder = "z.B. Hauptbahnhof, Heimatadresse",
                 singleLine = true,
-                textStyle = de.tipau.promille.AppText.body.copy(color = AppColors.text),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = AppColors.text,
-                    unfocusedTextColor = AppColors.text,
-                    focusedBorderColor = AppColors.accent,
-                    unfocusedBorderColor = AppColors.border,
-                    cursorColor = AppColors.accent
-                ),
                 modifier = Modifier.fillMaxWidth()
             )
 
