@@ -279,16 +279,16 @@ fun CrewView(
         ) {
             Column {
                 Text(
+                    // iOS: .appHeadline (CrewView.swift:499).
                     text = "Freunde",
                     color = AppColors.text,
-                    fontSize = 28.sp,
-                    fontFamily = AppSerif,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.headline
                 )
                 Text(
+                    // iOS: .appCaption (CrewView.swift:504).
                     text = "${members.size} Personen",
                     color = AppColors.textDim,
-                    fontSize = 13.sp
+                    style = de.tipau.promille.AppText.caption
                 )
             }
 
@@ -375,15 +375,16 @@ fun CrewView(
                             Spacer(Modifier.width(10.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(
+                                    // iOS: .appCaptionBold (CrewView.swift:465).
                                     text = "Live-BAC aktivieren",
                                     color = AppColors.text,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
+                                    style = de.tipau.promille.AppText.captionBold
                                 )
                                 Text(
+                                    // iOS: .appMicro (CrewView.swift:468).
                                     text = "Anmelden um BAC-Daten mit Freunden zu teilen",
                                     color = AppColors.textDim,
-                                    fontSize = 11.sp
+                                    style = de.tipau.promille.AppText.micro
                                 )
                             }
                             Icon(
@@ -452,9 +453,10 @@ fun CrewView(
                         Spacer(Modifier.width(16.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
+                                // iOS: .appCaption (CrewView.swift:550).
                                 text = "Mein Code",
                                 color = AppColors.textDim,
-                                fontSize = 13.sp
+                                style = de.tipau.promille.AppText.caption
                             )
                             Text(
                                 text = code,
@@ -467,9 +469,10 @@ fun CrewView(
                             )
                             if (!isSignedIn) {
                                 Text(
+                                    // iOS: .appMicro (CrewView.swift:558).
                                     text = "Wird mit Anmeldung für Live-BAC aktiviert",
                                     color = AppColors.textMuted,
-                                    fontSize = 11.sp
+                                    style = de.tipau.promille.AppText.micro
                                 )
                             }
                         }
@@ -481,19 +484,19 @@ fun CrewView(
                                 .clip(CircleShape)
                                 .background(AppColors.accent.copy(alpha = 0.12f))
                                 .border(0.5.dp, AppColors.accent.copy(alpha = 0.3f), CircleShape)
-                                .clickable {
-                                    val sendIntent = android.content.Intent().apply {
-                                        action = android.content.Intent.ACTION_SEND
-                                        putExtra(
-                                            android.content.Intent.EXTRA_TEXT,
-                                            "Mein Freundes-Code für promille.: $code"
-                                        )
-                                        type = "text/plain"
-                                    }
-                                    context.startActivity(
-                                        android.content.Intent.createChooser(sendIntent, "Freundescode teilen")
+                            .clickable {
+                                val sendIntent = android.content.Intent().apply {
+                                    action = android.content.Intent.ACTION_SEND
+                                    putExtra(
+                                        android.content.Intent.EXTRA_TEXT,
+                                        "Mein Freundes-Code für promille.: $code"
                                     )
-                                },
+                                    type = "text/plain"
+                                }
+                                context.startActivity(
+                                    android.content.Intent.createChooser(sendIntent, "Freundescode teilen")
+                                )
+                            },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -554,15 +557,12 @@ fun CrewView(
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
+                            // iOS: .appBodyBold (CrewView.swift:1019).
                             text = if (sosOn) "SOS ist aktiv" else "SOS senden",
                             color = if (sosOn) AppColors.statusRed else AppColors.text,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.bodyBold
                         )
                         Text(
-                            // iOS's SOSBar is a single line that promises nothing.
-                            // This one names a recipient, so it has to name the
-                            // right one - or say that there is none.
                             text = when {
                                 sosOn -> "Tippen zum Beenden."
                                 !isSignedIn && currentJam == null ->
@@ -571,7 +571,7 @@ fun CrewView(
                                 else -> "Deine Crew bekommt sofort eine Meldung."
                             },
                             color = AppColors.textDim,
-                            fontSize = 12.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
                 }
@@ -593,15 +593,16 @@ fun CrewView(
                             Spacer(Modifier.width(12.dp))
                             Column {
                                 Text(
+                                    // iOS: .appBodyBold (CrewView.swift:657).
                                     text = "SOS-Alarm aktiv!",
                                     color = AppColors.statusRed,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold
+                                    style = de.tipau.promille.AppText.bodyBold
                                 )
                                 Text(
+                                    // iOS: .appCaption (CrewView.swift:660).
                                     text = "${sosMembers.joinToString { it.name }} benötigt Unterstützung!",
                                     color = AppColors.text,
-                                    fontSize = 13.sp
+                                    style = de.tipau.promille.AppText.caption
                                 )
                             }
                         }
@@ -647,16 +648,17 @@ fun CrewView(
                             )
                             Spacer(Modifier.height(14.dp))
                             Text(
+                                // iOS: .appBodyBold (CrewView.swift:211).
                                 text = "Noch keine Freunde",
                                 color = AppColors.text,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold
+                                style = de.tipau.promille.AppText.bodyBold
                             )
                             Spacer(Modifier.height(6.dp))
                             Text(
+                                // iOS: .appCaption (CrewView.swift:215).
                                 text = "Teile deinen Code und füge Freunde per Code hinzu.",
                                 color = AppColors.textDim,
-                                fontSize = 13.sp,
+                                style = de.tipau.promille.AppText.caption,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
                             Spacer(Modifier.height(20.dp))
@@ -669,10 +671,10 @@ fun CrewView(
                                     .padding(horizontal = 20.dp, vertical = 10.dp)
                             ) {
                                 Text(
+                                    // iOS: .appBodyBold (CrewView.swift:226).
                                     text = "+ Freund hinzufügen",
                                     color = AppColors.accent,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                    style = de.tipau.promille.AppText.bodyBold
                                 )
                             }
                         }
@@ -763,16 +765,17 @@ private fun ActiveJamBanner(jam: de.tipau.promille.bac.Jam, onTap: () -> Unit) {
                         .background(AppColors.statusGreen)
                 )
                 Text(
+                    // iOS: .appCaptionBold (CrewView.swift:610).
                     text = "Aktiver Jam",
                     color = AppColors.statusGreen,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
+                    style = de.tipau.promille.AppText.captionBold
                 )
             }
             Text(
+                // iOS: .appCaption (CrewView.swift:614).
                 text = "${maxOf(1, jam.participants.size)} Teilnehmer · Tippen zum Öffnen",
                 color = AppColors.textDim,
-                fontSize = 13.sp
+                style = de.tipau.promille.AppText.caption
             )
         }
         Icon(
@@ -816,15 +819,16 @@ private fun FriendJamBanner(jam: de.tipau.promille.bac.Jam, isJoining: Boolean, 
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
+                // iOS: .appBodyBold (CrewView.swift:704).
                 text = "${jam.hostName} jammt gerade",
                 color = AppColors.text,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold
+                style = de.tipau.promille.AppText.bodyBold
             )
             Text(
+                // iOS: .appCaption (CrewView.swift:707).
                 text = "Jam von Freunden · Tippen zum Beitreten",
                 color = AppColors.textDim,
-                fontSize = 13.sp
+                style = de.tipau.promille.AppText.caption
             )
         }
         if (isJoining) {
@@ -835,10 +839,10 @@ private fun FriendJamBanner(jam: de.tipau.promille.bac.Jam, isJoining: Boolean, 
             )
         } else {
             Text(
+                // iOS: .appCaptionBold (CrewView.swift:717).
                 text = "Beitreten",
                 color = AppColors.accent,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
+                style = de.tipau.promille.AppText.captionBold,
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
                     .background(AppColors.accent.copy(alpha = 0.12f))
@@ -863,6 +867,7 @@ private fun CRAvatar(initial: String, status: de.tipau.promille.bac.BacStatus, s
         contentAlignment = Alignment.Center
     ) {
         Text(
+            // iOS: .system(size: size * 0.38, weight: .semibold) (CrewView.swift:797).
             text = initial,
             color = if (sober) AppColors.text else status.color,
             fontSize = (size.value * 0.38f).sp,
@@ -901,16 +906,17 @@ private fun CareCard(member: CrewMemberEntity, nowSeconds: Long) {
             )
             Spacer(Modifier.width(8.dp))
             Text(
+                // iOS: .appCaptionBold (CrewView.swift:822).
                 text = "Aufmerksamkeit nötig",
                 color = status.color,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold
+                style = de.tipau.promille.AppText.captionBold
             )
             Spacer(Modifier.weight(1f))
             Text(
+                // iOS: .appMicro (CrewView.swift:826).
                 text = "Höchster Risikowert",
                 color = AppColors.textMuted,
-                fontSize = 11.sp
+                style = de.tipau.promille.AppText.micro
             )
         }
         HorizontalDivider(color = AppColors.border.copy(alpha = 0.6f), thickness = 0.5.dp)
@@ -923,27 +929,35 @@ private fun CareCard(member: CrewMemberEntity, nowSeconds: Long) {
             CRAvatar(initial = member.avatarInitial, status = status, size = 48.dp)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(member.name, color = AppColors.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                // iOS: .appBodyBold (CrewView.swift:840).
+                Text(member.name, color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
                 de.tipau.promille.ui.components.StatusPill(status = status)
                 if (minutes != null) {
                     Text(
+                        // iOS: .appCaption (CrewView.swift:845).
                         text = if (minutes <= 0) "Gerade aktualisiert" else "Aktualisiert vor $minutes min",
                         color = AppColors.textDim,
-                        fontSize = 13.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
             }
             Spacer(Modifier.width(14.dp))
             Column(horizontalAlignment = Alignment.End) {
                 Text(
+                    // iOS: .system(size: 38, weight: .light, design: .serif) + monospacedDigit (CrewView.swift:854).
                     text = String.format(Locale.GERMANY, "%.2f", estimated),
                     color = status.color,
                     fontSize = 38.sp,
                     fontWeight = FontWeight.Light,
                     fontFamily = AppSerif,
-                    style = androidx.compose.ui.text.TextStyle(fontFeatureSettings = "tnum")
+                    style = TabularFigures
                 )
-                Text("‰", color = status.color, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    // iOS: .appBodyBold (CrewView.swift:858).
+                    text = "‰",
+                    color = status.color,
+                    style = de.tipau.promille.AppText.bodyBold
+                )
             }
         }
     }
@@ -973,12 +987,13 @@ private fun SoberBuddyCard(member: CrewMemberEntity, nowSeconds: Long, canDrive:
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
+                // iOS: .appCaptionBold (CrewView.swift:890).
                 text = if (canDrive) "Fahrbereit" else "Darf nicht mehr fahren",
                 color = accent,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold
+                style = de.tipau.promille.AppText.captionBold
             )
-            Text(member.name, color = AppColors.text, fontSize = 17.sp)
+            // iOS: .appBody (CrewView.swift:893).
+            Text(member.name, color = AppColors.text, style = de.tipau.promille.AppText.body)
         }
         Box(
             modifier = Modifier
@@ -1104,10 +1119,10 @@ private fun MemberCard(
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
+                        // iOS: .appBody (CrewView.swift:930).
                         text = member.name,
                         color = AppColors.text,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold
+                        style = de.tipau.promille.AppText.body
                     )
                     if (member.isSoberBuddy) {
                         Spacer(Modifier.width(6.dp))
@@ -1116,7 +1131,7 @@ private fun MemberCard(
                                 .background(AppColors.statusGreen.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
-                            Text("Buddy", color = AppColors.statusGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text("Buddy", color = AppColors.statusGreen, style = de.tipau.promille.AppText.micro.copy(fontWeight = FontWeight.Bold))
                         }
                     }
                     if (member.isHome) {
@@ -1126,7 +1141,7 @@ private fun MemberCard(
                                 .background(AppColors.border, RoundedCornerShape(4.dp))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
-                            Text("Daheim", color = AppColors.textDim, fontSize = 10.sp)
+                            Text("Daheim", color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
                         }
                     }
                 }
@@ -1138,7 +1153,8 @@ private fun MemberCard(
                         String.format(Locale.GERMANY, "%.2f ‰", estimated)
                     },
                     color = if (estimated > 0.8) AppColors.statusOrange else AppColors.textDim,
-                    fontSize = 12.sp
+                    // iOS: .appCaption (CrewView.swift:943).
+                    style = de.tipau.promille.AppText.caption
                 )
             }
 

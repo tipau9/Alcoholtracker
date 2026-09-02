@@ -25,6 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
+import de.tipau.promille.AppSerif
+import de.tipau.promille.TabularFigures
 import de.tipau.promille.bac.Achievement
 import de.tipau.promille.bac.AchievementAccent
 import de.tipau.promille.bac.AchievementCatalog
@@ -172,16 +174,17 @@ fun FriendProfileSheet(
                         .border(1.5.dp, AppColors.accent, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(member.avatarInitial, color = AppColors.accent, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text(member.avatarInitial, color = AppColors.accent, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Spacer(Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(member.name, color = AppColors.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    // iOS: .appHeadline (FriendProfileSheet.swift:129).
+                    Text(member.name, color = AppColors.text, style = de.tipau.promille.AppText.headline)
+                    // iOS: .appCaption (FriendProfileSheet.swift:184).
                     Text(
                         text = "${String.format(Locale.GERMANY, "%.2f ‰", currentBAC)} Promille",
                         color = if (currentBAC > 0.8) AppColors.statusRed else AppColors.textDim,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
                 Box(
@@ -218,27 +221,31 @@ fun FriendProfileSheet(
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 StatusPill(status = status)
                                 if (bacUpdatedMinutes != null) {
+                                    // iOS: .appMicro (FriendProfileSheet.swift:184).
                                     Text(
                                         text = CrewMath.updateStatusText(bacUpdatedMinutes),
                                         color = AppColors.textMuted,
-                                        fontSize = 11.sp
+                                        style = de.tipau.promille.AppText.micro
                                     )
                                 }
                             }
                             Spacer(Modifier.weight(1f))
                             Row(verticalAlignment = Alignment.Bottom) {
                                 Text(
+                                    // iOS: .system(size: 34, weight: .light, design: .serif) (swift:191).
                                     text = String.format(Locale.GERMANY, "%.2f", liveBAC),
                                     color = status.color,
                                     fontSize = 34.sp,
-                                    fontWeight = FontWeight.Light
+                                    fontFamily = AppSerif,
+                                    fontWeight = FontWeight.Light,
+                                    style = TabularFigures
                                 )
                                 Spacer(Modifier.width(3.dp))
                                 Text(
+                                    // iOS: .appBodyBold (swift:195).
                                     text = "‰",
                                     color = status.color,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
+                                    style = de.tipau.promille.AppText.bodyBold,
                                     modifier = Modifier.padding(bottom = 4.dp)
                                 )
                             }
@@ -255,11 +262,12 @@ fun FriendProfileSheet(
                                 tint = AppColors.textMuted,
                                 modifier = Modifier.size(20.dp)
                             )
+                            // iOS: .appCaption (FriendProfileSheet.swift:206).
                             Text(
                                 text = if (sharesData) "Keine Live-Daten verfügbar."
                                 else "Teilt aktuell keine Live-Daten.",
                                 color = AppColors.textDim,
-                                fontSize = 13.sp
+                                style = de.tipau.promille.AppText.caption
                             )
                         }
                     }
@@ -291,18 +299,19 @@ fun FriendProfileSheet(
                             )
                         }
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            // iOS: .appCaptionBold (FriendProfileSheet.swift:231).
                             Text(
                                 text = if (followsMe) "Hat dich auch als Freund"
                                 else "Hat dich noch nicht hinzugefügt",
                                 color = AppColors.text,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
+                                style = de.tipau.promille.AppText.captionBold
                             )
+                            // iOS: .appMicro (FriendProfileSheet.swift:236).
                             Text(
                                 text = if (followsMe) "Ihr seht gegenseitig eure Live-Daten."
                                 else "Sende deinen Code, damit die Verbindung in beide Richtungen geht.",
                                 color = AppColors.textDim,
-                                fontSize = 11.sp
+                                style = de.tipau.promille.AppText.micro
                             )
                         }
                         if (!followsMe && myShareCode.isNotEmpty()) {
@@ -346,10 +355,11 @@ fun FriendProfileSheet(
                 ) {
                     SectionLabel("ERFOLGE")
                     Spacer(Modifier.weight(1f))
+                    // iOS: .appMicro (FriendProfileSheet.swift:267).
                     Text(
                         text = "${earnedAchievements.size} von ${AchievementCatalog.ALL.size}",
                         color = AppColors.textMuted,
-                        fontSize = 11.sp
+                        style = de.tipau.promille.AppText.micro
                     )
                 }
                 FlowRow(
@@ -389,12 +399,13 @@ fun FriendProfileSheet(
                             tint = AppColors.textMuted,
                             modifier = Modifier.size(18.dp)
                         )
+                        // iOS: .appCaption (FriendProfileSheet.swift:358).
                         Text(
                             text = if (member.friendCode == null)
                                 "Lokaler Freund ohne Code. Live-Funktionen sind nicht verfügbar."
                             else "Melde dich an, um Live-Status, Erfolge und gemeinsame Freunde zu sehen.",
                             color = AppColors.textDim,
-                            fontSize = 13.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
                 }
@@ -450,8 +461,7 @@ fun FriendProfileSheet(
                     Text(
                         text = String.format(Locale.GERMANY, "%.2f ‰", currentBAC),
                         color = AppColors.text,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
+                        style = de.tipau.promille.AppText.headline.merge(de.tipau.promille.TabularFigures)
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
@@ -459,14 +469,14 @@ fun FriendProfileSheet(
                             colors = ButtonDefaults.buttonColors(containerColor = AppColors.card, contentColor = AppColors.text),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text("- 0,1")
+                            Text("- 0,1", style = de.tipau.promille.AppText.bodyBold)
                         }
                         Button(
                             onClick = { currentBAC = currentBAC + 0.1 },
                             colors = ButtonDefaults.buttonColors(containerColor = AppColors.accent, contentColor = AppColors.background),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text("+ 0,1", fontWeight = FontWeight.Bold)
+                            Text("+ 0,1", style = de.tipau.promille.AppText.bodyBold)
                         }
                     }
                 }
@@ -534,9 +544,11 @@ private fun AchievementChip(achievement: Achievement, onClick: () -> Unit) {
                 .background(color.copy(alpha = 0.13f)),
             contentAlignment = Alignment.Center
         ) {
+            // iOS: .system(size: 12, weight: .semibold) (swift:282).
             Text("\u2713", color = color, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
         }
-        Text(achievement.title, color = AppColors.text, fontSize = 11.sp, maxLines = 1)
+        // iOS: .appMicro (FriendProfileSheet.swift:288).
+        Text(achievement.title, color = AppColors.text, style = de.tipau.promille.AppText.micro, maxLines = 1)
     }
 }
 
@@ -558,6 +570,7 @@ private fun MutualFriendChip(friend: FriendProfile) {
                 .background(AppColors.border),
             contentAlignment = Alignment.Center
         ) {
+            // iOS: .system(size: 11, weight: .semibold) (swift:327).
             Text(
                 text = friend.displayName.take(1).uppercase(Locale.GERMANY),
                 color = AppColors.text,
@@ -565,10 +578,11 @@ private fun MutualFriendChip(friend: FriendProfile) {
                 fontWeight = FontWeight.SemiBold
             )
         }
+        // iOS: .appMicro (FriendProfileSheet.swift:333).
         Text(
             text = friend.displayName.ifEmpty { friend.friendCode },
             color = AppColors.text,
-            fontSize = 11.sp,
+            style = de.tipau.promille.AppText.micro,
             maxLines = 1
         )
     }
@@ -594,7 +608,8 @@ private fun AchievementDetailDialog(achievement: Achievement, onDismiss: () -> U
             }
         },
         title = {
-            Text(achievement.title, color = AppColors.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            // iOS: .appHeadline (swift:597).
+            Text(achievement.title, color = AppColors.text, style = de.tipau.promille.AppText.headline)
         },
         text = {
             Column(
@@ -602,7 +617,8 @@ private fun AchievementDetailDialog(achievement: Achievement, onDismiss: () -> U
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(achievement.subtitle, color = AppColors.textDim, fontSize = 13.sp)
+                // iOS: .appCaption (swift:605).
+                Text(achievement.subtitle, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                 Row(
                     modifier = Modifier
                         .clip(CircleShape)
@@ -617,13 +633,15 @@ private fun AchievementDetailDialog(achievement: Achievement, onDismiss: () -> U
                         tint = AppColors.statusGreen,
                         modifier = Modifier.size(14.dp)
                     )
-                    Text("Freigeschaltet", color = AppColors.statusGreen, fontSize = 12.sp)
+                    // iOS: .appCaptionBold (swift:620).
+                    Text("Freigeschaltet", color = AppColors.statusGreen, style = de.tipau.promille.AppText.captionBold)
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Schließen", color = AppColors.accent)
+                // iOS: .appCaptionBold.
+                Text("Schließen", color = AppColors.accent, style = de.tipau.promille.AppText.captionBold)
             }
         }
     )

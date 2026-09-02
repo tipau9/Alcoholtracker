@@ -172,10 +172,10 @@ fun PhotoCaptureSheet(
                     }
                     Spacer(Modifier.width(14.dp))
                     Text(
+                        // iOS: .appBodyBold (PhotoCaptureView.swift:40).
                         text = "Erinnerung",
                         color = AppColors.text,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold
+                        style = de.tipau.promille.AppText.bodyBold
                     )
                     Spacer(Modifier.weight(1f))
                     Box(
@@ -229,10 +229,11 @@ fun PhotoCaptureSheet(
                                     tint = AppColors.textMuted,
                                     modifier = Modifier.size(32.dp)
                                 )
+                                // iOS: .appCaption (PhotoCaptureView.swift:86).
                                 Text(
                                     text = "Noch kein Foto",
                                     color = AppColors.textMuted,
-                                    fontSize = 13.sp
+                                    style = de.tipau.promille.AppText.caption
                                 )
                             }
                         }
@@ -287,19 +288,19 @@ fun PhotoCaptureSheet(
                             contentAlignment = Alignment.CenterStart
                         ) {
                             if (caption.isEmpty()) {
+                                // iOS: .appBody (PhotoCaptureView.swift:141).
                                 Text(
                                     text = "z.B. Karaoke-Abend",
                                     color = AppColors.textMuted,
-                                    fontSize = 17.sp
+                                    style = de.tipau.promille.AppText.body
                                 )
                             }
                             BasicTextField(
                                 value = caption,
                                 onValueChange = { caption = it },
                                 singleLine = true,
-                                textStyle = TextStyle(
-                                    color = AppColors.text,
-                                    fontSize = 17.sp
+                                textStyle = de.tipau.promille.AppText.body.copy(
+                                    color = AppColors.text
                                 ),
                                 cursorBrush = SolidColor(AppColors.accent),
                                 modifier = Modifier.fillMaxWidth()
@@ -351,12 +352,12 @@ fun PhotoCaptureSheet(
             onDismissRequest = { showSaveError = false },
             shape = RoundedCornerShape(20.dp),
             modifier = Modifier.border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp)),
-            title = { Text("Speichern fehlgeschlagen") },
+            title = { Text("Speichern fehlgeschlagen", style = de.tipau.promille.AppText.bodyBold) },
             text = {
-                Text("Das Foto konnte nicht gespeichert werden. Prüfe den freien Speicherplatz.")
+                Text("Das Foto konnte nicht gespeichert werden. Prüfe den freien Speicherplatz.", style = de.tipau.promille.AppText.caption)
             },
             confirmButton = {
-                TextButton(onClick = { showSaveError = false }) { Text("OK") }
+                TextButton(onClick = { showSaveError = false }) { Text("OK", style = de.tipau.promille.AppText.captionBold) }
             },
             containerColor = AppColors.card,
             titleContentColor = AppColors.text,
@@ -395,10 +396,10 @@ private fun SourceButton(
         )
         Spacer(Modifier.width(8.dp))
         Text(
+            // iOS: .appBodyBold (PhotoCaptureView.swift:101, 121).
             text = label,
             color = AppColors.text,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.SemiBold
+            style = de.tipau.promille.AppText.bodyBold
         )
     }
 }

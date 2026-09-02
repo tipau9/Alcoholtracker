@@ -178,10 +178,10 @@ fun AddFriendSheet(
                             )
                         }
                         Text(
+                            // iOS: .appBodyBold (AddFriendSheet.swift:77).
                             text = "Freund hinzufügen",
                             color = AppColors.text,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.bodyBold
                         )
                     }
 
@@ -231,10 +231,11 @@ fun AddFriendSheet(
                                         strokeWidth = 2.dp,
                                         modifier = Modifier.size(14.dp)
                                     )
+                                    // iOS: .appCaption (AddFriendSheet.swift:122).
                                     Text(
                                         text = "Freund wird gesucht...",
                                         color = AppColors.textDim,
-                                        fontSize = 12.sp
+                                        style = de.tipau.promille.AppText.caption
                                     )
                                 }
                             }
@@ -251,11 +252,11 @@ fun AddFriendSheet(
                                         tint = AppColors.statusGreen,
                                         modifier = Modifier.size(16.dp)
                                     )
+                                    // iOS: .appCaption (AddFriendSheet.swift:130).
                                     Text(
                                         text = "${found.displayName.ifEmpty { found.friendCode }} gefunden",
                                         color = AppColors.statusGreen,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium
+                                        style = de.tipau.promille.AppText.caption
                                     )
                                 }
                             }
@@ -272,10 +273,11 @@ fun AddFriendSheet(
                                         tint = AppColors.statusRed,
                                         modifier = Modifier.size(16.dp)
                                     )
+                                    // iOS: .appCaption (AddFriendSheet.swift:138).
                                     Text(
                                         text = lookupError!!,
                                         color = AppColors.statusRed,
-                                        fontSize = 12.sp
+                                        style = de.tipau.promille.AppText.caption
                                     )
                                 }
                             }
@@ -296,10 +298,11 @@ fun AddFriendSheet(
                 }
 
                 if (!liveMode) {
+                    // Fallback helper text: .appCaption
                     Text(
                         text = "Ohne Anmeldung wird kein Promillewert übertragen. Der Eintrag bleibt lokal auf diesem Gerät.",
                         color = AppColors.textMuted,
-                        fontSize = 12.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
 
@@ -334,10 +337,11 @@ private fun CleanInputField(
         contentAlignment = Alignment.CenterStart
     ) {
         if (value.isEmpty()) {
+            // iOS: .appBody (AddFriendSheet.swift:103, 151).
             Text(
                 text = placeholder,
                 color = AppColors.textMuted,
-                fontSize = 15.sp
+                style = de.tipau.promille.AppText.body
             )
         }
         BasicTextField(
@@ -345,10 +349,8 @@ private fun CleanInputField(
             onValueChange = onValueChange,
             singleLine = true,
             keyboardOptions = keyboardOptions,
-            textStyle = TextStyle(
-                color = AppColors.text,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium
+            textStyle = de.tipau.promille.AppText.body.copy(
+                color = AppColors.text
             ),
             cursorBrush = SolidColor(AppColors.accent),
             modifier = Modifier.fillMaxWidth()
