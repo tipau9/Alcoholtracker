@@ -86,16 +86,16 @@ fun RidePickerSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
+                    // iOS: .appHeadline / .appBodyBold (RidePickerSheet.swift:36).
                     Text(
                         text = "Sicher nach Hause",
                         color = AppColors.text,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        style = de.tipau.promille.AppText.headline
                     )
                     Text(
                         text = "Fahrdienst, Taxi oder ÖPNV wählen",
                         color = AppColors.textDim,
-                        fontSize = 13.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
                 Box(
@@ -116,8 +116,9 @@ fun RidePickerSheet(
             OutlinedTextField(
                 value = destination,
                 onValueChange = { destination = it },
-                placeholder = { Text("z.B. Hauptbahnhof, Heimatadresse", color = AppColors.textMuted) },
+                placeholder = { Text("z.B. Hauptbahnhof, Heimatadresse", color = AppColors.textMuted, style = de.tipau.promille.AppText.body) },
                 singleLine = true,
+                textStyle = de.tipau.promille.AppText.body.copy(color = AppColors.text),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = AppColors.text,
                     unfocusedTextColor = AppColors.text,
@@ -159,8 +160,10 @@ fun RidePickerSheet(
                         Icon(de.tipau.promille.ui.components.AppIcons.Car, null, tint = AppColors.accent, modifier = Modifier.size(26.dp))
                         Spacer(Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Mit Uber fahren", color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                            Text("App öffnen und Fahrt bestellen", color = AppColors.textDim, fontSize = 12.sp)
+                            // iOS: .appBodyBold (RidePickerSheet.swift:92).
+                            Text("Mit Uber fahren", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
+                            // iOS: .appCaption (RidePickerSheet.swift:439).
+                            Text("App öffnen und Fahrt bestellen", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                         }
                         Text("›", color = AppColors.textMuted, fontSize = 22.sp)
                     }
@@ -182,8 +185,10 @@ fun RidePickerSheet(
                         Icon(de.tipau.promille.ui.components.AppIcons.Taxi, null, tint = AppColors.accent, modifier = Modifier.size(26.dp))
                         Spacer(Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Taxi Deutschland (22456)", color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                            Text("Bundesweiter Taxi-Rufservice per Anruf", color = AppColors.textDim, fontSize = 12.sp)
+                            // iOS: .appBodyBold (RidePickerSheet.swift:92).
+                            Text("Taxi Deutschland (22456)", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
+                            // iOS: .appCaption (RidePickerSheet.swift:439).
+                            Text("Bundesweiter Taxi-Rufservice per Anruf", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                         }
                         Text("›", color = AppColors.textMuted, fontSize = 22.sp)
                     }
@@ -210,8 +215,10 @@ fun RidePickerSheet(
                         Icon(de.tipau.promille.ui.components.AppIcons.Train, null, tint = AppColors.accent, modifier = Modifier.size(26.dp))
                         Spacer(Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Öffentlicher Nahverkehr", color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                            Text("Route in Google Maps planen", color = AppColors.textDim, fontSize = 12.sp)
+                            // iOS: .appBodyBold (RidePickerSheet.swift:92).
+                            Text("Öffentlicher Nahverkehr", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
+                            // iOS: .appCaption (RidePickerSheet.swift:439).
+                            Text("Route in Google Maps planen", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                         }
                         Text("›", color = AppColors.textMuted, fontSize = 22.sp)
                     }
@@ -234,8 +241,10 @@ fun RidePickerSheet(
                             Icon(de.tipau.promille.ui.components.AppIcons.Phone, null, tint = AppColors.accent, modifier = Modifier.size(26.dp))
                             Spacer(Modifier.width(14.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Notfallkontakt anrufen", color = AppColors.statusGreen, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                                Text("Tel: $emergencyContactPhone", color = AppColors.textDim, fontSize = 12.sp)
+                                // iOS: .appBodyBold (RidePickerSheet.swift:92).
+                                Text("Notfallkontakt anrufen", color = AppColors.statusGreen, style = de.tipau.promille.AppText.bodyBold)
+                                // iOS: .appCaption (RidePickerSheet.swift:439).
+                                Text("Tel: $emergencyContactPhone", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                             }
                             Text("›", color = AppColors.textMuted, fontSize = 22.sp)
                         }

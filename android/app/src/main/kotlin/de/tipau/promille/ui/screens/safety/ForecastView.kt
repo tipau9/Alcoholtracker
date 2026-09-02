@@ -107,11 +107,11 @@ fun ForecastView(
                 modifier = Modifier.size(14.dp)
             )
             Spacer(Modifier.width(8.dp))
+            // iOS: .appCaptionBold (ForecastView.swift:122).
             Text(
                 text = "Vorausschau",
                 color = AppColors.accent,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold
+                style = de.tipau.promille.AppText.captionBold
             )
             Spacer(Modifier.weight(1f))
             if (profile.conservativeForSafety) {
@@ -121,11 +121,11 @@ fun ForecastView(
                         .background(AppColors.statusOrange)
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
+                    // iOS: .appMicro (ForecastView.swift:127).
                     Text(
                         text = "WORST-CASE",
                         color = AppColors.background,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
+                        style = de.tipau.promille.AppText.micro,
                         letterSpacing = 0.5.sp
                     )
                 }
@@ -153,17 +153,18 @@ fun ForecastView(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
+                        // iOS: .appMicro.tracking(1) (ForecastView.swift:144).
                         Text(
                             text = "WANN MUSST DU FIT SEIN?",
                             color = AppColors.textMuted,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            style = de.tipau.promille.AppText.micro,
                             letterSpacing = 1.sp
                         )
+                        // iOS: .appCaption (ForecastView.swift:148).
                         Text(
-                            text = String.format(Locale.GERMAN, "%.1f h ab jetzt (%s Uhr)", targetHoursAhead, targetTimeStr),
+                            text = String.format(Locale.GERMANY, "%.1f h ab jetzt (%s Uhr)", targetHoursAhead, targetTimeStr),
                             color = AppColors.textDim,
-                            fontSize = 12.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
                 }
@@ -176,11 +177,11 @@ fun ForecastView(
 
             // Target BAC Picker
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // iOS: .appMicro.tracking(1) (ForecastView.swift:174).
                 Text(
                     text = "GRENZWERT",
                     color = AppColors.textMuted,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    style = de.tipau.promille.AppText.micro,
                     letterSpacing = 1.sp
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -198,11 +199,11 @@ fun ForecastView(
                                 .clickable { targetBac = limit }
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
+                            // iOS: .appCaption (ForecastView.swift:183).
                             Text(
                                 text = label,
                                 color = if (isSelected) AppColors.background else AppColors.textDim,
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                                style = de.tipau.promille.AppText.caption
                             )
                         }
                     }
@@ -230,16 +231,17 @@ fun ForecastView(
                             modifier = Modifier.size(28.dp)
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            // iOS: .appBodyBold (ForecastView.swift:210).
                             Text(
                                 text = "Besser nichts mehr trinken",
                                 color = AppColors.statusRed,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
+                                style = de.tipau.promille.AppText.bodyBold
                             )
+                            // iOS: .appCaption (ForecastView.swift:213).
                             Text(
                                 text = "Ziel-BAC bereits überschritten",
                                 color = AppColors.textDim,
-                                fontSize = 12.sp
+                                style = de.tipau.promille.AppText.caption
                             )
                         }
                     }
@@ -249,28 +251,31 @@ fun ForecastView(
                             verticalAlignment = Alignment.Bottom,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
+                            // iOS: .system(size: 52, weight: .light, design: .serif) (ForecastView.swift:220)
                             Text(
                                 text = "$allowedDrinks",
                                 color = if (allowedDrinks > 0) AppColors.accent else AppColors.textDim,
-                                fontSize = 44.sp,
+                                fontSize = 52.sp,
                                 fontFamily = AppSerif,
                                 fontWeight = FontWeight.Light
                             )
+                            // iOS: .appCaption (ForecastView.swift:224).
                             Text(
                                 text = "noch möglich",
                                 color = AppColors.textDim,
-                                fontSize = 13.sp,
+                                style = de.tipau.promille.AppText.caption,
                                 modifier = Modifier.padding(bottom = 6.dp)
                             )
                         }
+                        // iOS: .appMicro (ForecastView.swift:228).
                         Text(
                             text = String.format(
-                                Locale.GERMAN,
+                                Locale.GERMANY,
                                 "Standarddrinks · je ~%.2f ‰ Budget (konservativ)",
                                 singleBeerBac
                             ),
                             color = AppColors.textMuted,
-                            fontSize = 10.sp
+                            style = de.tipau.promille.AppText.micro
                         )
                     }
                 }

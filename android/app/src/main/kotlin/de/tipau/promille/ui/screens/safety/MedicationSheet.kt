@@ -73,16 +73,17 @@ fun MedicationSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
+                        // iOS: .appHeadline
                         Text(
                             text = "Medikamente & Alkohol",
                             color = AppColors.text,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.headline
                         )
+                        // iOS: .appCaption
                         Text(
                             text = "Wichtige Wechselwirkungen und Warnhinweise",
                             color = AppColors.textDim,
-                            fontSize = 13.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
                     Box(
@@ -116,18 +117,18 @@ fun MedicationSheet(
                         }
                         Spacer(Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
+                            // iOS: .appBodyBold
                             Text(
                                 text = med.name,
                                 color = AppColors.text,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
+                                style = de.tipau.promille.AppText.bodyBold
                             )
                             Spacer(Modifier.height(3.dp))
+                            // iOS: .appCaption
                             Text(
                                 text = med.warning,
                                 color = AppColors.textDim,
-                                fontSize = 12.sp,
-                                lineHeight = 16.sp
+                                style = de.tipau.promille.AppText.caption
                             )
                         }
                     }
