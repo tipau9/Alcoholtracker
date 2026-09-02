@@ -87,16 +87,17 @@ fun SettingsToggleRow(
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
+                // iOS STToggleRow: label is .appBody (17sp) - was 15sp.
                 text = title,
                 color = AppColors.text,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Normal
+                style = de.tipau.promille.AppText.body
             )
             if (subtitle != null) {
                 Text(
+                    // iOS: .appCaption (13sp) - was 12sp.
                     text = subtitle,
                     color = AppColors.textDim,
-                    fontSize = 12.sp,
+                    style = de.tipau.promille.AppText.caption,
                     lineHeight = 16.sp
                 )
             }
@@ -132,9 +133,10 @@ fun SettingsNumericRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
+            // iOS STNumericRow: label .appBody (17sp) - was 15sp.
             text = label,
             color = AppColors.text,
-            fontSize = 15.sp,
+            style = de.tipau.promille.AppText.body,
             modifier = Modifier.weight(1f)
         )
         androidx.compose.foundation.text.BasicTextField(
@@ -146,11 +148,12 @@ fun SettingsNumericRow(
             },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            textStyle = androidx.compose.ui.text.TextStyle(
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = AppColors.accent,
-                textAlign = androidx.compose.ui.text.style.TextAlign.End
+            // iOS: .appBodyBold (SemiBold, not Bold) - was 15sp Bold.
+            textStyle = de.tipau.promille.AppText.bodyBold.merge(
+                androidx.compose.ui.text.TextStyle(
+                    color = AppColors.accent,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.End
+                )
             ),
             cursorBrush = androidx.compose.ui.graphics.SolidColor(AppColors.accent),
             modifier = Modifier.width(74.dp)
@@ -160,7 +163,7 @@ fun SettingsNumericRow(
             Text(
                 text = unit,
                 color = AppColors.textDim,
-                fontSize = 13.sp,
+                style = de.tipau.promille.AppText.caption,
                 modifier = Modifier.width(36.dp)
             )
         }
@@ -190,9 +193,11 @@ fun SettingsContactRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
+            // iOS STContactField: label and field are both .appBody (17sp) -
+            // was 15sp throughout.
             text = label,
             color = AppColors.text,
-            fontSize = 15.sp,
+            style = de.tipau.promille.AppText.body,
             modifier = Modifier.width(120.dp)
         )
         Box(
@@ -203,7 +208,7 @@ fun SettingsContactRow(
                 Text(
                     text = placeholder,
                     color = AppColors.textMuted,
-                    fontSize = 15.sp,
+                    style = de.tipau.promille.AppText.body,
                     textAlign = androidx.compose.ui.text.style.TextAlign.End,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -216,11 +221,11 @@ fun SettingsContactRow(
                 },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-                textStyle = androidx.compose.ui.text.TextStyle(
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = AppColors.accent,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.End
+                textStyle = de.tipau.promille.AppText.body.merge(
+                    androidx.compose.ui.text.TextStyle(
+                        color = AppColors.accent,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.End
+                    )
                 ),
                 cursorBrush = androidx.compose.ui.graphics.SolidColor(AppColors.accent),
                 modifier = Modifier.fillMaxWidth()
@@ -274,17 +279,20 @@ fun SettingsSliderRow(
                     Spacer(Modifier.width(8.dp))
                 }
                 Text(
+                    // iOS STElimRow/STThresholdRow: label .appBody (17sp) -
+                    // was 15sp.
                     text = label,
                     color = AppColors.text,
-                    fontSize = 15.sp
+                    style = de.tipau.promille.AppText.body
                 )
             }
             Spacer(Modifier.width(12.dp))
             Text(
+                // iOS: .appCaptionBold - matches already, migrated for
+                // consistency/family.
                 text = valueDisplay,
                 color = activeColor,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold
+                style = de.tipau.promille.AppText.captionBold
             )
         }
         Spacer(Modifier.height(4.dp))
@@ -301,8 +309,8 @@ fun SettingsSliderRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = minLabel, color = AppColors.textDim, fontSize = 11.sp)
-                Text(text = maxLabel, color = AppColors.textDim, fontSize = 11.sp)
+                Text(text = minLabel, color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
+                Text(text = maxLabel, color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
             }
         }
     }
@@ -327,7 +335,10 @@ fun SettingsSelectRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = label, color = AppColors.text, fontSize = 15.sp)
+        // iOS STHomeStyleRow/STStomachRow: a native Picker button, .appBody
+        // throughout (no .font() override on the label or selected value)
+        // - both were 15sp here.
+        Text(text = label, color = AppColors.text, style = de.tipau.promille.AppText.body)
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -335,8 +346,7 @@ fun SettingsSelectRow(
             Text(
                 text = value,
                 color = AppColors.accent,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium
+                style = de.tipau.promille.AppText.body
             )
             Icon(
                 imageVector = UnfoldMoreIcon,
@@ -364,12 +374,13 @@ fun SettingsInfoRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = label, color = AppColors.text, fontSize = 15.sp)
+        // No single iOS struct backs this row; appBody/appBodyBold match the
+        // surrounding rows' label/value weight pairing (was 15sp/15sp Bold).
+        Text(text = label, color = AppColors.text, style = de.tipau.promille.AppText.body)
         Text(
             text = value,
             color = AppColors.textDim,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold
+            style = de.tipau.promille.AppText.bodyBold
         )
     }
 }
@@ -406,9 +417,10 @@ fun SettingsDestructiveRow(
             Spacer(Modifier.width(12.dp))
         }
         Text(
+            // iOS STDestructiveRow: .appBody (17sp) - was 15sp.
             text = label,
             color = AppColors.statusRed,
-            fontSize = 15.sp
+            style = de.tipau.promille.AppText.body
         )
         Spacer(Modifier.weight(1f))
     }
@@ -449,15 +461,17 @@ fun SettingsNavigationRow(
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
+                // iOS STSkinRow-pattern: title .appBody (17sp) - was 15sp.
                 text = title,
                 color = AppColors.text,
-                fontSize = 15.sp
+                style = de.tipau.promille.AppText.body
             )
             if (subtitle != null) {
                 Text(
+                    // iOS: .appCaption - was 12sp.
                     text = subtitle,
                     color = AppColors.textDim,
-                    fontSize = 12.sp
+                    style = de.tipau.promille.AppText.caption
                 )
             }
         }
