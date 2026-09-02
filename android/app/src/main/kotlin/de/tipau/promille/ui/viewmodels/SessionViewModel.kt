@@ -576,9 +576,9 @@ class SessionViewModel(
     // applied. One pair of functions now, HomeWidgetType's.
     private fun updateWidgets(transform: (Set<HomeWidgetType>) -> Set<HomeWidgetType>) {
         val currentProfile = profileEntity.value ?: return
-        val next = transform(HomeWidgetType.parseActiveWidgets(currentProfile.activeWidgetsRaw))
-        userProfileRepository.updateDebounced {
-            it.copy(activeWidgetsRaw = HomeWidgetType.serialize(next))
-        }
+        val raw = currentProfile.activeWidgetsRaw
+        val next = transform(HomeWidgetType.parseActiveWidgets(raw))
+        val serialized = HomeWidgetType.serialize(next, HomeWidgetType.foreignTokens(raw))
+        userProfileRepository.updateDebounced { it.copy(activeWidgetsRaw = serialized) }
     }
 }

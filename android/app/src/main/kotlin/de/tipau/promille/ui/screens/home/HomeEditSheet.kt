@@ -65,9 +65,24 @@ enum class HomeWidgetType(val raw: String, val localizedName: String, val icon: 
             return entries.filter { tokens.contains(it.raw) }.toSet()
         }
 
-        fun serialize(widgets: Set<HomeWidgetType>): String {
-            if (widgets.isEmpty()) return EXPLICIT_NONE_RAW
-            return widgets.joinToString(",") { it.raw }
+        /**
+         * iOS has four widget types this enum does not - streak, crewStatus,
+         * drinkingSpeed and hangover (UserProfile.swift:118-121) - and its
+         * fresh profiles write all sixteen tokens (UserProfile.swift:442).
+         * Rewriting activeWidgetsRaw from these twelve alone would delete the
+         * other four on the next sync, and iOS honours any non-empty list
+         * exactly, so they would stay gone over there.
+         */
+        fun foreignTokens(raw: String): List<String> {
+            if (raw == EXPLICIT_NONE_RAW || raw.isBlank()) return emptyList()
+            return raw.split(",").map { it.trim() }
+                .filter { token -> token.isNotEmpty() && entries.none { it.raw == token } }
+        }
+
+        fun serialize(widgets: Set<HomeWidgetType>, foreign: List<String> = emptyList()): String {
+            val tokens = widgets.map { it.raw } + foreign
+            if (tokens.isEmpty()) return EXPLICIT_NONE_RAW
+            return tokens.joinToString(",")
         }
     }
 }
@@ -88,11 +103,14 @@ fun HomeEditSheet(
     var activeWidgets by remember {
         mutableStateOf(HomeWidgetType.parseActiveWidgets(profile?.activeWidgetsRaw ?: ""))
     }
+    // Every Speichern rewrites the whole string, so anything only iOS knows
+    // about has to ride along.
+    val foreignWidgets = remember { HomeWidgetType.foreignTokens(profile?.activeWidgetsRaw ?: "") }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = {
-            onSave(homeStyle, warningThreshold.toDouble(), HomeWidgetType.serialize(activeWidgets))
+            onSave(homeStyle, warningThreshold.toDouble(), HomeWidgetType.serialize(activeWidgets, foreignWidgets))
             onDismiss()
         },
         sheetState = sheetState,
@@ -135,7 +153,7 @@ fun HomeEditSheet(
                             .background(AppColors.card)
                             .border(1.dp, AppColors.border, CircleShape)
                             .clickable(onClick = {
-                                onSave(homeStyle, warningThreshold.toDouble(), HomeWidgetType.serialize(activeWidgets))
+                                onSave(homeStyle, warningThreshold.toDouble(), HomeWidgetType.serialize(activeWidgets, foreignWidgets))
                                 onDismiss()
                             }),
                         contentAlignment = Alignment.Center
@@ -266,7 +284,7 @@ fun HomeEditSheet(
                     PrimaryButton(
                         text = "Fertig",
                         onClick = {
-                            onSave(homeStyle, warningThreshold.toDouble(), HomeWidgetType.serialize(activeWidgets))
+                            onSave(homeStyle, warningThreshold.toDouble(), HomeWidgetType.serialize(activeWidgets, foreignWidgets))
                             onDismiss()
                         }
                     )
