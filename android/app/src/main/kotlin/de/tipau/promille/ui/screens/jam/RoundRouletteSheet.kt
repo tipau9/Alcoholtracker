@@ -22,6 +22,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -88,10 +92,16 @@ fun RoundRouletteSheet(
         finished = true
     }
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // iOS: .interactiveDismissDisabled(!finished) (RoundRouletteSheet.swift:53) -
+    // block both the swipe gesture and the back-button/scrim dismiss path while
+    // the ball is still running, so a jam-synced spin can't be bailed out of.
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+        confirmValueChange = { finished }
+    )
 
     ModalBottomSheet(
-        onDismissRequest = onClose,
+        onDismissRequest = { if (finished) onClose() },
         sheetState = sheetState,
         containerColor = Color.Transparent,
         scrimColor = Color.Black.copy(alpha = 0.65f),
@@ -178,7 +188,21 @@ fun RoundRouletteSheet(
                 val numSegments = participants.size.coerceAtLeast(1)
                 val sweepAngle = 360f / numSegments
 
-                Canvas(modifier = Modifier.fillMaxSize()) {
+                Canvas(
+                    // iOS: .accessibilityElement(children: .ignore) + .accessibilityLabel(...)
+                    // (RoundRouletteSheet.swift:36-41) - a screen reader gets nothing from a
+                    // bare Canvas otherwise.
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .semantics {
+                            contentDescription = if (finished) {
+                                "Roulette beendet. $winnerName muss die nächste Runde ausgeben."
+                            } else {
+                                "Roulette mit ${participants.size} Teilnehmern dreht sich"
+                            }
+                            liveRegion = LiveRegionMode.Polite
+                        }
+                ) {
                     val center = Offset(size.width / 2, size.height / 2)
                     val radius = size.width / 2
 
