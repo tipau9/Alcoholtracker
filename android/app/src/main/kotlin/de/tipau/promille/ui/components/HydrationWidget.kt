@@ -100,9 +100,10 @@ fun HydrationWidget(
             ) {
                 Icon(de.tipau.promille.ui.components.AppIcons.Water, null, tint = AppColors.accent, modifier = Modifier.size(20.dp))
                 Text(
+                    // iOS: .appCaption - was 12sp.
                     text = "Noch keine Getränke heute.",
                     color = AppColors.textMuted,
-                    fontSize = 12.sp
+                    style = de.tipau.promille.AppText.caption
                 )
             }
 
@@ -167,20 +168,19 @@ fun HydrationWidget(
                     Spacer(Modifier.width(12.dp))
 
                     Text(
+                        // iOS: .appBody - was 14sp.
                         text = "Netto",
                         color = AppColors.text,
-                        fontSize = 14.sp
+                        style = de.tipau.promille.AppText.body
                     )
 
                     Spacer(Modifier.weight(1f))
 
                     Text(
+                        // iOS: .appBodyBold (SemiBold, not Bold) - was 14sp Bold.
                         text = netValueString,
                         color = netColor,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = de.tipau.promille.AppSans,
-                        style = de.tipau.promille.TabularFigures
+                        style = de.tipau.promille.AppText.bodyBold.merge(de.tipau.promille.TabularFigures)
                     )
 
                     Spacer(Modifier.width(8.dp))
@@ -192,10 +192,11 @@ fun HydrationWidget(
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
+                            // iOS: .appMicro, no weight override (was
+                            // 10sp Medium here).
                             text = netLabel,
                             color = netColor,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Medium
+                            style = de.tipau.promille.AppText.micro
                         )
                     }
                 }
@@ -266,13 +267,14 @@ fun HydrationWidget(
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
+                        // iOS: .appCaption - was 12sp.
                         text = if (extraWater == 0) {
                             "Kein extra Wasser nötig."
                         } else {
                             "Trinke noch ca. $extraWater ml Wasser extra."
                         },
                         color = AppColors.textDim,
-                        fontSize = 12.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
 
@@ -285,7 +287,7 @@ fun HydrationWidget(
                         Text(
                             text = "Inkl. ca. ${extraSweatML.toInt()} ml Schweißverlust (warmes Wetter).",
                             color = AppColors.textMuted,
-                            fontSize = 12.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
                 }
@@ -320,19 +322,17 @@ private fun HydrationStatRow(
         Spacer(Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, color = AppColors.text, fontSize = 14.sp)
+            Text(label, color = AppColors.text, style = de.tipau.promille.AppText.body)
             if (detail != null) {
-                Text(detail, color = AppColors.textMuted, fontSize = 10.sp)
+                Text(detail, color = AppColors.textMuted, style = de.tipau.promille.AppText.micro)
             }
         }
 
         Text(
+            // iOS: .appBodyBold (SemiBold, not Bold) - was 14sp Bold.
             text = value,
             color = valueColor,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = de.tipau.promille.AppSans,
-            style = de.tipau.promille.TabularFigures
+            style = de.tipau.promille.AppText.bodyBold.merge(de.tipau.promille.TabularFigures)
         )
     }
 }
@@ -360,11 +360,11 @@ private fun WaterLogRow(
         }
 
         Column(modifier = Modifier.weight(1f)) {
-            Text("Wasser geloggt", color = AppColors.text, fontSize = 14.sp)
+            Text("Wasser geloggt", color = AppColors.text, style = de.tipau.promille.AppText.body)
             Text(
                 text = "$loggedGlasses ${if (loggedGlasses == 1) "Glas" else "Gläser"} (${loggedML.toInt()} ml)",
                 color = AppColors.textMuted,
-                fontSize = 10.sp
+                style = de.tipau.promille.AppText.micro
             )
         }
 

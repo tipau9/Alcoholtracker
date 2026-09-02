@@ -72,14 +72,15 @@ fun SipCounterView(
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
+                    // iOS: .appBodyBold (17sp SemiBold) - was 16sp Bold.
                     text = "Schluck-Zähler",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = de.tipau.promille.AppText.bodyBold,
                     color = AppColors.text
                 )
                 Text(
+                    // iOS: .appCaption - was 12sp.
                     text = "${drinkName}  ${String.format(Locale.GERMANY, "%.1f", drinkAbv)}% vol",
-                    fontSize = 12.sp,
+                    style = de.tipau.promille.AppText.caption,
                     color = AppColors.textDim,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -123,8 +124,9 @@ fun SipCounterView(
             )
 
             Text(
+                // iOS: .appCaption - was 12sp.
                 text = if (sipCount == 1) "Schluck" else "Schlucke",
-                fontSize = 12.sp,
+                style = de.tipau.promille.AppText.caption,
                 color = AppColors.textMuted
             )
 
@@ -234,9 +236,9 @@ fun SipCounterView(
             contentAlignment = Alignment.Center
         ) {
             Text(
+                // iOS: .appBodyBold (17sp SemiBold) - was 16sp Bold.
                 text = commitText,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
+                style = de.tipau.promille.AppText.bodyBold,
                 color = if (sipCount > 0) Color.White else AppColors.textMuted
             )
         }
