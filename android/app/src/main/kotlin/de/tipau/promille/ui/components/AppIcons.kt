@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.*
 
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
@@ -13,7 +14,13 @@ import androidx.compose.ui.unit.dp
 
 object AppIcons {
 
-    private fun buildIcon(name: String, block: androidx.compose.ui.graphics.vector.PathBuilder.() -> Unit): ImageVector {
+    // EvenOdd is opt-in (default NonZero preserves every existing icon here)
+    // and needed by any glyph with a cutout: a hole, a slash, a notch.
+    private fun buildIcon(
+        name: String,
+        fillType: PathFillType = PathFillType.NonZero,
+        block: androidx.compose.ui.graphics.vector.PathBuilder.() -> Unit
+    ): ImageVector {
         return ImageVector.Builder(
             name = name,
             defaultWidth = 24.dp,
@@ -21,7 +28,7 @@ object AppIcons {
             viewportWidth = 24f,
             viewportHeight = 24f
         ).apply {
-            path(fill = SolidColor(Color.White)) {
+            path(fill = SolidColor(Color.White), pathFillType = fillType) {
                 block()
             }
         }.build()

@@ -543,7 +543,7 @@ fun CrewView(
                         }
                         .padding(14.dp)
                 ) {
-                    Icon(Icons.Filled.Warning, "SOS", tint = AppColors.statusRed, modifier = Modifier.size(20.dp))
+                    de.tipau.promille.ui.components.SOSGlyph(tint = AppColors.statusRed, size = 20.dp)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
@@ -582,7 +582,7 @@ fun CrewView(
                             .padding(14.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.Warning, "SOS", tint = AppColors.statusRed, modifier = Modifier.size(22.dp))
+                            de.tipau.promille.ui.components.SOSGlyph(tint = AppColors.statusRed, size = 22.dp)
                             Spacer(Modifier.width(12.dp))
                             Column {
                                 Text(

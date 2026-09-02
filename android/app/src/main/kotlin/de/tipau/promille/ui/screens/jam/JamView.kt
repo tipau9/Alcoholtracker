@@ -751,12 +751,7 @@ private fun ActiveJam(
                     .background(AppColors.statusRed)
                     .padding(horizontal = 20.dp, vertical = 10.dp)
             ) {
-                Icon(
-                    Icons.Filled.Warning,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(15.dp)
-                )
+                de.tipau.promille.ui.components.SOSGlyph(tint = Color.White, size = 15.dp)
                 Spacer(Modifier.width(10.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text("SOS aktiv", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
