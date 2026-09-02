@@ -145,10 +145,10 @@ fun HomeEditSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
+                        // iOS: .appHeadline (28sp SemiBold) - was 20sp Bold.
                         text = "Home anpassen",
                         color = AppColors.text,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        style = de.tipau.promille.AppText.headline
                     )
                     Box(
                         modifier = Modifier
@@ -217,16 +217,19 @@ fun HomeEditSheet(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    // No exact iOS label match (this section
+                                    // is HomeEditSheet.swift:88-110's
+                                    // WARNSCHWELLE slider, reworded); the
+                                    // value itself does match - .appCaptionBold.
                                     Text(
                                         text = "Limit",
                                         color = AppColors.textDim,
-                                        fontSize = 14.sp
+                                        style = de.tipau.promille.AppText.caption
                                     )
                                     Text(
                                         text = "${String.format(Locale.GERMANY, "%.2f", warningThreshold)} ‰",
                                         color = AppColors.accent,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold
+                                        style = de.tipau.promille.AppText.captionBold
                                     )
                                 }
 
@@ -241,8 +244,8 @@ fun HomeEditSheet(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("0,2 ‰ (Fahranfänger)", color = AppColors.textDim, fontSize = 11.sp)
-                                    Text("1,5 ‰ (Strikte Grenze)", color = AppColors.textDim, fontSize = 11.sp)
+                                    Text("0,2 ‰ (Fahranfänger)", color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
+                                    Text("1,5 ‰ (Strikte Grenze)", color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
                                 }
                             }
                         }
@@ -324,10 +327,11 @@ private fun StyleCard(
                 modifier = Modifier.size(24.dp)
             )
             Text(
+                // iOS HEStyleCard: .appBodyBold unconditionally - was 14sp,
+                // and varied weight by selection where iOS doesn't.
                 text = title,
                 color = if (isSelected) AppColors.text else AppColors.textDim,
-                fontSize = 14.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                style = de.tipau.promille.AppText.bodyBold
             )
         }
     }
@@ -364,10 +368,11 @@ private fun ToggleGroup(
                                 modifier = Modifier.size(20.dp)
                             )
                             Text(
+                                // iOS HEWidgetToggleRow: .appBody, no weight
+                                // override - was 14sp Medium.
                                 text = wt.localizedName,
                                 color = AppColors.text,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
+                                style = de.tipau.promille.AppText.body
                             )
                         }
 
