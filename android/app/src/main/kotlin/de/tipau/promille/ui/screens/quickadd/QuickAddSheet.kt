@@ -387,7 +387,6 @@ fun QuickAddSheet(
                     .fillMaxWidth()
                     .fillMaxHeight(0.92f)
             ) {
-                // Header matching QAHeader in iOS
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -396,11 +395,11 @@ fun QuickAddSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // iOS: .appHeadline (QuickAddSheet.swift:97, 439).
                 Text(
                     text = "Drink hinzufügen",
                     color = AppColors.text,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.SemiBold
+                    style = de.tipau.promille.AppText.headline
                 )
                 Box(
                     modifier = Modifier
@@ -444,20 +443,18 @@ fun QuickAddSheet(
                     )
                     Box(modifier = Modifier.weight(1f)) {
                         if (searchQuery.isEmpty()) {
+                            // iOS: .appBody (QuickAddSheet.swift:467).
                             Text(
                                 text = "Drink suchen...",
                                 color = AppColors.textDim,
-                                fontSize = 16.sp
+                                style = de.tipau.promille.AppText.body
                             )
                         }
                         BasicTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
                             singleLine = true,
-                            textStyle = TextStyle(
-                                color = AppColors.text,
-                                fontSize = 16.sp
-                            ),
+                            textStyle = de.tipau.promille.AppText.body.copy(color = AppColors.text),
                             cursorBrush = SolidColor(AppColors.accent),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -474,7 +471,7 @@ fun QuickAddSheet(
                     }
                 }
 
-                // Barcode scanner button
+                // Barcode scanner trigger
                 Box(
                     modifier = Modifier
                         .size(44.dp)
@@ -493,8 +490,8 @@ fun QuickAddSheet(
                 }
             }
 
-            // Segmented Tab Toggle [ Getränke | Mische ]
-            if (searchQuery.isBlank()) {
+            // Tab Picker (Getränke / Mische) - visible only when not searching
+            if (searchQuery.isEmpty()) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -513,11 +510,11 @@ fun QuickAddSheet(
                             .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
+                        // iOS: .appCaptionBold (QuickAddSheet.swift:1249).
                         Text(
                             "Getränke",
                             color = if (activeTab == QATab.DRINKS) AppColors.background else AppColors.textDim,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
+                            style = de.tipau.promille.AppText.captionBold
                         )
                     }
                     Box(
@@ -529,11 +526,11 @@ fun QuickAddSheet(
                             .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
+                        // iOS: .appCaptionBold (QuickAddSheet.swift:1249).
                         Text(
                             "Mische",
                             color = if (activeTab == QATab.MIXES) AppColors.background else AppColors.textDim,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
+                            style = de.tipau.promille.AppText.captionBold
                         )
                     }
                 }
@@ -573,11 +570,11 @@ fun QuickAddSheet(
                                 modifier = Modifier.size(11.dp)
                             )
                         }
+                        // iOS: .appCaptionBold (QuickAddSheet.swift:842).
                         Text(
                             text = cat.label,
                             color = if (isSelected) AppColors.background else AppColors.textDim,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
+                            style = de.tipau.promille.AppText.captionBold
                         )
                     }
                 }
@@ -634,17 +631,18 @@ fun QuickAddSheet(
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
+                                        // iOS: .appBody (QuickAddSheet.swift:682).
                                         Text(
                                             text = "Kein Ergebnis für \"$searchQuery\"",
                                             color = AppColors.textDim,
-                                            fontSize = 15.sp
+                                            style = de.tipau.promille.AppText.body
                                         )
                                         TextButton(onClick = { showCustomBrandDialog = true }) {
+                                            // iOS: .appCaptionBold (QuickAddSheet.swift:686).
                                             Text(
                                                 "Als eigene Marke erfassen",
                                                 color = AppColors.accent,
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.SemiBold
+                                                style = de.tipau.promille.AppText.captionBold
                                             )
                                         }
                                     }
@@ -757,18 +755,19 @@ private fun QAFavoriteCard(
             )
         }
 
+        // iOS: .appBodyBold (QuickAddSheet.swift:552).
         Text(
             text = template.name,
             color = AppColors.text,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
+            style = de.tipau.promille.AppText.bodyBold,
             maxLines = 2
         )
 
+        // iOS: .appMicro (QuickAddSheet.swift:558).
         Text(
             text = "${template.volume.toInt()} ml · ${String.format(Locale.GERMANY, "%.1f", template.abv)} %",
             color = AppColors.textDim,
-            fontSize = 11.sp
+            style = de.tipau.promille.AppText.micro
         )
 
         if (estimatedBac > 0.005) {
@@ -778,11 +777,11 @@ private fun QAFavoriteCard(
                     .background(AppColors.accent.copy(alpha = 0.15f))
                     .padding(horizontal = 7.dp, vertical = 3.dp)
             ) {
+                // iOS: .appMicro (QuickAddSheet.swift:731).
                 Text(
                     text = String.format(Locale.GERMANY, "+%.2f‰", estimatedBac),
                     color = AppColors.accent,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold
+                    style = de.tipau.promille.AppText.micro
                 )
             }
         }
@@ -857,16 +856,18 @@ private fun QADrinkRow(
         Spacer(Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
+            // iOS: .appBody (QuickAddSheet.swift:640).
             Text(
                 text = template.name,
                 color = AppColors.text,
-                fontSize = 16.sp,
+                style = de.tipau.promille.AppText.body,
                 maxLines = 1
             )
+            // iOS: .appMicro (QuickAddSheet.swift:644).
             Text(
                 text = "${template.volume.toInt()} ml · ${String.format(Locale.GERMANY, "%.1f", template.abv)} %",
                 color = AppColors.textDim,
-                fontSize = 11.sp
+                style = de.tipau.promille.AppText.micro
             )
         }
 
@@ -877,11 +878,11 @@ private fun QADrinkRow(
                     .background(AppColors.accent.copy(alpha = 0.15f))
                     .padding(horizontal = 7.dp, vertical = 3.dp)
             ) {
+                // iOS: .appMicro (QuickAddSheet.swift:731).
                 Text(
                     text = String.format(Locale.GERMANY, "+%.2f‰", estimatedBac),
                     color = AppColors.accent,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold
+                    style = de.tipau.promille.AppText.micro
                 )
             }
             Spacer(Modifier.width(8.dp))
@@ -932,11 +933,11 @@ private fun QAActionChip(
                 tint = if (isFilledAccent) AppColors.background else AppColors.accent
             )
         }
+        // iOS: .appMicro (QuickAddSheet.swift:795).
         Text(
             text = title,
             color = AppColors.textDim,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
+            style = de.tipau.promille.AppText.micro,
             maxLines = 1
         )
     }
@@ -1084,11 +1085,11 @@ private fun SipTemplatePicker(
                         .padding(horizontal = 20.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // iOS: .appBodyBold (QuickAddSheet.swift:1177).
                     Text(
                         text = "Schluck-Zähler starten",
                         color = AppColors.text,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
+                        style = de.tipau.promille.AppText.bodyBold,
                         modifier = Modifier.weight(1f)
                     )
                     Box(
@@ -1131,14 +1132,12 @@ private fun SipTemplatePicker(
                 androidx.compose.foundation.text.BasicTextField(
                     value = query,
                     onValueChange = { query = it },
-                    textStyle = androidx.compose.ui.text.TextStyle(
-                        color = AppColors.text,
-                        fontSize = 15.sp
-                    ),
+                    textStyle = de.tipau.promille.AppText.body.copy(color = AppColors.text),
                     singleLine = true,
                     decorationBox = { inner ->
                         if (query.isEmpty()) {
-                            Text("Getränk suchen...", color = AppColors.textDim, fontSize = 15.sp)
+                            // iOS: .appBody (QuickAddSheet.swift:1191).
+                            Text("Getränk suchen...", color = AppColors.textDim, style = de.tipau.promille.AppText.body)
                         }
                         inner()
                     },
@@ -1178,17 +1177,19 @@ private fun SipTemplatePicker(
                             verticalArrangement = Arrangement.spacedBy(1.dp),
                             modifier = Modifier.weight(1f)
                         ) {
+                            // iOS: .appBody (QuickAddSheet.swift:1210).
                             Text(
                                 text = t.name,
                                 color = AppColors.text,
-                                fontSize = 15.sp,
+                                style = de.tipau.promille.AppText.body,
                                 maxLines = 1,
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
+                            // iOS: .appCaption (QuickAddSheet.swift:1211).
                             Text(
                                 text = "${String.format(Locale.GERMANY, "%.1f", t.abv)}% vol",
                                 color = AppColors.textDim,
-                                fontSize = 12.sp
+                                style = de.tipau.promille.AppText.caption
                             )
                         }
                         Icon(

@@ -150,11 +150,11 @@ fun CustomMixCreatorSheet(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // iOS: .appHeadline (MixCreatorSheet.swift:236).
                     Text(
                         text = "Mix erstellen",
                         color = AppColors.text,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        style = de.tipau.promille.AppText.headline
                     )
                     Box(
                         modifier = Modifier
@@ -183,7 +183,8 @@ fun CustomMixCreatorSheet(
                     ) {
                         Icon(AppIcons.Group, null, tint = AppColors.accent, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(10.dp))
-                        Text("Community-Mische ansehen", color = AppColors.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        // iOS: .appBody (MixCreatorSheet.swift:64).
+                        Text("Community-Mische ansehen", color = AppColors.text, style = de.tipau.promille.AppText.body, modifier = Modifier.weight(1f))
                         Icon(AppIcons.ChevronRight, null, tint = AppColors.textDim, modifier = Modifier.size(16.dp))
                     }
                 }
@@ -216,30 +217,27 @@ fun CustomMixCreatorSheet(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Gesamtmenge", color = AppColors.textDim, fontSize = 12.sp)
+                            Text("Gesamtmenge", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                             Text(
                                 String.format(Locale.GERMANY, "%.0f ml", totalVolume),
                                 color = AppColors.text,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
+                                style = de.tipau.promille.AppText.bodyBold.merge(de.tipau.promille.TabularFigures)
                             )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Alkoholgehalt", color = AppColors.textDim, fontSize = 12.sp)
+                            Text("Alkoholgehalt", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                             Text(
                                 String.format(Locale.GERMANY, "%.1f %%", effectiveAbv),
                                 color = AppColors.accent,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
+                                style = de.tipau.promille.AppText.bodyBold.merge(de.tipau.promille.TabularFigures)
                             )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Kalorien", color = AppColors.textDim, fontSize = 12.sp)
+                            Text("Kalorien", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                             Text(
                                 "$estimatedCalories kcal",
                                 color = AppColors.text,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
+                                style = de.tipau.promille.AppText.bodyBold.merge(de.tipau.promille.TabularFigures)
                             )
                         }
                     }
@@ -254,11 +252,11 @@ fun CustomMixCreatorSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     SectionLabel("Zutaten (${ingredients.size})")
+                    // iOS: .appBody (MixCreatorSheet.swift:197).
                     Text(
                         text = "+ Zutat hinzufügen",
                         color = AppColors.accent,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        style = de.tipau.promille.AppText.bodyBold,
                         modifier = Modifier
                             .clickable {
                                 ingredients.add(MixIngredientInput(name = "Zutat ${ingredients.size + 1}", volumeML = "100", abv = "0"))
@@ -296,7 +294,7 @@ fun CustomMixCreatorSheet(
                                 OutlinedTextField(
                                     value = item.volumeML,
                                     onValueChange = { item.volumeML = it.filter { c -> c.isDigit() } },
-                                    label = { Text("Menge (ml)", color = AppColors.textDim, fontSize = 11.sp) },
+                                    label = { Text("Menge (ml)", color = AppColors.textDim, style = de.tipau.promille.AppText.caption) },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     singleLine = true,
                                     colors = OutlinedTextFieldDefaults.colors(
@@ -310,7 +308,7 @@ fun CustomMixCreatorSheet(
                                 OutlinedTextField(
                                     value = item.abv,
                                     onValueChange = { item.abv = it.filter { c -> c.isDigit() || c == '.' || c == ',' } },
-                                    label = { Text("Vol. %", color = AppColors.textDim, fontSize = 11.sp) },
+                                    label = { Text("Vol. %", color = AppColors.textDim, style = de.tipau.promille.AppText.caption) },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     singleLine = true,
                                     colors = OutlinedTextFieldDefaults.colors(
@@ -400,7 +398,8 @@ fun CustomMixCreatorSheet(
                             .padding(vertical = 15.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Sofort trinken", color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        // iOS: .appBodyBold (MixCreatorSheet.swift:532).
+                        Text("Sofort trinken", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
                     }
 
                     PrimaryButton(

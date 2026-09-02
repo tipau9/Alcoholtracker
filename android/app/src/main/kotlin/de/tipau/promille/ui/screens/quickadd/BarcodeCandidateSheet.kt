@@ -81,11 +81,11 @@ fun BarcodeCandidateSheet(
                 .padding(top = 8.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // iOS: .appHeadline (QuickAddSheet.swift:1083).
             Text(
                 text = if (candidate.foundInDatabase) "Gescannter Drink" else "Neues Produkt",
                 color = AppColors.text,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+                style = de.tipau.promille.AppText.headline
             )
 
             Row(
@@ -98,7 +98,8 @@ fun BarcodeCandidateSheet(
                     tint = sourceColor,
                     modifier = Modifier.size(16.dp)
                 )
-                Text(text = sourceMessage, color = if (candidate.foundInDatabase) sourceColor else AppColors.textDim, fontSize = 13.sp)
+                // iOS: .appCaption (QuickAddSheet.swift:1094).
+                Text(text = sourceMessage, color = if (candidate.foundInDatabase) sourceColor else AppColors.textDim, style = de.tipau.promille.AppText.caption)
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -134,7 +135,8 @@ fun BarcodeCandidateSheet(
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = category.germanName, color = AppColors.text, fontSize = 16.sp, modifier = Modifier.weight(1f))
+                        // iOS: .appBody (QuickAddSheet.swift:1115).
+                        Text(text = category.germanName, color = AppColors.text, style = de.tipau.promille.AppText.body, modifier = Modifier.weight(1f))
                         Icon(AppIcons.ChevronDown, contentDescription = null, tint = AppColors.textDim, modifier = Modifier.size(14.dp))
                     }
                     DropdownMenu(
@@ -206,12 +208,13 @@ fun BarcodeCandidateSheet(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Icon(AppIcons.Gauge, contentDescription = null, tint = AppColors.accent, modifier = Modifier.size(18.dp))
-                    Text(text = "Geschätzte Wirkung", color = AppColors.textDim, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    // iOS: .appCaption (QuickAddSheet.swift:1145).
+                    Text(text = "Geschätzte Wirkung", color = AppColors.textDim, style = de.tipau.promille.AppText.caption, modifier = Modifier.weight(1f))
+                    // iOS: .appCaptionBold + TabularFigures (QuickAddSheet.swift:1150).
                     Text(
                         text = String.format(Locale.GERMANY, "+%.2f ‰", projectedPeak),
                         color = AppColors.statusOrange,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold
+                        style = de.tipau.promille.AppText.captionBold.merge(de.tipau.promille.TabularFigures)
                     )
                 }
             }

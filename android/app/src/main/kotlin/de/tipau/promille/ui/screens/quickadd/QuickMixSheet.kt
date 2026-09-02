@@ -119,11 +119,11 @@ fun QuickMixSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // iOS: .appHeadline (QuickMixSheet.swift:90).
                 Text(
                     text = "Quick Mix",
                     color = AppColors.text,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.headline
                 )
 
                 Box(
@@ -147,7 +147,7 @@ fun QuickMixSheet(
                         .padding(horizontal = 20.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // Calories badge
+                    // Calories badge (iOS: .appCaptionBold, QuickMixSheet.swift:201)
                     Row(
                         modifier = Modifier
                             .clip(CircleShape)
@@ -161,12 +161,11 @@ fun QuickMixSheet(
                         Text(
                             text = "$totalCalories kcal",
                             color = AppColors.textDim,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.captionBold
                         )
                     }
 
-                    // ABV badge
+                    // ABV badge (iOS: .appCaptionBold, QuickMixSheet.swift:215)
                     Row(
                         modifier = Modifier
                             .clip(CircleShape)
@@ -180,8 +179,7 @@ fun QuickMixSheet(
                         Text(
                             text = "${String.format(Locale.GERMANY, "%.1f", effectiveABV)} % vol",
                             color = AppColors.textDim,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.captionBold
                         )
                     }
                 }
@@ -206,7 +204,7 @@ fun QuickMixSheet(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SectionLabel(text = "Alkohol-Basis")
 
-                    // Search field
+                    // Search field (iOS: .appBody, QuickMixSheet.swift:240)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -222,11 +220,11 @@ fun QuickMixSheet(
                             value = spiritSearch,
                             onValueChange = { spiritSearch = it },
                             modifier = Modifier.fillMaxWidth(),
-                            textStyle = TextStyle(color = AppColors.text, fontSize = 14.sp),
+                            textStyle = de.tipau.promille.AppText.body.copy(color = AppColors.text),
                             cursorBrush = SolidColor(AppColors.accent),
                             decorationBox = { innerTextField ->
                                 if (spiritSearch.isEmpty()) {
-                                    Text("Suchen...", color = AppColors.textDim, fontSize = 14.sp)
+                                    Text("Suchen...", color = AppColors.textDim, style = de.tipau.promille.AppText.body)
                                 }
                                 innerTextField()
                             }
@@ -265,18 +263,20 @@ fun QuickMixSheet(
                                     )
                                 }
 
+                                // iOS: .appMicro (QuickMixSheet.swift:455).
                                 Text(
                                     text = template.name,
                                     color = if (isSelected) AppColors.text else AppColors.textDim,
-                                    fontSize = 10.sp,
+                                    style = de.tipau.promille.AppText.micro,
                                     maxLines = 2,
                                     textAlign = TextAlign.Center
                                 )
 
+                                // iOS: .appMicro (QuickMixSheet.swift:462).
                                 Text(
                                     text = "${template.abv.toInt()}%",
                                     color = AppColors.textMuted,
-                                    fontSize = 10.sp
+                                    style = de.tipau.promille.AppText.micro
                                 )
                             }
                         }
@@ -300,8 +300,10 @@ fun QuickMixSheet(
                             ) {
                                 if (selectedSpirit != null) {
                                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text(selectedSpirit!!.name, color = AppColors.textDim, fontSize = 12.sp)
-                                        Text("${spiritVol.toInt()} ml", color = AppColors.accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        // iOS: .appCaption (QuickMixSheet.swift:288).
+                                        Text(selectedSpirit!!.name, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
+                                        // iOS: .appCaptionBold (QuickMixSheet.swift:291).
+                                        Text("${spiritVol.toInt()} ml", color = AppColors.accent, style = de.tipau.promille.AppText.captionBold)
                                     }
                                 } else {
                                     Spacer(Modifier.width(1.dp))
@@ -309,8 +311,10 @@ fun QuickMixSheet(
 
                                 if (selectedMixer != null) {
                                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text("${mixerVol.toInt()} ml", color = AppColors.textDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                        Text(selectedMixer!!.name, color = AppColors.textDim, fontSize = 12.sp)
+                                        // iOS: .appCaptionBold (QuickMixSheet.swift:298).
+                                        Text("${mixerVol.toInt()} ml", color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
+                                        // iOS: .appCaption (QuickMixSheet.swift:302).
+                                        Text(selectedMixer!!.name, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                                     }
                                 }
                             }
@@ -335,11 +339,11 @@ fun QuickMixSheet(
                                         .clickable { totalVolumeMl = vol }
                                         .padding(horizontal = 14.dp, vertical = 8.dp)
                                 ) {
+                                    // iOS: .appCaptionBold (QuickMixSheet.swift:481).
                                     Text(
                                         text = "${vol.toInt()} ml",
                                         color = if (isSelected) AppColors.background else AppColors.textDim,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
+                                        style = de.tipau.promille.AppText.captionBold
                                     )
                                 }
                             }
@@ -367,11 +371,11 @@ fun QuickMixSheet(
                                 .clickable { mixerCategory = null }
                                 .padding(horizontal = 14.dp, vertical = 8.dp)
                         ) {
+                            // iOS: .appCaptionBold (QuickMixSheet.swift:481).
                             Text(
                                 text = "Alle",
                                 color = if (isAllSelected) AppColors.background else AppColors.textDim,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
+                                style = de.tipau.promille.AppText.captionBold
                             )
                         }
 
@@ -385,11 +389,11 @@ fun QuickMixSheet(
                                     .clickable { mixerCategory = if (mixerCategory == cat) null else cat }
                                     .padding(horizontal = 14.dp, vertical = 8.dp)
                             ) {
+                                // iOS: .appCaptionBold (QuickMixSheet.swift:481).
                                 Text(
                                     text = cat.germanName,
                                     color = if (isCatSelected) AppColors.background else AppColors.textDim,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
+                                    style = de.tipau.promille.AppText.captionBold
                                 )
                             }
                         }
@@ -440,15 +444,17 @@ fun QuickMixSheet(
                                 Spacer(Modifier.width(12.dp))
 
                                 Column(modifier = Modifier.weight(1f)) {
+                                    // iOS: .appBody (QuickMixSheet.swift:519).
                                     Text(
                                         text = mixer.name,
                                         color = if (isSelected) AppColors.accent else AppColors.text,
-                                        fontSize = 14.sp
+                                        style = de.tipau.promille.AppText.body
                                     )
+                                    // iOS: .appMicro (QuickMixSheet.swift:522).
                                     Text(
                                         text = "${mixer.caloriesPer100ml} kcal/100 ml",
                                         color = AppColors.textMuted,
-                                        fontSize = 10.sp
+                                        style = de.tipau.promille.AppText.micro
                                     )
                                 }
 

@@ -67,11 +67,11 @@ fun CommunityMixesSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // iOS: .appHeadline (CommunityMixesSheet.swift:25).
                 Text(
                     text = "Community-Mische",
                     color = AppColors.text,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.headline
                 )
                 Box(
                     modifier = Modifier
@@ -100,7 +100,8 @@ fun CommunityMixesSheet(
                     ) {
                         Icon(AppIcons.Drink, null, tint = AppColors.textMuted, modifier = Modifier.size(36.dp))
                         Spacer(Modifier.height(10.dp))
-                        Text("Noch keine freigegebenen Mische.", color = AppColors.textDim, fontSize = 13.sp)
+                        // iOS: .appCaption (CommunityMixesSheet.swift:56).
+                        Text("Noch keine freigegebenen Mische.", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                     }
                 }
                 else -> {
@@ -123,21 +124,23 @@ fun CommunityMixesSheet(
                                     }
                                     Spacer(Modifier.width(14.dp))
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(row.name, color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                        // iOS: .appBodyBold (CommunityMixesSheet.swift:91).
+                                        Text(row.name, color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
+                                        // iOS: .appCaption (CommunityMixesSheet.swift:94).
                                         Text(
                                             "${row.ingredients.size} Zutaten · ${String.format(Locale.GERMANY, "%.0f ml · %.1f %%", row.totalVolume, row.totalAbv)}",
                                             color = AppColors.textDim,
-                                            fontSize = 12.sp
+                                            style = de.tipau.promille.AppText.caption
                                         )
                                     }
                                     if (imported) {
                                         Icon(Icons.Filled.CheckCircle, null, tint = AppColors.statusGreen, modifier = Modifier.size(20.dp))
                                     } else {
+                                        // iOS: .appCaptionBold (CommunityMixesSheet.swift:111).
                                         Text(
                                             text = "Übernehmen",
                                             color = AppColors.accent,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.SemiBold,
+                                            style = de.tipau.promille.AppText.captionBold,
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(50))
                                                 .background(AppColors.accent.copy(alpha = 0.12f))
