@@ -170,15 +170,15 @@ fun DrinkEditSheet(
                         Spacer(Modifier.width(14.dp))
                         Column {
                             Text(
+                                // iOS: .appBodyBold (SemiBold, not Bold).
                                 text = drink.name,
                                 color = AppColors.text,
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.Bold
+                                style = de.tipau.promille.AppText.bodyBold
                             )
                             Text(
                                 text = "${String.format(Locale.GERMANY, "%.1f", drink.abv)} % Alk.",
                                 color = AppColors.textDim,
-                                fontSize = 13.sp
+                                style = de.tipau.promille.AppText.caption
                             )
                             if (drink.mixerVolumeML > 0.0) {
                                 val spiritML = (drink.volumeML - drink.mixerVolumeML).roundToInt().coerceAtLeast(0)
@@ -186,7 +186,7 @@ fun DrinkEditSheet(
                                 Text(
                                     text = "Spirituose $spiritML ml, Mixer $mixerML ml",
                                     color = AppColors.textMuted,
-                                    fontSize = 11.sp
+                                    style = de.tipau.promille.AppText.micro
                                 )
                             }
                         }
@@ -233,7 +233,9 @@ fun DrinkEditSheet(
                             ),
                             modifier = Modifier.weight(1f)
                         )
-                        Text("ml", color = AppColors.textDim, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        // iOS: fixed 14sp SemiBold (not a token) - was
+                        // 16sp Bold here.
+                        Text("ml", color = AppColors.textDim, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
 
@@ -255,19 +257,21 @@ fun DrinkEditSheet(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            // iOS DESStat: value .appCaptionBold (SemiBold,
+                            // not Bold), label .appMicro.
                             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                                Text("$spiritML ml", color = AppColors.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                Text("Spirituose", color = AppColors.textMuted, fontSize = 11.sp)
+                                Text("$spiritML ml", color = AppColors.accent, style = de.tipau.promille.AppText.captionBold)
+                                Text("Spirituose", color = AppColors.textMuted, style = de.tipau.promille.AppText.micro)
                             }
                             Box(modifier = Modifier.width(0.5.dp).height(32.dp).background(AppColors.border))
                             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                                Text("$mixerML ml", color = AppColors.textDim, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                Text("Mixer", color = AppColors.textMuted, fontSize = 11.sp)
+                                Text("$mixerML ml", color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
+                                Text("Mixer", color = AppColors.textMuted, style = de.tipau.promille.AppText.micro)
                             }
                             Box(modifier = Modifier.width(0.5.dp).height(32.dp).background(AppColors.border))
                             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                                Text("$spiritPct %", color = AppColors.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                Text("Spi.-Anteil", color = AppColors.textMuted, fontSize = 11.sp)
+                                Text("$spiritPct %", color = AppColors.accent, style = de.tipau.promille.AppText.captionBold)
+                                Text("Spi.-Anteil", color = AppColors.textMuted, style = de.tipau.promille.AppText.micro)
                             }
                         }
                     }
@@ -284,12 +288,12 @@ fun DrinkEditSheet(
                     Text(
                         text = "Start $startTimeStr · fertig ca. $estimatedEndTimeStr",
                         color = AppColors.textMuted,
-                        fontSize = 11.sp
+                        style = de.tipau.promille.AppText.micro
                     )
                     Text(
                         text = "Aufnahme ca. bis $absorptionEndTimeStr",
                         color = AppColors.textMuted,
-                        fontSize = 11.sp
+                        style = de.tipau.promille.AppText.micro
                     )
                 }
 
@@ -324,8 +328,9 @@ fun DrinkEditSheet(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Startzeit", color = AppColors.textDim, fontSize = 14.sp)
-                        Text(startTimeStr, color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        // iOS: .appBody / .appBodyBold (SemiBold, not Bold).
+                        Text("Startzeit", color = AppColors.textDim, style = de.tipau.promille.AppText.body)
+                        Text(startTimeStr, color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
                     }
                 }
 
@@ -340,12 +345,12 @@ fun DrinkEditSheet(
                             .padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Geschätzte Wirkung", color = AppColors.textDim, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                        Text("Geschätzte Wirkung", color = AppColors.textDim, style = de.tipau.promille.AppText.caption, modifier = Modifier.weight(1f))
                         Text(
+                            // iOS: .appCaptionBold (SemiBold, not Bold).
                             text = "+${String.format(Locale.GERMANY, "%.2f", bacContribution)} ‰",
                             color = AppColors.statusOrange,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.captionBold
                         )
                     }
                 }
@@ -379,7 +384,8 @@ fun DrinkEditSheet(
                         modifier = Modifier.padding(vertical = 6.dp)
                     ) {
                         Icon(Icons.Filled.Delete, null, modifier = Modifier.size(16.dp))
-                        Text("Drink entfernen", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        // iOS: .appBodyBold (17sp SemiBold) - was 16sp Bold.
+                        Text("Drink entfernen", style = de.tipau.promille.AppText.bodyBold)
                     }
                 }
             }
