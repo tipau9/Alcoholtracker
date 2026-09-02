@@ -63,7 +63,6 @@ class MainActivity : ComponentActivity() {
             }
 
             val hasCompleted = hasCompletedOnboardingPref || (profile?.hasCompletedOnboarding == true)
-            val isInitialLoading = profile == null && !hasCompletedOnboardingPref
 
             // iOS hangs withAccessibility on the MainTabView branch only
             // (ContentView.swift:14), so onboarding renders at normal scale.
@@ -73,36 +72,26 @@ class MainActivity : ComponentActivity() {
                 reducedMotion = hasCompleted && profile?.reducedMotion == true,
                 accentColorHex = profile?.accentColorHex ?: "C9802F"
             ) {
-                when {
-                    isInitialLoading -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(AppColors.background)
+                if (hasCompleted) {
+                    PromilleNavigation(
+                        application = app,
+                        hasCompletedOnboarding = true,
+                        onOnboardingFinished = { /* Profile update triggers recomposition */ }
+                    )
+                } else {
+                    val onboardingViewModel = remember {
+                        OnboardingViewModel(
+                            userProfileRepository = container.userProfileRepository,
+                            drinkTemplateRepository = container.drinkTemplateRepository
                         )
                     }
-                    hasCompleted -> {
-                        PromilleNavigation(
-                            application = app,
-                            hasCompletedOnboarding = true,
-                            onOnboardingFinished = { /* Profile update triggers recomposition */ }
-                        )
-                    }
-                    else -> {
-                        val onboardingViewModel = remember {
-                            OnboardingViewModel(
-                                userProfileRepository = container.userProfileRepository,
-                                drinkTemplateRepository = container.drinkTemplateRepository
-                            )
+                    OnboardingScreen(
+                        viewModel = onboardingViewModel,
+                        onFinished = {
+                            prefs.edit().putBoolean("has_completed_onboarding", true).apply()
+                            hasCompletedOnboardingPref = true
                         }
-                        OnboardingScreen(
-                            viewModel = onboardingViewModel,
-                            onFinished = {
-                                prefs.edit().putBoolean("has_completed_onboarding", true).apply()
-                                hasCompletedOnboardingPref = true
-                            }
-                        )
-                    }
+                    )
                 }
             }
         }
