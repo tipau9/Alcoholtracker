@@ -3,6 +3,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 
+import androidx.compose.animation.core.EaseOut
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,13 +17,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -30,6 +36,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
+import de.tipau.promille.appSpec
 import de.tipau.promille.bac.CurvePoint
 import de.tipau.promille.bac.Drink
 import java.time.Instant
@@ -163,10 +170,23 @@ fun BACCurveChartView(
                 val endTime = points.last().epochSeconds
                 val maxBac = max(1.0, (points.maxOfOrNull { it.bac } ?: 0.0) + 0.2)
 
+                // iOS: HomeView.swift:1921-1928 masks the chart with a leading-anchored
+                // Rectangle and eases it to full width once, on first appear only.
+                var revealTarget by rememberSaveable { mutableStateOf(0f) }
+                val reveal by animateFloatAsState(
+                    targetValue = revealTarget,
+                    animationSpec = appSpec(tween(durationMillis = 800, easing = EaseOut)),
+                    label = "chartReveal"
+                )
+                LaunchedEffect(Unit) { revealTarget = 1f }
+
                 Canvas(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(150.dp)
+                        .drawWithContent {
+                            clipRect(right = size.width * reveal) { this@drawWithContent.drawContent() }
+                        }
                         .pointerInput(points) {
                             detectTapGestures(
                                 onTap = { offset ->
