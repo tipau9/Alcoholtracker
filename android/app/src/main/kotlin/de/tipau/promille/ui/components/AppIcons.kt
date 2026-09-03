@@ -706,6 +706,16 @@ object AppIcons {
     val ExitToApp: ImageVector = Icons.Filled.ExitToApp
     val Undo: ImageVector = Icons.Filled.Refresh
 
+    val ChevronLeft: ImageVector = buildIcon("ChevronLeft") {
+        moveTo(15.41f, 7.41f)
+        lineTo(14f, 6f)
+        lineToRelative(-6f, 6f)
+        lineToRelative(6f, 6f)
+        lineToRelative(1.41f, -1.41f)
+        lineTo(10.83f, 12f)
+        close()
+    }
+
     val ChevronRight: ImageVector = buildIcon("ChevronRight") {
         moveTo(10f, 6f)
         lineToRelative(6f, 6f)

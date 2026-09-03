@@ -247,7 +247,12 @@ private fun BottleTemplatePickerContent(
                         )
                     }
 
-                    Text("›", color = AppColors.textMuted, fontSize = 16.sp)
+                    Icon(
+                        imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                        contentDescription = null,
+                        tint = AppColors.textMuted,
+                        modifier = Modifier.size(13.dp)
+                    )
                 }
 
                 Box(
@@ -303,7 +308,12 @@ private fun BottleLevelContent(
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center
             ) {
-                Text("‹", color = AppColors.accent, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Icon(
+                    imageVector = de.tipau.promille.ui.components.AppIcons.ChevronLeft,
+                    contentDescription = "Zurück",
+                    tint = AppColors.accent,
+                    modifier = Modifier.size(14.dp)
+                )
             }
 
             Spacer(Modifier.width(12.dp))

@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
+import de.tipau.promille.bac.AchievementCatalog
 import de.tipau.promille.bac.BacStatus
 import de.tipau.promille.bac.Gender
 import de.tipau.promille.bac.StatusSkin
@@ -382,7 +383,7 @@ fun SettingsScreen(
                 )
                 Text(
                     // iOS: .appCaptionBold (SemiBold, not Bold) - was 12sp Bold.
-                    text = "$unlockedCount/49",
+                    text = "$unlockedCount/${AchievementCatalog.ALL.size}",
                     color = AppColors.accent,
                     style = de.tipau.promille.AppText.captionBold
                 )
@@ -801,7 +802,7 @@ fun SettingsScreen(
                 PromilleCard {
                     SettingsNavigationRow(
                         title = "Achievements",
-                        subtitle = "$unlockedCount von 49 freigeschaltet",
+                        subtitle = "$unlockedCount von ${AchievementCatalog.ALL.size} freigeschaltet",
                         onClick = onNavigateToAchievements,
                         icon = AppIcons.EmojiEvents
                     )

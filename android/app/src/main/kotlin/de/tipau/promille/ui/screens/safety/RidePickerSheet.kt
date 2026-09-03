@@ -150,7 +150,12 @@ fun RidePickerSheet(
                             // iOS: .appCaption (RidePickerSheet.swift:439).
                             Text("App öffnen und Fahrt bestellen", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                         }
-                        Text("›", color = AppColors.textMuted, fontSize = 22.sp)
+                        Icon(
+                            imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = AppColors.textMuted,
+                            modifier = Modifier.size(13.dp)
+                        )
                     }
                 }
 
@@ -175,7 +180,12 @@ fun RidePickerSheet(
                             // iOS: .appCaption (RidePickerSheet.swift:439).
                             Text("Bundesweiter Taxi-Rufservice per Anruf", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                         }
-                        Text("›", color = AppColors.textMuted, fontSize = 22.sp)
+                        Icon(
+                            imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = AppColors.textMuted,
+                            modifier = Modifier.size(13.dp)
+                        )
                     }
                 }
 
@@ -205,7 +215,12 @@ fun RidePickerSheet(
                             // iOS: .appCaption (RidePickerSheet.swift:439).
                             Text("Route in Google Maps planen", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                         }
-                        Text("›", color = AppColors.textMuted, fontSize = 22.sp)
+                        Icon(
+                            imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = AppColors.textMuted,
+                            modifier = Modifier.size(13.dp)
+                        )
                     }
                 }
 
@@ -231,7 +246,12 @@ fun RidePickerSheet(
                                 // iOS: .appCaption (RidePickerSheet.swift:439).
                                 Text("Tel: $emergencyContactPhone", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                             }
-                            Text("›", color = AppColors.textMuted, fontSize = 22.sp)
+                            Icon(
+                                imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                                contentDescription = null,
+                                tint = AppColors.textMuted,
+                                modifier = Modifier.size(13.dp)
+                            )
                         }
                     }
                 }

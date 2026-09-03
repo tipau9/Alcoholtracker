@@ -1146,7 +1146,12 @@ private fun MemberCard(
                 )
             }
 
-            Text("›", color = AppColors.textMuted, fontSize = 22.sp)
+            Icon(
+                imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                contentDescription = null,
+                tint = AppColors.textMuted,
+                modifier = Modifier.size(13.dp)
+            )
         }
     }
 }

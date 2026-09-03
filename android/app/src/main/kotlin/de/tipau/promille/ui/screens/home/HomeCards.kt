@@ -223,7 +223,12 @@ fun CrewAlertBanner(names: List<String>, onClick: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         // iOS: .appCaption (HomeView.swift:1657).
         Text(label, color = AppColors.text, style = de.tipau.promille.AppText.caption, modifier = Modifier.weight(1f))
-        Text("›", color = AppColors.textDim, fontSize = 18.sp)
+        Icon(
+            imageVector = AppIcons.ChevronRight,
+            contentDescription = null,
+            tint = AppColors.textDim,
+            modifier = Modifier.size(13.dp)
+        )
     }
 }
 
@@ -274,7 +279,12 @@ fun EmptyDrinkHint(onAdd: () -> Unit) {
                     style = de.tipau.promille.AppText.caption
                 )
             }
-            Text("›", color = AppColors.textDim, fontSize = 18.sp)
+            Icon(
+                imageVector = AppIcons.ChevronRight,
+                contentDescription = null,
+                tint = AppColors.textDim,
+                modifier = Modifier.size(13.dp)
+            )
         }
     }
 }

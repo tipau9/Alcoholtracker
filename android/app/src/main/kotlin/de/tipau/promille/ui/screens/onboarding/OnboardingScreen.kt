@@ -136,12 +136,11 @@ fun OnboardingScreen(
                     .clickable(enabled = page > 0) { viewModel.goBack() },
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "‹",
-                    color = AppColors.textDim,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 2.dp)
+                Icon(
+                    imageVector = AppIcons.ChevronLeft,
+                    contentDescription = "Zurück",
+                    tint = AppColors.textDim,
+                    modifier = Modifier.size(14.dp)
                 )
             }
 

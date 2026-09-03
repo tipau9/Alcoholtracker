@@ -279,7 +279,12 @@ private fun JamLobby(
                             style = de.tipau.promille.AppText.caption
                         )
                     }
-                    Text("›", color = AppColors.accent, fontSize = 20.sp)
+                    Icon(
+                        imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                        contentDescription = null,
+                        tint = AppColors.accent,
+                        modifier = Modifier.size(13.dp)
+                    )
                 }
             }
         }
@@ -1169,7 +1174,12 @@ private fun ActiveJam(
                         Spacer(Modifier.width(12.dp))
                         // iOS: .appBodyBold (ActiveJamView.swift:389).
                         Text("Jam Arcade", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold, modifier = Modifier.weight(1f))
-                        Text("›", color = AppColors.textMuted, fontSize = 20.sp)
+                        Icon(
+                            imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = AppColors.textMuted,
+                            modifier = Modifier.size(13.dp)
+                        )
                     }
 
                     // Freunde einladen
@@ -1187,7 +1197,12 @@ private fun ActiveJam(
                         Spacer(Modifier.width(12.dp))
                         // iOS: .appBodyBold (ActiveJamView.swift:392).
                         Text("Freunde einladen", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold, modifier = Modifier.weight(1f))
-                        Text("›", color = AppColors.textMuted, fontSize = 20.sp)
+                        Icon(
+                            imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = AppColors.textMuted,
+                            modifier = Modifier.size(13.dp)
+                        )
                     }
                 }
             }

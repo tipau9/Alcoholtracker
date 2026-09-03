@@ -173,7 +173,12 @@ fun HistoryScreen(
                         .clickable { viewModel.previousMonth() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("‹", color = AppColors.textDim, fontSize = 18.sp)
+                    Icon(
+                        imageVector = AppIcons.ChevronLeft,
+                        contentDescription = "Vorheriger Monat",
+                        tint = AppColors.textDim,
+                        modifier = Modifier.size(13.dp)
+                    )
                 }
 
                 // iOS: .appCaptionBold (HistoryView.swift:189).
@@ -196,10 +201,11 @@ fun HistoryScreen(
                         .clickable(enabled = !isCurrentMonth) { viewModel.nextMonth() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        "›",
-                        color = if (!isCurrentMonth) AppColors.textDim else AppColors.border,
-                        fontSize = 18.sp
+                    Icon(
+                        imageVector = AppIcons.ChevronRight,
+                        contentDescription = "Nächster Monat",
+                        tint = if (!isCurrentMonth) AppColors.textDim else AppColors.border,
+                        modifier = Modifier.size(13.dp)
                     )
                 }
             }
@@ -521,7 +527,12 @@ fun HistoryScreen(
                                     style = de.tipau.promille.AppText.caption
                                 )
                             }
-                            Text("›", color = AppColors.textMuted, fontSize = 22.sp)
+                            Icon(
+                                imageVector = AppIcons.ChevronRight,
+                                contentDescription = null,
+                                tint = AppColors.textMuted,
+                                modifier = Modifier.size(13.dp)
+                            )
                         }
                     }
                 }
