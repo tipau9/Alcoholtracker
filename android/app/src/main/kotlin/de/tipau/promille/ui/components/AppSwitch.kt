@@ -51,12 +51,16 @@ fun AppSwitch(
         animationSpec = tween(150),
         label = "switchTrack"
     )
+    val haptics = rememberHapticManager()
     Box(
         modifier = modifier
             .size(TrackWidth, TrackHeight)
             .toggleable(
                 value = checked,
-                onValueChange = { onCheckedChange?.invoke(it) },
+                onValueChange = {
+                    haptics.selection()
+                    onCheckedChange?.invoke(it)
+                },
                 role = Role.Switch,
                 enabled = onCheckedChange != null
             )

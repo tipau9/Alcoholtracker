@@ -198,6 +198,8 @@ fun SessionScreen(
         )
     }
 
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+
     // Achievement toast (HomeView.swift:200-217, 2702-2744).
     val unlockedIds by (container?.achievementService?.unlockedIds
         ?: kotlinx.coroutines.flow.MutableStateFlow(emptySet<String>())).collectAsState()
@@ -216,6 +218,7 @@ fun SessionScreen(
             val firstAchievement = de.tipau.promille.bac.AchievementCatalog.ALL
                 .firstOrNull { it.id == freshIds.first() }
             if (firstAchievement != null) {
+                haptics.success()
                 unlockedAchievementToast = firstAchievement to freshIds.size
                 delay(4000)
                 unlockedAchievementToast = null

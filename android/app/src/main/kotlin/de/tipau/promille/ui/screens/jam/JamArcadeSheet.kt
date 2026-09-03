@@ -67,8 +67,11 @@ fun JamArcadeSheet(
     val untilStart = round.startAtEpochSeconds - nowSeconds
     if (phase == ArcadePhase.COUNTDOWN && untilStart <= 0) phase = ArcadePhase.READY
 
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+
     fun submit(value: Double, disqualified: Boolean, text: String) {
         if (phase == ArcadePhase.SUBMITTED) return
+        if (disqualified) haptics.error() else haptics.success()
         ownResult = text
         phase = ArcadePhase.SUBMITTED
         onSubmit(value, disqualified)

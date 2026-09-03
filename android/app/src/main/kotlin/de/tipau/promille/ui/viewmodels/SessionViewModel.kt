@@ -376,8 +376,12 @@ class SessionViewModel(
         }
     }
 
+    private fun haptics(): de.tipau.promille.ui.components.HapticManager? =
+        applicationContext?.let { de.tipau.promille.ui.components.HapticManager.from(it) }
+
     // CRUD & Event Actions
     fun addDrink(entity: DrinkEntity) {
+        haptics()?.light()
         viewModelScope.launch {
             drinkRepository.addDrink(entity)
             _undoAction.value = UndoAction(label = "${entity.name} hinzugefügt", addedDrink = entity)
@@ -385,6 +389,7 @@ class SessionViewModel(
     }
 
     fun duplicateDrink(drink: Drink) {
+        haptics()?.success()
         val copy = DrinkEntity(
             id = UUID.randomUUID().toString(),
             templateID = drink.templateId,
@@ -400,6 +405,7 @@ class SessionViewModel(
     }
 
     fun finishDrinkNow(drink: Drink) {
+        haptics()?.light()
         viewModelScope.launch {
             val now = System.currentTimeMillis() / 1000
             val durationMinutes = kotlin.math.max(1.0, (now - drink.timestampEpochSeconds) / 60.0)
@@ -409,6 +415,7 @@ class SessionViewModel(
     }
 
     fun updateDrink(drink: Drink, volume: Double, timestampSeconds: Long, durationMinutes: Double) {
+        haptics()?.light()
         viewModelScope.launch {
             val factor = if (drink.volumeML > 0) volume / drink.volumeML else 1.0
             val updatedCalories = (drink.calories * factor).toInt()
@@ -423,6 +430,7 @@ class SessionViewModel(
     }
 
     fun removeDrink(drink: Drink) {
+        haptics()?.medium()
         viewModelScope.launch {
             val entity = DrinkRepository.toEntity(drink)
             drinkRepository.deleteDrink(entity)
@@ -432,6 +440,7 @@ class SessionViewModel(
 
     fun performUndo() {
         val action = _undoAction.value ?: return
+        haptics()?.light()
         viewModelScope.launch {
             if (action.deletedDrink != null) {
                 drinkRepository.addDrink(action.deletedDrink)
@@ -448,6 +457,7 @@ class SessionViewModel(
 
     // Sip Counter Actions
     fun startSipCounter(template: DrinkTemplateEntity) {
+        haptics()?.light()
         _activeSipDrink.value = template
         _sipCount.value = 0
         sipCounterStartTime = System.currentTimeMillis() / 1000
@@ -455,10 +465,12 @@ class SessionViewModel(
 
     fun addSip() {
         if (_activeSipDrink.value == null) return
+        haptics()?.medium()
         _sipCount.value += 1
     }
 
     fun removeSip() {
+        haptics()?.light()
         _sipCount.value = maxOf(0, _sipCount.value - 1)
     }
 
@@ -466,6 +478,7 @@ class SessionViewModel(
         val template = _activeSipDrink.value ?: return
         val count = _sipCount.value
         if (count <= 0) return
+        haptics()?.success()
         val ml = count.toDouble() * currentSipVolume.value
         val scaledCalories = if (template.volume > 0) {
             (template.calories.toDouble() / template.volume * ml).toInt()
@@ -499,10 +512,12 @@ class SessionViewModel(
 
     // Session Events
     fun logVomit() {
+        haptics()?.success()
         viewModelScope.launch { sessionEventRepository.logVomit() }
     }
 
     fun removeLastVomit() {
+        haptics()?.light()
         viewModelScope.launch {
             val last = rawVomits.value.lastOrNull() ?: return@launch
             sessionEventRepository.deleteVomitEvent(last)
@@ -510,10 +525,12 @@ class SessionViewModel(
     }
 
     fun logMeal(impact: MealImpact, name: String = "") {
+        haptics()?.medium()
         viewModelScope.launch { sessionEventRepository.logMeal(impact, name) }
     }
 
     fun logBreathalyzerReading(measuredBac: Double, note: String = "") {
+        haptics()?.success()
         viewModelScope.launch {
             val est = currentBAC.value
             sessionEventRepository.logBreathalyzerReading(measuredBac, est, "manual", note)
@@ -521,6 +538,7 @@ class SessionViewModel(
     }
 
     fun resetSession() {
+        haptics()?.warning()
         viewModelScope.launch {
             drinkRepository.deleteAll()
             sessionEventRepository.clearAll()

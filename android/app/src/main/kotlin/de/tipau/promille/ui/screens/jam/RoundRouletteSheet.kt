@@ -68,6 +68,7 @@ fun RoundRouletteSheet(
     val winnerIndex: Int = payload.winnerIndex.coerceIn(0, (participants.size - 1).coerceAtLeast(0))
     val winnerName: String = participants.getOrNull(winnerIndex) ?: "Niemand"
 
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
     val reducedMotion = LocalReducedMotion.current
     val rotation = remember { Animatable(0f) }
     var finished by remember { mutableStateOf(false) }
@@ -78,20 +79,29 @@ fun RoundRouletteSheet(
         val segmentAngle = 360f / participants.size.coerceAtLeast(1)
         val targetRotation = 360f * 6 + (360f - (winnerIndex * segmentAngle + segmentAngle / 2f))
 
+        haptics.medium()
         rotation.snapTo(0f)
         // Under reducedMotion the wheel jumps to the winner instead of spinning,
         // the same outcome the global animation disable produces on iOS.
         if (reducedMotion) {
             rotation.snapTo(targetRotation)
         } else {
+            var lastSegment = 0
             rotation.animateTo(
                 targetValue = targetRotation,
                 animationSpec = tween(
                     durationMillis = 4200,
                     easing = CubicBezierEasing(0.12f, 0.8f, 0.2f, 1.0f)
                 )
-            )
+            ) {
+                val currentSegment = (value / segmentAngle).toInt()
+                if (currentSegment != lastSegment) {
+                    lastSegment = currentSegment
+                    haptics.light()
+                }
+            }
         }
+        haptics.success()
         finished = true
     }
 

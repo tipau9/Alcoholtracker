@@ -33,6 +33,8 @@ fun <T> AppSegmentedControl(
     val selectedIndex = items.indexOf(selectedItem).coerceAtLeast(0)
     val reducedMotion = LocalReducedMotion.current
 
+    val haptics = rememberHapticManager()
+
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
@@ -73,7 +75,10 @@ fun <T> AppSegmentedControl(
                         .height(32.dp)
                         .pressable(
                             scale = 0.96f,
-                            onClick = { onItemSelected(item) }
+                            onClick = {
+                                if (!isSelected) haptics.selection()
+                                onItemSelected(item)
+                            }
                         ),
                     contentAlignment = Alignment.Center
                 ) {

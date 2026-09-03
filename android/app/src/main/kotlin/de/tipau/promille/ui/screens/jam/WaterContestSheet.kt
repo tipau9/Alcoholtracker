@@ -58,6 +58,8 @@ fun WaterContestSheet(
         }
     }
 
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -121,9 +123,11 @@ fun WaterContestSheet(
                     )
                     .clickable {
                         if (!running) {
+                            haptics.heavy()
                             running = true
                             lastResultMs = null
                         } else {
+                            haptics.success()
                             running = false
                             val ms = elapsedMillis.toInt()
                             lastResultMs = ms
