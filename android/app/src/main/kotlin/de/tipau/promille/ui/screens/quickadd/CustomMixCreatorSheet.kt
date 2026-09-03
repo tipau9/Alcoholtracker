@@ -164,6 +164,10 @@ fun CustomMixCreatorSheet(
                 }
             }
 
+            item {
+                de.tipau.promille.ui.components.TopEdgeFadeScrim(height = 10.dp)
+            }
+
             // Community entry point
             item {
                 PromilleCard(

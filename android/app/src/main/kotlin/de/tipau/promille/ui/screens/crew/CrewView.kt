@@ -328,6 +328,7 @@ fun CrewView(
         }
 
         HorizontalDivider(color = AppColors.border, thickness = 0.5.dp)
+        de.tipau.promille.ui.components.TopEdgeFadeScrim(height = 10.dp)
 
         LazyColumn(
             modifier = Modifier
