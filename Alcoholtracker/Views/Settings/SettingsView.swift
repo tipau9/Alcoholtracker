@@ -84,33 +84,42 @@ struct SettingsView: View {
 
     private var profileHero: some View {
         HStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(Color.appAccent.opacity(0.15))
-                    .frame(width: 60, height: 60)
-                Image(systemName: "person.fill")
-                    .font(.system(size: 26, weight: .medium))
-                    .foregroundStyle(Color.appAccent)
-            }
+            Button {
+                if !supabase.isSignedIn {
+                    showAuth = true
+                }
+            } label: {
+                HStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.appAccent.opacity(0.15))
+                            .frame(width: 60, height: 60)
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 26, weight: .medium))
+                            .foregroundStyle(Color.appAccent)
+                    }
 
-            VStack(alignment: .leading, spacing: 4) {
-                if supabase.isSignedIn, let p = supabase.myProfile {
-                    Text(p.displayName.isEmpty ? "Kein Name" : p.displayName)
-                        .font(.appTitle)
-                        .foregroundStyle(Color.appText)
-                    Text(p.friendCode)
-                        .font(.system(.caption, design: .monospaced, weight: .bold))
-                        .foregroundStyle(Color.appAccent)
-                        .tracking(2)
-                } else {
-                    Text("Profil")
-                        .font(.appTitle)
-                        .foregroundStyle(Color.appText)
-                    Text("Kein Konto verbunden")
-                        .font(.appCaption)
-                        .foregroundStyle(Color.appTextDim)
+                    VStack(alignment: .leading, spacing: 4) {
+                        if supabase.isSignedIn, let p = supabase.myProfile {
+                            Text(p.displayName.isEmpty ? "Kein Name" : p.displayName)
+                                .font(.appTitle)
+                                .foregroundStyle(Color.appText)
+                            Text(p.friendCode)
+                                .font(.system(.caption, design: .monospaced, weight: .bold))
+                                .foregroundStyle(Color.appAccent)
+                                .tracking(2)
+                        } else {
+                            Text("Profil")
+                                .font(.appTitle)
+                                .foregroundStyle(Color.appText)
+                            Text("Kein Konto verbunden")
+                                .font(.appCaption)
+                                .foregroundStyle(Color.appTextDim)
+                        }
+                    }
                 }
             }
+            .buttonStyle(.plain)
 
             Spacer()
 
