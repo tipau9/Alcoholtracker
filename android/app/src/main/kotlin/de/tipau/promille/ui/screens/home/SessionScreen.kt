@@ -860,8 +860,8 @@ fun SessionScreen(
         // Floating Achievement Unlock Toast (bottom-rising toast matching iOS HomeView.swift:200-217)
         AnimatedVisibility(
             visible = unlockedAchievementToast != null && activeSipDrink == null,
-            enter = if (reducedMotion) fadeIn() else slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = if (reducedMotion) fadeOut() else slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            enter = if (reducedMotion) fadeIn() else de.tipau.promille.AppMotion.toastBottomEnter,
+            exit = if (reducedMotion) fadeOut() else de.tipau.promille.AppMotion.toastBottomExit,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = if (undoAction != null) 148.dp else 84.dp)
@@ -878,8 +878,8 @@ fun SessionScreen(
         // Floating Sip Counter Overlay (replaces bottom area while counting)
         AnimatedVisibility(
             visible = activeSipDrink != null,
-            enter = if (reducedMotion) fadeIn() else slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = if (reducedMotion) fadeOut() else slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            enter = if (reducedMotion) fadeIn() else de.tipau.promille.AppMotion.toastBottomEnter,
+            exit = if (reducedMotion) fadeOut() else de.tipau.promille.AppMotion.toastBottomExit,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(horizontal = 16.dp, vertical = 20.dp)

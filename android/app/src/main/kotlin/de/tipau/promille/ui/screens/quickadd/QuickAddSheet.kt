@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import de.tipau.promille.ui.components.PrimaryButton
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -313,7 +314,7 @@ fun QuickAddSheet(
     }
 
     if (showCustomBrandDialog) {
-        CustomBrandDialog(
+        CustomBrandSheet(
             onDismiss = { showCustomBrandDialog = false },
             onCreated = { drink ->
                 showCustomBrandDialog = false
@@ -910,68 +911,160 @@ private fun QAActionChip(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CustomBrandDialog(
+private fun CustomBrandSheet(
     onDismiss: () -> Unit,
     onCreated: (DrinkEntity) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
-    var volume by remember { mutableStateOf("330") }
-    var abv by remember { mutableStateOf("5.0") }
+    var volumeText by remember { mutableStateOf("330") }
+    var abvText by remember { mutableStateOf("5,0") }
 
-    de.tipau.promille.ui.components.AppAlertDialog(
+    val volume = volumeText.toDoubleOrNull() ?: 0.0
+    val abv = abvText.replace(',', '.').toDoubleOrNull() ?: 0.0
+    val isValid = name.isNotBlank() && volume > 0 && abv > 0 && abv <= 96
+    val estimatedBac = if (volume > 0 && abv > 0) {
+        (volume * (abv / 100.0) * 0.8) / (75.0 * 0.68)
+    } else null
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = "Eigene Marke",
-        confirmText = "Hinzufügen",
-        onConfirm = {
-            val volNum = volume.toDoubleOrNull() ?: 330.0
-            val abvNum = abv.replace(',', '.').toDoubleOrNull() ?: 5.0
-            val cals = (volNum * (abvNum / 100.0) * 0.789 * 7).toInt()
-            val drink = DrinkEntity(
-                id = UUID.randomUUID().toString(),
-                name = name.ifBlank { "Eigenes Getränk" },
-                volume = volNum,
-                abv = abvNum,
-                calories = cals,
-                iconName = "other",
-                categoryRaw = "other",
-                timestampEpochSeconds = System.currentTimeMillis() / 1000
-            )
-            onCreated(drink)
-        },
-        dismissText = "Abbrechen",
-        content = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        sheetState = sheetState,
+        containerColor = AppColors.background,
+        scrimColor = Color.Black.copy(alpha = 0.65f),
+        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
+        dragHandle = null
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 36.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Header matching QAHeader in iOS
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Eigene Marke",
+                    color = AppColors.text,
+                    style = de.tipau.promille.AppText.headline
+                )
+                de.tipau.promille.ui.components.AppIconCloseButton(onDismiss = onDismiss)
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                SectionLabel("NAME")
                 de.tipau.promille.ui.components.AppTextField(
                     value = name,
                     onValueChange = { name = it },
-                    placeholder = "Getränkename",
+                    placeholder = "z.B. Pilsner Urquell",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    SectionLabel("MENGE")
                     de.tipau.promille.ui.components.AppTextField(
-                        value = volume,
-                        onValueChange = { volume = it.filter { c -> c.isDigit() } },
-                        placeholder = "Menge",
+                        value = volumeText,
+                        onValueChange = { volumeText = it.filter { c -> c.isDigit() } },
+                        placeholder = "330",
                         trailingIcon = { Text("ml", color = AppColors.textDim, style = de.tipau.promille.AppText.caption) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
+                        singleLine = true
                     )
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    SectionLabel("ALKOHOL")
                     de.tipau.promille.ui.components.AppTextField(
-                        value = abv,
-                        onValueChange = { abv = it.filter { c -> c.isDigit() || c == '.' || c == ',' } },
-                        placeholder = "Vol.",
+                        value = abvText,
+                        onValueChange = { abvText = it.filter { c -> c.isDigit() || c == '.' || c == ',' } },
+                        placeholder = "5,0",
                         trailingIcon = { Text("%", color = AppColors.textDim, style = de.tipau.promille.AppText.caption) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
+                        singleLine = true
                     )
                 }
             }
+
+            if (estimatedBac != null && estimatedBac > 0.005) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(AppColors.card)
+                        .border(0.5.dp, AppColors.border, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(9.dp))
+                            .background(AppColors.accent.copy(alpha = 0.10f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = de.tipau.promille.ui.components.AppIcons.Gauge,
+                            contentDescription = null,
+                            tint = AppColors.accent,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = "Geschätzte Wirkung",
+                        color = AppColors.textDim,
+                        style = de.tipau.promille.AppText.caption,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = String.format(Locale.GERMANY, "+%.2f‰", estimatedBac),
+                        color = AppColors.accent,
+                        style = de.tipau.promille.AppText.captionBold
+                    )
+                }
+            }
+
+            PrimaryButton(
+                text = "Hinzufügen",
+                icon = Icons.Filled.Add,
+                enabled = isValid,
+                onClick = {
+                    val cals = (volume * (abv / 100.0) * 0.789 * 7).toInt()
+                    val drink = DrinkEntity(
+                        id = UUID.randomUUID().toString(),
+                        name = name.trim(),
+                        volume = volume,
+                        abv = abv,
+                        calories = cals,
+                        iconName = "other",
+                        categoryRaw = "other",
+                        timestampEpochSeconds = System.currentTimeMillis() / 1000
+                    )
+                    onCreated(drink)
+                },
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
-    )
+    }
 }
 
 // MARK: - SipTemplatePicker (used by showSipPicker sheet)
@@ -1011,9 +1104,9 @@ private fun SipTemplatePicker(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp, top = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .background(AppColors.background)
-                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
         ) {
             Column(
                 modifier = Modifier

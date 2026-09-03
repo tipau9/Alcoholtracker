@@ -43,6 +43,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import de.tipau.promille.ui.components.pressable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.painterResource
@@ -116,58 +117,57 @@ fun OnboardingScreen(
             }
         }
 
-        // Header: Back Button + Progress Indicator Capsules
-        if (page > 0) {
+        // Header: Back Button + Progress Indicator Capsules matching iOS OnboardingView.swift:78-110
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(top = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Back Button (opacity 0 when page == 0 matching iOS .opacity(page == 0 ? 0 : 1))
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .alpha(if (page > 0) 1f else 0f)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(AppColors.card)
+                    .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+                    .clickable(enabled = page > 0) { viewModel.goBack() },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "‹",
+                    color = AppColors.textDim,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 2.dp)
+                )
+            }
+
+            // Progress Capsules centered
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(top = 16.dp),
+                    .weight(1f)
+                    .padding(end = 40.dp),
+                horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back Button
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(AppColors.card)
-                        .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
-                        .clickable { viewModel.goBack() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "‹",
-                        color = AppColors.textDim,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 2.dp)
+                for (i in 0..4) {
+                    val isCurrent = page == i
+                    val width by animateDpAsState(
+                        targetValue = if (isCurrent) 22.dp else 7.dp,
+                        animationSpec = AppMotion.snappy(),
+                        label = "dot_width"
                     )
-                }
-
-                // Progress Capsules centered
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 40.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    for (i in 0..4) {
-                        val isCurrent = page == i
-                        val width by animateDpAsState(
-                            targetValue = if (isCurrent) 22.dp else 7.dp,
-                            animationSpec = AppMotion.snappy(),
-                            label = "dot_width"
-                        )
-                        Box(
-                            modifier = Modifier
-                                .padding(horizontal = 4.dp)
-                                .height(7.dp)
-                                .width(width)
-                                .clip(CircleShape)
-                                .background(if (isCurrent) AppColors.accent else AppColors.border)
-                        )
-                    }
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 4.dp)
+                            .height(7.dp)
+                            .width(width)
+                            .clip(CircleShape)
+                            .background(if (isCurrent) AppColors.accent else AppColors.border)
+                    )
                 }
             }
         }
