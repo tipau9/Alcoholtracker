@@ -135,13 +135,18 @@ fun PromilleNavigation(
                     .background(AppColors.border)
                     .padding(top = 0.5.dp)
             ) {
+            // iOS: ContentView.swift:35 never overrides UITabBarAppearance, so this
+            // matches UIKit's standard tab bar metrics: 49pt content height, 25pt
+            // glyph, 10pt label. Keep the height fixed so a taller icon or a scaled
+            // label can't grow the bar past the system one.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(AppColors.card)
                     .navigationBarsPadding()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                    .height(49.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 visibleTabs.forEach { tab ->
                     val isSelected = selectedTab == tab
@@ -153,7 +158,7 @@ fun PromilleNavigation(
                             ) {
                                 selectedTab = tab
                             }
-                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                            .padding(horizontal = 12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
@@ -161,12 +166,13 @@ fun PromilleNavigation(
                             imageVector = tab.icon,
                             contentDescription = tab.label,
                             tint = if (isSelected) AppColors.accent else AppColors.textDim,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(25.dp)
                         )
                         Text(
                             text = tab.label,
                             color = if (isSelected) AppColors.accent else AppColors.textDim,
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
+                            lineHeight = 12.sp,
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
                         )
                     }
