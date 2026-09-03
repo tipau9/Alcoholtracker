@@ -107,20 +107,32 @@ fun QuickMixSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = AppColors.background,
+        containerColor = Color.Transparent,
         scrimColor = Color.Black.copy(alpha = 0.65f),
-        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
         dragHandle = null
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            // Header
-            Row(
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp, top = 16.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(AppColors.background)
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+        ) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxHeight(0.92f)
             ) {
+                // Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                 // iOS: .appHeadline (QuickMixSheet.swift:90).
                 Text(
                     text = "Quick Mix",
@@ -249,9 +261,10 @@ fun QuickMixSheet(
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        text = template.iconName.ifEmpty { "" },
-                                        fontSize = 20.sp
+                                    de.tipau.promille.ui.components.DrinkIconView(
+                                        template = template,
+                                        size = 22.dp,
+                                        tint = if (isSelected) AppColors.background else AppColors.accent
                                     )
                                 }
 
@@ -388,15 +401,12 @@ fun QuickMixSheet(
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        text = when (mixer.category) {
-                                            MixerCategory.ENERGY -> "Energy"
-                                            MixerCategory.JUICE -> "Saft"
-                                            MixerCategory.WATER -> "Wasser"
-                                            MixerCategory.TEA -> "Tee"
-                                            else -> "Softdrink"
-                                        },
-                                        fontSize = 16.sp
+                                    de.tipau.promille.ui.components.DrinkIconView(
+                                        iconName = mixer.icon,
+                                        name = mixer.name,
+                                        categoryRaw = mixer.category.raw,
+                                        size = 20.dp,
+                                        tint = if (isSelected) AppColors.background else AppColors.accent
                                     )
                                 }
 
@@ -468,4 +478,5 @@ fun QuickMixSheet(
             }
         }
     }
+}
 }

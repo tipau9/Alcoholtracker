@@ -42,8 +42,10 @@ import de.tipau.promille.data.CustomMixDao
 import de.tipau.promille.data.DrinkEntity
 import de.tipau.promille.data.DrinkTemplateEntity
 import de.tipau.promille.fixedSp
+import de.tipau.promille.network.CommunityMixRow
 import de.tipau.promille.network.SupabaseService
 import de.tipau.promille.network.contributeDrink
+import de.tipau.promille.network.fetchCommunityMixes
 import de.tipau.promille.network.lookupCommunityBarcode
 import de.tipau.promille.repository.DrinkTemplateRepository
 import de.tipau.promille.service.BarcodeService
@@ -208,6 +210,19 @@ fun QuickAddSheet(
         allTemplates.groupBy { it.categoryRaw.lowercase() }
     }
 
+    var communityMixes by remember { mutableStateOf<List<CommunityMixRow>>(emptyList()) }
+    var isLoadingCommunityMixes by remember { mutableStateOf(false) }
+    var selectedMixFilter by remember { mutableStateOf("all") }
+
+    LaunchedEffect(activeTab) {
+        if (activeTab == QATab.MIXES && communityMixes.isEmpty() && supabase != null) {
+            isLoadingCommunityMixes = true
+            val rows = runCatching { supabase.fetchCommunityMixes() }.getOrNull() ?: emptyList()
+            communityMixes = rows
+            isLoadingCommunityMixes = false
+        }
+    }
+
     if (showBarcodeScanner) {
         BarcodeScannerSheet(
             onBarcodeDetected = { ean ->
@@ -282,18 +297,6 @@ fun QuickAddSheet(
                 onDismiss()
             },
             onDismiss = { showQuickMix = false }
-        )
-    }
-
-    if (showSipPicker && onStartSipCounter != null) {
-        SipTemplatePicker(
-            allTemplates = allTemplates,
-            onSelect = { template ->
-                showSipPicker = false
-                onStartSipCounter(template)
-                onDismiss()
-            },
-            onDismiss = { showSipPicker = false }
         )
     }
 
@@ -404,11 +407,132 @@ fun QuickAddSheet(
                 .background(AppColors.background)
                 .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.92f)
-            ) {
+            if (showSipPicker) {
+                // Inline Sip Picker Content
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.92f)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Schluck-Zähler starten",
+                            color = AppColors.text,
+                            style = de.tipau.promille.AppText.headline
+                        )
+                        de.tipau.promille.ui.components.AppIconCloseButton(onDismiss = { showSipPicker = false })
+                    }
+
+                    var sipQuery by remember { mutableStateOf("") }
+                    val sipResults = remember(sipQuery, allTemplates.size) {
+                        if (sipQuery.isBlank()) allTemplates.take(50)
+                        else allTemplates.filter { it.name.contains(sipQuery, ignoreCase = true) }.take(30)
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 8.dp)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(AppColors.card)
+                            .border(0.5.dp, AppColors.border, RoundedCornerShape(12.dp))
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.Search, contentDescription = null, tint = AppColors.textDim, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        BasicTextField(
+                            value = sipQuery,
+                            onValueChange = { sipQuery = it },
+                            textStyle = de.tipau.promille.AppText.body.copy(color = AppColors.text),
+                            singleLine = true,
+                            decorationBox = { inner ->
+                                if (sipQuery.isEmpty()) {
+                                    Text("Getränk suchen...", color = AppColors.textDim, style = de.tipau.promille.AppText.body)
+                                }
+                                inner()
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    HorizontalDivider(color = AppColors.border, thickness = 0.5.dp)
+
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(vertical = 4.dp)
+                    ) {
+                        items(sipResults, key = { it.id }) { t ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        showSipPicker = false
+                                        runCatching { onStartSipCounter?.invoke(t) }
+                                        onDismiss()
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(AppColors.accent.copy(alpha = 0.10f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    DrinkIconView(
+                                        template = t,
+                                        size = 18.dp,
+                                        tint = AppColors.accent
+                                    )
+                                }
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        text = t.name,
+                                        color = AppColors.text,
+                                        style = de.tipau.promille.AppText.bodyBold,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "${String.format(Locale.GERMANY, "%.1f", t.abv)}% vol · ${t.volume.toInt()} ml",
+                                        color = AppColors.textDim,
+                                        style = de.tipau.promille.AppText.caption
+                                    )
+                                }
+                                Icon(
+                                    imageVector = de.tipau.promille.ui.components.AppIcons.TouchApp,
+                                    contentDescription = null,
+                                    tint = AppColors.accent,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            HorizontalDivider(
+                                color = AppColors.border.copy(alpha = 0.5f),
+                                thickness = 0.5.dp,
+                                modifier = Modifier.padding(start = 64.dp)
+                            )
+                        }
+                    }
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.92f)
+                ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -516,24 +640,49 @@ fun QuickAddSheet(
                 )
             }
 
-            // Categories Strip
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 10.dp)
-            ) {
-                items(CATEGORIES) { cat ->
-                    val isSelected = (selectedCategory == null && cat.key == "all") || (selectedCategory == cat.key)
-                    de.tipau.promille.ui.components.AppChip(
-                        label = cat.label,
-                        isSelected = isSelected,
-                        iconPainter = cat.iconRes?.let { painterResource(it) },
-                        onClick = {
-                            selectedCategory = if (cat.key == "all" || selectedCategory == cat.key) null else cat.key
-                        }
+            // Categories Strip (Drinks) or Mix Filter Strip (Mische)
+            if (activeTab == QATab.DRINKS) {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp)
+                ) {
+                    items(CATEGORIES) { cat ->
+                        val isSelected = (selectedCategory == null && cat.key == "all") || (selectedCategory == cat.key)
+                        de.tipau.promille.ui.components.AppChip(
+                            label = cat.label,
+                            isSelected = isSelected,
+                            iconPainter = cat.iconRes?.let { painterResource(it) },
+                            onClick = {
+                                selectedCategory = if (cat.key == "all" || selectedCategory == cat.key) null else cat.key
+                            }
+                        )
+                    }
+                }
+            } else {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp)
+                ) {
+                    val customCount = allTemplates.count { it.isCustom }
+                    val mixChips = listOf(
+                        "all" to "Alle Mischen",
+                        "custom" to "Eigene ($customCount)",
+                        "community" to "Community (${communityMixes.size})",
+                        "cocktail" to "Klassiker"
                     )
+                    items(mixChips) { (key, label) ->
+                        de.tipau.promille.ui.components.AppChip(
+                            label = label,
+                            isSelected = selectedMixFilter == key,
+                            onClick = { selectedMixFilter = key }
+                        )
+                    }
                 }
             }
 
@@ -551,8 +700,8 @@ fun QuickAddSheet(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 90.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Favorites Section
-                    if (searchQuery.isBlank() && selectedCategory == null && favorites.isNotEmpty()) {
+                    // Favorites Section (only on Drinks tab)
+                    if (activeTab == QATab.DRINKS && searchQuery.isBlank() && selectedCategory == null && favorites.isNotEmpty()) {
                         item {
                             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 SectionLabel("FAVORITEN")
@@ -618,6 +767,242 @@ fun QuickAddSheet(
                                 }
                             }
                         }
+                    } else if (activeTab == QATab.MIXES) {
+                        // MARK: - Mische / Cocktails / Community Tab
+
+                        // 1. Action Row: Neue Mische kreieren + Quick Mix
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                // Create Custom Mix
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(AppColors.card)
+                                        .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+                                        .clickable { showMixCreator = true }
+                                        .padding(12.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(AppColors.accent.copy(alpha = 0.15f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(Icons.Filled.Add, contentDescription = null, tint = AppColors.accent, modifier = Modifier.size(18.dp))
+                                        }
+                                        Column {
+                                            Text(
+                                                text = "Eigene Mische",
+                                                color = AppColors.text,
+                                                style = de.tipau.promille.AppText.captionBold
+                                            )
+                                            Text(
+                                                text = "Rezept bauen",
+                                                color = AppColors.textDim,
+                                                style = de.tipau.promille.AppText.micro
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Quick Mix
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(AppColors.card)
+                                        .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+                                        .clickable { showQuickMix = true }
+                                        .padding(12.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(AppColors.accent.copy(alpha = 0.15f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(de.tipau.promille.ui.components.AppIcons.Water, contentDescription = null, tint = AppColors.accent, modifier = Modifier.size(18.dp))
+                                        }
+                                        Column {
+                                            Text(
+                                                text = "Quick Mix",
+                                                color = AppColors.text,
+                                                style = de.tipau.promille.AppText.captionBold
+                                            )
+                                            Text(
+                                                text = "Basis + Mixer",
+                                                color = AppColors.textDim,
+                                                style = de.tipau.promille.AppText.micro
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 2. User's Own Mixes
+                        val userCustomMixes = allTemplates.filter { it.isCustom }
+                        if (selectedMixFilter in listOf("all", "custom")) {
+                            if (userCustomMixes.isNotEmpty()) {
+                                item {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        SectionLabel("DEINE EIGENEN MISCHEN (${userCustomMixes.size})")
+                                        QACategoryContainer(
+                                            templates = userCustomMixes,
+                                            onDrinkClick = { addDrinkDirectly(it) },
+                                            onTuneClick = { selectedTemplateForAmount = it }
+                                        )
+                                    }
+                                }
+                            } else if (selectedMixFilter == "custom") {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 32.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text("Noch keine eigenen Mischen", color = AppColors.textDim, style = de.tipau.promille.AppText.body)
+                                            Text("Erstelle deine erste eigene Mische oben!", color = AppColors.textMuted, style = de.tipau.promille.AppText.caption)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 3. Community Mixes
+                        if (selectedMixFilter in listOf("all", "community")) {
+                            if (communityMixes.isNotEmpty()) {
+                                item {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        SectionLabel("COMMUNITY MISCHEN (${communityMixes.size})")
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(16.dp))
+                                                .background(AppColors.card)
+                                                .border(0.5.dp, AppColors.border, RoundedCornerShape(16.dp))
+                                        ) {
+                                            communityMixes.forEachIndexed { index, row ->
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clickable {
+                                                            val drink = DrinkEntity(
+                                                                id = UUID.randomUUID().toString(),
+                                                                templateID = row.id,
+                                                                name = row.name,
+                                                                volume = row.totalVolume,
+                                                                abv = row.totalAbv,
+                                                                calories = row.calories,
+                                                                iconName = "cocktail",
+                                                                categoryRaw = "cocktail",
+                                                                timestampEpochSeconds = System.currentTimeMillis() / 1000
+                                                            )
+                                                            onDrinkAdded(drink)
+                                                            onDismiss()
+                                                        }
+                                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(38.dp)
+                                                            .clip(RoundedCornerShape(10.dp))
+                                                            .background(AppColors.accent.copy(alpha = 0.12f)),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        DrinkIconView(
+                                                            iconName = "cocktail",
+                                                            name = row.name,
+                                                            categoryRaw = "cocktail",
+                                                            size = 18.dp,
+                                                            tint = AppColors.accent
+                                                        )
+                                                    }
+                                                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                        Text(
+                                                            text = row.name,
+                                                            color = AppColors.text,
+                                                            style = de.tipau.promille.AppText.bodyBold,
+                                                            maxLines = 1,
+                                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                                        )
+                                                        Text(
+                                                            text = "${row.ingredients.size} Zutaten · ${row.totalVolume.toInt()} ml · ${String.format(Locale.GERMANY, "%.1f", row.totalAbv)}% vol",
+                                                            color = AppColors.textDim,
+                                                            style = de.tipau.promille.AppText.caption
+                                                        )
+                                                    }
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .clip(CircleShape)
+                                                            .background(AppColors.accent.copy(alpha = 0.15f))
+                                                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = "+ Log",
+                                                            color = AppColors.accent,
+                                                            style = de.tipau.promille.AppText.captionBold
+                                                        )
+                                                    }
+                                                }
+                                                if (index < communityMixes.lastIndex) {
+                                                    HorizontalDivider(color = AppColors.border.copy(alpha = 0.5f), thickness = 0.5.dp, modifier = Modifier.padding(start = 64.dp))
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else if (isLoadingCommunityMixes) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 24.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(color = AppColors.accent, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                                    }
+                                }
+                            }
+                        }
+
+                        // 4. Classic Cocktails & Longdrinks
+                        val classicCocktails = allTemplates.filter { it.categoryRaw.equals("cocktail", ignoreCase = true) && !it.isCustom }
+                        if (selectedMixFilter in listOf("all", "cocktail")) {
+                            if (classicCocktails.isNotEmpty()) {
+                                item {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        SectionLabel("KLASSISCHE COCKTAILS & LONGDRINKS (${classicCocktails.size})")
+                                        QACategoryContainer(
+                                            templates = classicCocktails,
+                                            onDrinkClick = { addDrinkDirectly(it) },
+                                            onTuneClick = { selectedTemplateForAmount = it }
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     } else {
                         // Grouped by categories matching iOS QACategorySection
                         val orderedCategories = listOf(
@@ -672,9 +1057,10 @@ fun QuickAddSheet(
                         QAActionChip(icon = Icons.Filled.Add, title = "Eigene", onClick = { showCustomBrandDialog = true }, isFilledAccent = true)
                     }
                 }
-            }
-        }
-    }
+}
+}
+}
+}
 }
 }
 
@@ -1064,168 +1450,4 @@ private fun CustomBrandSheet(
             )
         }
     }
-}
-
-// MARK: - SipTemplatePicker (used by showSipPicker sheet)
-// 1:1 port of SipTemplatePicker in QuickAddSheet.swift:1160-1226
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SipTemplatePicker(
-    allTemplates: List<DrinkTemplateEntity>,
-    onSelect: (DrinkTemplateEntity) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var query by remember { mutableStateOf("") }
-
-    val results = remember(query, allTemplates) {
-        if (query.isBlank()) {
-            allTemplates.take(50)
-        } else {
-            allTemplates.filter { it.name.contains(query, ignoreCase = true) }.take(30)
-        }
-    }
-
-    val pickerSheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true
-    )
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = pickerSheetState,
-        containerColor = Color.Transparent,
-        scrimColor = Color.Black.copy(alpha = 0.65f),
-        dragHandle = null
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 24.dp, top = 16.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(AppColors.background)
-                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.85f)
-            ) {
-                // Header: matching iOS .padding(.horizontal, 20).padding(.vertical, 14)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // iOS: .appBodyBold (QuickAddSheet.swift:1177).
-                    Text(
-                        text = "Schluck-Zähler starten",
-                        color = AppColors.text,
-                        style = de.tipau.promille.AppText.bodyBold,
-                        modifier = Modifier.weight(1f)
-                    )
-                    de.tipau.promille.ui.components.AppIconCloseButton(onDismiss = onDismiss)
-                }
-
-            // Search bar: matching iOS .padding(.horizontal, 14).padding(.vertical, 10)
-            Row(
-                modifier = Modifier
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 8.dp)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(AppColors.card)
-                    .border(0.5.dp, AppColors.border, RoundedCornerShape(12.dp))
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Search,
-                    contentDescription = null,
-                    tint = AppColors.textDim,
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                androidx.compose.foundation.text.BasicTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    textStyle = de.tipau.promille.AppText.body.copy(color = AppColors.text),
-                    singleLine = true,
-                    decorationBox = { inner ->
-                        if (query.isEmpty()) {
-                            // iOS: .appBody (QuickAddSheet.swift:1191).
-                            Text("Getränk suchen...", color = AppColors.textDim, style = de.tipau.promille.AppText.body)
-                        }
-                        inner()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            HorizontalDivider(color = AppColors.border)
-
-            // Results list
-            androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(results.size) { index ->
-                    val t = results[index]
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelect(t) }
-                            .padding(horizontal = 16.dp, vertical = 11.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        // Drink icon container: 34x34, accent bg, 8dp radius
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(AppColors.accent.copy(alpha = 0.1f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            de.tipau.promille.ui.components.DrinkIconView(
-                                template = t,
-                                size = 15.dp,
-                                tint = AppColors.accent
-                            )
-                        }
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(1.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            // iOS: .appBody (QuickAddSheet.swift:1210).
-                            Text(
-                                text = t.name,
-                                color = AppColors.text,
-                                style = de.tipau.promille.AppText.body,
-                                maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                            )
-                            // iOS: .appCaption (QuickAddSheet.swift:1211).
-                            Text(
-                                text = "${String.format(Locale.GERMANY, "%.1f", t.abv)}% vol",
-                                color = AppColors.textDim,
-                                style = de.tipau.promille.AppText.caption
-                            )
-                        }
-                        Icon(
-                            imageVector = de.tipau.promille.ui.components.AppIcons.TouchApp,
-                            contentDescription = null,
-                            tint = AppColors.accent,
-                            modifier = Modifier.size(12.dp)
-                        )
-                    }
-                    if (index < results.lastIndex) {
-                        HorizontalDivider(
-                            color = AppColors.border,
-                            modifier = Modifier.padding(start = 62.dp)
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
 }
