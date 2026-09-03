@@ -63,6 +63,7 @@ fun QuickMixSheet(
     var totalVolumeMl by remember { mutableStateOf(200.0) }
     var mixerCategory by remember { mutableStateOf<MixerCategory?>(null) }
     var spiritSearch by remember { mutableStateOf("") }
+    var mixerSearch by remember { mutableStateOf("") }
 
     val volumePresets = listOf(100.0, 150.0, 200.0, 250.0, 300.0, 400.0, 500.0)
 
@@ -81,9 +82,14 @@ fun QuickMixSheet(
         }
     }
 
-    val visibleMixers = remember(mixerCategory) {
-        if (mixerCategory != null) MixerDatabase.entries(mixerCategory!!)
+    val visibleMixers = remember(mixerCategory, mixerSearch) {
+        val base = if (mixerCategory != null) MixerDatabase.entries(mixerCategory!!)
         else MixerDatabase.ALL
+        if (mixerSearch.trim().isEmpty()) base
+        else {
+            val q = mixerSearch.trim().lowercase(Locale.GERMAN)
+            base.filter { it.name.lowercase(Locale.GERMAN).contains(q) }
+        }
     }
 
     val effectiveABV = selectedSpirit?.let { it.abv * spiritFraction } ?: 0.0
@@ -223,7 +229,7 @@ fun QuickMixSheet(
                         BasicTextField(
                             value = spiritSearch,
                             onValueChange = { spiritSearch = it },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.weight(1f),
                             textStyle = de.tipau.promille.AppText.body.copy(color = AppColors.text),
                             cursorBrush = SolidColor(AppColors.accent),
                             decorationBox = { innerTextField ->
@@ -233,6 +239,21 @@ fun QuickMixSheet(
                                 innerTextField()
                             }
                         )
+                        if (spiritSearch.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clickable { spiritSearch = "" },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "Löschen",
+                                    tint = AppColors.textDim,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                     }
 
                     // Spirit Cards Carousel
@@ -349,6 +370,48 @@ fun QuickMixSheet(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SectionLabel(text = "Mixer")
 
+                    // Mixer search field
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(AppColors.card)
+                            .border(0.5.dp, AppColors.border, RoundedCornerShape(12.dp))
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.Search, null, tint = AppColors.textDim, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        BasicTextField(
+                            value = mixerSearch,
+                            onValueChange = { mixerSearch = it },
+                            modifier = Modifier.weight(1f),
+                            textStyle = de.tipau.promille.AppText.body.copy(color = AppColors.text),
+                            cursorBrush = SolidColor(AppColors.accent),
+                            decorationBox = { innerTextField ->
+                                if (mixerSearch.isEmpty()) {
+                                    Text("Mixer suchen...", color = AppColors.textDim, style = de.tipau.promille.AppText.body)
+                                }
+                                innerTextField()
+                            }
+                        )
+                        if (mixerSearch.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clickable { mixerSearch = "" },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "Löschen",
+                                    tint = AppColors.textDim,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+
                     // Category chips
                     Row(
                         modifier = Modifier
@@ -430,6 +493,21 @@ fun QuickMixSheet(
                                 if (isSelected) {
                                     Icon(Icons.Filled.Check, null, tint = AppColors.accent, modifier = Modifier.size(16.dp))
                                 }
+                            }
+                        }
+
+                        if (visibleMixers.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Keine Mixer gefunden",
+                                    color = AppColors.textDim,
+                                    style = de.tipau.promille.AppText.body
+                                )
                             }
                         }
                     }
