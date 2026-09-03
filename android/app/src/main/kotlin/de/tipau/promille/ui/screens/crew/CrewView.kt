@@ -180,18 +180,19 @@ fun CrewView(
         )
     }
 
-    if (selectedMember != null) {
+    selectedMember?.let { target ->
         FriendProfileSheet(
-            member = selectedMember!!,
+            member = target,
             onDismiss = { selectedMember = null },
             onUpdate = { updated ->
                 coroutineScope.launch {
-                    crewRepository.update(updated)
+                    runCatching { crewRepository.update(updated) }
                 }
             },
             onDelete = {
+                selectedMember = null
                 coroutineScope.launch {
-                    crewRepository.delete(selectedMember!!)
+                    runCatching { crewRepository.delete(target) }
                 }
             },
             supabase = supabase
@@ -207,8 +208,10 @@ fun CrewView(
             confirmText = "Entfernen",
             isDestructive = true,
             onConfirm = {
-                coroutineScope.launch { crewRepository.delete(target) }
                 memberToDelete = null
+                coroutineScope.launch {
+                    runCatching { crewRepository.delete(target) }
+                }
             },
             dismissText = "Abbrechen"
         )

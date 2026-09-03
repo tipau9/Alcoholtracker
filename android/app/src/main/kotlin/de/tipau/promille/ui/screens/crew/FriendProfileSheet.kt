@@ -82,6 +82,7 @@ fun FriendProfileSheet(
     var followsMe by remember { mutableStateOf(false) }
     var mutualFriends by remember { mutableStateOf<List<FriendProfile>>(emptyList()) }
     var selectedAchievement by remember { mutableStateOf<Achievement?>(null) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
     val myProfile by (supabase?.myProfile
         ?: kotlinx.coroutines.flow.MutableStateFlow<FriendProfile?>(null)).collectAsState()
     val isSignedIn by (supabase?.isSignedIn
@@ -488,15 +489,30 @@ fun FriendProfileSheet(
                 }
             )
 
-            // Delete Friend
+            // Delete Friend (matches iOS FriendProfileSheet.swift:458-480)
             SettingsDestructiveRow(
                 label = "Freund aus Crew entfernen",
                 onClick = {
-                    onDelete()
-                    onDismiss()
+                    showDeleteConfirmation = true
                 }
             )
         }
+    }
+
+    if (showDeleteConfirmation) {
+        de.tipau.promille.ui.components.AppAlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = "Freund entfernen?",
+            text = "${member.name} wird aus deiner Liste entfernt.",
+            confirmText = "Entfernen",
+            isDestructive = true,
+            onConfirm = {
+                showDeleteConfirmation = false
+                onDelete()
+                onDismiss()
+            },
+            dismissText = "Abbrechen"
+        )
     }
 }
 

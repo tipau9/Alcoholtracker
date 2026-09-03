@@ -101,8 +101,7 @@ fun QuickMixSheet(
 
     val canAdd = selectedSpirit != null && selectedMixer != null
     val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
-        confirmValueChange = { it != SheetValue.Hidden }
+        skipPartiallyExpanded = true
     )
 
     ModalBottomSheet(

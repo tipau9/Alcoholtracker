@@ -128,8 +128,7 @@ fun CustomMixCreatorSheet(
     }
 
     val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
-        confirmValueChange = { it != SheetValue.Hidden }
+        skipPartiallyExpanded = true
     )
 
     ModalBottomSheet(

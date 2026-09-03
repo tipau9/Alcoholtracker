@@ -128,7 +128,18 @@ data class BacProjectionInput(
 
     /** Curve points carry absolute epoch seconds so a chart can plot them directly. */
     fun curve(fromEpochSeconds: Long, hours: Double, intervalMinutes: Double): List<CurvePoint> {
-        if (drinks.isEmpty()) return emptyList()
+        if (drinks.isEmpty()) {
+            val stepSeconds = (intervalMinutes * 60).toLong().coerceAtLeast(60L)
+            val totalSeconds = (hours * 3600).toLong()
+            val points = mutableListOf<CurvePoint>()
+            var t = fromEpochSeconds
+            val end = fromEpochSeconds + totalSeconds
+            while (t <= end) {
+                points.add(CurvePoint(t, 0.0))
+                t += stepSeconds
+            }
+            return points
+        }
         val start = minutesFromOrigin(fromEpochSeconds)
         return BacCalculator.bacCurve(
             drinks = engineDrinks(),

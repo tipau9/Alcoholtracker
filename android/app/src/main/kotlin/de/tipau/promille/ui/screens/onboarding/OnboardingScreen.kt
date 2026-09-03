@@ -377,6 +377,8 @@ private fun ONRulerPicker(
         }
     }
 
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+
     // Continuously report current centered value
     LaunchedEffect(listState) {
         snapshotFlow {
@@ -387,6 +389,7 @@ private fun ONRulerPicker(
         }.collect { centerIdx ->
             val centerValue = items.getOrNull(centerIdx)
             if (centerValue != null && centerValue != value) {
+                haptics.selection()
                 onValueChange(centerValue)
             }
         }
@@ -513,6 +516,8 @@ private fun ONGenderPage(
 
         Spacer(Modifier.height(16.dp))
 
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -523,14 +528,20 @@ private fun ONGenderPage(
                 label = "Männlich",
                 iconRes = R.drawable.ic_gender_male,
                 isSelected = selectedGender == Gender.MALE,
-                onTap = { viewModel.setGender(Gender.MALE) },
+                onTap = {
+                    haptics.selection()
+                    viewModel.setGender(Gender.MALE)
+                },
                 modifier = Modifier.weight(1f)
             )
             ONGenderCard(
                 label = "Weiblich",
                 iconRes = R.drawable.ic_gender_female,
                 isSelected = selectedGender == Gender.FEMALE,
-                onTap = { viewModel.setGender(Gender.FEMALE) },
+                onTap = {
+                    haptics.selection()
+                    viewModel.setGender(Gender.FEMALE)
+                },
                 modifier = Modifier.weight(1f)
             )
         }
@@ -908,10 +919,13 @@ private fun <T> IOSWheelPicker(
         }
     }
 
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+
     // Immediately notify when active item changes
     LaunchedEffect(activeIndex) {
         val item = items.getOrNull(activeIndex)
         if (item != null && item != selectedItem) {
+            haptics.selection()
             onItemSelected(item)
         }
     }
@@ -1072,6 +1086,8 @@ private fun ONFavoritesPage(
             }
         }
 
+        val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+
         // Category Filter Chips
         Row(
             modifier = Modifier
@@ -1086,7 +1102,10 @@ private fun ONFavoritesPage(
                 de.tipau.promille.ui.components.AppChip(
                     label = catLabel,
                     isSelected = isOn,
-                    onClick = { selectedCategory = if (isOn && catKey != null) null else catKey }
+                    onClick = {
+                        haptics.selection()
+                        selectedCategory = if (isOn && catKey != null) null else catKey
+                    }
                 )
             }
         }
@@ -1107,7 +1126,10 @@ private fun ONFavoritesPage(
                         isSelected = true,
                         selectedColor = AppColors.accent.copy(alpha = 0.12f),
                         selectedTextColor = AppColors.text,
-                        onClick = { viewModel.removeFavorite(t.id) },
+                        onClick = {
+                            haptics.selection()
+                            viewModel.removeFavorite(t.id)
+                        },
                         icon = Icons.Filled.Close
                     )
                 }
@@ -1142,7 +1164,10 @@ private fun ONFavoritesPage(
                                 if (isSelected) AppColors.accent else AppColors.border,
                                 RoundedCornerShape(16.dp)
                             )
-                            .clickable { viewModel.toggleFavorite(template.id) }
+                            .clickable {
+                                haptics.selection()
+                                viewModel.toggleFavorite(template.id)
+                            }
                             .padding(12.dp)
                     ) {
                         Column(

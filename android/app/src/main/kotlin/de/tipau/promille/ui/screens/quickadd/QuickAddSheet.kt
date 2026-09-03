@@ -147,8 +147,7 @@ fun QuickAddSheet(
     customMixDao: CustomMixDao? = null
 ) {
     val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
-        confirmValueChange = { it != SheetValue.Hidden }
+        skipPartiallyExpanded = true
     )
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
@@ -1088,8 +1087,7 @@ private fun SipTemplatePicker(
     }
 
     val pickerSheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
-        confirmValueChange = { it != SheetValue.Hidden }
+        skipPartiallyExpanded = true
     )
 
     ModalBottomSheet(

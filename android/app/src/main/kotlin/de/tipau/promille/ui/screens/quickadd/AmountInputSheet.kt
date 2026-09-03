@@ -7,9 +7,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
@@ -176,8 +181,7 @@ fun AmountInputSheet(
         (template.calories * factor).toInt()
     }
     val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
-        confirmValueChange = { it != SheetValue.Hidden }
+        skipPartiallyExpanded = true
     )
 
     ModalBottomSheet(
@@ -347,14 +351,27 @@ fun AmountInputSheet(
                         verticalAlignment = Alignment.Bottom,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Text(
-                            // iOS: .system(size: 48, weight: .light, design: .serif) (AmountInputSheet.swift:174).
-                            text = volumeText,
-                            color = AppColors.text,
-                            fontSize = fixedSp(48f),
-                            fontWeight = FontWeight.Light,
-                            fontFamily = AppSerif,
-                            style = TabularFigures
+                        BasicTextField(
+                            value = volumeText,
+                            onValueChange = { newText ->
+                                val filtered = newText.filter { it.isDigit() }.take(5)
+                                volumeText = filtered
+                                val typed = filtered.toDoubleOrNull()
+                                if (typed != null && typed > 0) {
+                                    volume = typed
+                                    selectedPresetID = presets.firstOrNull { kotlin.math.abs(it.volumeML - typed) < 0.5 }?.id
+                                }
+                            },
+                            textStyle = TextStyle(
+                                color = AppColors.text,
+                                fontSize = fixedSp(48f),
+                                fontWeight = FontWeight.Light,
+                                fontFamily = de.tipau.promille.AppSerif
+                            ),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            cursorBrush = SolidColor(AppColors.accent),
+                            modifier = Modifier.widthIn(min = 40.dp, max = 150.dp)
                         )
                         Text(
                             // iOS: .system(size: 16, weight: .regular) (AmountInputSheet.swift:189).

@@ -1,8 +1,14 @@
 package de.tipau.promille.ui.screens.home
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -151,6 +157,8 @@ fun EditableWidgetContainer(
     isEditMode: Boolean,
     isActive: Boolean,
     onToggleActive: () -> Unit,
+    onMoveUp: (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     if (!isEditMode) {
@@ -158,37 +166,95 @@ fun EditableWidgetContainer(
             content()
         }
     } else {
+        val infiniteTransition = rememberInfiniteTransition(label = "jiggle")
+        val jiggleAngle by infiniteTransition.animateFloat(
+            initialValue = -0.75f,
+            targetValue = 0.75f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(140, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "jiggleAngle"
+        )
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .graphicsLayer { alpha = if (isActive) 1f else 0.35f }
+                .graphicsLayer {
+                    rotationZ = jiggleAngle
+                    alpha = if (isActive) 1f else 0.4f
+                }
         ) {
             content()
 
-            // Top-trailing toggle button matching iOS sectionToggle
-            Box(
+            // Top-trailing action row with move up/down and toggle
+            Row(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 4.dp, end = 8.dp)
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(AppColors.background)
-                    .clickable(onClick = onToggleActive),
-                contentAlignment = Alignment.Center
+                    .padding(top = 4.dp, end = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (isActive) {
-                    Icon(
-                        imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = "Aktiviert",
-                        tint = AppColors.accent,
-                        modifier = Modifier.size(24.dp)
-                    )
-                } else {
+                if (onMoveUp != null) {
                     Box(
                         modifier = Modifier
-                            .size(20.dp)
-                            .border(1.5.dp, AppColors.textDim, CircleShape)
-                    )
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(AppColors.card)
+                            .border(0.5.dp, AppColors.border, CircleShape)
+                            .clickable(onClick = onMoveUp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = AppIcons.ChevronUp,
+                            contentDescription = "Nach oben",
+                            tint = AppColors.text,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+                if (onMoveDown != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(AppColors.card)
+                            .border(0.5.dp, AppColors.border, CircleShape)
+                            .clickable(onClick = onMoveDown),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = AppIcons.ChevronDown,
+                            contentDescription = "Nach unten",
+                            tint = AppColors.text,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                // Toggle active button matching iOS sectionToggle
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(AppColors.background)
+                        .clickable(onClick = onToggleActive),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isActive) {
+                        Icon(
+                            imageVector = Icons.Filled.CheckCircle,
+                            contentDescription = "Aktiviert",
+                            tint = AppColors.accent,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(20.dp)
+                                .border(1.5.dp, AppColors.textDim, CircleShape)
+                        )
+                    }
                 }
             }
         }

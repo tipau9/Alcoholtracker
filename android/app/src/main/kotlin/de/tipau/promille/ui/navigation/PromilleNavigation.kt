@@ -141,13 +141,15 @@ fun PromilleNavigation(
                     .fillMaxWidth()
                     .background(AppColors.card)
                     .navigationBarsPadding()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                    .padding(vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 visibleTabs.forEach { tab ->
                     val isSelected = selectedTab == tab
                     Column(
                         modifier = Modifier
+                            .weight(1f)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
@@ -157,7 +159,7 @@ fun PromilleNavigation(
                                     selectedTab = tab
                                 }
                             }
-                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                            .padding(vertical = 2.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
@@ -170,8 +172,11 @@ fun PromilleNavigation(
                         Text(
                             text = tab.label,
                             color = if (isSelected) AppColors.accent else AppColors.textDim,
-                            fontSize = 11.sp,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
+                            fontSize = 10.sp,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
                     }
                 }
