@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -43,6 +44,7 @@ fun PromilleNavigation(
 
     var selectedTab by rememberSaveable { mutableStateOf(Tab.HOME) }
     var showAchievements by remember { mutableStateOf(false) }
+    val stateHolder = rememberSaveableStateHolder()
 
     val container = application.container
     // AppContainer already refreshes this on startup and on sign-in/sign-up; just observe it.
@@ -90,6 +92,10 @@ fun PromilleNavigation(
                     .weight(1f)
                     .statusBarsPadding()
             ) {
+                // iOS TabView keeps every tab alive, so per-tab state (scroll offset,
+                // the chart's play-once reveal) survives a switch. `when` disposes the
+                // branch it leaves, so hold that state here instead.
+                stateHolder.SaveableStateProvider(selectedTab) {
                 when (selectedTab) {
                     Tab.HOME -> {
                         de.tipau.promille.ui.screens.home.SessionScreen(
@@ -125,6 +131,7 @@ fun PromilleNavigation(
                     Tab.ADMIN -> {
                         de.tipau.promille.ui.screens.admin.AdminScreen(container = container)
                     }
+                }
                 }
             }
 
