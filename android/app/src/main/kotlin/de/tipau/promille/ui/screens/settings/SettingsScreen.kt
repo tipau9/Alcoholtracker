@@ -311,7 +311,10 @@ fun SettingsScreen(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { if (!isSignedIn) showAuth = true }
             ) {
                 Box(
                     modifier = Modifier

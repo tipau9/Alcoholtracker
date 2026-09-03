@@ -76,3 +76,20 @@ fun Modifier.pressable(
         pressedAlpha = pressedAlpha
     )
 }
+
+/**
+ * 1:1 mirror of iOS pressableChip (Theme/Motion.swift:65).
+ * Slightly stronger shrink (scale: 0.94) for small controls (chips, circular icon buttons).
+ */
+@Composable
+fun Modifier.pressableChip(
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    enabled: Boolean = true,
+    onClick: (() -> Unit)? = null
+): Modifier = pressable(
+    interactionSource = interactionSource,
+    enabled = enabled,
+    scale = 0.94f,
+    pressedAlpha = 0.85f,
+    onClick = onClick
+)

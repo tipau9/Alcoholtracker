@@ -287,6 +287,7 @@ fun StomachStatusPicker(
     currentStatus: StomachStatus,
     onStatusSelected: (StomachStatus) -> Unit
 ) {
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionLabel(text = "MAGEN")
         Row(
@@ -305,7 +306,12 @@ fun StomachStatusPicker(
                             if (isSelected) AppColors.accent else AppColors.border,
                             RoundedCornerShape(10.dp)
                         )
-                        .clickable { onStatusSelected(status) }
+                        .clickable {
+                            if (!isSelected) {
+                                haptics.selection()
+                                onStatusSelected(status)
+                            }
+                        }
                         .padding(vertical = 9.dp),
                     contentAlignment = Alignment.Center
                 ) {

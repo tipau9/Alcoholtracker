@@ -185,39 +185,16 @@ fun TrendsView(
                 }
             }
 
-            // Period Segmented Picker
+            // Period Segmented Picker (1:1 mirror of Picker.pickerStyle(.segmented))
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionLabel("ZEITRAUM")
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(AppColors.card)
-                            .border(0.5.dp, AppColors.border, RoundedCornerShape(12.dp))
-                            .padding(3.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        InsightsPeriod.entries.forEach { period ->
-                            val isSelected = period == selectedPeriod
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(9.dp))
-                                    .background(if (isSelected) AppColors.accent else Color.Transparent)
-                                    .clickable { selectedPeriod = period }
-                                    .padding(vertical = 8.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                // iOS: .appCaptionBold (TrendsView.swift:130, 135).
-                                Text(
-                                    text = period.label,
-                                    color = if (isSelected) AppColors.background else AppColors.textDim,
-                                    style = de.tipau.promille.AppText.captionBold
-                                )
-                            }
-                        }
-                    }
+                    de.tipau.promille.ui.components.AppSegmentedControl(
+                        items = InsightsPeriod.entries,
+                        selectedItem = selectedPeriod,
+                        onItemSelected = { selectedPeriod = it },
+                        labelProvider = { it.label }
+                    )
                 }
             }
 

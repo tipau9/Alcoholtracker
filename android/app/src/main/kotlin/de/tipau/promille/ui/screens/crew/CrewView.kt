@@ -530,6 +530,7 @@ fun CrewView(
                             if (!isSignedIn && currentJam == null) {
                                 showSOSInfo = true
                             } else {
+                                de.tipau.promille.ui.components.HapticManager.from(context).warning()
                                 if (isSignedIn) {
                                     coroutineScope.launch { runCatching { supabase.setSOS(!sosOn) } }
                                 }

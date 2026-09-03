@@ -1,8 +1,10 @@
 package de.tipau.promille.ui.screens.quickadd
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -161,6 +163,23 @@ fun QuickAddSheet(
     var activeTab by remember { mutableStateOf(QATab.DRINKS) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    fun addDrinkDirectly(template: DrinkTemplateEntity) {
+        val drink = DrinkEntity(
+            id = UUID.randomUUID().toString(),
+            templateID = template.id,
+            name = template.name,
+            volume = template.volume,
+            abv = template.abv,
+            calories = template.calories,
+            iconName = template.iconName,
+            categoryRaw = template.categoryRaw,
+            timestampEpochSeconds = System.currentTimeMillis() / 1000
+        )
+        de.tipau.promille.ui.components.HapticManager.from(context).success()
+        onDrinkAdded(drink)
+        onDismiss()
+    }
 
     val favorites by templateRepository.getTopFavorites(6)
         .collectAsState(initial = emptyList())
@@ -546,7 +565,7 @@ fun QuickAddSheet(
                                         Box(modifier = Modifier.weight(1f)) {
                                             QAFavoriteCard(
                                                 template = fav,
-                                                onClick = { selectedTemplateForAmount = fav },
+                                                onClick = { addDrinkDirectly(fav) },
                                                 onLongPress = { selectedTemplateForAmount = fav }
                                             )
                                         }
@@ -593,7 +612,7 @@ fun QuickAddSheet(
                                     SectionLabel("ERGEBNISSE (${filteredTemplates.size})")
                                     QACategoryContainer(
                                         templates = filteredTemplates,
-                                        onDrinkClick = { selectedTemplateForAmount = it },
+                                        onDrinkClick = { addDrinkDirectly(it) },
                                         onTuneClick = { selectedTemplateForAmount = it }
                                     )
                                 }
@@ -621,7 +640,7 @@ fun QuickAddSheet(
                                         SectionLabel(catTitle)
                                         QACategoryContainer(
                                             templates = itemsInCat,
-                                            onDrinkClick = { selectedTemplateForAmount = it },
+                                            onDrinkClick = { addDrinkDirectly(it) },
                                             onTuneClick = { selectedTemplateForAmount = it }
                                         )
                                     }
@@ -660,6 +679,7 @@ fun QuickAddSheet(
 }
 
 // MARK: - QAFavoriteCard matching iOS QADrinkCard
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun QAFavoriteCard(
     template: DrinkTemplateEntity,
@@ -674,7 +694,10 @@ private fun QAFavoriteCard(
             .clip(RoundedCornerShape(16.dp))
             .background(AppColors.card)
             .border(0.5.dp, AppColors.border, RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongPress
+            )
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -760,6 +783,7 @@ private fun QACategoryContainer(
 }
 
 // MARK: - QADrinkRow matching iOS QADrinkRow
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun QADrinkRow(
     template: DrinkTemplateEntity,
@@ -771,7 +795,11 @@ private fun QADrinkRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clip(RoundedCornerShape(8.dp))
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onTuneClick
+            )
             .padding(vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

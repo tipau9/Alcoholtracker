@@ -66,6 +66,7 @@ fun AppAlertDialog(
                 if (content != null) {
                     content()
                 }
+                val haptics = rememberHapticManager()
                 if (buttons != null) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -80,13 +81,17 @@ fun AppAlertDialog(
                         if (dismissText != null && onDismiss != null) {
                             SecondaryButton(
                                 text = dismissText,
-                                onClick = onDismiss,
+                                onClick = {
+                                    haptics.light()
+                                    onDismiss()
+                                },
                                 modifier = Modifier.weight(1f)
                             )
                         }
                         PrimaryButton(
                             text = confirmText,
                             onClick = {
+                                if (isDestructive) haptics.warning() else haptics.light()
                                 onConfirm()
                                 onDismissRequest()
                             },

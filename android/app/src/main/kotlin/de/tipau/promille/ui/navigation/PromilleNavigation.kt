@@ -135,6 +135,7 @@ fun PromilleNavigation(
                     .background(AppColors.border)
                     .padding(top = 0.5.dp)
             ) {
+            val haptics = de.tipau.promille.ui.components.rememberHapticManager()
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -151,7 +152,10 @@ fun PromilleNavigation(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
-                                selectedTab = tab
+                                if (selectedTab != tab) {
+                                    haptics.selection()
+                                    selectedTab = tab
+                                }
                             }
                             .padding(horizontal = 12.dp, vertical = 4.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
