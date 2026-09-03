@@ -91,6 +91,13 @@ dependencies {
     implementation("io.ktor:ktor-client-okhttp:2.3.13")
     // Offline/Bluetooth Jam transport, the Android analog of MultipeerConnectivity.
     implementation("com.google.android.gms:play-services-nearby:19.3.0")
+    // CameraX & ML Kit Barcode Scanning
+    val cameraxVersion = "1.3.4"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation(kotlin("test"))
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
