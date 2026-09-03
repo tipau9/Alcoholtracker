@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.appSpec
 import de.tipau.promille.AppColors
+import de.tipau.promille.AppMotion
 import de.tipau.promille.bac.Achievement
 import de.tipau.promille.bac.AchievementAccent
 import de.tipau.promille.bac.AchievementCatalog
@@ -46,7 +47,7 @@ fun AchievementsScreen(
     val unlocked = unlockedIds.size
     val progress by animateFloatAsState(
         targetValue = if (total > 0) unlocked.toFloat() / total else 0f,
-        animationSpec = appSpec(spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 200f)),
+        animationSpec = AppMotion.springMotion(),
         label = "progress"
     )
 

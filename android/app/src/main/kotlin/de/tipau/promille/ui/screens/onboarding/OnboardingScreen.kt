@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
+import de.tipau.promille.AppMotion
 import de.tipau.promille.bac.Gender
 import de.tipau.promille.data.DrinkTemplateEntity
 import de.tipau.promille.ui.components.AppIcons
@@ -155,7 +156,7 @@ fun OnboardingScreen(
                         val isCurrent = page == i
                         val width by animateDpAsState(
                             targetValue = if (isCurrent) 22.dp else 7.dp,
-                            animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy),
+                            animationSpec = AppMotion.snappy(),
                             label = "dot_width"
                         )
                         Box(
