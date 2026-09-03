@@ -23,8 +23,7 @@ fun SectionLabel(
     Text(
         text = text.uppercase(),
         color = color,
-        fontSize = 13.sp,
-        fontWeight = FontWeight.SemiBold,
+        style = de.tipau.promille.AppText.captionBold,
         letterSpacing = 1.2.sp,
         modifier = modifier.padding(bottom = 8.dp, top = 4.dp)
     )

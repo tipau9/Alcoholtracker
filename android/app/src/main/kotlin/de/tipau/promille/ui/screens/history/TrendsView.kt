@@ -135,8 +135,10 @@ fun TrendsView(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
         containerColor = AppColors.background,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
+        scrimColor = Color.Black.copy(alpha = 0.65f),
+        dragHandle = null
     ) {
         LazyColumn(
             modifier = Modifier
@@ -155,17 +157,17 @@ fun TrendsView(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        // iOS: .appHeadline (TrendsView.swift:78).
                         Text(
                             text = "Trends & Einblicke",
                             color = AppColors.text,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = AppSerif
+                            style = de.tipau.promille.AppText.headline
                         )
+                        // iOS: .appMicro (TrendsView.swift:545).
                         Text(
                             text = "Analyse deiner Trinkgewohnheiten",
                             color = AppColors.textDim,
-                            fontSize = 13.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
 
@@ -173,11 +175,11 @@ fun TrendsView(
                         onClick = onDismiss,
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                     ) {
+                        // iOS: .appBodyBold / Primary accent action
                         Text(
                             text = "Fertig",
                             color = AppColors.accent,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold
+                            style = de.tipau.promille.AppText.bodyBold
                         )
                     }
                 }
@@ -207,11 +209,11 @@ fun TrendsView(
                                     .padding(vertical = 8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
+                                // iOS: .appCaptionBold (TrendsView.swift:130, 135).
                                 Text(
                                     text = period.label,
                                     color = if (isSelected) AppColors.background else AppColors.textDim,
-                                    fontSize = 13.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    style = de.tipau.promille.AppText.captionBold
                                 )
                             }
                         }
@@ -227,7 +229,8 @@ fun TrendsView(
                             .padding(vertical = 40.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Noch keine Daten für Trends vorhanden.", color = AppColors.textDim, fontSize = 15.sp)
+                        // iOS: .appBody (TrendsView.swift:55).
+                        Text("Noch keine Daten für Trends vorhanden.", color = AppColors.textDim, style = de.tipau.promille.AppText.body)
                     }
                 }
             } else {
@@ -317,15 +320,16 @@ fun TrendsView(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text(item.name, color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                                    Text(item.subtitle, color = AppColors.textDim, fontSize = 12.sp)
+                                    // iOS: .appCaptionBold (TrendsView.swift:606).
+                                    Text(item.name, color = AppColors.text, style = de.tipau.promille.AppText.captionBold)
+                                    // iOS: .appMicro (TrendsView.swift:607).
+                                    Text(item.subtitle, color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
                                 }
+                                // iOS: .appCaptionBold (TrendsView.swift:619).
                                 Text(
                                     text = "${item.count}×",
                                     color = AppColors.accent,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = AppSerif
+                                    style = de.tipau.promille.AppText.captionBold.merge(de.tipau.promille.TabularFigures)
                                 )
                             }
                         }
@@ -344,8 +348,10 @@ fun TrendsView(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(cat.name, color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                                Text("${cat.count} Drinks (${cat.subtitle})", color = AppColors.textDim, fontSize = 13.sp)
+                                // iOS: .appCaption (TrendsView.swift:433).
+                                Text(cat.name, color = AppColors.text, style = de.tipau.promille.AppText.caption)
+                                // iOS: .appMicro (TrendsView.swift:438).
+                                Text("${cat.count} Drinks (${cat.subtitle})", color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
                             }
                         }
                     }
@@ -375,8 +381,10 @@ fun TrendsView(
                                 }
                                 Spacer(Modifier.width(12.dp))
                                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text(discovery.title, color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                    Text(discovery.detail, color = AppColors.textDim, fontSize = 12.sp, lineHeight = 16.sp)
+                                    // iOS: .appBodyBold (TrendsView.swift:222).
+                                    Text(discovery.title, color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
+                                    // iOS: .appCaption (TrendsView.swift:225).
+                                    Text(discovery.detail, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                                 }
                             }
                         }
@@ -390,11 +398,11 @@ fun TrendsView(
                             SectionLabel("MORGEN DANACH")
                             PromilleCard {
                                 if (correlations.isEmpty()) {
+                                    // iOS: .appCaption (TrendsView.swift:457).
                                     Text(
                                         text = "Bewerte morgens deine Nacht, um hier zu sehen, wie sich dein Promillewert auf den nächsten Tag auswirkt.",
                                         color = AppColors.textMuted,
-                                        fontSize = 12.sp,
-                                        lineHeight = 16.sp
+                                        style = de.tipau.promille.AppText.caption
                                     )
                                 } else {
                                     val maxAvg = (correlations.maxOfOrNull { it.averagePeakBAC } ?: 0.0).coerceAtLeast(0.01)
@@ -408,11 +416,11 @@ fun TrendsView(
                                             )
                                         }
                                         insight?.let {
+                                            // iOS: .appCaption (TrendsView.swift:473).
                                             Text(
                                                 text = "Deine positiv bewerteten Morgen folgten auf Abende mit im Schnitt ${it.goodAvg.permilleString()}, die negativ bewerteten auf ${it.badAvg.permilleString()}.",
                                                 color = AppColors.textDim,
-                                                fontSize = 12.sp,
-                                                lineHeight = 16.sp
+                                                style = de.tipau.promille.AppText.caption
                                             )
                                         }
                                     }
@@ -458,16 +466,17 @@ fun TrendsView(
                                 }
                                 Spacer(Modifier.width(12.dp))
                                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    // iOS: .appHeadline (TrendsView.swift:338).
                                     Text(
                                         text = trendsCity?.let { "Was läuft in $it?" } ?: "Lokale Stadt-Trends",
                                         color = AppColors.text,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold
+                                        style = de.tipau.promille.AppText.headline
                                     )
+                                    // iOS: .appMicro (TrendsView.swift:339).
                                     Text(
                                         text = "Anonym aggregiert · letzte 7 Tage",
                                         color = AppColors.textDim,
-                                        fontSize = 12.sp
+                                        style = de.tipau.promille.AppText.micro
                                     )
                                 }
                             }
@@ -549,24 +558,27 @@ fun TrendsView(
                                         }
                                         if (cityIns.categories.isNotEmpty()) {
                                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                                Text("KATEGORIEN", color = AppColors.textDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                // iOS: .appCaptionBold (TrendsView.swift:428).
+                                                Text("KATEGORIEN", color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
                                                 cityIns.categories.take(5).forEach { cat ->
                                                     Row(
                                                         modifier = Modifier.fillMaxWidth(),
                                                         horizontalArrangement = Arrangement.SpaceBetween
                                                     ) {
-                                                        Text(categoryName(cat.category), color = AppColors.text, fontSize = 13.sp)
-                                                        Text("${cat.pingCount}", color = AppColors.textDim, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                                        // iOS: .appCaption (TrendsView.swift:434).
+                                                        Text(categoryName(cat.category), color = AppColors.text, style = de.tipau.promille.AppText.caption)
+                                                        // iOS: .appCaptionBold (TrendsView.swift:438).
+                                                        Text("${cat.pingCount}", color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
                                                     }
                                                 }
                                             }
                                         }
 
+                                        // iOS: .appMicro (TrendsView.swift:365).
                                         Text(
                                             text = "Basierend auf ${cityIns.contributorCount ?: 0} anonymen Beiträgern. BAC und Dauer sind Schätzwerte beim Zeitpunkt des Eintrags.",
                                             color = AppColors.textMuted,
-                                            fontSize = 11.sp,
-                                            lineHeight = 15.sp
+                                            style = de.tipau.promille.AppText.micro
                                         )
                                     }
                                 }
@@ -577,10 +589,11 @@ fun TrendsView(
                                     LocalTrendsRanking("TOP 5 GETRÄNKE", cityTrends.take(5).map {
                                         Triple(it.drinkName, categoryName(it.category), it.pingCount)
                                     })
+                                    // iOS: .appMicro (TrendsView.swift:379).
                                     Text(
                                         text = "Für Zeit-, BAC- und Dauerwerte muss die aktualisierte city_drink_trends.sql ausgeführt werden.",
                                         color = AppColors.textMuted,
-                                        fontSize = 11.sp
+                                        style = de.tipau.promille.AppText.micro
                                     )
                                 }
                             }
@@ -614,7 +627,8 @@ private fun LocalTrendsEmpty(text: String) {
             modifier = Modifier.size(16.dp)
         )
         Spacer(Modifier.width(8.dp))
-        Text(text, color = AppColors.textMuted, fontSize = 13.sp, lineHeight = 17.sp)
+        // iOS: .appCaption (TrendsView.swift:630).
+        Text(text, color = AppColors.textMuted, style = de.tipau.promille.AppText.caption)
     }
 }
 
@@ -622,7 +636,8 @@ private fun LocalTrendsEmpty(text: String) {
 @Composable
 private fun LocalTrendsRanking(title: String, items: List<Triple<String, String, Int>>) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, color = AppColors.textDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        // iOS: .appCaptionBold (TrendsView.swift:388).
+        Text(title, color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
         val maximum = (items.maxOfOrNull { it.third } ?: 1).coerceAtLeast(1)
         items.forEachIndexed { index, (name, subtitle, count) ->
             Row(
@@ -632,7 +647,7 @@ private fun LocalTrendsRanking(title: String, items: List<Triple<String, String,
             ) {
                 Box(
                     modifier = Modifier
-                        .size(22.dp)
+                        .size(26.dp)
                         .clip(CircleShape)
                         .background(if (index == 0) AppColors.accent else AppColors.border.copy(alpha = 0.45f)),
                     contentAlignment = Alignment.Center
@@ -640,17 +655,19 @@ private fun LocalTrendsRanking(title: String, items: List<Triple<String, String,
                     Text(
                         "${index + 1}",
                         color = if (index == 0) AppColors.background else AppColors.textDim,
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Black
                     )
                 }
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Text(name, color = AppColors.text, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                    if (subtitle.isNotEmpty()) Text(subtitle, color = AppColors.textMuted, fontSize = 10.sp)
+                    // iOS: .appCaptionBold (TrendsView.swift:606).
+                    Text(name, color = AppColors.text, style = de.tipau.promille.AppText.captionBold, maxLines = 1)
+                    // iOS: .appMicro (TrendsView.swift:607).
+                    if (subtitle.isNotEmpty()) Text(subtitle, color = AppColors.textMuted, style = de.tipau.promille.AppText.micro)
                 }
                 Box(
                     modifier = Modifier
-                        .width(50.dp)
+                        .width(58.dp)
                         .height(5.dp)
                         .clip(RoundedCornerShape(50))
                         .background(AppColors.accent.copy(alpha = 0.16f))
@@ -663,7 +680,8 @@ private fun LocalTrendsRanking(title: String, items: List<Triple<String, String,
                             .background(AppColors.accent)
                     )
                 }
-                Text("$count", color = AppColors.textDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                // iOS: .appCaptionBold (TrendsView.swift:619).
+                Text("$count", color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
             }
         }
     }
@@ -684,14 +702,21 @@ private fun MoodCorrelationRow(mood: DayMood, averagePeakBAC: Double, nights: In
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("${mood.emoji} ${mood.label}", color = AppColors.text, fontSize = 12.sp)
+            // iOS: .appCaption (TrendsView.swift:674).
+            Text("${mood.emoji} ${mood.label}", color = AppColors.text, style = de.tipau.promille.AppText.caption)
+            // iOS: .appMicro (TrendsView.swift:677).
             Text(
                 if (nights == 1) "1 Nacht" else "$nights Nächte",
                 color = AppColors.textMuted,
-                fontSize = 10.sp
+                style = de.tipau.promille.AppText.micro
             )
             Spacer(Modifier.weight(1f))
-            Text(averagePeakBAC.permilleString(), color = AppColors.text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            // iOS: .appCaptionBold.monospacedDigit() (TrendsView.swift:681).
+            Text(
+                averagePeakBAC.permilleString(),
+                color = AppColors.text,
+                style = de.tipau.promille.AppText.captionBold.merge(de.tipau.promille.TabularFigures)
+            )
         }
         Box(
             modifier = Modifier
@@ -740,17 +765,17 @@ private fun MetricTile(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                // iOS: InsightsMetricTile value (21sp Bold design.rounded)
                 Text(
                     text = value,
                     color = AppColors.text,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Light,
-                    fontFamily = AppSerif
+                    style = de.tipau.promille.AppText.bodyBold.merge(de.tipau.promille.TabularFigures)
                 )
+                // iOS: .appMicro (TrendsView.swift:563).
                 Text(
                     text = label,
                     color = AppColors.textDim,
-                    fontSize = 11.sp
+                    style = de.tipau.promille.AppText.micro
                 )
             }
         }
@@ -768,13 +793,13 @@ private fun DetailRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, color = AppColors.textDim, fontSize = 14.sp)
+        // iOS: .appCaption (TrendsView.swift:581).
+        Text(label, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
+        // iOS: .appCaptionBold.monospacedDigit() (TrendsView.swift:583).
         Text(
             text = value,
             color = valueColor,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = AppSerif
+            style = de.tipau.promille.AppText.captionBold.merge(de.tipau.promille.TabularFigures)
         )
     }
 }

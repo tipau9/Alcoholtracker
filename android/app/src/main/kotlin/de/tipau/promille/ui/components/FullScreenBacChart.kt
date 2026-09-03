@@ -88,34 +88,14 @@ fun FullScreenBacChart(
                         fontFamily = AppSerif
                     )
                     Text(
+                        // iOS: .appCaption - was 12sp.
                         text = "24-Stunden-Ansicht",
                         color = AppColors.textDim,
-                        fontSize = 12.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .clickable(onClickLabel = "Schließen", onClick = onDismiss),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.card),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Close,
-                            contentDescription = "Schließen",
-                            tint = AppColors.textDim,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
+                AppIconCloseButton(onDismiss = onDismiss)
             }
 
             // Selected Point Overlay (Scrubbing HUD)
@@ -344,7 +324,9 @@ fun FullScreenBacChart(
                         .weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Keine Verlaufsdaten vorhanden", color = AppColors.textDim, fontSize = 14.sp)
+                    // No iOS counterpart found for this empty state; AppText.body
+                    // matches the full-screen (not preview-widget) context here.
+                    Text("Keine Verlaufsdaten vorhanden", color = AppColors.textDim, style = de.tipau.promille.AppText.body)
                 }
             }
 

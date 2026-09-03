@@ -27,8 +27,10 @@ fun PromilleCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(AppColors.card, RoundedCornerShape(16.dp))
-            .border(0.5.dp, AppColors.border, RoundedCornerShape(16.dp))
+            // 20dp matches iOS's PromilleCardStyle (Colors.swift:106,108,
+            // cornerRadius(20)) - this used to be 16dp, a direct mismatch.
+            .background(AppColors.card, RoundedCornerShape(20.dp))
+            .border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp))
             .padding(16.dp),
         content = content
     )

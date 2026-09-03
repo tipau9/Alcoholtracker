@@ -74,10 +74,10 @@ fun PhotoMemoryStrip(
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
+                        // iOS: .appMicro, no weight override (was Medium here).
                         text = "Foto",
                         color = AppColors.textDim,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium
+                        style = de.tipau.promille.AppText.micro
                     )
                 }
             }

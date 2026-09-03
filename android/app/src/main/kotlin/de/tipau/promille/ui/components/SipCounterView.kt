@@ -72,38 +72,22 @@ fun SipCounterView(
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
+                    // iOS: .appBodyBold (17sp SemiBold) - was 16sp Bold.
                     text = "Schluck-Zähler",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = de.tipau.promille.AppText.bodyBold,
                     color = AppColors.text
                 )
                 Text(
+                    // iOS: .appCaption - was 12sp.
                     text = "${drinkName}  ${String.format(Locale.GERMANY, "%.1f", drinkAbv)}% vol",
-                    fontSize = 12.sp,
+                    style = de.tipau.promille.AppText.caption,
                     color = AppColors.textDim,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onCancel
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Abbrechen",
-                    modifier = Modifier.size(22.dp),
-                    tint = AppColors.textMuted
-                )
-            }
+            AppIconCloseButton(onDismiss = onCancel)
         }
 
         // Counter
@@ -123,8 +107,9 @@ fun SipCounterView(
             )
 
             Text(
+                // iOS: .appCaption - was 12sp.
                 text = if (sipCount == 1) "Schluck" else "Schlucke",
-                fontSize = 12.sp,
+                style = de.tipau.promille.AppText.caption,
                 color = AppColors.textMuted
             )
 
@@ -146,14 +131,9 @@ fun SipCounterView(
             Box(
                 modifier = Modifier
                     .size(56.dp)
-                    .clip(CircleShape)
-                    .background(AppColors.background)
-                    .border(1.dp, AppColors.border, CircleShape)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onRemoveSip
-                    ),
+                    .pressable(scale = 0.92f, onClick = onRemoveSip)
+                    .background(AppColors.card, CircleShape)
+                    .border(0.5.dp, AppColors.border, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -170,13 +150,8 @@ fun SipCounterView(
             Box(
                 modifier = Modifier
                     .size(90.dp)
-                    .clip(CircleShape)
-                    .background(AppColors.accent)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onAddSip
-                    ),
+                    .pressable(scale = 0.94f, onClick = onAddSip)
+                    .background(AppColors.accent, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -234,9 +209,9 @@ fun SipCounterView(
             contentAlignment = Alignment.Center
         ) {
             Text(
+                // iOS: .appBodyBold (17sp SemiBold) - was 16sp Bold.
                 text = commitText,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
+                style = de.tipau.promille.AppText.bodyBold,
                 color = if (sipCount > 0) Color.White else AppColors.textMuted
             )
         }

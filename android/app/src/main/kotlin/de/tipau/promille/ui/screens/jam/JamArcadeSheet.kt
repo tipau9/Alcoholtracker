@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
+import de.tipau.promille.TabularFigures
 import de.tipau.promille.fixedSp
 import de.tipau.promille.bac.BalanceAccumulator
 import de.tipau.promille.bac.JamArcadeGame
@@ -66,8 +67,11 @@ fun JamArcadeSheet(
     val untilStart = round.startAtEpochSeconds - nowSeconds
     if (phase == ArcadePhase.COUNTDOWN && untilStart <= 0) phase = ArcadePhase.READY
 
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+
     fun submit(value: Double, disqualified: Boolean, text: String) {
         if (phase == ArcadePhase.SUBMITTED) return
+        if (disqualified) haptics.error() else haptics.success()
         ownResult = text
         phase = ArcadePhase.SUBMITTED
         onSubmit(value, disqualified)
@@ -87,9 +91,9 @@ fun JamArcadeSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp, top = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .background(AppColors.background)
-                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
         ) {
             Column(
                 modifier = Modifier
@@ -99,21 +103,24 @@ fun JamArcadeSheet(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
             Text(
-                round.game.title,
+                // iOS: .appHeadline (JamArcadeSheet.swift:124).
+                text = round.game.title,
                 color = AppColors.text,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
+                style = de.tipau.promille.AppText.headline
             )
-            Text(round.game.subtitle, color = AppColors.textDim, fontSize = 13.sp)
+            // iOS: .appCaption (JamArcadeSheet.swift:27).
+            Text(round.game.subtitle, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
             Text(
-                "Gestartet von ${round.starterName}",
+                // iOS: .appCaption (JamArcadeSheet.swift:125).
+                text = "Gestartet von ${round.starterName}",
                 color = AppColors.textMuted,
-                fontSize = 12.sp
+                style = de.tipau.promille.AppText.caption
             )
 
             when {
                 phase == ArcadePhase.COUNTDOWN -> {
-                    Text("START IN", color = AppColors.textDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    // iOS: .appCaptionBold (JamArcadeSheet.swift:141).
+                    Text("START IN", color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
                     Text(
                         "${maxOf(1, kotlin.math.ceil(untilStart).toInt())}",
                         color = AppColors.accent,
@@ -123,7 +130,8 @@ fun JamArcadeSheet(
                 }
 
                 phase == ArcadePhase.SUBMITTED -> {
-                    Text("Dein Ergebnis", color = AppColors.textDim, fontSize = 13.sp)
+                    // iOS: .appCaption (JamArcadeSheet.swift:240).
+                    Text("Dein Ergebnis", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                     Text(
                         ownResult ?: "",
                         color = AppColors.accent,
@@ -171,10 +179,12 @@ fun JamArcadeSheet(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 SectionLabel("ERGEBNISSE")
-                Text("${results.size}/$participantCount", color = AppColors.textDim, fontSize = 12.sp)
+                // iOS: .appCaption (JamArcadeSheet.swift:240).
+                Text("${results.size}/$participantCount", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
             }
             if (results.isEmpty()) {
-                Text("Noch wartet die Runde auf Ergebnisse.", color = AppColors.textMuted, fontSize = 12.sp)
+                // iOS: .appCaption (JamArcadeSheet.swift:243).
+                Text("Noch wartet die Runde auf Ergebnisse.", color = AppColors.textMuted, style = de.tipau.promille.AppText.caption)
             }
             orderedArcadeResults(results).forEachIndexed { index, result ->
                 Row(
@@ -182,28 +192,31 @@ fun JamArcadeSheet(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        "${index + 1}.",
+                        // iOS: .appBodyBold (JamArcadeSheet.swift:249).
+                        text = "${index + 1}.",
                         color = AppColors.textDim,
-                        fontSize = 13.sp,
+                        style = de.tipau.promille.AppText.bodyBold,
                         modifier = Modifier.width(28.dp)
                     )
                     Text(
-                        result.participantName,
+                        // iOS: .appBody (JamArcadeSheet.swift:251).
+                        text = result.participantName,
                         color = AppColors.text,
-                        fontSize = 14.sp,
+                        style = de.tipau.promille.AppText.body,
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        formatArcadeResult(result, round.game),
+                        // iOS: .appBodyBold + monospacedDigit (JamArcadeSheet.swift:253).
+                        text = formatArcadeResult(result, round.game),
                         color = if (result.disqualified) AppColors.statusRed else AppColors.accent,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
+                        style = de.tipau.promille.AppText.bodyBold.merge(de.tipau.promille.TabularFigures)
                     )
                 }
             }
 
             TextButton(onClick = onDismiss) {
-                Text("Schließen", color = AppColors.textDim)
+                // iOS: .appBodyBold (JamArcadeSheet.swift:271).
+                Text("Schließen", color = AppColors.textDim, style = de.tipau.promille.AppText.bodyBold)
             }
         }
     }
@@ -222,9 +235,10 @@ private fun PerfectSecondArea(targetSeconds: Double, onFinish: (Double) -> Unit)
     var startedAt by remember { mutableStateOf<Long?>(null) }
 
     Text(
+        // iOS: .appBody (JamArcadeSheet.swift:168).
         text = String.format(Locale.GERMANY, "Triff genau %.3f Sekunden", targetSeconds),
         color = AppColors.textDim,
-        fontSize = 13.sp,
+        style = de.tipau.promille.AppText.body,
         textAlign = TextAlign.Center
     )
     // The elapsed time is deliberately not shown: reading it off the screen
@@ -270,9 +284,10 @@ private fun ReactionArea(signalAt: Double, nowSeconds: Double, onTap: (Double) -
         )
     }
     Text(
-        "Wer vor dem grünen Signal tippt, hat einen Fehlstart.",
+        // iOS: .appCaption (JamArcadeSheet.swift:231).
+        text = "Wer vor dem grünen Signal tippt, hat einen Fehlstart.",
         color = AppColors.textMuted,
-        fontSize = 12.sp,
+        style = de.tipau.promille.AppText.caption,
         textAlign = TextAlign.Center
     )
 }
@@ -323,13 +338,15 @@ private fun BalanceArea(durationSeconds: Double, onFinish: (Double) -> Unit) {
 
     if (!available) {
         Text(
-            "Bewegungssensor auf diesem Gerät nicht verfügbar",
+            // iOS: .appCaption (JamArcadeSheet.swift:209).
+            text = "Bewegungssensor auf diesem Gerät nicht verfügbar",
             color = AppColors.statusOrange,
-            fontSize = 13.sp,
+            style = de.tipau.promille.AppText.caption,
             textAlign = TextAlign.Center
         )
     } else {
-        Text("Halte dein Handy still", color = AppColors.textDim, fontSize = 13.sp)
+        // iOS: .appBodyBold (JamArcadeSheet.swift:205).
+        Text("Halte dein Handy still", color = AppColors.textDim, style = de.tipau.promille.AppText.bodyBold)
         LinearProgressIndicator(
             progress = { progress },
             color = AppColors.accent,

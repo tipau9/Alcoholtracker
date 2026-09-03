@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -19,13 +20,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import de.tipau.promille.AppColors
 import de.tipau.promille.bac.JamArcadeGame
 import de.tipau.promille.bac.JamRoulettePayload
 import de.tipau.promille.bac.JamParticipant
 import de.tipau.promille.bac.JamSettings
+import androidx.compose.ui.graphics.vector.ImageVector
 import de.tipau.promille.bac.JamVisibility
 import de.tipau.promille.bac.WaterScore
+import de.tipau.promille.bac.privacyLabels
+import de.tipau.promille.ui.components.AppIcons
 import de.tipau.promille.ui.components.PrimaryButton
 import de.tipau.promille.ui.components.PromilleCard
 import de.tipau.promille.ui.components.SectionLabel
@@ -37,6 +43,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateJamSheet(
+    isSignedIn: Boolean,
     onDismiss: () -> Unit,
     onCreate: (JamVisibility, JamSettings) -> Unit
 ) {
@@ -46,7 +53,16 @@ fun CreateJamSheet(
         JamVisibility.CODE_ONLY,
         JamVisibility.PROXIMITY_ONLY
     )
-    var visibility by remember { mutableStateOf(JamVisibility.PROXIMITY_AND_CODE) }
+    // CreateJamSheet.isLocked. Everything but the pure Bluetooth jam needs a
+    // server row, so signed out it is the only choice left - and the default,
+    // the way iOS falls back in onAppear. The sheet is built fresh per open,
+    // so the remember initialiser is that fallback.
+    fun isLocked(option: JamVisibility) = option.usesServer && !isSignedIn
+    var visibility by remember {
+        mutableStateOf(
+            if (isSignedIn) JamVisibility.PROXIMITY_AND_CODE else JamVisibility.PROXIMITY_ONLY
+        )
+    }
     var settings by remember { mutableStateOf(JamSettings()) }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -74,13 +90,12 @@ fun CreateJamSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = onDismiss) {
-                    Text("Abbrechen", color = AppColors.accent, fontSize = 15.sp)
+                    Text("Abbrechen", color = AppColors.accent, style = de.tipau.promille.AppText.body)
                 }
                 Text(
                     "Jam erstellen",
                     color = AppColors.text,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.headline
                 )
                 Spacer(Modifier.width(60.dp))
             }
@@ -97,10 +112,12 @@ fun CreateJamSheet(
             ) {
                 choices.forEachIndexed { index, option ->
                     val selected = option == visibility
+                    val locked = isLocked(option)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { visibility = option }
+                            .alpha(if (locked) 0.45f else 1f)
+                            .clickable(enabled = !locked) { visibility = option }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -112,12 +129,7 @@ fun CreateJamSheet(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = when (option) {
-                                    JamVisibility.PROXIMITY_AND_CODE -> de.tipau.promille.ui.components.AppIcons.Waveform
-                                    JamVisibility.FRIENDS_ONLY -> de.tipau.promille.ui.components.AppIcons.PersonPlus
-                                    JamVisibility.CODE_ONLY -> Icons.Filled.Lock
-                                    JamVisibility.PROXIMITY_ONLY -> de.tipau.promille.ui.components.AppIcons.Location
-                                },
+                                imageVector = jamVisibilityIcon(option),
                                 contentDescription = null,
                                 tint = AppColors.accent,
                                 modifier = Modifier.size(16.dp)
@@ -128,16 +140,22 @@ fun CreateJamSheet(
                             Text(
                                 option.raw,
                                 color = AppColors.text,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold
+                                style = de.tipau.promille.AppText.bodyBold
                             )
                             Text(
                                 option.description,
                                 color = AppColors.textDim,
-                                fontSize = 12.sp
+                                style = de.tipau.promille.AppText.caption
                             )
                         }
-                        if (selected) {
+                        if (locked) {
+                            Icon(
+                                imageVector = AppIcons.Lock,
+                                contentDescription = "Anmeldung nötig",
+                                tint = AppColors.textMuted,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        } else if (selected) {
                             Icon(
                                 imageVector = Icons.Filled.Check,
                                 contentDescription = null,
@@ -150,6 +168,14 @@ fun CreateJamSheet(
                         Divider(color = AppColors.border, thickness = 0.5.dp, modifier = Modifier.padding(start = 62.dp))
                     }
                 }
+            }
+
+            if (!isSignedIn) {
+                Text(
+                    "Ohne Anmeldung ist nur der Offline-Modus über Bluetooth verfügbar.",
+                    color = AppColors.textMuted,
+                    style = de.tipau.promille.AppText.caption
+                )
             }
 
             SectionLabel("WAS TEILST DU?")
@@ -219,14 +245,13 @@ fun JamPrivacySheet(
                 Text(
                     "Meine Privatsphäre",
                     color = AppColors.text,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.headline
                 )
                 TextButton(onClick = {
                     onApply(draft)
                     onDismiss()
                 }) {
-                    Text("Fertig", color = AppColors.accent, fontWeight = FontWeight.Bold)
+                    Text("Fertig", color = AppColors.accent, style = de.tipau.promille.AppText.bodyBold)
                 }
             }
             Divider(color = AppColors.border, thickness = 0.5.dp)
@@ -285,16 +310,29 @@ private fun JamPrivacyToggles(settings: JamSettings, onChange: (JamSettings) -> 
     }
 }
 
-/** Sends a server invitation to a friend who is not in the jam yet. */
+/** One row of InviteFriendsSheet: a crew member who is not in the jam yet. */
+data class InviteCandidate(
+    val id: String,
+    val name: String,
+    val avatarInitial: String,
+    val friendCode: String?
+)
+
+/**
+ * InviteFriendsSheet (ActiveJamView.swift:660). Sends a server invitation to a
+ * friend who is not in the jam yet. A friend without a friend code keeps their
+ * row and loses only the notify button - the share sheet still reaches them.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InviteFriendsSheet(
-    friendCodes: List<Pair<String, String>>,
+    friends: List<InviteCandidate>,
+    jamCode: String,
+    invited: Set<String>,
     onDismiss: () -> Unit,
-    onInvite: (String) -> Unit
+    onInvite: (InviteCandidate) -> Unit
 ) {
-    val invited = remember { mutableStateListOf<String>() }
-
+    val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -318,10 +356,10 @@ fun InviteFriendsSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Freunde einladen",
+                    // iOS: .appHeadline (ActiveJamView.swift:660).
+                    text = "Freunde einladen",
                     color = AppColors.text,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.headline
                 )
                 Box(
                     modifier = Modifier
@@ -335,26 +373,103 @@ fun InviteFriendsSheet(
                     Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(14.dp))
                 }
             }
-            if (friendCodes.isEmpty()) {
-                Text(
-                    "Niemand in deiner Crew hat einen Freundescode. Ohne Code kann keine Einladung zugestellt werden.",
-                    color = AppColors.textDim,
-                    fontSize = 13.sp
-                )
+            if (friends.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        AppIcons.Group,
+                        contentDescription = null,
+                        tint = AppColors.textMuted,
+                        modifier = Modifier.size(40.dp)
+                    )
+                    Text("Alle Freunde sind dabei!", color = AppColors.textDim, style = de.tipau.promille.AppText.bodyBold)
+                    Text(
+                        "Alle deine Crew-Mitglieder sind bereits im Jam.",
+                        color = AppColors.textMuted,
+                        style = de.tipau.promille.AppText.caption,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
-            friendCodes.forEach { (name, code) ->
+            friends.forEach { friend ->
+                val sent = friend.id in invited
                 PromilleCard(Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(name, color = AppColors.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                        if (code in invited) {
-                            Text("Eingeladen", color = AppColors.statusGreen, fontSize = 13.sp)
-                        } else {
-                            TextButton(onClick = {
-                                onInvite(code)
-                                invited += code
-                            }) {
-                                Text("Einladen", color = AppColors.accent, fontWeight = FontWeight.Bold)
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(AppColors.statusOrange.copy(alpha = 0.12f))
+                                .border(1.dp, AppColors.statusOrange.copy(alpha = 0.3f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                friend.avatarInitial,
+                                color = AppColors.statusOrange,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Text(friend.name, color = AppColors.text, style = de.tipau.promille.AppText.body, modifier = Modifier.weight(1f))
+                        if (friend.friendCode != null) {
+                            val tint = if (sent) AppColors.statusGreen else AppColors.accent
+                            Row(
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(tint.copy(alpha = 0.12f))
+                                    .border(0.5.dp, tint.copy(alpha = 0.3f), CircleShape)
+                                    .clickable(enabled = !sent) { onInvite(friend) }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    if (sent) AppIcons.Check else AppIcons.Bell,
+                                    contentDescription = null,
+                                    tint = tint,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    if (sent) "Eingeladen" else "Benachrichtigen",
+                                    color = tint,
+                                    style = de.tipau.promille.AppText.captionBold
+                                )
                             }
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(AppColors.card)
+                                .border(0.5.dp, AppColors.border, CircleShape)
+                                .clickable {
+                                    val sendIntent = android.content.Intent().apply {
+                                        action = android.content.Intent.ACTION_SEND
+                                        putExtra(
+                                            android.content.Intent.EXTRA_TEXT,
+                                            "Tritt meinem Jam bei! Code: $jamCode"
+                                        )
+                                        type = "text/plain"
+                                    }
+                                    context.startActivity(
+                                        android.content.Intent.createChooser(sendIntent, "Jam teilen")
+                                    )
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                AppIcons.Share,
+                                contentDescription = "Jam teilen",
+                                tint = AppColors.textDim,
+                                modifier = Modifier.size(14.dp)
+                            )
                         }
                     }
                 }
@@ -363,7 +478,14 @@ fun InviteFriendsSheet(
     }
 }
 
-/** Host powers, reachable by long pressing a participant row. */
+private enum class ParticipantAction { KICK, TRANSFER }
+
+/**
+ * Privacy detail plus host powers, reachable by long pressing a participant row.
+ * Port of ParticipantPrivacySheet (JamPrivacySheets.swift:65) as a dialog rather
+ * than a sheet, which is where this screen already puts host actions.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ParticipantActionsDialog(
     participant: JamParticipant,
@@ -373,44 +495,150 @@ fun ParticipantActionsDialog(
     onTransfer: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    // Kick and host handover are both one way, so neither fires straight off the
+    // tap: iOS gates each behind its own confirmation.
+    var confirming by remember { mutableStateOf<ParticipantAction?>(null) }
+
+    confirming?.let { action ->
+        val kick = action == ParticipantAction.KICK
+        de.tipau.promille.ui.components.AppAlertDialog(
+            onDismissRequest = { confirming = null },
+            title = if (kick) "Teilnehmer entfernen?" else "Host übergeben?",
+            text = if (kick) "${participant.displayName} wird aus dem Jam entfernt."
+                else "${participant.displayName} wird zum Host. Du bleibst als Teilnehmer im Jam.",
+            confirmText = if (kick) "Entfernen" else "Host übergeben",
+            isDestructive = kick,
+            onConfirm = {
+                confirming = null
+                if (kick) onKick() else onTransfer()
+            },
+            dismissText = "Abbrechen"
+        )
+        return
+    }
+
+    de.tipau.promille.ui.components.AppAlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = AppColors.card,
-        title = { Text(participant.displayName, color = AppColors.text, fontWeight = FontWeight.Bold) },
-        text = {
-            if (!canKick && !canTransfer) {
-                Text("Nur der Host kann Teilnehmer verwalten.", color = AppColors.textDim, fontSize = 13.sp)
-            } else {
-                Column {
+        title = participant.displayName,
+        dismissText = null,
+        confirmText = "Schließen",
+        onConfirm = onDismiss,
+        content = {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(AppColors.border),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(participant.avatar, color = AppColors.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    Column {
+                        Text(participant.connectionType.label, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
+                    }
+                }
+
+                val settings = participant.sharedSettings
+                if (settings == null) {
+                    // Settings ride the Bluetooth channel only, so server-synced
+                    // members arrive without them.
+                    Text(
+                        "Privatsphäre-Details sind nur bei direkter Bluetooth-Verbindung sichtbar. " +
+                            "Verborgene Werte bleiben trotzdem verborgen.",
+                        color = AppColors.textDim,
+                        style = de.tipau.promille.AppText.caption
+                    )
+                } else {
+                    val (shared, hidden) = settings.privacyLabels()
+                    if (shared.isNotEmpty()) {
+                        PrivacyTagGroup("${participant.displayName} teilt:", shared, AppColors.statusGreen)
+                    }
+                    if (hidden.isNotEmpty()) {
+                        PrivacyTagGroup("Verbirgt:", hidden, AppColors.textMuted)
+                    }
+                }
+
+                if (!canKick && !canTransfer) {
+                    Text("Nur der Host kann Teilnehmer verwalten.", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
+                } else {
+                    // Pill buttons matching iOS's tinted-background/border
+                    // rows (JamPrivacySheets.swift:164-201), rather than
+                    // the plain clickable text this used to be.
                     if (canTransfer) {
-                        Text(
-                            "Host übertragen",
-                            color = AppColors.accent,
-                            fontSize = 15.sp,
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable(onClick = onTransfer)
-                                .padding(vertical = 12.dp)
-                        )
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(AppColors.accent.copy(alpha = 0.1f))
+                                .border(1.dp, AppColors.accent.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                                .clickable { confirming = ParticipantAction.TRANSFER }
+                                .padding(vertical = 14.dp)
+                        ) {
+                            Icon(
+                                de.tipau.promille.ui.components.AppIcons.Crown,
+                                contentDescription = null,
+                                tint = AppColors.accent,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Host übergeben", color = AppColors.accent, style = de.tipau.promille.AppText.bodyBold)
+                        }
                     }
                     if (canKick) {
-                        Text(
-                            "Aus dem Jam entfernen",
-                            color = AppColors.statusRed,
-                            fontSize = 15.sp,
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable(onClick = onKick)
-                                .padding(vertical = 12.dp)
-                        )
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(AppColors.statusRed.copy(alpha = 0.1f))
+                                .border(1.dp, AppColors.statusRed.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                                .clickable { confirming = ParticipantAction.KICK }
+                                .padding(vertical = 14.dp)
+                        ) {
+                            Icon(
+                                de.tipau.promille.ui.components.AppIcons.PersonXmark,
+                                contentDescription = null,
+                                tint = AppColors.statusRed,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Aus Jam entfernen", color = AppColors.statusRed, style = de.tipau.promille.AppText.bodyBold)
+                        }
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Abbrechen", color = AppColors.textDim) }
         }
     )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PrivacyTagGroup(title: String, items: List<String>, color: Color) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items.forEach { item ->
+                Text(
+                    item,
+                    color = color,
+                    style = de.tipau.promille.AppText.caption,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(color.copy(alpha = 0.1f))
+                        .border(0.5.dp, color.copy(alpha = 0.25f), CircleShape)
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                )
+            }
+        }
+    }
 }
 
 /** Jam is a sheet out of Crew on both platforms, never its own tab. */
@@ -440,8 +668,8 @@ fun ArcadePickerSheet(onDismiss: () -> Unit, onPick: (JamArcadeGame) -> Unit) {
         sheetState = sheetState,
         containerColor = AppColors.background,
         scrimColor = Color.Black.copy(alpha = 0.65f),
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
+        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
+        dragHandle = null
     ) {
         Column(
             modifier = Modifier
@@ -456,24 +684,14 @@ fun ArcadePickerSheet(onDismiss: () -> Unit, onPick: (JamArcadeGame) -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("Jam Arcade", color = AppColors.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("Jam Arcade", color = AppColors.text, style = de.tipau.promille.AppText.headline)
                     Text(
                         "Alle im Jam spielen die gleiche Runde, zur gleichen Sekunde.",
                         color = AppColors.textDim,
-                        fontSize = 13.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.card)
-                        .border(0.5.dp, AppColors.border, CircleShape)
-                        .clickable(onClick = onDismiss),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(14.dp))
-                }
+                de.tipau.promille.ui.components.AppIconCloseButton(onDismiss = onDismiss)
             }
 
             JamArcadeGame.entries.forEach { game ->
@@ -507,12 +725,20 @@ fun ArcadePickerSheet(onDismiss: () -> Unit, onPick: (JamArcadeGame) -> Unit) {
                     }
                     Spacer(Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(game.title, color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                        Text(game.subtitle, color = AppColors.textDim, fontSize = 12.sp)
+                        Text(game.title, color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
+                        Text(game.subtitle, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                     }
                     Text("›", color = AppColors.textMuted, fontSize = 20.sp)
                 }
             }
         }
     }
+}
+
+/** Jam.JamVisibility.icon, shared by the create sheet and the lobby rows. */
+internal fun jamVisibilityIcon(visibility: JamVisibility): ImageVector = when (visibility) {
+    JamVisibility.PROXIMITY_AND_CODE -> de.tipau.promille.ui.components.AppIcons.Waveform
+    JamVisibility.FRIENDS_ONLY -> de.tipau.promille.ui.components.AppIcons.PersonPlus
+    JamVisibility.CODE_ONLY -> Icons.Filled.Lock
+    JamVisibility.PROXIMITY_ONLY -> de.tipau.promille.ui.components.AppIcons.Location
 }

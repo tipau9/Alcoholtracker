@@ -58,6 +58,8 @@ fun WaterContestSheet(
         }
     }
 
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -72,9 +74,9 @@ fun WaterContestSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp, top = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .background(AppColors.background)
-                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
         ) {
             Column(
                 modifier = Modifier
@@ -89,35 +91,21 @@ fun WaterContestSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    // iOS: .appHeadline (WaterContestSheet.swift:55).
                     Text(
                         text = "Wetttrinken",
                         color = AppColors.text,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        style = de.tipau.promille.AppText.headline
                     )
+                    // iOS: .appCaption (WaterContestSheet.swift:58).
                     Text(
                         text = "Wer am schnellsten trinkt gewinnt",
                         color = AppColors.textDim,
-                        fontSize = 12.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.card)
-                        .border(0.5.dp, AppColors.border, CircleShape)
-                        .clickable(onClick = onDismiss),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = "Schließen",
-                        tint = AppColors.textDim,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
+                de.tipau.promille.ui.components.AppIconCloseButton(onDismiss = onDismiss)
             }
 
             Spacer(Modifier.height(24.dp))
@@ -135,9 +123,11 @@ fun WaterContestSheet(
                     )
                     .clickable {
                         if (!running) {
+                            haptics.heavy()
                             running = true
                             lastResultMs = null
                         } else {
+                            haptics.success()
                             running = false
                             val ms = elapsedMillis.toInt()
                             lastResultMs = ms
@@ -160,6 +150,7 @@ fun WaterContestSheet(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
+                            // iOS: .system(size: 46, weight: .light, design: .serif) + monospacedDigit (swift:97).
                             text = String.format(Locale.GERMANY, "%.2f", elapsedMillis / 1000.0),
                             color = AppColors.accent,
                             fontSize = fixedSp(46f),
@@ -168,9 +159,10 @@ fun WaterContestSheet(
                             style = TabularFigures
                         )
                         Text(
+                            // iOS: .appMicro (WaterContestSheet.swift:101).
                             text = "Sekunden · tippen zum Stoppen",
                             color = AppColors.textDim,
-                            fontSize = 11.sp
+                            style = de.tipau.promille.AppText.micro
                         )
                     }
                 } else if (lastResultMs != null) {
@@ -179,6 +171,7 @@ fun WaterContestSheet(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
+                            // iOS: .system(size: 40, weight: .light, design: .serif) + monospacedDigit (swift:108).
                             text = String.format(Locale.GERMANY, "%.2f s", lastResultMs!! / 1000.0),
                             color = AppColors.statusGreen,
                             fontSize = fixedSp(40f),
@@ -187,9 +180,10 @@ fun WaterContestSheet(
                             style = TabularFigures
                         )
                         Text(
+                            // iOS: .appMicro (WaterContestSheet.swift:112).
                             text = "Nochmal? Tippen zum Start",
                             color = AppColors.textDim,
-                            fontSize = 11.sp
+                            style = de.tipau.promille.AppText.micro
                         )
                     }
                 } else {
@@ -204,20 +198,21 @@ fun WaterContestSheet(
                             modifier = Modifier.size(34.dp)
                         )
                         Text(
+                            // iOS: .appBodyBold (WaterContestSheet.swift:121).
                             text = "Start",
                             color = AppColors.text,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.bodyBold
                         )
                     }
                 }
             }
 
             Text(
+                // iOS: .appCaption (WaterContestSheet.swift:34).
                 text = if (running) "Trink aus, dann Becher abstellen und tippen."
                 else "Becher auf den Kreis stellen. Zum Trinken anheben und tippen.",
                 color = AppColors.textDim,
-                fontSize = 12.sp,
+                style = de.tipau.promille.AppText.caption,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
             )
@@ -239,9 +234,10 @@ fun WaterContestSheet(
                 SectionLabel("BESTENLISTE")
                 if (scores.isNotEmpty() && canReset) {
                     Text(
+                        // iOS: .appCaption (WaterContestSheet.swift:140).
                         text = "Zurücksetzen",
                         color = AppColors.textDim,
-                        fontSize = 12.sp,
+                        style = de.tipau.promille.AppText.caption,
                         modifier = Modifier.clickable(onClick = onReset)
                     )
                 }
@@ -257,9 +253,10 @@ fun WaterContestSheet(
                 if (scores.isEmpty()) {
                     item {
                         Text(
+                            // iOS: .appCaption (WaterContestSheet.swift:150).
                             text = "Noch keine Zeiten. Sei die/der Erste!",
                             color = AppColors.textMuted,
-                            fontSize = 13.sp,
+                            style = de.tipau.promille.AppText.caption,
                             modifier = Modifier.padding(vertical = 12.dp)
                         )
                     }
@@ -286,20 +283,21 @@ fun WaterContestSheet(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
+                                // iOS: .appBodyBold (WaterContestSheet.swift:172).
                                 text = "$rank",
                                 color = medalColor,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
+                                style = de.tipau.promille.AppText.bodyBold,
                                 modifier = Modifier.width(26.dp)
                             )
                             Text(
+                                // iOS: .appBody (WaterContestSheet.swift:176).
                                 text = score.name,
                                 color = AppColors.text,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Normal,
+                                style = de.tipau.promille.AppText.body,
                                 modifier = Modifier.weight(1f)
                             )
                             Text(
+                                // iOS: .system(size: 17, weight: .semibold, design: .serif) (swift:180).
                                 text = String.format(Locale.GERMANY, "%.2f s", score.ms / 1000.0),
                                 color = if (rank == 1) AppColors.statusYellow else AppColors.text,
                                 fontSize = 17.sp,

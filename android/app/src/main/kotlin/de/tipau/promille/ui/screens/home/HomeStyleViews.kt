@@ -142,10 +142,9 @@ fun MinimalHomeView(
                         )
                     }
 
-                    DropdownMenu(
+                    de.tipau.promille.ui.components.AppDropdownMenu(
                         expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        modifier = Modifier.background(AppColors.card)
+                        onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
                             text = { Text("Detaillierter Modus", color = AppColors.text) },
@@ -290,15 +289,16 @@ fun DrunkHomeView(
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
+                    // iOS: .appMicro, no weight override - was 10sp Bold.
                     text = "EINFACHE ANSICHT",
                     color = AppColors.accent,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.micro
                 )
                 Text(
+                    // iOS: .appCaption - was 12sp.
                     text = "Alles Wichtige auf einen Blick",
                     color = AppColors.textDim,
-                    fontSize = 12.sp
+                    style = de.tipau.promille.AppText.caption
                 )
             }
             Row(
@@ -312,7 +312,8 @@ fun DrunkHomeView(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Icon(ExpandDiagonal, null, tint = AppColors.textMuted, modifier = Modifier.size(13.dp))
-                Text("Normal", color = AppColors.textMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                // iOS: .appCaptionBold (SemiBold, not Bold).
+                Text("Normal", color = AppColors.textMuted, style = de.tipau.promille.AppText.captionBold)
             }
         }
 
@@ -378,10 +379,10 @@ fun DrunkHomeView(
 
         soberCountdownText(bac, viewModel)?.let { countdown ->
             Text(
+                // iOS: .appBodyBold (17sp SemiBold) - was 15sp Bold.
                 text = countdown,
                 color = AppColors.textDim,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
+                style = de.tipau.promille.AppText.bodyBold,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
@@ -421,9 +422,10 @@ fun DrunkHomeView(
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
+                        // iOS: .appCaption - was 12sp.
                         "Heute $waterGlasses ${if (waterGlasses == 1) "Glas" else "Gläser"}",
                         color = AppColors.statusGreen.copy(alpha = 0.72f),
-                        fontSize = 12.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
                 Icon(Icons.Filled.Add, null, tint = AppColors.statusGreen, modifier = Modifier.size(24.dp))
@@ -535,7 +537,8 @@ private fun DrunkPanelHeader(
         }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(title, color = AppColors.text, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Text(subtitle, color = AppColors.textDim, fontSize = 12.sp)
+            // iOS: .appCaption - was 12sp.
+            Text(subtitle, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
         }
         Box(
             modifier = Modifier
@@ -559,7 +562,9 @@ private fun DrunkPanelSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
         containerColor = AppColors.background,
+        scrimColor = Color.Black.copy(alpha = 0.65f),
         dragHandle = null
     ) {
         Column(
@@ -614,8 +619,11 @@ private fun DrunkDrinksPanel(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(AppIcons.Drink, null, tint = AppColors.textMuted, modifier = Modifier.size(40.dp))
-                Text("Noch keine Getränke", color = AppColors.textDim, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                Text("Füge deinen ersten Drink hinzu.", color = AppColors.textMuted, fontSize = 13.sp)
+                // iOS: native ContentUnavailableView, no font override; sizes
+                // already matched appBodyBold/appCaption, migrated for
+                // consistency.
+                Text("Noch keine Getränke", color = AppColors.textDim, style = de.tipau.promille.AppText.bodyBold)
+                Text("Füge deinen ersten Drink hinzu.", color = AppColors.textMuted, style = de.tipau.promille.AppText.caption)
             }
         } else {
             drinks.reversed().forEach { drink ->
@@ -670,10 +678,10 @@ private fun DrunkDrinkManageCard(
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
+                    // iOS: .appBodyBold (SemiBold, not Bold) - was 15sp Bold.
                     drink.name,
                     color = AppColors.text,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = de.tipau.promille.AppText.bodyBold,
                     maxLines = 1
                 )
                 Text(
@@ -685,7 +693,7 @@ private fun DrunkDrinkManageCard(
                         germanTime.format(Instant.ofEpochSecond(drink.timestampEpochSeconds))
                     ),
                     color = AppColors.textDim,
-                    fontSize = 12.sp,
+                    style = de.tipau.promille.AppText.caption,
                     maxLines = 1
                 )
             }
@@ -717,7 +725,8 @@ private fun DrunkDrinkAction(
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         Icon(icon, null, tint = color, modifier = Modifier.size(18.dp))
-        Text(title, color = color, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        // iOS: fixed 10sp Bold (not a token) - was 11sp SemiBold.
+        Text(title, color = color, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
 
@@ -730,23 +739,15 @@ private fun DrunkVomitPanel(
     var showConfirmation by remember { mutableStateOf(false) }
 
     if (showConfirmation) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showConfirmation = false },
-            containerColor = AppColors.card,
-            title = { Text("Übergeben jetzt protokollieren?", color = AppColors.text, fontWeight = FontWeight.Bold) },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.logVomit()
-                    showConfirmation = false
-                }) {
-                    Text("Protokollieren", color = AppColors.statusOrange, fontWeight = FontWeight.Bold)
-                }
+            title = "Übergeben jetzt protokollieren?",
+            confirmText = "Protokollieren",
+            onConfirm = {
+                viewModel.logVomit()
+                showConfirmation = false
             },
-            dismissButton = {
-                TextButton(onClick = { showConfirmation = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
-                }
-            }
+            dismissText = "Abbrechen"
         )
     }
 
@@ -783,9 +784,10 @@ private fun DrunkVomitPanel(
         )
         Spacer(Modifier.height(8.dp))
         Text(
+            // iOS: .appBody (17sp) - was 14sp.
             text = "Es wird nur noch nicht aufgenommener Alkohol berücksichtigt. Der aktuelle Blutalkoholwert fällt dadurch nicht sofort.",
             color = AppColors.textDim,
-            fontSize = 14.sp,
+            style = de.tipau.promille.AppText.body,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
@@ -826,7 +828,8 @@ private fun DrunkVomitPanel(
             ) {
                 Icon(Icons.Filled.Refresh, null, tint = AppColors.textDim, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Letzten Eintrag rückgängig", color = AppColors.textDim, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                // iOS: .appBodyBold (SemiBold, not Bold) - was 15sp Bold.
+                Text("Letzten Eintrag rückgängig", color = AppColors.textDim, style = de.tipau.promille.AppText.bodyBold)
             }
         }
     }
@@ -891,7 +894,8 @@ private fun DrunkMorePanel(
 
         Spacer(Modifier.height(20.dp))
 
-        Text("MAGENSTATUS", color = AppColors.textDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        // iOS: .appCaptionBold (13sp SemiBold) - was 11sp Bold.
+        Text("MAGENSTATUS", color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             StomachStatus.entries.forEach { candidate ->
@@ -913,8 +917,7 @@ private fun DrunkMorePanel(
                     Text(
                         candidate.germanName,
                         color = if (selected) AppColors.accent else AppColors.textDim,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        style = de.tipau.promille.AppText.captionBold,
                         maxLines = 1
                     )
                 }
@@ -955,7 +958,8 @@ private fun DrunkMorePanel(
         ) {
             Icon(ExpandDiagonal, null, tint = AppColors.text, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Alle Details in normaler Ansicht", color = AppColors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            // iOS: .appBodyBold (17sp SemiBold) - was 15sp Bold.
+            Text("Alle Details in normaler Ansicht", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
         }
     }
 }
@@ -980,8 +984,10 @@ private fun DrunkStatTile(
         verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
         Icon(icon, null, tint = color, modifier = Modifier.size(22.dp))
+        // value is a fixed 22sp Bold literal on iOS too (rounded design);
+        // label is .appCaption - was 12sp.
         Text(value, color = AppColors.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-        Text(label, color = AppColors.textDim, fontSize = 12.sp, maxLines = 1)
+        Text(label, color = AppColors.textDim, style = de.tipau.promille.AppText.caption, maxLines = 1)
     }
 }
 

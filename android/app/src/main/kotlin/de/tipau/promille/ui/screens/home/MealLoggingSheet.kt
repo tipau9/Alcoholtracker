@@ -63,9 +63,9 @@ fun MealLoggingSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp, top = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .background(AppColors.background)
-                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
         ) {
             Column(
                 modifier = Modifier
@@ -81,15 +81,16 @@ fun MealLoggingSheet(
                 ) {
                     Column {
                         Text(
+                            // iOS: .appBodyBold (17sp) - was 20sp.
                             text = "Essen protokollieren",
                             color = AppColors.text,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.bodyBold
                         )
                         Text(
+                            // iOS: .appCaption - was 12sp.
                             text = "Wirkt auf noch nicht aufgenommenen Alkohol",
                             color = AppColors.textDim,
-                            fontSize = 12.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
                     Box(
@@ -111,27 +112,11 @@ fun MealLoggingSheet(
                 }
 
                 // Food Name Field
-                OutlinedTextField(
+                de.tipau.promille.ui.components.AppTextField(
                     value = mealName,
                     onValueChange = { mealName = it },
-                    placeholder = {
-                        Text(
-                            "Was gab es? (z.B. Pizza, Döner, Nüsse)",
-                            color = AppColors.textMuted,
-                            fontSize = 14.sp
-                        )
-                    },
+                    placeholder = "Was gab es? (z.B. Pizza, Döner, Nüsse)",
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = AppColors.card,
-                        unfocusedContainerColor = AppColors.card,
-                        focusedTextColor = AppColors.text,
-                        unfocusedTextColor = AppColors.text,
-                        focusedBorderColor = AppColors.accent,
-                        unfocusedBorderColor = AppColors.border,
-                        cursorColor = AppColors.accent
-                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -157,15 +142,17 @@ fun MealLoggingSheet(
                                     verticalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
                                     Text(
+                                        // No iOS source (native Form row);
+                                        // appBody/appBodyBold match the rest
+                                        // of this sheet's label pairing.
                                         text = option.title,
                                         color = if (isSelected) AppColors.accent else AppColors.text,
-                                        fontSize = 15.sp,
-                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                                        style = if (isSelected) de.tipau.promille.AppText.bodyBold else de.tipau.promille.AppText.body
                                     )
                                     Text(
                                         text = option.subtitle,
                                         color = AppColors.textDim,
-                                        fontSize = 12.sp
+                                        style = de.tipau.promille.AppText.caption
                                     )
                                 }
                                 if (isSelected) {

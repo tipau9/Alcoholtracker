@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.*
 
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
@@ -13,7 +14,13 @@ import androidx.compose.ui.unit.dp
 
 object AppIcons {
 
-    private fun buildIcon(name: String, block: androidx.compose.ui.graphics.vector.PathBuilder.() -> Unit): ImageVector {
+    // EvenOdd is opt-in (default NonZero preserves every existing icon here)
+    // and needed by any glyph with a cutout: a hole, a slash, a notch.
+    private fun buildIcon(
+        name: String,
+        fillType: PathFillType = PathFillType.NonZero,
+        block: androidx.compose.ui.graphics.vector.PathBuilder.() -> Unit
+    ): ImageVector {
         return ImageVector.Builder(
             name = name,
             defaultWidth = 24.dp,
@@ -21,7 +28,7 @@ object AppIcons {
             viewportWidth = 24f,
             viewportHeight = 24f
         ).apply {
-            path(fill = SolidColor(Color.White)) {
+            path(fill = SolidColor(Color.White), pathFillType = fillType) {
                 block()
             }
         }.build()
@@ -787,6 +794,146 @@ object AppIcons {
         close()
     }
 
+    /**
+     * antenna.radiowaves.left.and.right.slash: RadioWave's exact geometry
+     * plus a diagonal bar, same convention Material's own `_off` icons use
+     * (wifi_off, visibility_off) for "the base thing, crossed out".
+     */
+    val RadioWaveSlash: ImageVector = buildIcon("RadioWaveSlash") {
+        moveTo(12f, 12f)
+        curveToRelative(-1.1f, 0f, -2f, 0.9f, -2f, 2f)
+        reflectiveCurveToRelative(0.9f, 2f, 2f, 2f)
+        reflectiveCurveToRelative(2f, -0.9f, 2f, -2f)
+        reflectiveCurveToRelative(-0.9f, -2f, -2f, -2f)
+        close()
+        moveTo(4.93f, 4.93f)
+        lineTo(3.51f, 3.51f)
+        curveTo(1.36f, 5.67f, 0f, 8.68f, 0f, 12f)
+        reflectiveCurveToRelative(1.36f, 6.33f, 3.51f, 8.49f)
+        lineToRelative(1.42f, -1.42f)
+        curveTo(3.18f, 17.31f, 2f, 14.8f, 2f, 12f)
+        reflectiveCurveToRelative(1.18f, -5.31f, 2.93f, -7.07f)
+        close()
+        moveTo(20.49f, 3.51f)
+        lineToRelative(-1.42f, 1.42f)
+        curveTo(20.82f, 6.69f, 22f, 9.2f, 22f, 12f)
+        reflectiveCurveToRelative(-1.18f, 5.31f, -2.93f, 7.07f)
+        lineToRelative(1.42f, 1.42f)
+        curveTo(22.64f, 18.33f, 24f, 15.32f, 24f, 12f)
+        reflectiveCurveToRelative(-1.36f, -6.33f, -3.51f, -8.49f)
+        close()
+        // Diagonal slash, corner to corner.
+        moveTo(1.22f, 21.22f)
+        lineTo(2.78f, 22.78f)
+        lineTo(22.78f, 2.78f)
+        lineTo(21.22f, 1.22f)
+        close()
+    }
+
+    /** eye.slash.fill: a solid eye silhouette, crossed out. */
+    val EyeSlash: ImageVector = buildIcon("EyeSlash") {
+        moveTo(12f, 6.5f)
+        curveToRelative(-5f, 0f, -9.27f, 3.11f, -11f, 7.5f)
+        curveToRelative(1.73f, 4.39f, 6f, 7.5f, 11f, 7.5f)
+        reflectiveCurveToRelative(9.27f, -3.11f, 11f, -7.5f)
+        curveToRelative(-1.73f, -4.39f, -6f, -7.5f, -11f, -7.5f)
+        close()
+        moveTo(12f, 18f)
+        curveToRelative(-2.21f, 0f, -4f, -1.79f, -4f, -4f)
+        reflectiveCurveToRelative(1.79f, -4f, 4f, -4f)
+        reflectiveCurveToRelative(4f, 1.79f, 4f, 4f)
+        reflectiveCurveToRelative(-1.79f, 4f, -4f, 4f)
+        close()
+        moveTo(1.22f, 21.22f)
+        lineTo(2.78f, 22.78f)
+        lineTo(22.78f, 2.78f)
+        lineTo(21.22f, 1.22f)
+        close()
+    }
+
+    /** icloud.slash: a rounded cloud, crossed out. */
+    val CloudSlash: ImageVector = buildIcon("CloudSlash") {
+        moveTo(19.35f, 10.04f)
+        curveTo(18.67f, 6.59f, 15.64f, 4f, 12f, 4f)
+        curveToRelative(-2.86f, 0f, -5.34f, 1.61f, -6.59f, 4f)
+        curveTo(2.35f, 8.36f, 0f, 10.91f, 0f, 14f)
+        curveToRelative(0f, 3.31f, 2.69f, 6f, 6f, 6f)
+        horizontalLineToRelative(13f)
+        curveToRelative(2.76f, 0f, 5f, -2.24f, 5f, -5f)
+        curveToRelative(0f, -2.64f, -2.05f, -4.78f, -4.65f, -4.96f)
+        close()
+        moveTo(1.22f, 21.22f)
+        lineTo(2.78f, 22.78f)
+        lineTo(22.78f, 2.78f)
+        lineTo(21.22f, 1.22f)
+        close()
+    }
+
+    /** person.fill.questionmark: not-yet-mutual friendship status. */
+    val PersonQuestionMark: ImageVector = buildIcon("PersonQuestionMark") {
+        // Head, shifted left to leave room for the "?" on the right.
+        moveTo(9f, 11f)
+        curveToRelative(1.93f, 0f, 3.5f, -1.57f, 3.5f, -3.5f)
+        reflectiveCurveTo(10.93f, 4f, 9f, 4f)
+        reflectiveCurveTo(5.5f, 5.57f, 5.5f, 7.5f)
+        reflectiveCurveTo(7.07f, 11f, 9f, 11f)
+        close()
+        // Shoulders
+        moveTo(9f, 13f)
+        curveToRelative(-2.34f, 0f, -7f, 1.17f, -7f, 3.5f)
+        verticalLineTo(19f)
+        horizontalLineToRelative(14f)
+        verticalLineToRelative(-2.5f)
+        curveToRelative(0f, -2.33f, -4.66f, -3.5f, -7f, -3.5f)
+        close()
+        // Question mark hook
+        moveTo(16.4f, 4.9f)
+        curveToRelative(0f, -1.16f, 0.94f, -2.1f, 2.1f, -2.1f)
+        reflectiveCurveToRelative(2.1f, 0.94f, 2.1f, 2.1f)
+        curveToRelative(0f, 1.13f, -0.77f, 1.63f, -1.42f, 2.09f)
+        curveToRelative(-0.55f, 0.39f, -0.98f, 0.75f, -0.98f, 1.51f)
+        horizontalLineToRelative(-1.4f)
+        curveToRelative(0f, -1.24f, 0.62f, -1.76f, 1.19f, -2.16f)
+        curveToRelative(0.5f, -0.36f, 0.91f, -0.65f, 0.91f, -1.44f)
+        curveToRelative(0f, -0.39f, -0.32f, -0.7f, -0.7f, -0.7f)
+        reflectiveCurveToRelative(-0.7f, 0.31f, -0.7f, 0.7f)
+        horizontalLineTo(16.4f)
+        close()
+        moveTo(17.8f, 9.3f)
+        horizontalLineToRelative(1.4f)
+        verticalLineToRelative(1.4f)
+        horizontalLineToRelative(-1.4f)
+        close()
+    }
+
+    /**
+     * xmark.circle.fill. Not in material-icons-core (only the extended
+     * artifact this project doesn't depend on has Cancel), so hand-built:
+     * a filled circle with the X cut out, same EvenOdd technique
+     * StatusPill.kt's XOctagon uses.
+     */
+    val XCircle: ImageVector = buildIcon("XCircle", fillType = PathFillType.EvenOdd) {
+        moveTo(12f, 2f)
+        curveTo(6.48f, 2f, 2f, 6.48f, 2f, 12f)
+        reflectiveCurveToRelative(4.48f, 10f, 10f, 10f)
+        reflectiveCurveToRelative(10f, -4.48f, 10f, -10f)
+        reflectiveCurveTo(17.52f, 2f, 12f, 2f)
+        close()
+        moveTo(15.59f, 7f)
+        lineTo(12f, 10.59f)
+        lineTo(8.41f, 7f)
+        lineTo(7f, 8.41f)
+        lineTo(10.59f, 12f)
+        lineTo(7f, 15.59f)
+        lineTo(8.41f, 17f)
+        lineTo(12f, 13.41f)
+        lineTo(15.59f, 17f)
+        lineTo(17f, 15.59f)
+        lineTo(13.41f, 12f)
+        lineTo(17f, 8.41f)
+        close()
+    }
+
     val Gauge: ImageVector = buildIcon("Gauge") {
         moveTo(20.38f, 8.57f)
         lineToRelative(-1.23f, 1.85f)
@@ -1018,6 +1165,52 @@ object AppIcons {
         horizontalLineTo(13f)
         curveToRelative(-0.55f, 0f, -1f, -0.45f, -1f, -1f)
         reflectiveCurveToRelative(0.45f, -1f, 1f, -1f)
+        close()
+    }
+
+    /** crown.fill: the host indicator, currently missing everywhere. */
+    val Crown: ImageVector = buildIcon("Crown") {
+        moveTo(3f, 18f)
+        lineTo(3f, 7f)
+        lineTo(8f, 12f)
+        lineTo(12f, 4f)
+        lineTo(16f, 12f)
+        lineTo(21f, 7f)
+        lineTo(21f, 18f)
+        close()
+    }
+
+    /** person.fill.xmark: the "remove participant" action. */
+    val PersonXmark: ImageVector = buildIcon("PersonXmark") {
+        // Head, shifted left to leave room for the x badge on the right.
+        moveTo(10f, 12f)
+        curveToRelative(2.21f, 0f, 4f, -1.79f, 4f, -4f)
+        reflectiveCurveToRelative(-1.79f, -4f, -4f, -4f)
+        reflectiveCurveToRelative(-4f, 1.79f, -4f, 4f)
+        reflectiveCurveToRelative(1.79f, 4f, 4f, 4f)
+        close()
+        // Shoulders
+        moveTo(10f, 14f)
+        curveToRelative(-2.67f, 0f, -8f, 1.34f, -8f, 4f)
+        verticalLineToRelative(2f)
+        horizontalLineToRelative(13f)
+        verticalLineToRelative(-2f)
+        curveToRelative(0f, -0.83f, -0.51f, -1.54f, -1.24f, -2.13f)
+        curveToRelative(-1.09f, -1.16f, -2.55f, -1.87f, -3.76f, -1.87f)
+        close()
+        // X badge, bottom-right
+        moveTo(15.4f, 13.6f)
+        lineTo(17.5f, 15.7f)
+        lineTo(19.6f, 13.6f)
+        lineTo(21f, 15f)
+        lineTo(18.9f, 17.1f)
+        lineTo(21f, 19.2f)
+        lineTo(19.6f, 20.6f)
+        lineTo(17.5f, 18.5f)
+        lineTo(15.4f, 20.6f)
+        lineTo(14f, 19.2f)
+        lineTo(16.1f, 17.1f)
+        lineTo(14f, 15f)
         close()
     }
 

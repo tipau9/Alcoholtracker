@@ -55,8 +55,8 @@ fun MedicationSheet(
         sheetState = sheetState,
         containerColor = AppColors.background,
         scrimColor = Color.Black.copy(alpha = 0.65f),
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
+        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
+        dragHandle = null
     ) {
         LazyColumn(
             modifier = Modifier
@@ -73,29 +73,20 @@ fun MedicationSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
+                        // iOS: .appHeadline
                         Text(
                             text = "Medikamente & Alkohol",
                             color = AppColors.text,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.headline
                         )
+                        // iOS: .appCaption
                         Text(
                             text = "Wichtige Wechselwirkungen und Warnhinweise",
                             color = AppColors.textDim,
-                            fontSize = 13.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.card)
-                            .border(1.dp, AppColors.border, CircleShape)
-                            .clickable(onClick = onDismiss),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(16.dp))
-                    }
+                    de.tipau.promille.ui.components.AppIconCloseButton(onDismiss = onDismiss)
                 }
             }
 
@@ -116,18 +107,18 @@ fun MedicationSheet(
                         }
                         Spacer(Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
+                            // iOS: .appBodyBold
                             Text(
                                 text = med.name,
                                 color = AppColors.text,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
+                                style = de.tipau.promille.AppText.bodyBold
                             )
                             Spacer(Modifier.height(3.dp))
+                            // iOS: .appCaption
                             Text(
                                 text = med.warning,
                                 color = AppColors.textDim,
-                                fontSize = 12.sp,
-                                lineHeight = 16.sp
+                                style = de.tipau.promille.AppText.caption
                             )
                         }
                     }

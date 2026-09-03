@@ -30,7 +30,7 @@ android {
         applicationId = "de.tipau.promille"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
+        versionCode = 3
         versionName = "0.1.0"
 
         buildConfigField("String", "SUPABASE_URL", "\"${supabaseProp("supabase.url")}\"")

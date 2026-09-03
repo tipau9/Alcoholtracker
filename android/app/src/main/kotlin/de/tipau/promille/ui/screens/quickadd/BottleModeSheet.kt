@@ -67,8 +67,8 @@ fun BottleModeSheet(
         sheetState = sheetState,
         containerColor = AppColors.background,
         scrimColor = Color.Black.copy(alpha = 0.65f),
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
+        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
+        dragHandle = null
     ) {
         if (selectedTemplate != null) {
             BottleLevelContent(
@@ -129,30 +129,21 @@ private fun BottleTemplatePickerContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                // iOS: .appHeadline (BottleModeSheet.swift:69).
                 Text(
                     text = "Aus Flasche",
                     color = AppColors.text,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.headline
                 )
+                // iOS: .appCaption (BottleModeSheet.swift:72).
                 Text(
                     text = "Welches Getränk ist in der Flasche?",
                     color = AppColors.textDim,
-                    fontSize = 12.sp
+                    style = de.tipau.promille.AppText.caption
                 )
             }
 
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(AppColors.card)
-                    .border(0.5.dp, AppColors.border, CircleShape)
-                    .clickable(onClick = onDismiss),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(16.dp))
-            }
+            de.tipau.promille.ui.components.AppIconCloseButton(onDismiss = onDismiss)
         }
 
         // Search field
@@ -172,11 +163,11 @@ private fun BottleTemplatePickerContent(
                 value = searchQuery,
                 onValueChange = onSearchQueryChange,
                 modifier = Modifier.fillMaxWidth(),
-                textStyle = TextStyle(color = AppColors.text, fontSize = 14.sp),
+                textStyle = de.tipau.promille.AppText.body.copy(color = AppColors.text),
                 cursorBrush = SolidColor(AppColors.accent),
                 decorationBox = { innerTextField ->
                     if (searchQuery.isEmpty()) {
-                        Text("Getränk suchen...", color = AppColors.textDim, fontSize = 14.sp)
+                        Text("Getränk suchen...", color = AppColors.textDim, style = de.tipau.promille.AppText.body)
                     }
                     innerTextField()
                 }
@@ -204,16 +195,17 @@ private fun BottleTemplatePickerContent(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(de.tipau.promille.ui.components.AppIcons.Bottle, null, tint = AppColors.accent, modifier = Modifier.size(28.dp))
+                        // iOS: .appCaptionBold (BottleModeSheet.swift:120).
                         Text(
                             text = "Keine Flaschen-Produkte gefunden",
                             color = AppColors.text,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.captionBold
                         )
+                        // iOS: .appMicro (BottleModeSheet.swift:123).
                         Text(
                             text = "Aus Flasche ist nur für Produkte gedacht, die realistisch als einzelne Flasche getrunken werden.",
                             color = AppColors.textMuted,
-                            fontSize = 10.sp
+                            style = de.tipau.promille.AppText.micro
                         )
                     }
                 }
@@ -240,16 +232,18 @@ private fun BottleTemplatePickerContent(
                     Spacer(Modifier.width(14.dp))
 
                     Column(modifier = Modifier.weight(1f)) {
+                        // iOS: .appBody (BottleModeSheet.swift:141).
                         Text(
                             text = template.name,
                             color = AppColors.text,
-                            fontSize = 14.sp,
+                            style = de.tipau.promille.AppText.body,
                             maxLines = 1
                         )
+                        // iOS: .appCaption (BottleModeSheet.swift:145).
                         Text(
                             text = "${String.format(Locale.GERMANY, "%.1f", template.abv)}% vol",
                             color = AppColors.textDim,
-                            fontSize = 12.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
 
@@ -315,17 +309,18 @@ private fun BottleLevelContent(
             Spacer(Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
+                // iOS: .appBodyBold (BottleModeSheet.swift:246).
                 Text(
                     text = template.name,
                     color = AppColors.text,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = de.tipau.promille.AppText.bodyBold,
                     maxLines = 1
                 )
+                // iOS: .appCaption (BottleModeSheet.swift:250).
                 Text(
                     text = "${String.format(Locale.GERMANY, "%.1f", template.abv)}% vol",
                     color = AppColors.textDim,
-                    fontSize = 12.sp
+                    style = de.tipau.promille.AppText.caption
                 )
             }
         }
@@ -351,16 +346,18 @@ private fun BottleLevelContent(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
+                        // iOS: .system(size: 30, weight: .light, design: .serif) (BottleModeSheet.swift:264).
                         text = "${consumedML.toInt()}",
                         color = AppColors.text,
                         fontSize = 30.sp,
                         fontWeight = FontWeight.Light,
                         fontFamily = AppSerif
                     )
+                    // iOS: .appMicro (BottleModeSheet.swift:268).
                     Text(
                         text = "ml getrunken",
                         color = AppColors.textMuted,
-                        fontSize = 10.sp
+                        style = de.tipau.promille.AppText.micro
                     )
                 }
 
@@ -376,16 +373,18 @@ private fun BottleLevelContent(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
+                        // iOS: .system(size: 30, weight: .light, design: .serif) (BottleModeSheet.swift:275).
                         text = "${(consumedML * template.abv / 100.0 * 0.8).toInt()} g",
                         color = AppColors.accent,
                         fontSize = 30.sp,
                         fontWeight = FontWeight.Light,
                         fontFamily = AppSerif
                     )
+                    // iOS: .appMicro (BottleModeSheet.swift:279).
                     Text(
                         text = "Reinalkohol",
                         color = AppColors.textMuted,
-                        fontSize = 10.sp
+                        style = de.tipau.promille.AppText.micro
                     )
                 }
             }
@@ -402,11 +401,11 @@ private fun BottleLevelContent(
                     .padding(vertical = 13.dp),
                 contentAlignment = Alignment.Center
             ) {
+                // iOS: .appBodyBold (BottleModeSheet.swift:293).
                 Text(
                     text = if (consumedML > 0) "Hinzufügen" else "Pegelstand einstellen",
                     color = if (consumedML > 0) AppColors.background else AppColors.textMuted,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.bodyBold
                 )
             }
         }
@@ -426,6 +425,7 @@ private fun BottleLevelContent(
         ) {
             // Bottle size selector
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // iOS: .system(size: 10, weight: .medium) + tracking 2 (swift:314).
                 Text(
                     text = "FLASCHENGRÖSSE",
                     color = AppColors.textMuted,
@@ -455,6 +455,7 @@ private fun BottleLevelContent(
                                 .padding(horizontal = 14.dp, vertical = 8.dp)
                         ) {
                             Text(
+                                // iOS: .system(size: 12, weight: .medium) (swift:326).
                                 text = size.label,
                                 color = if (isSelected) AppColors.accent else AppColors.textDim,
                                 fontSize = 12.sp,
@@ -495,12 +496,14 @@ private fun BottleLevelContent(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            // iOS: .appCaption (BottleModeSheet.swift:350).
                             Text(
                                 text = "Vorher war die Flasche...",
                                 color = AppColors.text,
-                                fontSize = 12.sp
+                                style = de.tipau.promille.AppText.caption
                             )
                             Text(
+                                // iOS: .system(size: 13, weight: .semibold, design: .serif) (swift:354).
                                 text = "${(startLevel * 100).toInt()}%",
                                 color = AppColors.textDim,
                                 fontSize = 13.sp,
@@ -526,12 +529,14 @@ private fun BottleLevelContent(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            // iOS: .appCaption (BottleModeSheet.swift:372).
                             Text(
                                 text = "Jetzt ist sie...",
                                 color = AppColors.text,
-                                fontSize = 12.sp
+                                style = de.tipau.promille.AppText.caption
                             )
                             Text(
+                                // iOS: .system(size: 13, weight: .semibold, design: .serif) (swift:376).
                                 text = "${(currentLevel * 100).toInt()}%",
                                 color = AppColors.accent,
                                 fontSize = 13.sp,
@@ -540,15 +545,10 @@ private fun BottleLevelContent(
                             )
                         }
 
-                        Slider(
+                        de.tipau.promille.ui.components.AppSlider(
                             value = currentLevel.toFloat(),
                             onValueChange = { currentLevel = min(it.toDouble(), startLevel) },
-                            valueRange = 0f..startLevel.toFloat().coerceAtLeast(0.01f),
-                            colors = SliderDefaults.colors(
-                                thumbColor = AppColors.accent,
-                                activeTrackColor = AppColors.accent,
-                                inactiveTrackColor = AppColors.border
-                            )
+                            valueRange = 0f..startLevel.toFloat().coerceAtLeast(0.01f)
                         )
 
                         LevelButtonRow(
@@ -610,6 +610,7 @@ private fun LevelButtonRow(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
+                    // iOS: .system(size: 11, weight: .medium) (BottleModeSheet.swift:451).
                     text = label,
                     color = if (active) AppColors.accent else AppColors.textDim,
                     fontSize = 11.sp,
@@ -627,8 +628,10 @@ private fun BottleDetailRow(label: String, value: String) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, color = AppColors.textMuted, fontSize = 12.sp)
+        // iOS: .appCaption (BottleModeSheet.swift:416).
+        Text(label, color = AppColors.textMuted, style = de.tipau.promille.AppText.caption)
         Text(
+            // iOS: .system(size: 12, weight: .medium, design: .serif) (swift:420).
             text = value,
             color = AppColors.textDim,
             fontSize = 12.sp,

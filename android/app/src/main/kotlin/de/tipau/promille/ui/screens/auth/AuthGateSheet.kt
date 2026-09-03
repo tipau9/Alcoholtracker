@@ -65,9 +65,9 @@ fun AuthGateSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp, top = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .background(AppColors.background)
-                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
         ) {
             AuthGateContent(supabase, onSignedIn, onDismiss)
         }
@@ -145,16 +145,7 @@ private fun AuthGateContent(
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.weight(1f))
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(AppColors.card, CircleShape)
-                    .border(0.5.dp, AppColors.border, CircleShape)
-                    .clickable(onClick = onDismiss)
-            ) {
-                Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(16.dp))
-            }
+            de.tipau.promille.ui.components.AppIconCloseButton(onDismiss = onDismiss)
         }
 
         Column(

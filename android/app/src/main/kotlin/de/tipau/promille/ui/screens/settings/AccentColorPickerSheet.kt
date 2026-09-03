@@ -201,9 +201,9 @@ fun RgbColorPickerSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp, top = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .background(AppColors.background)
-                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
         ) {
             Column(
                 modifier = Modifier
@@ -217,83 +217,33 @@ fun RgbColorPickerSheet(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                // Eyedropper (Pipette)
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.card)
-                        .clickable { /* Eyedropper */ },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = AppIcons.Eyedropper,
-                        contentDescription = "Pipette",
-                        tint = AppColors.accent,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
+                // iOS has no eyedropper here, and this one was never wired.
+                // A real one needs MediaProjection to read a screen pixel,
+                // for a sheet that already has a wheel, a hex field and the
+                // presets. Spacer, not nothing: SpaceBetween needs the
+                // counterweight or the title slides left.
+                Spacer(Modifier.size(32.dp))
 
                 // Centered Title
+                // No iOS source (iOS delegates to the system ColorPicker);
+                // appBodyBold matches this app's other sheet-header style.
                 Text(
                     text = "Farben",
                     color = AppColors.text,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.bodyBold
                 )
 
-                // Close Button (iOS style)
-                Box(
-                    modifier = Modifier
-                        .size(30.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.card)
-                        .clickable(onClick = onDismiss),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = "Schließen",
-                        tint = AppColors.textDim,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
+                de.tipau.promille.ui.components.AppIconCloseButton(onDismiss = onDismiss)
             }
 
             // 2. iOS Segmented Control (Gitter | Spektrum | Schieberegler)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(34.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(AppColors.card)
-                    .padding(2.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    ColorPickerTab.values().forEach { tab ->
-                        val isSelected = selectedTab == tab
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(if (isSelected) AppColors.border else Color.Transparent)
-                                .clickable { selectedTab = tab },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = tab.title,
-                                color = if (isSelected) AppColors.text else AppColors.textDim,
-                                fontSize = 13.sp,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                            )
-                        }
-                    }
-                }
-            }
+            de.tipau.promille.ui.components.AppSegmentedControl(
+                items = ColorPickerTab.entries,
+                selectedItem = selectedTab,
+                onItemSelected = { selectedTab = it },
+                labelProvider = { it.title },
+                modifier = Modifier.fillMaxWidth()
+            )
 
             // 3. Tab Content (Grid / Spectrum / Sliders)
             Box(
@@ -561,8 +511,10 @@ private fun AppleSpectrumColorPickerTab(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Helligkeit", color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                Text("${(brightness * 100).toInt()} %", color = AppColors.textDim, fontSize = 14.sp, fontWeight = FontWeight.Normal)
+                // No iOS source; matches SettingsSliderRow's label/value
+                // pairing (appBody / appCaptionBold) elsewhere in the app.
+                Text("Helligkeit", color = AppColors.text, style = de.tipau.promille.AppText.body)
+                Text("${(brightness * 100).toInt()} %", color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
             }
 
             val pureColorAtHue = Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, saturation, 1.0f)))
@@ -671,11 +623,12 @@ private fun AppleSlidersColorPickerTab(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // No iOS source for this whole hex row (system ColorPicker only
+            // on iOS); appBody/appBodyBold match this sheet's other rows.
             Text(
                 text = "Hex-Farbcode",
                 color = AppColors.text,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
+                style = de.tipau.promille.AppText.body
             )
 
             Row(
@@ -685,23 +638,18 @@ private fun AppleSlidersColorPickerTab(
                 Text(
                     text = "#",
                     color = AppColors.textDim,
-                    fontSize = 14.sp,
-                    fontFamily = AppSans,
-                    style = TabularFigures,
-                    fontWeight = FontWeight.SemiBold
+                    style = de.tipau.promille.AppText.bodyBold.merge(TabularFigures)
                 )
                 BasicTextField(
                     value = hexInput,
                     onValueChange = onHexChanged,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
-                    textStyle = TextStyle(
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = AppSans,
-                        fontFeatureSettings = "tnum",
-                        color = AppColors.text,
-                        textAlign = TextAlign.Start
+                    textStyle = de.tipau.promille.AppText.bodyBold.merge(TabularFigures).merge(
+                        TextStyle(
+                            color = AppColors.text,
+                            textAlign = TextAlign.Start
+                        )
                     ),
                     cursorBrush = SolidColor(AppColors.accent),
                     modifier = Modifier.width(72.dp)
@@ -729,8 +677,7 @@ private fun AppleRgbChannelRow(
             Text(
                 text = label,
                 color = AppColors.text,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
+                style = de.tipau.promille.AppText.body
             )
             // iOS Numerical Value Badge
             Box(
@@ -743,10 +690,7 @@ private fun AppleRgbChannelRow(
                 Text(
                     text = value.toString(),
                     color = AppColors.text,
-                    fontSize = 13.sp,
-                    fontFamily = AppSans,
-                    style = TabularFigures,
-                    fontWeight = FontWeight.SemiBold
+                    style = de.tipau.promille.AppText.captionBold.merge(TabularFigures)
                 )
             }
         }

@@ -61,6 +61,25 @@ data class JamSettings(
     val autoAcceptFriends: Boolean = true
 )
 
+/**
+ * Splits the toggles into the values a member shares and the ones they hide,
+ * mirroring ParticipantPrivacySheet (JamPrivacySheets.swift:75-97). Only the six
+ * roster visible values: location, waves and auto accept are local preferences,
+ * never values another member sees.
+ */
+fun JamSettings.privacyLabels(): Pair<List<String>, List<String>> {
+    val flags = listOf(
+        shareBAC to "Promille-Wert",
+        shareStatus to "Status",
+        shareDrinks to "Drinks",
+        shareDrinkCount to "Anzahl Drinks",
+        shareSOSStatus to "SOS-Status",
+        sharePhotos to "Fotos"
+    )
+    return flags.filter { it.first }.map { it.second } to
+        flags.filterNot { it.first }.map { it.second }
+}
+
 data class JamParticipant(
     val id: String,
     val userID: String? = null,
@@ -85,6 +104,20 @@ data class Jam(
     val settings: JamSettings = JamSettings(),
     val participants: List<JamParticipant> = emptyList()
 )
+
+/**
+ * "Gerade gestartet" / "vor 5 min" / "vor 2 h" under a lobby row, mirrors
+ * LobbyJamRow.relativeTime. A jam nobody joined an hour ago is probably over,
+ * so the age is what tells the reader whether a row is worth tapping.
+ */
+fun jamLobbyRelativeTime(createdAtEpochSeconds: Long, nowEpochSeconds: Long): String {
+    val minutes = (nowEpochSeconds - createdAtEpochSeconds) / 60
+    return when {
+        minutes < 1 -> "Gerade gestartet"
+        minutes < 60 -> "vor $minutes min"
+        else -> "vor ${minutes / 60} h"
+    }
+}
 
 /**
  * Last writer wins upsert: an incoming row only replaces an existing one when it
@@ -150,6 +183,15 @@ fun activeJamRoster(
             (myUserID == null || p.userID != myUserID) &&
             p.id !in tombstonedIDs &&
             nowEpochSeconds - p.lastUpdatedEpochSeconds <= STALE_PARTICIPANT_SECONDS
+    }.map { p ->
+        // Privacy toggles only ride the Bluetooth channel, so a server row for a
+        // peer we also hear over proximity carries none. Dropping them here would
+        // read as "they turned sharing off" and wipe the detail every poll.
+        if (p.sharedSettings != null) p else p.copy(
+            sharedSettings = existingParticipants.firstOrNull {
+                it.id == p.id || (p.userID != null && it.userID == p.userID)
+            }?.sharedSettings
+        )
     }
 
     // Keep multipeer-only peers (proximity peers with no server row, e.g. a

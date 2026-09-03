@@ -51,9 +51,9 @@ fun StatusSkinPickerSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp, top = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .background(AppColors.background)
-                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
         ) {
             Column(
                 modifier = Modifier
@@ -68,28 +68,19 @@ fun StatusSkinPickerSheet(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
+                        // iOS: .appHeadline (28sp SemiBold) - was 20sp Bold.
                         text = "Status-Skin",
                         color = AppColors.text,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        style = de.tipau.promille.AppText.headline
                     )
                     Text(
+                        // iOS: .appCaption - was 12sp.
                         text = "Wähle die Bezeichnungen für deinen Promille-Status.",
                         color = AppColors.textDim,
-                        fontSize = 12.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.card)
-                        .border(0.5.dp, AppColors.border, CircleShape)
-                        .clickable(onClick = onDismiss),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(16.dp))
-                }
+                de.tipau.promille.ui.components.AppIconCloseButton(onDismiss = onDismiss)
             }
 
             Spacer(Modifier.height(14.dp))
@@ -116,16 +107,17 @@ fun StatusSkinPickerSheet(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
+                                        // iOS: .appBodyBold (17sp) - was 15sp.
                                         text = skin.displayName,
                                         color = if (isSelected) AppColors.accent else AppColors.text,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold
+                                        style = de.tipau.promille.AppText.bodyBold
                                     )
                                     Spacer(Modifier.height(2.dp))
                                     Text(
+                                        // iOS: .appCaption - was 12sp.
                                         text = skin.skinDescription,
                                         color = AppColors.textDim,
-                                        fontSize = 12.sp
+                                        style = de.tipau.promille.AppText.caption
                                     )
                                 }
                                 if (isSelected) {
@@ -147,9 +139,12 @@ fun StatusSkinPickerSheet(
                                             .padding(horizontal = 8.dp, vertical = 4.dp)
                                     ) {
                                         Text(
+                                            // iOS: fixed 10sp Medium (not a
+                                            // token) - was 11sp here.
                                             text = skin.label(status),
                                             color = AppColors.textDim,
-                                            fontSize = 11.sp
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Medium
                                         )
                                     }
                                 }

@@ -40,7 +40,9 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import de.tipau.promille.AppSerif
+
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 
 private enum class DayMoodOption(val raw: Int, val emoji: String, val label: String, val iconRes: Int) {
     NEUTRAL(0, "😐", "Kein Urteil", R.drawable.ic_mood_neutral),
@@ -57,6 +59,7 @@ fun DayDetailSheet(
     dayNoteRepository: DayNoteRepository,
     profile: Profile? = null,
     statusSkin: StatusSkin = StatusSkin.STANDARD,
+    onDeleteDrink: ((de.tipau.promille.bac.Drink) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -109,9 +112,9 @@ fun DayDetailSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp, top = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .background(AppColors.background)
-                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
         ) {
             LazyColumn(
                 modifier = Modifier
@@ -131,43 +134,31 @@ fun DayDetailSheet(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
+                            // iOS: .appHeadline (DayDetailSheet.swift:118) -
+                            // sans, not the AppSerif/Bold this used to be.
                             text = dateTitle,
                             color = AppColors.text,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = AppSerif
+                            style = de.tipau.promille.AppText.headline
                         )
                         Text(
                             text = subtitle,
                             color = AppColors.textDim,
-                            fontSize = 13.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.card)
-                            .border(0.5.dp, AppColors.border, CircleShape)
-                            .clickable {
-                                saveNote()
-                                onDismiss()
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Close,
-                            contentDescription = "Schließen",
-                            tint = AppColors.textDim,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
+                    de.tipau.promille.ui.components.AppIconCloseButton(
+                        onDismiss = {
+                            saveNote()
+                            onDismiss()
+                        }
+                    )
                 }
             }
 
             item {
                 HorizontalDivider(color = AppColors.border, thickness = 0.5.dp)
+                de.tipau.promille.ui.components.TopEdgeFadeScrim(height = 10.dp)
             }
 
             // Drinks or Empty State
@@ -189,7 +180,7 @@ fun DayDetailSheet(
                         Text(
                             text = "Kein Alkohol an diesem Tag.",
                             color = AppColors.textMuted,
-                            fontSize = 13.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
                 }
@@ -226,15 +217,16 @@ fun DayDetailSheet(
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
+                                        // iOS DDSStat: value is .appBodyBold
+                                        // (SemiBold, not the Bold this had).
                                         text = String.format(Locale.GERMANY, "%.2f ‰", peakBAC),
                                         color = bacStatus.color,
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.Bold
+                                        style = de.tipau.promille.AppText.bodyBold
                                     )
                                     Text(
                                         text = "Spitzen-BAC",
                                         color = AppColors.textDim,
-                                        fontSize = 11.sp
+                                        style = de.tipau.promille.AppText.micro
                                     )
                                 }
 
@@ -260,13 +252,12 @@ fun DayDetailSheet(
                                     Text(
                                         text = "${dayStats.drinkCount}",
                                         color = AppColors.text,
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.Bold
+                                        style = de.tipau.promille.AppText.bodyBold
                                     )
                                     Text(
                                         text = "Drinks",
                                         color = AppColors.textDim,
-                                        fontSize = 11.sp
+                                        style = de.tipau.promille.AppText.micro
                                     )
                                 }
 
@@ -292,13 +283,12 @@ fun DayDetailSheet(
                                     Text(
                                         text = "${dayStats.totalCalories}",
                                         color = AppColors.text,
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.Bold
+                                        style = de.tipau.promille.AppText.bodyBold
                                     )
                                     Text(
                                         text = "Kalorien",
                                         color = AppColors.textDim,
-                                        fontSize = 11.sp
+                                        style = de.tipau.promille.AppText.micro
                                     )
                                 }
                             }
@@ -388,19 +378,19 @@ fun DayDetailSheet(
                                 Text(
                                     text = "Kater-Prognose",
                                     color = AppColors.textDim,
-                                    fontSize = 11.sp
+                                    style = de.tipau.promille.AppText.micro
                                 )
                                 Text(
+                                    // iOS: .appCaptionBold (SemiBold, not Bold).
                                     text = level.germanLabel,
                                     color = if (level.isLethal) levelColor else AppColors.text,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
+                                    style = de.tipau.promille.AppText.captionBold
                                 )
                                 if (level.isLethal) {
                                     Text(
                                         text = "Solche Werte sind lebensgefährlich. Im Zweifel Notruf 112.",
                                         color = AppColors.textDim,
-                                        fontSize = 11.sp
+                                        style = de.tipau.promille.AppText.micro
                                     )
                                 }
                             }
@@ -412,54 +402,11 @@ fun DayDetailSheet(
                 item {
                     SectionLabel("GETRÄNKE")
                 }
-                items(dayStats.drinks) { drink ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(AppColors.card)
-                            .border(0.5.dp, AppColors.border, RoundedCornerShape(12.dp))
-                            .padding(14.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(RoundedCornerShape(9.dp))
-                                    .background(AppColors.accent.copy(alpha = 0.12f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = AppIcons.Drink,
-                                    contentDescription = null,
-                                    tint = AppColors.accent,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = drink.name,
-                                    color = AppColors.text,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    text = String.format(
-                                        Locale.GERMANY,
-                                        "%.0f ml · %.1f %%",
-                                        drink.volumeML,
-                                        drink.abv
-                                    ),
-                                    color = AppColors.textDim,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-                    }
+                items(dayStats.drinks, key = { it.id }) { drink ->
+                    DayDetailDrinkRow(
+                        drink = drink,
+                        onDelete = onDeleteDrink?.let { callback -> { callback(drink) } }
+                    )
                 }
             }
 
@@ -515,31 +462,16 @@ fun DayDetailSheet(
                     }
 
                     // Text field
-                    OutlinedTextField(
+                    de.tipau.promille.ui.components.AppTextField(
                         value = noteText,
                         onValueChange = {
                             noteText = it
                             saveNote()
                         },
-                        placeholder = {
-                            Text(
-                                "Kurze Notiz zum Abend...",
-                                color = AppColors.textMuted,
-                                fontSize = 14.sp
-                            )
-                        },
+                        placeholder = "Kurze Notiz zum Abend...",
+                        singleLine = false,
                         minLines = 3,
                         maxLines = 5,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = AppColors.card,
-                            unfocusedContainerColor = AppColors.card,
-                            focusedTextColor = AppColors.text,
-                            unfocusedTextColor = AppColors.text,
-                            focusedBorderColor = AppColors.accent,
-                            unfocusedBorderColor = AppColors.border,
-                            cursorColor = AppColors.accent
-                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -547,4 +479,96 @@ fun DayDetailSheet(
         }
     }
 }
+}
+
+/**
+ * 1:1 mirror of iOS DayDetailSheet drink row with long-press context menu (DayDetailSheet.swift:284-319).
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun DayDetailDrinkRow(
+    drink: de.tipau.promille.bac.Drink,
+    onDelete: (() -> Unit)?
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(AppColors.card)
+            .border(0.5.dp, AppColors.border, RoundedCornerShape(12.dp))
+            .combinedClickable(
+                onClick = {},
+                onLongClick = { if (onDelete != null) menuExpanded = true }
+            )
+            .padding(14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(AppColors.accent.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = AppIcons.Drink,
+                    contentDescription = null,
+                    tint = AppColors.accent,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = drink.name,
+                    color = AppColors.text,
+                    style = de.tipau.promille.AppText.body
+                )
+                Text(
+                    text = String.format(
+                        Locale.GERMANY,
+                        "%.0f ml · %.1f %%",
+                        drink.volumeML,
+                        drink.abv
+                    ),
+                    color = AppColors.textDim,
+                    style = de.tipau.promille.AppText.micro
+                )
+            }
+        }
+
+        if (onDelete != null) {
+            de.tipau.promille.ui.components.AppDropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            "Eintrag löschen",
+                            color = AppColors.statusRed,
+                            style = de.tipau.promille.AppText.captionBold
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = AppIcons.Trash,
+                            contentDescription = null,
+                            tint = AppColors.statusRed,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onDelete()
+                    }
+                )
+            }
+        }
+    }
 }

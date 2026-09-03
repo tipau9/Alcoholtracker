@@ -175,7 +175,10 @@ fun AmountInputSheet(
         val factor = if (template.volume > 0) volume / template.volume else 1.0
         (template.calories * factor).toInt()
     }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+        confirmValueChange = { it != SheetValue.Hidden }
+    )
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -189,9 +192,9 @@ fun AmountInputSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp, top = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .background(AppColors.background)
-                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
         ) {
             Column(
                 modifier = Modifier
@@ -227,30 +230,21 @@ fun AmountInputSheet(
                     }
                     Spacer(Modifier.width(14.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        // iOS: .appBodyBold (AmountInputSheet.swift:112).
                         Text(
                             text = template.name,
                             color = AppColors.text,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.bodyBold
                         )
+                        // iOS: .appCaption (AmountInputSheet.swift:115).
                         Text(
                             text = "${String.format(Locale.GERMANY, "%.1f", template.abv)} % Alk.",
                             color = AppColors.textDim,
-                            fontSize = 13.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
                 }
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.card)
-                        .border(0.5.dp, AppColors.border, CircleShape)
-                        .clickable(onClick = onDismiss),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(14.dp))
-                }
+                de.tipau.promille.ui.components.AppIconCloseButton(onDismiss = onDismiss)
             }
 
             HorizontalDivider(color = AppColors.border, thickness = 0.5.dp)
@@ -299,6 +293,7 @@ fun AmountInputSheet(
                                             modifier = Modifier.size(20.dp)
                                         )
                                         Text(
+                                            // iOS: .system(size: 11, weight: .semibold) (AmountInputSheet.swift:324).
                                             text = preset.name,
                                             color = if (isSelected) AppColors.accent else AppColors.text,
                                             fontSize = 11.sp,
@@ -308,6 +303,7 @@ fun AmountInputSheet(
                                             overflow = TextOverflow.Ellipsis
                                         )
                                         Text(
+                                            // iOS: .system(size: 10) + monospacedDigit (AmountInputSheet.swift:331).
                                             text = "${preset.volumeML.toInt()} ml",
                                             color = AppColors.textDim,
                                             fontSize = 10.sp,
@@ -316,6 +312,7 @@ fun AmountInputSheet(
                                         )
                                         if (preset.description != null) {
                                             Text(
+                                                // iOS: .system(size: 9) (AmountInputSheet.swift:337).
                                                 text = preset.description,
                                                 color = AppColors.textDim.copy(alpha = 0.8f),
                                                 fontSize = 9.sp,
@@ -351,13 +348,16 @@ fun AmountInputSheet(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
+                            // iOS: .system(size: 48, weight: .light, design: .serif) (AmountInputSheet.swift:174).
                             text = volumeText,
                             color = AppColors.text,
                             fontSize = fixedSp(48f),
                             fontWeight = FontWeight.Light,
-                            fontFamily = AppSerif
+                            fontFamily = AppSerif,
+                            style = TabularFigures
                         )
                         Text(
+                            // iOS: .system(size: 16, weight: .regular) (AmountInputSheet.swift:189).
                             text = "ml",
                             color = AppColors.textDim,
                             fontSize = 16.sp,
@@ -373,37 +373,34 @@ fun AmountInputSheet(
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
+                                // iOS: .system(size: 10, weight: .medium) + tracking 1 (AmountInputSheet.swift:195).
                                 text = "EIGENE MENGE",
                                 color = AppColors.accent,
                                 fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Medium,
                                 letterSpacing = 1.sp
                             )
                         }
                     }
                 }
 
-                Slider(
+                de.tipau.promille.ui.components.AppSlider(
                     value = volume.toFloat(),
                     onValueChange = { newValue ->
                         volume = newValue.toDouble()
                         volumeText = newValue.toInt().toString()
                         selectedPresetID = presets.firstOrNull { kotlin.math.abs(it.volumeML - volume) < 5.0 }?.id
                     },
-                    valueRange = sliderRange,
-                    colors = SliderDefaults.colors(
-                        thumbColor = AppColors.text,
-                        activeTrackColor = AppColors.accent,
-                        inactiveTrackColor = AppColors.border
-                    )
+                    valueRange = sliderRange
                 )
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("${sliderRange.start.toInt()} ml", color = AppColors.textDim, fontSize = 11.sp)
-                    Text("${sliderRange.endInclusive.toInt()} ml", color = AppColors.textDim, fontSize = 11.sp)
+                    // iOS: .appMicro (AmountInputSheet.swift:218, 222).
+                    Text("${sliderRange.start.toInt()} ml", color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
+                    Text("${sliderRange.endInclusive.toInt()} ml", color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
                 }
             }
 
@@ -457,15 +454,16 @@ fun AmountInputSheet(
                 )
 
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    // iOS: .appMicro (AmountInputSheet.swift:249, 252).
                     Text(
                         text = "Fertig ca. ${timeFmt.format(finishCal.time)}",
                         color = AppColors.textDim,
-                        fontSize = 11.sp
+                        style = de.tipau.promille.AppText.micro
                     )
                     Text(
                         text = "Aufnahme ca. bis ${timeFmt.format(absorptionCal.time)}",
                         color = AppColors.textDim,
-                        fontSize = 11.sp
+                        style = de.tipau.promille.AppText.micro
                     )
                 }
 
@@ -473,11 +471,12 @@ fun AmountInputSheet(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Kalorien: ca. $calories kcal", color = AppColors.textDim, fontSize = 12.sp)
+                    // iOS: .appCaption
+                    Text("Kalorien: ca. $calories kcal", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                     Text(
                         text = String.format(Locale.GERMANY, "Reinalkohol: %.1f g", volume * (template.abv / 100.0) * 0.789),
                         color = AppColors.textDim,
-                        fontSize = 12.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
             }
@@ -516,20 +515,19 @@ fun AmountInputSheet(
                     )
                 }
 
+                // iOS: .appCaption (AmountInputSheet.swift:266).
                 Text(
                     text = "Geschätzte Wirkung",
                     color = AppColors.textDim,
-                    fontSize = 13.sp,
+                    style = de.tipau.promille.AppText.caption,
                     modifier = Modifier.weight(1f)
                 )
 
+                // iOS: .appCaptionBold (AmountInputSheet.swift:270).
                 Text(
                     text = String.format(Locale.GERMANY, "+%.2f ‰", projectedPeak),
                     color = AppColors.statusOrange,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = AppSans,
-                    style = TabularFigures
+                    style = de.tipau.promille.AppText.captionBold.merge(TabularFigures)
                 )
             }
 

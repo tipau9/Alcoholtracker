@@ -67,10 +67,12 @@ fun BACCurveChartView(
                     if (scrubbedPoint != null) {
                         Spacer(Modifier.width(8.dp))
                         Text(
+                            // No iOS counterpart for this scrub tooltip;
+                            // AppText.captionBold matches the role of other
+                            // accent-colored inline annotations in this file.
                             text = "${timeFormatter.format(Instant.ofEpochSecond(scrubbedPoint!!.epochSeconds))}: ${String.format(Locale.GERMANY, "%.2f ‰", scrubbedPoint!!.bac)}",
                             color = AppColors.accent,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.captionBold
                         )
                     }
                 }
@@ -93,9 +95,10 @@ fun BACCurveChartView(
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Text(
+                                // iOS: .appMicro, no weight override (was
+                                // 11sp SemiBold here).
                                 text = "8h",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                style = de.tipau.promille.AppText.micro,
                                 color = if (!showFullDay) AppColors.background else AppColors.textDim
                             )
                         }
@@ -108,8 +111,7 @@ fun BACCurveChartView(
                         ) {
                             Text(
                                 text = "24h",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                style = de.tipau.promille.AppText.micro,
                                 color = if (showFullDay) AppColors.background else AppColors.textDim
                             )
                         }
@@ -153,7 +155,7 @@ fun BACCurveChartView(
                         .height(150.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Noch keine Verlaufskurve", color = AppColors.textMuted, fontSize = 13.sp)
+                    Text("Noch keine Verlaufskurve", color = AppColors.textMuted, style = de.tipau.promille.AppText.caption)
                 }
             } else {
                 val nowEpoch = remember { System.currentTimeMillis() / 1000 }

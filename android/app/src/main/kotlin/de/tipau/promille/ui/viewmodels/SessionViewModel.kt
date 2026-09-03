@@ -18,6 +18,7 @@ import de.tipau.promille.service.LocationService
 import de.tipau.promille.service.NotificationService
 import de.tipau.promille.sync.BACPublisher
 import de.tipau.promille.sync.JamService
+import de.tipau.promille.ui.screens.home.HomeWidgetType
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -231,14 +232,11 @@ class SessionViewModel(
     fun hoursUntil(target: Double): Double? =
         projection.value?.hoursUntil(target, System.currentTimeMillis() / 1000)
 
-    val pacingWarning: StateFlow<String?> = combine(drinks, currentBAC) { list, bac ->
-        if (list.size >= 3 && bac > 0.5) {
-            val recentMinutes = 60
-            val recentThreshold = System.currentTimeMillis() / 1000 - recentMinutes * 60
-            val drinksLastHour = list.count { it.timestampEpochSeconds >= recentThreshold }
-            if (drinksLastHour >= 3) {
-                "Du trinkst gerade schnell ($drinksLastHour Drinks in der letzten Stunde). Gönn dir ein Glas Wasser!"
-            } else null
+    val pacingWarning: StateFlow<String?> = combine(rawDrinks, ticker) { list, now ->
+        val halfHourAgo = now - 30 * 60
+        val recentDrinks = list.filter { it.timestampEpochSeconds >= halfHourAgo && it.abv > 0 }
+        if (recentDrinks.size >= 2) {
+            "${recentDrinks.size} Drinks in 30 Minuten. Zeit für ein Glas Wasser!"
         } else null
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
@@ -378,8 +376,12 @@ class SessionViewModel(
         }
     }
 
+    private fun haptics(): de.tipau.promille.ui.components.HapticManager? =
+        applicationContext?.let { de.tipau.promille.ui.components.HapticManager.from(it) }
+
     // CRUD & Event Actions
     fun addDrink(entity: DrinkEntity) {
+        haptics()?.light()
         viewModelScope.launch {
             drinkRepository.addDrink(entity)
             _undoAction.value = UndoAction(label = "${entity.name} hinzugefügt", addedDrink = entity)
@@ -387,6 +389,7 @@ class SessionViewModel(
     }
 
     fun duplicateDrink(drink: Drink) {
+        haptics()?.success()
         val copy = DrinkEntity(
             id = UUID.randomUUID().toString(),
             templateID = drink.templateId,
@@ -402,6 +405,7 @@ class SessionViewModel(
     }
 
     fun finishDrinkNow(drink: Drink) {
+        haptics()?.light()
         viewModelScope.launch {
             val now = System.currentTimeMillis() / 1000
             val durationMinutes = kotlin.math.max(1.0, (now - drink.timestampEpochSeconds) / 60.0)
@@ -411,6 +415,7 @@ class SessionViewModel(
     }
 
     fun updateDrink(drink: Drink, volume: Double, timestampSeconds: Long, durationMinutes: Double) {
+        haptics()?.light()
         viewModelScope.launch {
             val factor = if (drink.volumeML > 0) volume / drink.volumeML else 1.0
             val updatedCalories = (drink.calories * factor).toInt()
@@ -425,6 +430,7 @@ class SessionViewModel(
     }
 
     fun removeDrink(drink: Drink) {
+        haptics()?.medium()
         viewModelScope.launch {
             val entity = DrinkRepository.toEntity(drink)
             drinkRepository.deleteDrink(entity)
@@ -434,6 +440,7 @@ class SessionViewModel(
 
     fun performUndo() {
         val action = _undoAction.value ?: return
+        haptics()?.light()
         viewModelScope.launch {
             if (action.deletedDrink != null) {
                 drinkRepository.addDrink(action.deletedDrink)
@@ -450,6 +457,7 @@ class SessionViewModel(
 
     // Sip Counter Actions
     fun startSipCounter(template: DrinkTemplateEntity) {
+        haptics()?.light()
         _activeSipDrink.value = template
         _sipCount.value = 0
         sipCounterStartTime = System.currentTimeMillis() / 1000
@@ -457,10 +465,12 @@ class SessionViewModel(
 
     fun addSip() {
         if (_activeSipDrink.value == null) return
+        haptics()?.medium()
         _sipCount.value += 1
     }
 
     fun removeSip() {
+        haptics()?.light()
         _sipCount.value = maxOf(0, _sipCount.value - 1)
     }
 
@@ -468,6 +478,7 @@ class SessionViewModel(
         val template = _activeSipDrink.value ?: return
         val count = _sipCount.value
         if (count <= 0) return
+        haptics()?.success()
         val ml = count.toDouble() * currentSipVolume.value
         val scaledCalories = if (template.volume > 0) {
             (template.calories.toDouble() / template.volume * ml).toInt()
@@ -501,10 +512,12 @@ class SessionViewModel(
 
     // Session Events
     fun logVomit() {
+        haptics()?.success()
         viewModelScope.launch { sessionEventRepository.logVomit() }
     }
 
     fun removeLastVomit() {
+        haptics()?.light()
         viewModelScope.launch {
             val last = rawVomits.value.lastOrNull() ?: return@launch
             sessionEventRepository.deleteVomitEvent(last)
@@ -512,10 +525,12 @@ class SessionViewModel(
     }
 
     fun logMeal(impact: MealImpact, name: String = "") {
+        haptics()?.medium()
         viewModelScope.launch { sessionEventRepository.logMeal(impact, name) }
     }
 
     fun logBreathalyzerReading(measuredBac: Double, note: String = "") {
+        haptics()?.success()
         viewModelScope.launch {
             val est = currentBAC.value
             sessionEventRepository.logBreathalyzerReading(measuredBac, est, "manual", note)
@@ -523,6 +538,7 @@ class SessionViewModel(
     }
 
     fun resetSession() {
+        haptics()?.warning()
         viewModelScope.launch {
             drinkRepository.deleteAll()
             sessionEventRepository.clearAll()
@@ -555,20 +571,29 @@ class SessionViewModel(
     }
 
     fun toggleWidget(widgetRaw: String) {
+        val type = HomeWidgetType.entries.firstOrNull { it.raw == widgetRaw } ?: return
+        updateWidgets { if (type in it) it - type else it + type }
+    }
+
+    /**
+     * The four info tiles are one section in edit mode, as on iOS: tapping it
+     * clears all four, or restores all four (HomeView.swift:845-851).
+     */
+    fun toggleGridTiles() {
+        val grid = HomeWidgetType.gridTypes
+        updateWidgets { active ->
+            if (grid.any { it in active }) active - grid.toSet() else active + grid
+        }
+    }
+
+    // This used to keep its own hardcoded copy of the widget list and its own
+    // split/join, which meant the "__none__" sentinel could only ever be half
+    // applied. One pair of functions now, HomeWidgetType's.
+    private fun updateWidgets(transform: (Set<HomeWidgetType>) -> Set<HomeWidgetType>) {
         val currentProfile = profileEntity.value ?: return
         val raw = currentProfile.activeWidgetsRaw
-        val list = if (raw.isBlank()) {
-            listOf("timeToLimit", "water", "calories", "drinkCount", "bacCurve", "hydration", "stomachStatus", "favStrip", "drinkHistory", "milestone", "dayStats", "safetyActions")
-        } else {
-            raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-        }.toMutableList()
-
-        if (list.contains(widgetRaw)) {
-            list.remove(widgetRaw)
-        } else {
-            list.add(widgetRaw)
-        }
-        val serialized = list.joinToString(",")
+        val next = transform(HomeWidgetType.parseActiveWidgets(raw))
+        val serialized = HomeWidgetType.serialize(next, HomeWidgetType.foreignTokens(raw))
         userProfileRepository.updateDebounced { it.copy(activeWidgetsRaw = serialized) }
     }
 }

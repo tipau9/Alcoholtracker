@@ -46,14 +46,43 @@ enum class HomeWidgetType(val raw: String, val localizedName: String, val icon: 
         val gridTypes = listOf(TIME_TO_LIMIT, WATER, CALORIES, DRINK_COUNT)
         val sectionTypes = listOf(BAC_CURVE, STOMACH_STATUS, FAV_STRIP, DRINK_HISTORY, MILESTONE, DAY_STATS, SAFETY_ACTIONS)
 
+        // WidgetType.explicitNoneRaw (UserProfile.swift:122). The literal
+        // has to match: activeWidgetsRaw syncs across platforms
+        // (HistorySyncService.kt:329). Without it, serialize(emptySet())
+        // writes "" and parse reads that back as "all on", so turning every
+        // widget off resurrected all of them on the next read.
+        const val EXPLICIT_NONE_RAW = "__none__"
+
         fun parseActiveWidgets(raw: String): Set<HomeWidgetType> {
+            if (raw == EXPLICIT_NONE_RAW) return emptySet()
+            // Blank is Android's column default (Entities.kt:46), so it means
+            // a fresh profile, not a legacy one. iOS's preWidgetDefault is
+            // deliberately not ported here: its fresh profiles are written
+            // with the full list (UserProfile.swift:442), so over there blank
+            // only ever means pre-widget-system.
             if (raw.isBlank()) return entries.toSet()
             val tokens = raw.split(",").map { it.trim() }
             return entries.filter { tokens.contains(it.raw) }.toSet()
         }
 
-        fun serialize(widgets: Set<HomeWidgetType>): String {
-            return widgets.joinToString(",") { it.raw }
+        /**
+         * iOS has four widget types this enum does not - streak, crewStatus,
+         * drinkingSpeed and hangover (UserProfile.swift:118-121) - and its
+         * fresh profiles write all sixteen tokens (UserProfile.swift:442).
+         * Rewriting activeWidgetsRaw from these twelve alone would delete the
+         * other four on the next sync, and iOS honours any non-empty list
+         * exactly, so they would stay gone over there.
+         */
+        fun foreignTokens(raw: String): List<String> {
+            if (raw == EXPLICIT_NONE_RAW || raw.isBlank()) return emptyList()
+            return raw.split(",").map { it.trim() }
+                .filter { token -> token.isNotEmpty() && entries.none { it.raw == token } }
+        }
+
+        fun serialize(widgets: Set<HomeWidgetType>, foreign: List<String> = emptyList()): String {
+            val tokens = widgets.map { it.raw } + foreign
+            if (tokens.isEmpty()) return EXPLICIT_NONE_RAW
+            return tokens.joinToString(",")
         }
     }
 }
@@ -74,11 +103,18 @@ fun HomeEditSheet(
     var activeWidgets by remember {
         mutableStateOf(HomeWidgetType.parseActiveWidgets(profile?.activeWidgetsRaw ?: ""))
     }
+    // Every Speichern rewrites the whole string, so anything only iOS knows
+    // about has to ride along.
+    // Keyed, unlike the line above: a stale set of switches is visible and the
+    // user can correct it, a stale foreign list silently deletes iOS's widgets.
+    val foreignWidgets = remember(profile?.activeWidgetsRaw) {
+        HomeWidgetType.foreignTokens(profile?.activeWidgetsRaw ?: "")
+    }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = {
-            onSave(homeStyle, warningThreshold.toDouble(), HomeWidgetType.serialize(activeWidgets))
+            onSave(homeStyle, warningThreshold.toDouble(), HomeWidgetType.serialize(activeWidgets, foreignWidgets))
             onDismiss()
         },
         sheetState = sheetState,
@@ -91,9 +127,9 @@ fun HomeEditSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp, top = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .background(AppColors.background)
-                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
         ) {
             Column(
                 modifier = Modifier
@@ -109,30 +145,17 @@ fun HomeEditSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
+                        // iOS: .appHeadline (28sp SemiBold) - was 20sp Bold.
                         text = "Home anpassen",
                         color = AppColors.text,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        style = de.tipau.promille.AppText.headline
                     )
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.card)
-                            .border(1.dp, AppColors.border, CircleShape)
-                            .clickable(onClick = {
-                                onSave(homeStyle, warningThreshold.toDouble(), HomeWidgetType.serialize(activeWidgets))
-                                onDismiss()
-                            }),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Close,
-                            contentDescription = "Schließen",
-                            modifier = Modifier.size(16.dp),
-                            tint = AppColors.textDim
-                        )
-                    }
+                    de.tipau.promille.ui.components.AppIconCloseButton(
+                        onDismiss = {
+                            onSave(homeStyle, warningThreshold.toDouble(), HomeWidgetType.serialize(activeWidgets, foreignWidgets))
+                            onDismiss()
+                        }
+                    )
                 }
 
                 LazyColumn(
@@ -181,37 +204,35 @@ fun HomeEditSheet(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    // No exact iOS label match (this section
+                                    // is HomeEditSheet.swift:88-110's
+                                    // WARNSCHWELLE slider, reworded); the
+                                    // value itself does match - .appCaptionBold.
                                     Text(
                                         text = "Limit",
                                         color = AppColors.textDim,
-                                        fontSize = 14.sp
+                                        style = de.tipau.promille.AppText.caption
                                     )
                                     Text(
                                         text = "${String.format(Locale.GERMANY, "%.2f", warningThreshold)} ‰",
                                         color = AppColors.accent,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold
+                                        style = de.tipau.promille.AppText.captionBold
                                     )
                                 }
 
-                                Slider(
+                                de.tipau.promille.ui.components.AppSlider(
                                     value = warningThreshold,
                                     onValueChange = { warningThreshold = ((it * 20f).roundToInt() / 20f) },
                                     valueRange = 0.2f..1.5f,
-                                    steps = 25,
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = AppColors.accent,
-                                        activeTrackColor = AppColors.accent,
-                                        inactiveTrackColor = AppColors.border
-                                    )
+                                    steps = 25
                                 )
 
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("0,2 ‰ (Fahranfänger)", color = AppColors.textDim, fontSize = 11.sp)
-                                    Text("1,5 ‰ (Strikte Grenze)", color = AppColors.textDim, fontSize = 11.sp)
+                                    Text("0,2 ‰ (Fahranfänger)", color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
+                                    Text("1,5 ‰ (Strikte Grenze)", color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
                                 }
                             }
                         }
@@ -252,7 +273,7 @@ fun HomeEditSheet(
                     PrimaryButton(
                         text = "Fertig",
                         onClick = {
-                            onSave(homeStyle, warningThreshold.toDouble(), HomeWidgetType.serialize(activeWidgets))
+                            onSave(homeStyle, warningThreshold.toDouble(), HomeWidgetType.serialize(activeWidgets, foreignWidgets))
                             onDismiss()
                         }
                     )
@@ -293,10 +314,11 @@ private fun StyleCard(
                 modifier = Modifier.size(24.dp)
             )
             Text(
+                // iOS HEStyleCard: .appBodyBold unconditionally - was 14sp,
+                // and varied weight by selection where iOS doesn't.
                 text = title,
                 color = if (isSelected) AppColors.text else AppColors.textDim,
-                fontSize = 14.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                style = de.tipau.promille.AppText.bodyBold
             )
         }
     }
@@ -333,22 +355,19 @@ private fun ToggleGroup(
                                 modifier = Modifier.size(20.dp)
                             )
                             Text(
+                                // iOS HEWidgetToggleRow: .appBody, no weight
+                                // override - was 14sp Medium.
                                 text = wt.localizedName,
                                 color = AppColors.text,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
+                                style = de.tipau.promille.AppText.body
                             )
                         }
 
-                        Switch(
+                        de.tipau.promille.ui.components.AppSwitch(
                             checked = isOn,
                             onCheckedChange = { onToggle(wt, it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = AppColors.accent,
-                                checkedTrackColor = AppColors.accent.copy(alpha = 0.3f),
-                                uncheckedThumbColor = AppColors.textDim,
-                                uncheckedTrackColor = AppColors.background
-                            )
+                            activeColor = AppColors.accent,
+                            inactiveColor = AppColors.background
                         )
                     }
 

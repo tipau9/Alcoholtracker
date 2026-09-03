@@ -62,7 +62,6 @@ fun SettingsScreen(
 
     var showStatusSkinPicker by remember { mutableStateOf(false) }
     var showRgbColorPicker by remember { mutableStateOf(false) }
-    var showAdminView by remember { mutableStateOf(false) }
     var showAuth by remember { mutableStateOf(false) }
     var showDeleteAccountConfirm by remember { mutableStateOf(false) }
     var showDeletePhotosConfirm by remember { mutableStateOf(false) }
@@ -84,63 +83,31 @@ fun SettingsScreen(
     }
 
     if (showDeleteAccountConfirm && supabase != null) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showDeleteAccountConfirm = false },
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp)),
-            containerColor = AppColors.card,
-            title = { Text("Konto wirklich löschen?", color = AppColors.text) },
-            text = {
-                Text(
-                    "Diese Aktion kann nicht rückgängig gemacht werden. Alle deine Online-Daten werden unwiderruflich gelöscht.",
-                    color = AppColors.textDim
-                )
+            title = "Konto wirklich löschen?",
+            text = "Diese Aktion kann nicht rückgängig gemacht werden. Alle deine Online-Daten werden unwiderruflich gelöscht.",
+            confirmText = "Löschen",
+            isDestructive = true,
+            onConfirm = {
+                showDeleteAccountConfirm = false
+                coroutineScope.launch { runCatching { supabase.deleteAccount() } }
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeleteAccountConfirm = false
-                    coroutineScope.launch { runCatching { supabase.deleteAccount() } }
-                }) { Text("Löschen", color = AppColors.statusRed) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteAccountConfirm = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
-                }
-            }
+            dismissText = "Abbrechen"
         )
     }
 
     if (showDeletePhotosConfirm) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showDeletePhotosConfirm = false },
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp)),
-            containerColor = AppColors.card,
-            title = { Text("Fotos löschen?", color = AppColors.text) },
-            text = {
-                Text(
-                    "Alle gespeicherten Erinnerungsfotos werden dauerhaft gelöscht.",
-                    color = AppColors.textDim
-                )
+            title = "Fotos löschen?",
+            text = "Alle gespeicherten Erinnerungsfotos werden dauerhaft gelöscht.",
+            confirmText = "Löschen",
+            isDestructive = true,
+            onConfirm = {
+                showDeletePhotosConfirm = false
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeletePhotosConfirm = false
-                    // Delete photos action
-                }) { Text("Löschen", color = AppColors.statusRed) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeletePhotosConfirm = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
-                }
-            }
-        )
-    }
-
-    if (showAdminView && appContainer != null) {
-        de.tipau.promille.ui.screens.admin.AdminConsoleSheet(
-            container = appContainer,
-            onDismiss = { showAdminView = false }
+            dismissText = "Abbrechen"
         )
     }
 
@@ -193,13 +160,18 @@ fun SettingsScreen(
     }
 
     if (showGenderDialog) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showGenderDialog = false },
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp)),
-            containerColor = AppColors.card,
-            title = { Text("Geschlecht wählen", color = AppColors.text) },
-            text = {
+            title = "Geschlecht wählen",
+            dismissText = "Abbrechen",
+            buttons = {
+                de.tipau.promille.ui.components.SecondaryButton(
+                    text = "Abbrechen",
+                    onClick = { showGenderDialog = false },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            content = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(
                         Gender.MALE to "Männlich",
@@ -219,31 +191,30 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = label, color = if (p.genderRaw == g.raw) AppColors.accent else AppColors.text, fontSize = 16.sp)
+                            Text(text = label, color = if (p.genderRaw == g.raw) AppColors.accent else AppColors.text, style = de.tipau.promille.AppText.body)
                             if (p.genderRaw == g.raw) {
                                 Icon(AppIcons.Check, contentDescription = null, tint = AppColors.accent, modifier = Modifier.size(18.dp))
                             }
                         }
                     }
                 }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showGenderDialog = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
-                }
             }
         )
     }
 
     if (showStomachDialog) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showStomachDialog = false },
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp)),
-            containerColor = AppColors.card,
-            title = { Text("Standard-Magenfüllung", color = AppColors.text) },
-            text = {
+            title = "Standard-Magenfüllung",
+            dismissText = "Abbrechen",
+            buttons = {
+                de.tipau.promille.ui.components.SecondaryButton(
+                    text = "Abbrechen",
+                    onClick = { showStomachDialog = false },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            content = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     StomachStatus.entries.forEach { status ->
                         Row(
@@ -259,31 +230,30 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = status.germanName, color = if (p.stomachStatusRaw == status.raw) AppColors.accent else AppColors.text, fontSize = 16.sp)
+                            Text(text = status.germanName, color = if (p.stomachStatusRaw == status.raw) AppColors.accent else AppColors.text, style = de.tipau.promille.AppText.body)
                             if (p.stomachStatusRaw == status.raw) {
                                 Icon(AppIcons.Check, contentDescription = null, tint = AppColors.accent, modifier = Modifier.size(18.dp))
                             }
                         }
                     }
                 }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showStomachDialog = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
-                }
             }
         )
     }
 
     if (showHomeStyleDialog) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showHomeStyleDialog = false },
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp)),
-            containerColor = AppColors.card,
-            title = { Text("Home-Ansicht wählen", color = AppColors.text) },
-            text = {
+            title = "Home-Ansicht wählen",
+            dismissText = "Abbrechen",
+            buttons = {
+                de.tipau.promille.ui.components.SecondaryButton(
+                    text = "Abbrechen",
+                    onClick = { showHomeStyleDialog = false },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            content = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     HomeStyle.entries.forEach { style ->
                         Row(
@@ -299,18 +269,12 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = style.localizedName, color = if (p.homeStyleRaw == style.raw) AppColors.accent else AppColors.text, fontSize = 16.sp)
+                            Text(text = style.localizedName, color = if (p.homeStyleRaw == style.raw) AppColors.accent else AppColors.text, style = de.tipau.promille.AppText.body)
                             if (p.homeStyleRaw == style.raw) {
                                 Icon(AppIcons.Check, contentDescription = null, tint = AppColors.accent, modifier = Modifier.size(18.dp))
                             }
                         }
                     }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showHomeStyleDialog = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
                 }
             }
         )
@@ -367,11 +331,14 @@ fun SettingsScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (isSignedIn && myProfile != null) {
                         Text(
+                            // iOS: .appTitle (22sp SemiBold) - was 20sp Bold.
                             text = myProfile?.displayName?.ifBlank { "Kein Name" } ?: "Kein Name",
                             color = AppColors.text,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.title
                         )
+                        // Fixed literal on iOS too (.caption, monospaced,
+                        // bold, tracking 2) - no monospace font resource
+                        // exists on Android, so size/weight stay as-is.
                         Text(
                             text = myProfile?.friendCode ?: "",
                             color = AppColors.accent,
@@ -381,15 +348,16 @@ fun SettingsScreen(
                         )
                     } else {
                         Text(
+                            // iOS: .appTitle - was 20sp Bold.
                             text = "Profil",
                             color = AppColors.text,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
+                            style = de.tipau.promille.AppText.title
                         )
                         Text(
+                            // iOS: .appCaption - was 12sp.
                             text = "Kein Konto verbunden",
                             color = AppColors.textDim,
-                            fontSize = 12.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
                 }
@@ -410,15 +378,16 @@ fun SettingsScreen(
                     modifier = Modifier.size(14.dp)
                 )
                 Text(
+                    // iOS: .appCaptionBold (SemiBold, not Bold) - was 12sp Bold.
                     text = "$unlockedCount/49",
                     color = AppColors.accent,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.captionBold
                 )
                 Text(
+                    // iOS: .appMicro - was 10sp.
                     text = "Achievements",
                     color = AppColors.textDim,
-                    fontSize = 10.sp
+                    style = de.tipau.promille.AppText.micro
                 )
             }
         }
@@ -633,10 +602,11 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
+                                // iOS: .appBodyBold (17sp SemiBold) - was
+                                // 15sp Bold.
                                 text = "Eigene Farbe (RGB)",
                                 color = AppColors.text,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
+                                style = de.tipau.promille.AppText.bodyBold
                             )
                             val currentColor = ACCENT_COLOR_OPTIONS.find { it.hex.equals(p.accentColorHex, ignoreCase = true) }?.color
                                 ?: try { Color(android.graphics.Color.parseColor("#${p.accentColorHex.ifBlank { "C9802F" }}")) } catch (e: Exception) { AppColors.accent }
@@ -722,7 +692,7 @@ fun SettingsScreen(
                         Text(
                             text = "Standard: 25 ml. Aus einer Flasche eher 20 ml, aus einem Glas eher 30 ml.",
                             color = AppColors.textDim,
-                            fontSize = 11.sp,
+                            style = de.tipau.promille.AppText.micro,
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
                     }
@@ -738,14 +708,15 @@ fun SettingsScreen(
                 ) {
                     SectionLabel(text = "STATUS-SCHWELLEN")
                     TextButton(onClick = { viewModel.resetThresholds() }, contentPadding = PaddingValues(0.dp)) {
-                        Text(text = "Zurücksetzen", color = AppColors.textDim, fontSize = 12.sp)
+                        // iOS: .appCaption - was 12sp.
+                        Text(text = "Zurücksetzen", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                     }
                 }
 
                 Text(
                     text = "Passe an, ab welchem Promille-Wert du in den jeweiligen Status wechselst. Nüchtern beginnt immer bei 0,00 ‰.",
                     color = AppColors.textDim,
-                    fontSize = 11.sp
+                    style = de.tipau.promille.AppText.micro
                 )
 
                 PromilleCard {
@@ -930,7 +901,7 @@ fun SettingsScreen(
                 Text(
                     text = "Persönliche Trends bleiben lokal. Stadtwerte werden nur nach deiner Zustimmung übertragen und erst ab mindestens fünf verschiedenen Beiträgern angezeigt. Fotos bleiben ausschließlich auf deinem Gerät.",
                     color = AppColors.textDim,
-                    fontSize = 11.sp
+                    style = de.tipau.promille.AppText.micro
                 )
             }
 
@@ -947,19 +918,12 @@ fun SettingsScreen(
                             onClick = { showUpdateSheet = true },
                             icon = AppIcons.ArrowDown
                         )
-                        SettingsDivider()
-                        SettingsNavigationRow(
-                            title = "Entwickler-Optionen & Admin",
-                            subtitle = "Testdaten, DB-Status und Debug-Werkzeuge",
-                            onClick = { showAdminView = true },
-                            icon = AppIcons.Settings
-                        )
                     }
                 }
                 Text(
                     text = "Diese App liefert Schätzwerte nach dem Widmark-Modell. Sie ersetzt keinen Atemtest und keine medizinische Beurteilung. Im Zweifel nicht fahren.",
                     color = AppColors.textDim,
-                    fontSize = 11.sp
+                    style = de.tipau.promille.AppText.micro
                 )
             }
         }

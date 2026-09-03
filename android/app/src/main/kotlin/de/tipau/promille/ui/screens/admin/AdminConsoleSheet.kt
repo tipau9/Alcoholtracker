@@ -35,11 +35,10 @@ import de.tipau.promille.ui.viewmodels.AdminViewModel
  * SECURITY DEFINER RPC that checks the caller again, so hiding a tab is
  * convenience, never the protection.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminConsoleSheet(
+fun AdminScreen(
     container: AppContainer,
-    onDismiss: () -> Unit
+    modifier: Modifier = Modifier
 ) {
     val viewModel = remember { AdminViewModel(container.supabase) }
     var section by remember { mutableStateOf(AdminSection.MODERATION) }
@@ -59,6 +58,23 @@ fun AdminConsoleSheet(
 
     var searchTerm by remember { mutableStateOf("") }
 
+    // The 5 admin editor sheets (AdminEditors.kt) - AdminView.swift's
+    // showFlagEditor/editingDrink/editingMix/showRoleEditor/showBlockEditor.
+    var editingFlag by remember { mutableStateOf<de.tipau.promille.network.AdminFeatureFlag?>(null) }
+    var showFlagEditor by remember { mutableStateOf(false) }
+    var editingDrink by remember { mutableStateOf<de.tipau.promille.network.AdminQueueItem?>(null) }
+    var editingMix by remember { mutableStateOf<de.tipau.promille.network.AdminQueueItem?>(null) }
+    var showRoleEditor by remember { mutableStateOf(false) }
+    var showBlockEditor by remember { mutableStateOf(false) }
+
+    // iOS: edit(_:) dispatches on item.itemType (AdminView.swift:555-561).
+    fun editQueueItem(item: de.tipau.promille.network.AdminQueueItem) {
+        when (item.itemType) {
+            "drink" -> editingDrink = item
+            "mix" -> editingMix = item
+        }
+    }
+
     // Debounced: the field fires per keystroke, and two responses landing out
     // of order would settle the list on a prefix of what was typed.
     LaunchedEffect(searchTerm) {
@@ -72,43 +88,24 @@ fun AdminConsoleSheet(
         if (isAdmin) viewModel.reloadAll()
     }
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = Color.Transparent,
-        scrimColor = Color.Black.copy(alpha = 0.65f),
-        dragHandle = null
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(top = 16.dp, bottom = 36.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 24.dp, top = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(AppColors.background)
-                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
-        ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.92f)
-                    .padding(horizontal = 20.dp),
-                contentPadding = PaddingValues(top = 20.dp, bottom = 36.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
                 item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // iOS: .appHeadline
                     Text(
                         "Admin",
                         color = AppColors.text,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        style = de.tipau.promille.AppText.headline
                     )
                     if (isLoading) {
                         CircularProgressIndicator(
@@ -118,7 +115,8 @@ fun AdminConsoleSheet(
                         )
                     } else {
                         TextButton(onClick = { viewModel.reloadAll() }) {
-                            Text("Neu laden", color = AppColors.accent, fontSize = 13.sp)
+                            // iOS: .appCaption
+                            Text("Neu laden", color = AppColors.accent, style = de.tipau.promille.AppText.caption)
                         }
                     }
                 }
@@ -126,16 +124,17 @@ fun AdminConsoleSheet(
 
             if (!isAdmin) {
                 item {
+                    // iOS: .appCaption
                     Text(
                         "Kein Adminzugang für dieses Konto. Die Serverabschnitte bleiben leer, die Debug-Werkzeuge funktionieren trotzdem.",
                         color = AppColors.statusOrange,
-                        fontSize = 12.sp
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
             }
 
             error?.let { message ->
-                item { Text(message, color = AppColors.statusRed, fontSize = 12.sp) }
+                item { Text(message, color = AppColors.statusRed, style = de.tipau.promille.AppText.caption) }
             }
 
             if (metrics.isNotEmpty()) {
@@ -154,13 +153,13 @@ fun AdminConsoleSheet(
                                         Text(
                                             "${metric.value}",
                                             color = AppColors.accent,
-                                            fontSize = 20.sp,
-                                            fontWeight = FontWeight.Bold
+                                            style = de.tipau.promille.AppText.headline.merge(de.tipau.promille.TabularFigures)
                                         )
+                                        // iOS: .appMicro
                                         Text(
                                             AdminViewModel.metricLabel(metric.metric),
                                             color = AppColors.textDim,
-                                            fontSize = 11.sp
+                                            style = de.tipau.promille.AppText.micro
                                         )
                                     }
                                 }
@@ -175,27 +174,16 @@ fun AdminConsoleSheet(
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(AdminSection.entries) { candidate ->
                         val active = candidate == section
-                        Box(
-                            modifier = Modifier
-                                .background(
-                                    if (active) AppColors.accent.copy(alpha = 0.15f) else AppColors.card,
-                                    RoundedCornerShape(10.dp)
-                                )
-                                .border(
-                                    0.5.dp,
-                                    if (active) AppColors.accent else AppColors.border,
-                                    RoundedCornerShape(10.dp)
-                                )
-                                .clickable { section = candidate }
-                                .padding(horizontal = 12.dp, vertical = 7.dp)
-                        ) {
-                            Text(
-                                candidate.title,
-                                color = if (active) AppColors.accent else AppColors.textDim,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
+                        de.tipau.promille.ui.components.AppChip(
+                            label = candidate.title,
+                            isSelected = active,
+                            onClick = { section = candidate },
+                            shape = RoundedCornerShape(10.dp),
+                            selectedColor = AppColors.accent.copy(alpha = 0.15f),
+                            selectedTextColor = AppColors.accent,
+                            unselectedColor = AppColors.card,
+                            unselectedTextColor = AppColors.textDim
+                        )
                     }
                 }
             }
@@ -221,7 +209,10 @@ fun AdminConsoleSheet(
                                 onToggleSelection = { viewModel.toggleSelection(item.id) },
                                 onApprove = { viewModel.setModerationStatus(item, "approved") },
                                 onReject = { viewModel.setModerationStatus(item, "rejected") },
-                                onBlockVoter = { viewModel.blockVoter(it) }
+                                onBlockVoter = { viewModel.blockVoter(it) },
+                                onEdit = if (item.itemType == "drink" || item.itemType == "mix") {
+                                    { editQueueItem(item) }
+                                } else null
                             )
                         }
                     }
@@ -229,25 +220,25 @@ fun AdminConsoleSheet(
 
                 AdminSection.CATALOG -> {
                     item {
-                        OutlinedTextField(
+                        de.tipau.promille.ui.components.AppTextField(
                             value = searchTerm,
                             onValueChange = { searchTerm = it },
-                            placeholder = { Text("Suchen", color = AppColors.textMuted) },
+                            placeholder = "Suchen",
                             singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = AppColors.text,
-                                unfocusedTextColor = AppColors.text,
-                                focusedBorderColor = AppColors.accent,
-                                unfocusedBorderColor = AppColors.border,
-                                cursorColor = AppColors.accent
-                            ),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
                     if (catalog.isEmpty()) {
                         item { AdminEmpty("Kein Eintrag gefunden.") }
                     } else {
-                        items(catalog, key = { it.id }) { AdminCatalogRow(it) }
+                        items(catalog, key = { it.id }) { item ->
+                            AdminCatalogRow(
+                                item = item,
+                                onEdit = if (item.itemType == "drink" || item.itemType == "mix") {
+                                    { editQueueItem(item) }
+                                } else null
+                            )
+                        }
                     }
                 }
 
@@ -262,17 +253,42 @@ fun AdminConsoleSheet(
                 }
 
                 AdminSection.FLAGS -> {
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SectionLabel("FEATURE FLAGS")
+                            // iOS: "plus.circle.fill" opens AdminFlagEditor(flag: nil) (swift:321-329).
+                            IconButton(onClick = { editingFlag = null; showFlagEditor = true }) {
+                                Icon(Icons.Filled.AddCircle, contentDescription = "Flag anlegen", tint = AppColors.accent)
+                            }
+                        }
+                    }
                     if (flags.isEmpty()) {
                         item { AdminEmpty("Keine Feature Flags.") }
                     } else {
                         items(flags, key = { it.key }) { flag ->
-                            AdminFlagRow(flag) { viewModel.setFlag(flag, it) }
+                            AdminFlagRow(flag) { editingFlag = flag; showFlagEditor = true }
                         }
                     }
                 }
 
                 AdminSection.SECURITY -> {
-                    item { SectionLabel("ADMIN-ROLLEN") }
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SectionLabel("ADMIN-ROLLEN")
+                            // iOS: "person.badge.plus" opens AdminRoleEditor (swift:344-352).
+                            IconButton(onClick = { showRoleEditor = true }) {
+                                Icon(Icons.Filled.Add, contentDescription = "Rolle setzen", tint = AppColors.accent)
+                            }
+                        }
+                    }
                     if (adminUsers.isEmpty()) {
                         item { AdminEmpty("Keine Rollen vergeben.") }
                     } else {
@@ -280,7 +296,19 @@ fun AdminConsoleSheet(
                             AdminUserRow(user) { viewModel.setUserRole(user.userID, it) }
                         }
                     }
-                    item { SectionLabel("BLOCKLIST") }
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SectionLabel("BLOCKLIST")
+                            // iOS: "hand.raised.fill" opens AdminBlockEditor (swift:370-378).
+                            IconButton(onClick = { showBlockEditor = true }) {
+                                Icon(Icons.Filled.Add, contentDescription = "Blockieren", tint = AppColors.accent)
+                            }
+                        }
+                    }
                     if (blockedVoters.isEmpty()) {
                         item { AdminEmpty("Niemand gesperrt.") }
                     } else {
@@ -303,16 +331,55 @@ fun AdminConsoleSheet(
                 }
             }
         }
+
+    if (showFlagEditor) {
+        AdminFlagEditorDialog(
+            flag = editingFlag,
+            onDismiss = { showFlagEditor = false },
+            onSave = { key, enabled, isPublic, value, description ->
+                viewModel.saveFlag(key, enabled, isPublic, value, description)
+            }
+        )
     }
-}
+    editingDrink?.let { item ->
+        AdminDrinkEditorDialog(
+            item = item,
+            onDismiss = { editingDrink = null },
+            onSave = { name, category, volume, abv, calories, iconName ->
+                viewModel.updateDrink(item.id, name, category, volume, abv, calories, iconName)
+            }
+        )
+    }
+    editingMix?.let { item ->
+        AdminMixEditorDialog(
+            item = item,
+            onDismiss = { editingMix = null },
+            onSave = { name, ingredients, totalVolume, totalAbv, calories ->
+                viewModel.updateMix(item.id, name, ingredients, totalVolume, totalAbv, calories)
+            }
+        )
+    }
+    if (showRoleEditor) {
+        AdminRoleEditorDialog(
+            onDismiss = { showRoleEditor = false },
+            onSave = { userID, role -> viewModel.setRole(userID, role) }
+        )
+    }
+    if (showBlockEditor) {
+        AdminBlockEditorDialog(
+            onDismiss = { showBlockEditor = false },
+            onSave = { voter, reason -> viewModel.blockVoterAwait(voter, reason) }
+        )
+    }
 }
 
 @Composable
 private fun AdminEmpty(text: String) {
+    // iOS: .appCaption
     Text(
         text,
         color = AppColors.textMuted,
-        fontSize = 13.sp,
+        style = de.tipau.promille.AppText.caption,
         modifier = Modifier.padding(vertical = 20.dp)
     )
 }

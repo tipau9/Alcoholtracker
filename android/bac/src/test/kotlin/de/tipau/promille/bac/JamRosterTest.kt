@@ -31,6 +31,18 @@ class JamRosterTest {
     }
 
     @Test
+    fun `privacy labels split shared from hidden and ignore local preferences`() {
+        val (shared, hidden) = JamSettings(
+            shareBAC = false,
+            shareDrinkCount = false,
+            shareLocation = true,
+            allowWaves = false
+        ).privacyLabels()
+        assertEquals(listOf("Status", "Drinks", "SOS-Status", "Fotos"), shared)
+        assertEquals(listOf("Promille-Wert", "Anzahl Drinks"), hidden)
+    }
+
+    @Test
     fun `a stale broadcast never clobbers a newer status`() {
         val current = listOf(p("row-a", userID = "u1", bac = 0.9, updated = 200))
         val merged = current.upserting(p("row-a", userID = "u1", bac = 0.1, updated = 100))
@@ -153,12 +165,35 @@ class JamActiveRosterTest {
     }
 
     @Test
+    fun `a server row keeps the privacy toggles only bluetooth carries`() {
+        val known = p("a", userID = "u-a").copy(sharedSettings = JamSettings(shareBAC = false))
+        val roster = activeJamRoster(
+            serverRows = listOf(p("a", userID = "u-a")),
+            me = me, myUserID = "u-me", tombstonedIDs = emptySet(), nowEpochSeconds = now,
+            existingParticipants = listOf(known)
+        )
+        assertEquals(false, roster.first { it.id == "a" }.sharedSettings?.shareBAC)
+    }
+
+    @Test
     fun `a member who just left is not re-added by the next poll`() {
         val roster = activeJamRoster(
             serverRows = listOf(p("left")),
             me = me, myUserID = "u-me", tombstonedIDs = setOf("left"), nowEpochSeconds = now
         )
         assertEquals(listOf("me"), roster.map { it.id })
+    }
+
+    @Test
+    fun `a lobby row ages from just started through minutes into hours`() {
+        assertEquals("Gerade gestartet", jamLobbyRelativeTime(now, now))
+        assertEquals("Gerade gestartet", jamLobbyRelativeTime(now - 59, now))
+        assertEquals("vor 1 min", jamLobbyRelativeTime(now - 60, now))
+        assertEquals("vor 59 min", jamLobbyRelativeTime(now - 59 * 60, now))
+        assertEquals("vor 1 h", jamLobbyRelativeTime(now - 60 * 60, now))
+        assertEquals("vor 3 h", jamLobbyRelativeTime(now - 200 * 60, now))
+        // A clock that jumped backwards must not read as hours old.
+        assertEquals("Gerade gestartet", jamLobbyRelativeTime(now + 120, now))
     }
 
     @Test
@@ -284,4 +319,5 @@ class JamArcadeScoringTest {
         )
         assertEquals(listOf("fast", "slow", "dq"), ordered.map { it.participantID })
     }
+
 }

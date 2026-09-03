@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -133,10 +134,10 @@ fun EditModeTopBar(
             contentAlignment = Alignment.Center
         ) {
             Text(
+                // iOS: .appCaptionBold (HomeView.swift:472).
                 text = "Fertig",
                 color = AppColors.background,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
+                style = de.tipau.promille.AppText.captionBold
             )
         }
     }
@@ -220,7 +221,8 @@ fun CrewAlertBanner(names: List<String>, onClick: () -> Unit) {
             tint = AppColors.statusOrange
         )
         Spacer(Modifier.width(12.dp))
-        Text(label, color = AppColors.text, fontSize = 12.sp, modifier = Modifier.weight(1f))
+        // iOS: .appCaption (HomeView.swift:1657).
+        Text(label, color = AppColors.text, style = de.tipau.promille.AppText.caption, modifier = Modifier.weight(1f))
         Text("›", color = AppColors.textDim, fontSize = 18.sp)
     }
 }
@@ -260,15 +262,16 @@ fun EmptyDrinkHint(onAdd: () -> Unit) {
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
+                    // iOS: .appBodyBold (HomeView.swift:2673).
                     text = "Ersten Drink hinzufügen",
                     color = AppColors.text,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.bodyBold
                 )
                 Text(
+                    // iOS: .appCaption (HomeView.swift:2676).
                     text = "Tippe, um mit der Aufzeichnung zu beginnen",
                     color = AppColors.textDim,
-                    fontSize = 12.sp
+                    style = de.tipau.promille.AppText.caption
                 )
             }
             Text("›", color = AppColors.textDim, fontSize = 18.sp)
@@ -307,10 +310,10 @@ fun StomachStatusPicker(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
+                        // iOS: .appCaption unconditionally (HomeView.swift:1992).
                         text = status.germanName,
                         color = if (isSelected) AppColors.background else AppColors.textDim,
-                        fontSize = 12.sp,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                        style = de.tipau.promille.AppText.caption
                     )
                 }
             }
@@ -319,11 +322,11 @@ fun StomachStatusPicker(
 }
 
 /**
- * 2x2 InfoWidget tile matching iOS InfoWidget.swift
+ * Spec-accurate InfoWidget matching iOS InfoWidget.swift (20pt Light serif, 10pt caption)
  */
 @Composable
 fun InfoWidget(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     label: String,
     value: String,
     iconColor: Color = AppColors.accent,
@@ -332,6 +335,7 @@ fun InfoWidget(
 ) {
     Box(
         modifier = modifier
+            .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(AppColors.card)
             .border(
@@ -341,10 +345,7 @@ fun InfoWidget(
             )
             .padding(16.dp)
     ) {
-        Column(
-            horizontalAlignment = Alignment.Start,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(
                 modifier = Modifier
                     .size(30.dp)
@@ -362,17 +363,19 @@ fun InfoWidget(
 
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
+                    // iOS: fixed 20sp Light serif with minimumScaleFactor(0.55) (InfoWidget.swift:28).
                     text = value,
                     color = AppColors.text,
-                    fontSize = if (value.length > 9) 16.sp else 18.sp,
+                    fontSize = if (value.length > 9) 16.sp else 20.sp,
                     fontFamily = AppSerif,
                     fontWeight = FontWeight.Light,
                     maxLines = 1
                 )
                 Text(
+                    // iOS: .appMicro (InfoWidget.swift:37).
                     text = label,
                     color = AppColors.textDim,
-                    fontSize = 10.sp
+                    style = de.tipau.promille.AppText.micro
                 )
             }
         }
@@ -428,9 +431,10 @@ fun HangoverForecastCard(
                     fontWeight = FontWeight.Light
                 )
                 Text(
+                    // iOS: .appMicro (InfoWidget.swift:37 / HomeView.swift:2373).
                     text = "Kater-Prognose",
                     color = AppColors.textDim,
-                    fontSize = 11.sp
+                    style = de.tipau.promille.AppText.micro
                 )
             }
         }
@@ -471,9 +475,10 @@ fun HydrationCard(
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
+                            // iOS: .appCaption (HydrationWidget.swift:82).
                             text = "Noch keine Getränke heute.",
                             color = AppColors.textMuted,
-                            fontSize = 13.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
                     HorizontalDivider(color = AppColors.border.copy(alpha = 0.5f), thickness = 0.5.dp)
@@ -500,12 +505,13 @@ fun HydrationCard(
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Wasser geloggt", color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        // iOS: .appBody / .appMicro (HydrationWidget.swift:162, 165).
+                        Text("Wasser geloggt", color = AppColors.text, style = de.tipau.promille.AppText.body)
                         val ml = waterGlasses * 250
                         Text(
                             text = "$waterGlasses ${if (waterGlasses == 1) "Glas" else "Gläser"} ($ml ml)",
                             color = AppColors.textMuted,
-                            fontSize = 11.sp
+                            style = de.tipau.promille.AppText.micro
                         )
                     }
 
@@ -598,18 +604,19 @@ fun MilestoneCard(
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
+                // iOS: .appCaptionBold (HomeView.swift:2873).
                 text = if (isProbationaryDriver) "Unter 0,0 ‰" else "Unter 0,5 ‰",
                 color = AppColors.text,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
+                style = de.tipau.promille.AppText.captionBold
             )
-            Text(subtitle, color = AppColors.textDim, fontSize = 11.sp)
+            // iOS: .appMicro (HomeView.swift:2876).
+            Text(subtitle, color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
         }
         Text(
+            // iOS: .appCaptionBold with monospacedDigit (HomeView.swift:2913).
             text = pillText,
             color = pillColor,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
+            style = de.tipau.promille.AppText.captionBold.merge(de.tipau.promille.TabularFigures),
             modifier = Modifier
                 .background(pillColor.copy(alpha = 0.12f), CircleShape)
                 .padding(horizontal = 12.dp, vertical = 6.dp)
@@ -669,26 +676,27 @@ private fun StatBlock(value: String, unit: String?, label: String, modifier: Mod
     ) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
+                // iOS: .appHeadline with monospacedDigit (HomeView.swift:2981).
                 text = value,
                 color = AppColors.text,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Light,
-                fontFamily = AppSerif
+                style = de.tipau.promille.AppText.headline.merge(de.tipau.promille.TabularFigures)
             )
             if (unit != null) {
                 Spacer(Modifier.width(2.dp))
                 Text(
+                    // iOS: .appCaption (HomeView.swift:2986).
                     text = unit,
                     color = AppColors.textDim,
-                    fontSize = 13.sp,
+                    style = de.tipau.promille.AppText.caption,
                     modifier = Modifier.padding(bottom = 2.dp)
                 )
             }
         }
         Text(
+            // iOS: .appMicro (HomeView.swift:2990).
             text = label,
             color = AppColors.textDim,
-            fontSize = 10.sp
+            style = de.tipau.promille.AppText.micro
         )
     }
 }
@@ -733,12 +741,13 @@ fun WeeklyLimitCard(used: Int, limit: Int) {
             .padding(horizontal = 16.dp, vertical = 14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(caption, color = AppColors.textDim, fontSize = 11.sp, modifier = Modifier.weight(1f))
+            // iOS: .appMicro (HomeView.swift:2808).
+            Text(caption, color = AppColors.textDim, style = de.tipau.promille.AppText.micro, modifier = Modifier.weight(1f))
+            // iOS: .appCaptionBold with monospacedDigit (HomeView.swift:2812).
             Text(
                 "$used/$limit Drinks",
                 color = tint,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
+                style = de.tipau.promille.AppText.captionBold.merge(de.tipau.promille.TabularFigures)
             )
         }
         Box(
@@ -797,7 +806,8 @@ fun FavouritesStrip(
                         tint = AppColors.accent
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text(template.name, color = AppColors.text, fontSize = 13.sp, maxLines = 1)
+                    // iOS: .appCaption (HomeView.swift:2424).
+                    Text(template.name, color = AppColors.text, style = de.tipau.promille.AppText.caption, maxLines = 1)
                 }
             }
         }
@@ -816,39 +826,18 @@ fun SafetyActionsCard(
     var showSOSConfirm by remember { mutableStateOf(false) }
 
     if (showSOSConfirm) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showSOSConfirm = false },
-            containerColor = AppColors.card,
-            title = {
-                Text(
-                    if (sosActive) "SOS beenden?" else "SOS an deine Freunde senden?",
-                    color = AppColors.text
-                )
+            title = if (sosActive) "SOS beenden?" else "SOS an deine Freunde senden?",
+            text = if (sosActive) "Deine Freunde sehen dann kein SOS mehr."
+                else "Deine Freunde werden benachrichtigt, dass du Hilfe brauchst.",
+            confirmText = if (sosActive) "SOS beenden" else "SOS senden",
+            isDestructive = true,
+            onConfirm = {
+                showSOSConfirm = false
+                onToggleSOS()
             },
-            text = {
-                Text(
-                    if (sosActive) "Deine Freunde sehen dann kein SOS mehr."
-                    else "Deine Freunde werden benachrichtigt, dass du Hilfe brauchst.",
-                    color = AppColors.textDim
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showSOSConfirm = false
-                    onToggleSOS()
-                }) {
-                    Text(
-                        if (sosActive) "SOS beenden" else "SOS senden",
-                        color = AppColors.statusRed,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSOSConfirm = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
-                }
-            }
+            dismissText = "Abbrechen"
         )
     }
 
@@ -875,10 +864,10 @@ fun SafetyActionsCard(
                         tint = AppColors.background
                     )
                     Text(
+                        // iOS: .appCaptionBold (SemiBold, not Bold).
                         text = "Fahrt rufen",
                         color = AppColors.background,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
+                        style = de.tipau.promille.AppText.captionBold
                     )
                 }
             }
@@ -904,10 +893,10 @@ fun SafetyActionsCard(
                         tint = AppColors.statusRed
                     )
                     Text(
+                        // iOS: .appCaptionBold (SemiBold, not Bold).
                         text = if (sosActive) "SOS aktiv" else "SOS",
                         color = AppColors.statusRed,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
+                        style = de.tipau.promille.AppText.captionBold
                     )
                 }
             }
@@ -929,13 +918,14 @@ fun AchievementToast(title: String, modifier: Modifier = Modifier) {
         Icon(AppIcons.EmojiEvents, null, tint = AppColors.accent, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(10.dp))
         Column {
+            // iOS: .appMicro (HomeView.swift:2719).
             Text(
                 "Achievement freigeschaltet",
                 color = AppColors.accent,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
+                style = de.tipau.promille.AppText.micro
             )
-            Text(title, color = AppColors.text, fontSize = 13.sp)
+            // iOS: .appCaptionBold (HomeView.swift:2722).
+            Text(title, color = AppColors.text, style = de.tipau.promille.AppText.captionBold)
         }
     }
 }
@@ -981,17 +971,17 @@ fun MealActionCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
+                // iOS: .appBodyBold (HomeView.swift:2028).
                 Text(
                     text = "Essen protokollieren",
                     color = AppColors.text,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.bodyBold
                 )
+                // iOS: .appCaption (HomeView.swift:2032).
                 Text(
                     text = lastMealSubtitle ?: "Wirkt nur auf noch nicht aufgenommenen Alkohol",
                     color = AppColors.textDim,
-                    fontSize = 12.sp,
-                    lineHeight = 15.sp
+                    style = de.tipau.promille.AppText.caption
                 )
             }
 
@@ -1060,17 +1050,17 @@ fun BreathalyzerCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
+                // iOS: .appBodyBold (HomeView.swift:2129).
                 Text(
                     text = "Breathalyser-Messung",
                     color = AppColors.text,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.bodyBold
                 )
+                // iOS: .appCaption (HomeView.swift:2133).
                 Text(
                     text = latestReadingText ?: "Orientierungsbereich der Schätzung: $estimateRange",
                     color = AppColors.textDim,
-                    fontSize = 12.sp,
-                    lineHeight = 15.sp
+                    style = de.tipau.promille.AppText.caption
                 )
             }
 
@@ -1135,17 +1125,17 @@ fun VomitActionCard(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(1.dp)
                 ) {
+                    // iOS: .appBody (HomeView.swift:2242).
                     Text(
                         text = if (vomitCount == 0) "Übergeben loggen" else "$vomitCount× geloggt",
                         color = AppColors.text,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
+                        style = de.tipau.promille.AppText.body
                     )
+                    // iOS: .appMicro (HomeView.swift:2245).
                     Text(
                         text = "Entfernt noch nicht aufgenommenen Alkohol aus dem Magen",
                         color = AppColors.textMuted,
-                        fontSize = 10.sp,
-                        lineHeight = 13.sp,
+                        style = de.tipau.promille.AppText.micro,
                         maxLines = 2
                     )
                 }
@@ -1216,10 +1206,11 @@ fun DrinkHistorySection(
         ) {
             SectionLabel(text = "HEUTE")
             val count = drinks.size
+            // iOS: .appCaption (HomeView.swift:2490).
             Text(
                 text = "$count Drink${if (count == 1) "" else "s"}",
-                fontSize = 12.sp,
-                color = AppColors.textDim
+                color = AppColors.textDim,
+                style = de.tipau.promille.AppText.caption
             )
         }
 
@@ -1249,11 +1240,11 @@ fun DrinkHistorySection(
                     horizontalArrangement = Arrangement.spacedBy(7.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // iOS: .appCaptionBold (HomeView.swift:2518).
                     Text(
                         text = if (showsAllDrinks) "Weniger anzeigen" else "Noch ${drinks.size - 4} anzeigen",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = AppColors.accent
+                        color = AppColors.accent,
+                        style = de.tipau.promille.AppText.captionBold
                     )
                     Icon(
                         imageVector = if (showsAllDrinks) AppIcons.ChevronUp else AppIcons.ChevronDown,
@@ -1304,26 +1295,17 @@ fun DrinkRowView(
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     if (showDeleteConfirm) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            containerColor = AppColors.card,
-            title = { Text("Drink löschen?", color = AppColors.text, fontWeight = FontWeight.Bold) },
-            text = { Text("\"${drink.name}\" wirklich aus der Liste entfernen?", color = AppColors.textDim) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteConfirm = false
-                        onDelete()
-                    }
-                ) {
-                    Text("Löschen", color = AppColors.statusRed, fontWeight = FontWeight.Bold)
-                }
+            title = "Drink löschen?",
+            text = "\"${drink.name}\" wirklich aus der Liste entfernen?",
+            confirmText = "Löschen",
+            isDestructive = true,
+            onConfirm = {
+                showDeleteConfirm = false
+                onDelete()
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
-                }
-            }
+            dismissText = "Abbrechen"
         )
     }
 
@@ -1364,18 +1346,19 @@ fun DrinkRowView(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
+                // iOS: .appBodyBold (HomeView.swift:2566).
                 Text(
                     text = drink.name,
                     color = AppColors.text,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = de.tipau.promille.AppText.bodyBold,
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
+                // iOS: .appMicro (HomeView.swift:2570).
                 Text(
                     text = "${drink.volumeML.toInt()} ml · ${String.format(Locale.GERMANY, "%.1f", drink.abv)} % · ${drink.calories} kcal",
                     color = AppColors.textDim,
-                    fontSize = 11.sp
+                    style = de.tipau.promille.AppText.micro
                 )
             }
 
@@ -1388,21 +1371,24 @@ fun DrinkRowView(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
+                    // iOS: .appMicro (HomeView.swift:2579).
                     Text(
                         text = startTimeStr,
                         color = AppColors.textMuted,
-                        fontSize = 11.sp
+                        style = de.tipau.promille.AppText.micro
                     )
+                    // iOS: .appMicro (HomeView.swift:2582).
                     Text(
                         text = "bis $finishedTimeStr",
                         color = AppColors.textMuted,
-                        fontSize = 11.sp
+                        style = de.tipau.promille.AppText.micro
                     )
                     if (timing.absorptionFinishedAt - timing.drinkingFinishedAt > 60) {
+                        // iOS: .appMicro (HomeView.swift:2586).
                         Text(
                             text = "Aufnahme bis $absorptionTimeStr",
                             color = AppColors.textMuted,
-                            fontSize = 11.sp
+                            style = de.tipau.promille.AppText.micro
                         )
                     }
                 }

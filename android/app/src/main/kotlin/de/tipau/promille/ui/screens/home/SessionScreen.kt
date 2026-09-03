@@ -56,6 +56,7 @@ fun SessionScreen(
     viewModel: SessionViewModel,
     templateRepository: DrinkTemplateRepository,
     container: de.tipau.promille.di.AppContainer? = null,
+    onOpenCrew: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val bac by viewModel.currentBAC.collectAsState()
@@ -197,12 +198,13 @@ fun SessionScreen(
         )
     }
 
-    // Achievement toast. The service exposes the unlocked set, not an event, so
-    // the newly added id is the difference against what was already on screen.
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+
+    // Achievement toast (HomeView.swift:200-217, 2702-2744).
     val unlockedIds by (container?.achievementService?.unlockedIds
         ?: kotlinx.coroutines.flow.MutableStateFlow(emptySet<String>())).collectAsState()
     var seenAchievements by remember { mutableStateOf<Set<String>?>(null) }
-    var unlockToast by remember { mutableStateOf<String?>(null) }
+    var unlockedAchievementToast by remember { mutableStateOf<Pair<de.tipau.promille.bac.Achievement, Int>?>(null) }
     LaunchedEffect(unlockedIds) {
         val seen = seenAchievements
         if (seen == null) {
@@ -210,13 +212,17 @@ fun SessionScreen(
             seenAchievements = unlockedIds
             return@LaunchedEffect
         }
-        val fresh = (unlockedIds - seen).firstOrNull()
+        val freshIds = (unlockedIds - seen).toList()
         seenAchievements = unlockedIds
-        if (fresh != null) {
-            unlockToast = de.tipau.promille.bac.AchievementCatalog.ALL
-                .firstOrNull { it.id == fresh }?.title ?: fresh
-            delay(3000)
-            unlockToast = null
+        if (freshIds.isNotEmpty()) {
+            val firstAchievement = de.tipau.promille.bac.AchievementCatalog.ALL
+                .firstOrNull { it.id == freshIds.first() }
+            if (firstAchievement != null) {
+                haptics.success()
+                unlockedAchievementToast = firstAchievement to freshIds.size
+                delay(4000)
+                unlockedAchievementToast = null
+            }
         }
     }
 
@@ -299,26 +305,17 @@ fun SessionScreen(
     }
 
     if (showResetDialog) {
-        AlertDialog(
+        de.tipau.promille.ui.components.AppAlertDialog(
             onDismissRequest = { showResetDialog = false },
-            containerColor = AppColors.card,
-            title = { Text("Sitzung zurücksetzen?", color = AppColors.text, fontWeight = FontWeight.Bold) },
-            text = { Text("Alle heutigen Getränke und Ereignisse werden gelöscht.", color = AppColors.textDim) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.resetSession()
-                        showResetDialog = false
-                    }
-                ) {
-                    Text("Zurücksetzen", color = AppColors.statusRed, fontWeight = FontWeight.Bold)
-                }
+            title = "Sitzung zurücksetzen?",
+            text = "Alle heutigen Getränke und Ereignisse werden gelöscht.",
+            confirmText = "Zurücksetzen",
+            isDestructive = true,
+            onConfirm = {
+                viewModel.resetSession()
+                showResetDialog = false
             },
-            dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) {
-                    Text("Abbrechen", color = AppColors.textDim)
-                }
-            }
+            dismissText = "Abbrechen"
         )
     }
 
@@ -404,55 +401,19 @@ fun SessionScreen(
                 }
             }
 
-            // Pacing Warning
+            // Pacing Warning (HomeView.swift:529-534, 2748-2779)
             if (pacingWarning != null && !isWidgetEditMode) {
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(AppColors.card)
-                            .border(0.5.dp, AppColors.statusOrange.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(AppColors.statusOrange.copy(alpha = 0.12f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = AppIcons.Water,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = AppColors.statusOrange
-                                )
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(
-                                    text = "Trink-Tempo",
-                                    color = AppColors.textDim,
-                                    fontSize = 11.sp
-                                )
-                                Text(
-                                    text = pacingWarning!!,
-                                    color = AppColors.text,
-                                    fontSize = 13.sp,
-                                    lineHeight = 17.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
+                    de.tipau.promille.ui.components.PacingHintBanner(message = pacingWarning!!)
                 }
             }
 
             if (needsAttention.isNotEmpty() && !isWidgetEditMode) {
                 item {
-                    CrewAlertBanner(names = needsAttention, onClick = { /* Crew tab */ })
+                    // iOS's banner is inert (HomeView.swift:494 passes no
+                    // closure) with a decorative chevron. This one has a real
+                    // ripple, so the chevron has to lead somewhere.
+                    CrewAlertBanner(names = needsAttention, onClick = onOpenCrew)
                 }
             }
 
@@ -599,50 +560,72 @@ fun SessionScreen(
                 EditableWidgetContainer(
                     isEditMode = isWidgetEditMode,
                     isActive = showTime || showWater || showCalories || showCount,
-                    onToggleActive = {
-                        viewModel.toggleWidget("timeToLimit")
-                    }
+                    onToggleActive = { viewModel.toggleGridTiles() }
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
+                    // Each tile follows its own switch, as iOS's HomeWidgetGrid
+                    // does. The four used to render unconditionally, so turning
+                    // Wasser, Kalorien or Drinks heute off in the edit sheet
+                    // changed nothing on screen. Building the list and chunking
+                    // it by two is what iOS's two-column LazyVGrid does with an
+                    // odd number of tiles; the trailing Spacer keeps the last
+                    // one at half width instead of letting it stretch.
+                    val drivingLimit = profile
+                        ?.let { de.tipau.promille.repository.UserProfileRepository.toProfile(it).drivingLimit } ?: 0.5
+                    val overLimit = bac > drivingLimit + 0.005
+                    val tiles = buildList<@Composable (Modifier) -> Unit> {
+                        if (showTime) add { m ->
                             val driveText = driveableIn?.let { if (it <= 0) "Nüchtern" else "in ${formatHours(it)}" } ?: "Nüchtern"
                             InfoWidget(
                                 icon = AppIcons.Car,
                                 label = if (profile?.isProbationaryDriver == true) "Bis 0,0 ‰" else "Bis 0,5 ‰",
                                 value = driveText,
-                                iconColor = AppColors.accent,
-                                modifier = Modifier.weight(1f)
+                                iconColor = if (overLimit) AppColors.statusOrange else AppColors.accent,
+                                isHighlighted = overLimit,
+                                modifier = m
                             )
-                            val waterText = if (recommendedWater <= 0) "Ausreichend" else "Noch $waterGlasses Gl."
+                        }
+                        if (showWater) add { m ->
+                            val waterText = if (recommendedWater <= 0) {
+                                "Ausreichend"
+                            } else {
+                                "$waterGlasses ${if (waterGlasses == 1) "Glas" else "Gläser"}"
+                            }
                             InfoWidget(
                                 icon = AppIcons.Water,
                                 label = "Wasser",
                                 value = waterText,
                                 iconColor = AppColors.accent,
-                                modifier = Modifier.weight(1f)
+                                modifier = m
                             )
                         }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
+                        if (showCalories) add { m ->
                             InfoWidget(
                                 icon = AppIcons.Fire,
                                 label = "Kalorien",
                                 value = "$totalCalories kcal",
                                 iconColor = AppColors.statusOrange,
-                                modifier = Modifier.weight(1f)
+                                modifier = m
                             )
+                        }
+                        if (showCount) add { m ->
                             InfoWidget(
                                 icon = AppIcons.Person,
                                 label = "Drinks heute",
                                 value = "${drinks.size}",
                                 iconColor = AppColors.statusGreen,
-                                modifier = Modifier.weight(1f)
+                                modifier = m
                             )
+                        }
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        tiles.chunked(2).forEach { row ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                row.forEach { tile -> tile(Modifier.weight(1f)) }
+                                if (row.size == 1) Spacer(Modifier.weight(1f))
+                            }
                         }
                     }
                 }
@@ -751,7 +734,7 @@ fun SessionScreen(
                 Text(
                     text = "Widmark-Schätzwert. Müdigkeit, Medikamente und individuelle Faktoren können stark abweichen. Kein Ersatz für einen Atemtest. Im Zweifel nicht fahren.",
                     color = AppColors.textMuted,
-                    fontSize = 11.sp,
+                    style = de.tipau.promille.AppText.micro,
                     lineHeight = 15.sp,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     modifier = Modifier
@@ -835,16 +818,17 @@ fun SessionScreen(
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
+                    // Android-only (AppUpdateService has no iOS source);
+                    // appBodyBold/appMicro match this sweep's banner pairing.
                     Text(
                         text = "Update verfügbar: v${update.newVersion}",
                         color = AppColors.text,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
+                        style = de.tipau.promille.AppText.bodyBold
                     )
                     Text(
                         text = "Tippen für Details & Download",
                         color = AppColors.textDim,
-                        fontSize = 11.sp
+                        style = de.tipau.promille.AppText.micro
                     )
                 }
                 Box(
@@ -873,14 +857,22 @@ fun SessionScreen(
             )
         }
 
-        val currentToast = unlockToast
-        if (currentToast != null) {
-            AchievementToast(
-                title = currentToast,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 12.dp, start = 20.dp, end = 20.dp)
-            )
+        // Floating Achievement Unlock Toast (bottom-rising toast matching iOS HomeView.swift:200-217)
+        AnimatedVisibility(
+            visible = unlockedAchievementToast != null && activeSipDrink == null,
+            enter = if (reducedMotion) fadeIn() else slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = if (reducedMotion) fadeOut() else slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = if (undoAction != null) 148.dp else 84.dp)
+        ) {
+            unlockedAchievementToast?.let { (achievement, count) ->
+                de.tipau.promille.ui.components.AchievementUnlockToast(
+                    achievement = achievement,
+                    count = count,
+                    onDismiss = { unlockedAchievementToast = null }
+                )
+            }
         }
 
         // Floating Sip Counter Overlay (replaces bottom area while counting)

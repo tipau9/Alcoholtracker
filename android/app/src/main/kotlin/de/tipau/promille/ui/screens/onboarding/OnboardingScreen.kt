@@ -43,6 +43,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import de.tipau.promille.ui.components.pressable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.painterResource
 import de.tipau.promille.R
@@ -57,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
+import de.tipau.promille.AppMotion
 import de.tipau.promille.bac.Gender
 import de.tipau.promille.data.DrinkTemplateEntity
 import de.tipau.promille.ui.components.AppIcons
@@ -154,7 +156,7 @@ fun OnboardingScreen(
                         val isCurrent = page == i
                         val width by animateDpAsState(
                             targetValue = if (isCurrent) 22.dp else 7.dp,
-                            animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy),
+                            animationSpec = AppMotion.snappy(),
                             label = "dot_width"
                         )
                         Box(
@@ -221,10 +223,11 @@ private fun ONWelcomePage(onNext: () -> Unit) {
                         fontFamily = AppSerif
                     )
                 }
+                // iOS: .appBody (OnboardingView.swift:210).
                 Text(
                     text = "Trink bewusst.",
                     color = AppColors.textDim,
-                    fontSize = 16.sp
+                    style = de.tipau.promille.AppText.body
                 )
             }
         }
@@ -236,11 +239,11 @@ private fun ONWelcomePage(onNext: () -> Unit) {
             onClick = onNext
         )
 
+        // iOS: .appMicro (OnboardingView.swift:222).
         Text(
             text = "Nur für Personen ab 18 Jahren. Promillewerte sind Schätzungen und ersetzen keinen Atemtest.",
             color = AppColors.textMuted,
-            fontSize = 11.sp,
-            lineHeight = 15.sp,
+            style = de.tipau.promille.AppText.micro,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .padding(horizontal = 16.dp)
@@ -305,10 +308,11 @@ private fun ONWeightPage(
                 fontWeight = FontWeight.Light
             )
             Spacer(Modifier.width(6.dp))
+            // iOS: .appTitle (OnboardingView.swift:274).
             Text(
                 text = unit,
                 color = AppColors.textDim,
-                fontSize = 20.sp,
+                style = de.tipau.promille.AppText.title,
                 modifier = Modifier.padding(bottom = 6.dp)
             )
         }
@@ -427,10 +431,11 @@ private fun ONRulerPicker(
                         )
                         Spacer(Modifier.height(8.dp))
                         if (isMajor) {
+                            // iOS: .appMicro (OnboardingView.swift:370).
                             Text(
                                 text = "$v",
                                 color = AppColors.textMuted,
-                                fontSize = 11.sp,
+                                style = de.tipau.promille.AppText.micro,
                                 maxLines = 1,
                                 softWrap = false,
                                 textAlign = TextAlign.Center,
@@ -439,7 +444,7 @@ private fun ONRulerPicker(
                         } else {
                             Text(
                                 text = " ",
-                                fontSize = 11.sp,
+                                style = de.tipau.promille.AppText.micro,
                                 maxLines = 1,
                                 softWrap = false
                             )
@@ -550,11 +555,11 @@ private fun ONGenderPage(
                 tint = AppColors.accent,
                 modifier = Modifier.size(16.dp).padding(top = 2.dp)
             )
+            // iOS: .appCaption (OnboardingView.swift:412).
             Text(
                 text = "Beeinflusst die Berechnung über den Widmark-Faktor: Alkohol verteilt sich im Körperwasser physiologisch unterschiedlich.",
                 color = AppColors.textDim,
-                fontSize = 13.sp,
-                lineHeight = 17.sp
+                style = de.tipau.promille.AppText.caption
             )
         }
 
@@ -593,7 +598,7 @@ private fun ONGenderCard(
                 if (isSelected) AppColors.accent else AppColors.border,
                 RoundedCornerShape(24.dp)
             )
-            .clickable(onClick = onTap)
+            .pressable(onClick = onTap)
             .padding(14.dp)
     ) {
         // Selected Checkmark Top Right
@@ -620,11 +625,11 @@ private fun ONGenderCard(
                 modifier = Modifier.size(44.dp)
             )
             Spacer(Modifier.height(14.dp))
+            // iOS: .appBodyBold (OnboardingView.swift:453).
             Text(
                 text = label,
                 color = AppColors.text,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold
+                style = de.tipau.promille.AppText.bodyBold
             )
         }
     }
@@ -677,16 +682,17 @@ private fun ONBodyPage(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // iOS: .appCaptionBold (OnboardingView.swift:509).
                 Text(
                     text = "Geburtsdatum",
                     color = AppColors.textDim,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.captionBold
                 )
+                // iOS: .appMicro (OnboardingView.swift:513).
                 Text(
                     text = "Aktuell $age Jahre",
                     color = AppColors.accent,
-                    fontSize = 12.sp
+                    style = de.tipau.promille.AppText.micro
                 )
             }
 
@@ -752,11 +758,11 @@ private fun ONBodyPage(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // iOS: .appCaptionBold (OnboardingView.swift:535).
                 Text(
                     text = "Größe",
                     color = AppColors.textDim,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.captionBold
                 )
                 ONUnitToggle(
                     options = listOf("cm", "ft/in"),
@@ -1012,11 +1018,11 @@ private fun ONFavoritesPage(
                     .background(AppColors.accent.copy(alpha = 0.1f))
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
+                // iOS: .appCaptionBold (OnboardingView.swift:660).
                 Text(
                     text = "${favoriteIds.size}/4",
                     color = AppColors.accent,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.captionBold
                 )
             }
         }
@@ -1040,16 +1046,17 @@ private fun ONFavoritesPage(
                 tint = AppColors.textMuted,
                 modifier = Modifier.size(16.dp)
             )
+            // iOS: .appBody (OnboardingView.swift:675).
             BasicTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                textStyle = TextStyle(color = AppColors.text, fontSize = 14.sp),
+                textStyle = de.tipau.promille.AppText.body.copy(color = AppColors.text),
                 cursorBrush = SolidColor(AppColors.accent),
                 singleLine = true,
                 modifier = Modifier.weight(1f),
                 decorationBox = { innerTextField ->
                     if (searchQuery.isEmpty()) {
-                        Text("Suchen, z.B. Salitos Ice oder Kölsch", color = AppColors.textMuted, fontSize = 13.sp)
+                        Text("Suchen, z.B. Salitos Ice oder Kölsch", color = AppColors.textMuted, style = de.tipau.promille.AppText.body)
                     }
                     innerTextField()
                 }
@@ -1077,21 +1084,11 @@ private fun ONFavoritesPage(
         ) {
             categories.forEach { (catKey, catLabel) ->
                 val isOn = selectedCategory == catKey
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(if (isOn) AppColors.accent else AppColors.card)
-                        .border(0.5.dp, if (isOn) Color.Transparent else AppColors.border, CircleShape)
-                        .clickable { selectedCategory = if (isOn && catKey != null) null else catKey }
-                        .padding(horizontal = 14.dp, vertical = 7.dp)
-                ) {
-                    Text(
-                        text = catLabel,
-                        color = if (isOn) AppColors.background else AppColors.textDim,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                de.tipau.promille.ui.components.AppChip(
+                    label = catLabel,
+                    isSelected = isOn,
+                    onClick = { selectedCategory = if (isOn && catKey != null) null else catKey }
+                )
             }
         }
 
@@ -1106,29 +1103,14 @@ private fun ONFavoritesPage(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 selectedTemplates.forEach { t ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(AppColors.accent.copy(alpha = 0.12f))
-                            .border(0.5.dp, AppColors.accent.copy(alpha = 0.5f), CircleShape)
-                            .clickable { viewModel.removeFavorite(t.id) }
-                            .padding(horizontal = 12.dp, vertical = 7.dp)
-                    ) {
-                        Text(
-                            text = t.name,
-                            color = AppColors.text,
-                            fontSize = 12.sp,
-                            maxLines = 1
-                        )
-                        Icon(
-                            imageVector = Icons.Filled.Close,
-                            contentDescription = "Entfernen",
-                            tint = AppColors.textDim,
-                            modifier = Modifier.size(10.dp)
-                        )
-                    }
+                    de.tipau.promille.ui.components.AppChip(
+                        label = t.name,
+                        isSelected = true,
+                        selectedColor = AppColors.accent.copy(alpha = 0.12f),
+                        selectedTextColor = AppColors.text,
+                        onClick = { viewModel.removeFavorite(t.id) },
+                        icon = Icons.Filled.Close
+                    )
                 }
             }
         }
@@ -1191,19 +1173,20 @@ private fun ONFavoritesPage(
                             }
 
                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                // iOS: .appCaptionBold (OnboardingView.swift:858).
                                 Text(
                                     text = template.name,
                                     color = AppColors.text,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
+                                    style = de.tipau.promille.AppText.captionBold,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 val volText = if (template.volume >= 1000) "${String.format(Locale.GERMANY, "%.1f", template.volume / 1000)} l" else "${template.volume.toInt()} ml"
+                                // iOS: .appMicro (OnboardingView.swift:863).
                                 Text(
                                     text = "$volText · ${String.format(Locale.GERMANY, "%.1f", template.abv)}%",
                                     color = AppColors.textMuted,
-                                    fontSize = 10.sp
+                                    style = de.tipau.promille.AppText.micro
                                 )
                             }
                         }
@@ -1251,11 +1234,11 @@ private fun ONQuestionHeader(
             fontWeight = FontWeight.Bold,
             fontFamily = AppSerif
         )
+        // iOS: .appCaption (OnboardingView.swift:898).
         Text(
             text = subtitle,
             color = AppColors.textDim,
-            fontSize = 13.sp,
-            lineHeight = 18.sp
+            style = de.tipau.promille.AppText.caption
         )
     }
 }
@@ -1288,11 +1271,11 @@ private fun ONUnitToggle(
                     ),
                 contentAlignment = Alignment.Center
             ) {
+                // iOS: .appCaptionBold (OnboardingView.swift:919).
                 Text(
                     text = opt,
                     color = if (isSelected) AppColors.background else AppColors.textDim,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.captionBold
                 )
             }
         }
@@ -1315,10 +1298,11 @@ private fun InlineValidationMessage(
             tint = AppColors.statusOrange,
             modifier = Modifier.size(16.dp)
         )
+        // iOS: .appCaption (OnboardingView.swift:615).
         Text(
             text = text,
             color = AppColors.statusOrange,
-            fontSize = 12.sp
+            style = de.tipau.promille.AppText.caption
         )
     }
 }

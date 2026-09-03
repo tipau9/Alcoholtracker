@@ -94,7 +94,14 @@ class AppContainer(context: Context) {
         // Crew toggles sos_active on the profile; the jam roster carries the
         // same flag, so the two must not drift apart.
         syncScope.launch {
-            supabase.myProfile.collect { jamService.mySOSActive.value = it?.sosActive == true }
+            supabase.myProfile.collect {
+                // Inside a jam the flag can have been raised locally, with no
+                // account behind it at all. Signing in mid-jam emits a profile
+                // with sos_active false and would drop that SOS without a word.
+                if (jamService.currentJam.value == null) {
+                    jamService.mySOSActive.value = it?.sosActive == true
+                }
+            }
         }
         connectivity.start()
         syncScope.launch {

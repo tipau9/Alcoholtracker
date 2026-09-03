@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <cache-path name="exports" path="exports/" />
+    <!-- Staging area the camera app writes into before "Speichern" moves the
+         file to filesDir. Cache, so an abandoned capture is reclaimable. -->
+    <cache-path name="captures" path="captures/" />
+    <!-- Downloaded update APK handed to the system installer via FileProvider. -->
+    <cache-path name="updates" path="updates/" />
 </paths>

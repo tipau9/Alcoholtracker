@@ -86,8 +86,7 @@ fun SafetyScreen(
         modifier = modifier
             .fillMaxSize()
             .background(AppColors.background)
-    ) {
-        // SFTopBar matching iOS
+    ) {        // SFTopBar matching iOS
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -95,11 +94,11 @@ fun SafetyScreen(
                 .padding(top = 16.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // iOS: .appHeadline (SafetyView.swift:262).
             Text(
                 text = "Sicherheit",
                 color = AppColors.text,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.SemiBold
+                style = de.tipau.promille.AppText.headline
             )
         }
 
@@ -139,11 +138,11 @@ fun SafetyScreen(
                                 tint = status.color,
                                 modifier = Modifier.size(12.dp)
                             )
+                            // iOS: .appCaptionBold (SafetyView.swift:284).
                             Text(
                                 text = "Aktueller Pegel",
                                 color = status.color,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
+                                style = de.tipau.promille.AppText.captionBold
                             )
                         }
 
@@ -159,26 +158,27 @@ fun SafetyScreen(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = String.format(Locale.GERMAN, "%.2f", bac),
+                            text = String.format(Locale.GERMANY, "%.2f", bac),
                             color = status.color,
                             fontSize = 56.sp,
                             fontFamily = AppSerif,
                             fontWeight = FontWeight.Light
                         )
+                        // iOS: .appCaption (SafetyView.swift:301).
                         Text(
                             text = "Promille (‰)",
                             color = status.color.copy(alpha = 0.7f),
-                            fontSize = 13.sp
+                            style = de.tipau.promille.AppText.caption
                         )
                     }
 
                     HorizontalDivider(color = AppColors.border.copy(alpha = 0.5f), thickness = 0.5.dp)
 
+                    // iOS: .appMicro (SafetyView.swift:310).
                     Text(
                         text = "Widmark-Schätzwert. Individuelle Faktoren können abweichen. Kein Atemtest. Im Zweifel nicht fahren.",
                         color = AppColors.textMuted,
-                        fontSize = 11.sp,
-                        lineHeight = 15.sp,
+                        style = de.tipau.promille.AppText.micro,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
                     )
                 }
@@ -218,18 +218,19 @@ fun SafetyScreen(
                                 )
                             }
                             Spacer(Modifier.width(14.dp))
+                            // iOS: .appBody (SafetyView.swift:368).
                             Text(
                                 text = "Nüchtern",
                                 color = AppColors.text,
-                                fontSize = 17.sp
+                                style = de.tipau.promille.AppText.body
                             )
                             Spacer(Modifier.weight(1f))
+                            // iOS: .appBodyBold.monospacedDigit() (SafetyView.swift:374).
                             Text(
                                 text = if (isSoberReady) "Bereits nüchtern"
                                 else soberIn?.let { formatHours(it) } ?: "> 72 h",
                                 color = if (isSoberReady) AppColors.statusGreen else AppColors.text,
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.SemiBold
+                                style = de.tipau.promille.AppText.bodyBold.merge(de.tipau.promille.TabularFigures)
                             )
                         }
 
@@ -262,18 +263,19 @@ fun SafetyScreen(
                                 )
                             }
                             Spacer(Modifier.width(14.dp))
+                            // iOS: .appBody (SafetyView.swift:368).
                             Text(
                                 text = if (isProbationary) "Unter 0,0 ‰" else "Unter 0,5 ‰",
                                 color = AppColors.text,
-                                fontSize = 17.sp
+                                style = de.tipau.promille.AppText.body
                             )
                             Spacer(Modifier.weight(1f))
+                            // iOS: .appBodyBold.monospacedDigit() (SafetyView.swift:374).
                             Text(
                                 text = if (isUnderDriveLimit) "Fahrbereit"
                                 else driveableIn?.let { formatHours(it) } ?: "> 72 h",
                                 color = if (isUnderDriveLimit) AppColors.statusGreen else AppColors.text,
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.SemiBold
+                                style = de.tipau.promille.AppText.bodyBold.merge(de.tipau.promille.TabularFigures)
                             )
                         }
                     }
@@ -306,16 +308,17 @@ fun SafetyScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
+                            // iOS: .appBodyBold (SafetyView.swift:395).
                             Text(
                                 text = "0,5 ‰",
                                 color = if (!isProbationary) AppColors.background else AppColors.text,
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.SemiBold
+                                style = de.tipau.promille.AppText.bodyBold
                             )
+                            // iOS: .appMicro (SafetyView.swift:398).
                             Text(
                                 text = "Standard",
                                 color = if (!isProbationary) AppColors.background.copy(alpha = 0.8f) else AppColors.textDim,
-                                fontSize = 11.sp
+                                style = de.tipau.promille.AppText.micro
                             )
                         }
                     }
@@ -339,26 +342,27 @@ fun SafetyScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
+                            // iOS: .appBodyBold (SafetyView.swift:395).
                             Text(
                                 text = "Probezeit",
                                 color = if (isProbationary) AppColors.background else AppColors.text,
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.SemiBold
+                                style = de.tipau.promille.AppText.bodyBold
                             )
+                            // iOS: .appMicro (SafetyView.swift:398).
                             Text(
                                 text = "0,0 ‰",
                                 color = if (isProbationary) AppColors.background.copy(alpha = 0.8f) else AppColors.textDim,
-                                fontSize = 11.sp
+                                style = de.tipau.promille.AppText.micro
                             )
                         }
                     }
                 }
 
+                // iOS: .appMicro (SafetyView.swift:214).
                 Text(
                     text = "Gilt für deine Fahrbereit-Zeit, die Vorausschau und die Fahrbereit-Anzeige bei als Fahrer markierten Freunden.",
                     color = AppColors.textMuted,
-                    fontSize = 11.sp,
-                    lineHeight = 15.sp
+                    style = de.tipau.promille.AppText.micro
                 )
             }
 
@@ -405,16 +409,17 @@ fun SafetyScreen(
                             }
 
                             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                // iOS: .appBodyBold (SafetyView.swift:436).
                                 Text(
                                     text = "Heimfahrt",
                                     color = AppColors.text,
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                    style = de.tipau.promille.AppText.bodyBold
                                 )
+                                // iOS: .appCaption (SafetyView.swift:439).
                                 Text(
                                     text = "Taxi oder Maps öffnen",
                                     color = AppColors.textDim,
-                                    fontSize = 13.sp
+                                    style = de.tipau.promille.AppText.caption
                                 )
                             }
 
@@ -458,16 +463,17 @@ fun SafetyScreen(
                                 }
 
                                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    // iOS: .appBodyBold (SafetyView.swift:436).
                                     Text(
                                         text = "Notfallkontakt anrufen",
                                         color = AppColors.text,
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.SemiBold
+                                        style = de.tipau.promille.AppText.bodyBold
                                     )
+                                    // iOS: .appCaption (SafetyView.swift:439).
                                     Text(
                                         text = contactName?.ifBlank { "Notfallkontakt" } ?: "Notfallkontakt",
                                         color = AppColors.textDim,
-                                        fontSize = 13.sp
+                                        style = de.tipau.promille.AppText.caption
                                     )
                                 }
 

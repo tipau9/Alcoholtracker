@@ -55,33 +55,19 @@ fun MorningMoodPrompt(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
+                    // iOS: .appCaptionBold (SemiBold, not Bold).
                     text = "Wie war gestern Abend?",
                     color = AppColors.text,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
+                    style = de.tipau.promille.AppText.captionBold
                 )
                 Text(
                     text = "Deine Einschätzung landet im Verlauf.",
                     color = AppColors.textDim,
-                    fontSize = 11.sp
+                    style = de.tipau.promille.AppText.micro
                 )
             }
 
-            Box(
-                modifier = Modifier
-                    .size(26.dp)
-                    .clip(CircleShape)
-                    .background(AppColors.background.copy(alpha = 0.6f))
-                    .clickable(onClick = onDismiss),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Schließen",
-                    tint = AppColors.textDim,
-                    modifier = Modifier.size(13.dp)
-                )
-            }
+            AppIconCloseButton(onDismiss = onDismiss)
         }
 
         Row(
