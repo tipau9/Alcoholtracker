@@ -668,8 +668,8 @@ fun ArcadePickerSheet(onDismiss: () -> Unit, onPick: (JamArcadeGame) -> Unit) {
         sheetState = sheetState,
         containerColor = AppColors.background,
         scrimColor = Color.Black.copy(alpha = 0.65f),
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
+        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
+        dragHandle = null
     ) {
         Column(
             modifier = Modifier
@@ -691,17 +691,7 @@ fun ArcadePickerSheet(onDismiss: () -> Unit, onPick: (JamArcadeGame) -> Unit) {
                         style = de.tipau.promille.AppText.caption
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.card)
-                        .border(0.5.dp, AppColors.border, CircleShape)
-                        .clickable(onClick = onDismiss),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Filled.Close, "Schließen", tint = AppColors.textDim, modifier = Modifier.size(14.dp))
-                }
+                de.tipau.promille.ui.components.AppIconCloseButton(onDismiss = onDismiss)
             }
 
             JamArcadeGame.entries.forEach { game ->

@@ -102,9 +102,9 @@ fun AppUpdateSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp, top = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .background(AppColors.background)
-                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
         ) {
             Column(
                 modifier = Modifier

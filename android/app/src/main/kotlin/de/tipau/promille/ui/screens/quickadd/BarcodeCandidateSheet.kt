@@ -71,7 +71,9 @@ fun BarcodeCandidateSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
         containerColor = AppColors.background,
+        scrimColor = Color.Black.copy(alpha = 0.65f),
         dragHandle = null
     ) {
         Column(

@@ -127,9 +127,9 @@ fun HomeEditSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp, top = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .background(AppColors.background)
-                .border(0.5.dp, AppColors.border, RoundedCornerShape(24.dp))
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
         ) {
             Column(
                 modifier = Modifier
@@ -150,25 +150,12 @@ fun HomeEditSheet(
                         color = AppColors.text,
                         style = de.tipau.promille.AppText.headline
                     )
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.card)
-                            .border(1.dp, AppColors.border, CircleShape)
-                            .clickable(onClick = {
-                                onSave(homeStyle, warningThreshold.toDouble(), HomeWidgetType.serialize(activeWidgets, foreignWidgets))
-                                onDismiss()
-                            }),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Close,
-                            contentDescription = "Schließen",
-                            modifier = Modifier.size(16.dp),
-                            tint = AppColors.textDim
-                        )
-                    }
+                    de.tipau.promille.ui.components.AppIconCloseButton(
+                        onDismiss = {
+                            onSave(homeStyle, warningThreshold.toDouble(), HomeWidgetType.serialize(activeWidgets, foreignWidgets))
+                            onDismiss()
+                        }
+                    )
                 }
 
                 LazyColumn(

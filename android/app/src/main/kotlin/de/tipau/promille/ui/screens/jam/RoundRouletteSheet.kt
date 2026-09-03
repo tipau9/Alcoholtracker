@@ -125,9 +125,9 @@ fun RoundRouletteSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 24.dp, top = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .background(NavyBackground)
-                .border(0.5.dp, GoldAccent.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+                .border(0.5.dp, GoldAccent.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
         ) {
             Column(
                 modifier = Modifier

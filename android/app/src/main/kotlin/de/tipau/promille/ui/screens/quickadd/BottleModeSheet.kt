@@ -67,8 +67,8 @@ fun BottleModeSheet(
         sheetState = sheetState,
         containerColor = AppColors.background,
         scrimColor = Color.Black.copy(alpha = 0.65f),
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
+        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
+        dragHandle = null
     ) {
         if (selectedTemplate != null) {
             BottleLevelContent(

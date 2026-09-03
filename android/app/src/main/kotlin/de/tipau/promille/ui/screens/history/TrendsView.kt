@@ -135,8 +135,10 @@ fun TrendsView(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
         containerColor = AppColors.background,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
+        scrimColor = Color.Black.copy(alpha = 0.65f),
+        dragHandle = null
     ) {
         LazyColumn(
             modifier = Modifier
