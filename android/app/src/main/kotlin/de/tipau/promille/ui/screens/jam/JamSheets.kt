@@ -728,7 +728,12 @@ fun ArcadePickerSheet(onDismiss: () -> Unit, onPick: (JamArcadeGame) -> Unit) {
                         Text(game.title, color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
                         Text(game.subtitle, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                     }
-                    Text("›", color = AppColors.textMuted, fontSize = 20.sp)
+                    Icon(
+                        imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                        contentDescription = null,
+                        tint = AppColors.textMuted,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
         }

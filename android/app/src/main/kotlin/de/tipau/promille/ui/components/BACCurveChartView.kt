@@ -81,17 +81,23 @@ fun BACCurveChartView(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .background(AppColors.background)
-                            .border(1.dp, AppColors.border, RoundedCornerShape(8.dp))
+                            .border(0.5.dp, AppColors.border, RoundedCornerShape(8.dp))
                     ) {
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(7.dp))
                                 .background(if (!showFullDay) AppColors.accent else Color.Transparent)
-                                .clickable { showFullDay = false }
+                                .clickable {
+                                    if (showFullDay) {
+                                        haptics.selection()
+                                        showFullDay = false
+                                    }
+                                }
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Text(
@@ -106,7 +112,12 @@ fun BACCurveChartView(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(7.dp))
                                 .background(if (showFullDay) AppColors.accent else Color.Transparent)
-                                .clickable { showFullDay = true }
+                                .clickable {
+                                    if (!showFullDay) {
+                                        haptics.selection()
+                                        showFullDay = true
+                                    }
+                                }
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Text(

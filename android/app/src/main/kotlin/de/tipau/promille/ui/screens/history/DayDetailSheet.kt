@@ -62,6 +62,7 @@ fun DayDetailSheet(
     onDeleteDrink: ((de.tipau.promille.bac.Drink) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
     val coroutineScope = rememberCoroutineScope()
     val dateString = dayStats.date.format(DateTimeFormatter.ISO_LOCAL_DATE)
     val isToday = dayStats.date == LocalDate.now()
@@ -398,15 +399,41 @@ fun DayDetailSheet(
                     }
                 }
 
-                // Drink list
+                // Drink list (Unified 14dp card matching iOS DayDetailSheet.swift:324-350)
                 item {
-                    SectionLabel("GETRÄNKE")
-                }
-                items(dayStats.drinks, key = { it.id }) { drink ->
-                    DayDetailDrinkRow(
-                        drink = drink,
-                        onDelete = onDeleteDrink?.let { callback -> { callback(drink) } }
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        SectionLabel("GETRÄNKE")
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(AppColors.card)
+                                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+                        ) {
+                            Column {
+                                dayStats.drinks.forEachIndexed { index, drink ->
+                                    val isNextCalendarDay = remember(drink.timestampEpochSeconds, dayStats.date) {
+                                        val drinkDate = java.time.Instant.ofEpochSecond(drink.timestampEpochSeconds)
+                                            .atZone(java.time.ZoneId.systemDefault())
+                                            .toLocalDate()
+                                        drinkDate != dayStats.date
+                                    }
+                                    DayDetailDrinkRow(
+                                        drink = drink,
+                                        isNextCalendarDay = isNextCalendarDay,
+                                        onDelete = onDeleteDrink?.let { callback -> { callback(drink) } }
+                                    )
+                                    if (index < dayStats.drinks.size - 1) {
+                                        HorizontalDivider(
+                                            color = AppColors.border,
+                                            thickness = 0.5.dp,
+                                            modifier = Modifier.padding(start = 52.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -433,6 +460,7 @@ fun DayDetailSheet(
                                         RoundedCornerShape(10.dp)
                                     )
                                     .clickable {
+                                        haptics.selection()
                                         selectedMood = mood
                                         saveNote()
                                     }
@@ -482,27 +510,31 @@ fun DayDetailSheet(
 }
 
 /**
- * 1:1 mirror of iOS DayDetailSheet drink row with long-press context menu (DayDetailSheet.swift:284-319).
+ * 1:1 mirror of iOS DayDetailSheet drink row (DDSDrinkRow) with long-press context menu (DayDetailSheet.swift:527-581).
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DayDetailDrinkRow(
     drink: de.tipau.promille.bac.Drink,
+    isNextCalendarDay: Boolean = false,
     onDelete: (() -> Unit)?
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
+    val timeLabel = remember(drink.timestampEpochSeconds) {
+        val dt = java.time.Instant.ofEpochSecond(drink.timestampEpochSeconds)
+            .atZone(java.time.ZoneId.systemDefault())
+        dt.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm", Locale.GERMAN))
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(AppColors.card)
-            .border(0.5.dp, AppColors.border, RoundedCornerShape(12.dp))
             .combinedClickable(
                 onClick = {},
                 onLongClick = { if (onDelete != null) menuExpanded = true }
             )
-            .padding(14.dp)
+            .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -538,6 +570,37 @@ private fun DayDetailDrinkRow(
                     ),
                     color = AppColors.textDim,
                     style = de.tipau.promille.AppText.micro
+                )
+            }
+
+            // Timestamp + next-day indicator + ChevronRight (iOS DDSDrinkRow parity)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = timeLabel,
+                        color = AppColors.textMuted,
+                        style = de.tipau.promille.AppText.micro.merge(de.tipau.promille.TabularFigures)
+                    )
+                    if (isNextCalendarDay) {
+                        Text(
+                            text = "+1",
+                            color = AppColors.accent,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+                Icon(
+                    imageVector = AppIcons.ChevronRight,
+                    contentDescription = null,
+                    tint = AppColors.textMuted,
+                    modifier = Modifier.size(12.dp)
                 )
             }
         }

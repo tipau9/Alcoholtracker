@@ -56,6 +56,7 @@ fun AdminScreen(
     val error by viewModel.error.collectAsState()
     val isAdmin by container.supabase.isAdmin.collectAsState()
 
+    var showMetrics by remember { mutableStateOf(true) }
     var searchTerm by remember { mutableStateOf("") }
 
     // The 5 admin editor sheets (AdminEditors.kt) - AdminView.swift's
@@ -95,49 +96,77 @@ fun AdminScreen(
         contentPadding = PaddingValues(top = 16.dp, bottom = 36.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-                item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // iOS: .appHeadline
-                    Text(
-                        "Admin",
-                        color = AppColors.text,
-                        style = de.tipau.promille.AppText.headline
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // iOS: .appHeadline
+                Text(
+                    "Admin",
+                    color = AppColors.text,
+                    style = de.tipau.promille.AppText.headline
+                )
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        color = AppColors.accent,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(18.dp)
                     )
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            color = AppColors.accent,
-                            strokeWidth = 2.dp,
-                            modifier = Modifier.size(18.dp)
+                } else {
+                    IconButton(onClick = { viewModel.reloadAll() }) {
+                        Icon(
+                            imageVector = Icons.Filled.Refresh,
+                            contentDescription = "Neu laden",
+                            tint = AppColors.accent,
+                            modifier = Modifier.size(20.dp)
                         )
-                    } else {
-                        TextButton(onClick = { viewModel.reloadAll() }) {
-                            // iOS: .appCaption
-                            Text("Neu laden", color = AppColors.accent, style = de.tipau.promille.AppText.caption)
-                        }
                     }
                 }
             }
+        }
 
-            if (!isAdmin) {
-                item {
-                    // iOS: .appCaption
+        if (!isAdmin) {
+            item {
+                // iOS: .appCaption
+                Text(
+                    "Kein Adminzugang für dieses Konto. Die Serverabschnitte bleiben leer, die Debug-Werkzeuge funktionieren trotzdem.",
+                    color = AppColors.statusOrange,
+                    style = de.tipau.promille.AppText.caption
+                )
+            }
+        }
+
+        error?.let { message ->
+            item { Text(message, color = AppColors.statusRed, style = de.tipau.promille.AppText.caption) }
+        }
+
+        if (metrics.isNotEmpty()) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { showMetrics = !showMetrics }
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        "Kein Adminzugang für dieses Konto. Die Serverabschnitte bleiben leer, die Debug-Werkzeuge funktionieren trotzdem.",
-                        color = AppColors.statusOrange,
-                        style = de.tipau.promille.AppText.caption
+                        if (showMetrics) "Metriken ausblenden" else "Metriken anzeigen",
+                        color = AppColors.accent,
+                        style = de.tipau.promille.AppText.captionBold
+                    )
+                    Icon(
+                        imageVector = if (showMetrics) de.tipau.promille.ui.components.AppIcons.ChevronUp else de.tipau.promille.ui.components.AppIcons.ChevronDown,
+                        contentDescription = null,
+                        tint = AppColors.accent,
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
-
-            error?.let { message ->
-                item { Text(message, color = AppColors.statusRed, style = de.tipau.promille.AppText.caption) }
-            }
-
-            if (metrics.isNotEmpty()) {
+            if (showMetrics) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         metrics.chunked(2).forEach { pair ->
@@ -169,6 +198,7 @@ fun AdminScreen(
                     }
                 }
             }
+        }
 
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
