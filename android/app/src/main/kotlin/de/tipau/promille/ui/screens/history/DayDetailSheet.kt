@@ -59,6 +59,7 @@ fun DayDetailSheet(
     dayNoteRepository: DayNoteRepository,
     profile: Profile? = null,
     statusSkin: StatusSkin = StatusSkin.STANDARD,
+    onUpdateDrink: ((de.tipau.promille.bac.Drink, Double, Long, Double) -> Unit)? = null,
     onDeleteDrink: ((de.tipau.promille.bac.Drink) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
@@ -66,6 +67,7 @@ fun DayDetailSheet(
     val coroutineScope = rememberCoroutineScope()
     val dateString = dayStats.date.format(DateTimeFormatter.ISO_LOCAL_DATE)
     val isToday = dayStats.date == LocalDate.now()
+    var editingDrink by remember { mutableStateOf<de.tipau.promille.bac.Drink?>(null) }
 
     val dateTitle = remember(dayStats.date) {
         dayStats.date.format(DateTimeFormatter.ofPattern("d. MMMM yyyy", Locale.GERMAN))
@@ -421,6 +423,7 @@ fun DayDetailSheet(
                                     DayDetailDrinkRow(
                                         drink = drink,
                                         isNextCalendarDay = isNextCalendarDay,
+                                        onEdit = { editingDrink = drink },
                                         onDelete = onDeleteDrink?.let { callback -> { callback(drink) } }
                                     )
                                     if (index < dayStats.drinks.size - 1) {
@@ -507,6 +510,22 @@ fun DayDetailSheet(
         }
     }
 }
+
+    editingDrink?.let { drinkToEdit ->
+        de.tipau.promille.ui.screens.home.DrinkEditSheet(
+            drink = drinkToEdit,
+            profileEntity = null,
+            onDismiss = { editingDrink = null },
+            onSave = { volume, timestampSeconds, durationMinutes ->
+                onUpdateDrink?.invoke(drinkToEdit, volume, timestampSeconds, durationMinutes)
+                editingDrink = null
+            },
+            onDelete = {
+                onDeleteDrink?.invoke(drinkToEdit)
+                editingDrink = null
+            }
+        )
+    }
 }
 
 /**
@@ -517,6 +536,7 @@ fun DayDetailSheet(
 private fun DayDetailDrinkRow(
     drink: de.tipau.promille.bac.Drink,
     isNextCalendarDay: Boolean = false,
+    onEdit: (() -> Unit)? = null,
     onDelete: (() -> Unit)?
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -531,7 +551,7 @@ private fun DayDetailDrinkRow(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
-                onClick = {},
+                onClick = { onEdit?.invoke() },
                 onLongClick = { if (onDelete != null) menuExpanded = true }
             )
             .padding(horizontal = 14.dp, vertical = 12.dp)

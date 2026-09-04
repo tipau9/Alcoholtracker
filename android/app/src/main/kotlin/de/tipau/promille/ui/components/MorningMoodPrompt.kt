@@ -39,6 +39,7 @@ fun MorningMoodPrompt(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptics = rememberHapticManager()
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -81,7 +82,10 @@ fun MorningMoodPrompt(
                         .clip(RoundedCornerShape(10.dp))
                         .background(AppColors.background.copy(alpha = 0.6f))
                         .border(0.5.dp, AppColors.border, RoundedCornerShape(10.dp))
-                        .clickable { onSelect(mood) }
+                        .clickable {
+                            haptics.selection()
+                            onSelect(mood)
+                        }
                         .padding(vertical = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {

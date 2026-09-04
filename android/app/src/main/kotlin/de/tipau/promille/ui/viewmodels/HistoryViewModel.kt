@@ -114,6 +114,29 @@ class HistoryViewModel(
         visibleMonth.value = YearMonth.now()
     }
 
+    fun updateDrink(drink: de.tipau.promille.bac.Drink, volumeML: Double, timestampSeconds: Long, durationMinutes: Double) {
+        if (volumeML <= 0 || drink.volumeML <= 0) return
+        val newCalories = kotlin.math.round((drink.calories.toDouble() / drink.volumeML) * volumeML).toInt()
+        viewModelScope.launch {
+            drinkRepository.updateDrink(
+                de.tipau.promille.data.DrinkEntity(
+                    id = drink.id,
+                    name = drink.name,
+                    volume = volumeML,
+                    abv = drink.abv,
+                    calories = newCalories,
+                    iconName = drink.iconName,
+                    categoryRaw = drink.category.name.lowercase(),
+                    timestampEpochSeconds = timestampSeconds,
+                    templateID = drink.templateId,
+                    mixerVolume = drink.mixerVolumeML,
+                    mixerWaterContent = drink.mixerWaterContentPercent,
+                    drinkDurationMinutes = durationMinutes
+                )
+            )
+        }
+    }
+
     fun deleteDrink(drink: de.tipau.promille.bac.Drink) {
         viewModelScope.launch {
             drinkRepository.deleteDrink(

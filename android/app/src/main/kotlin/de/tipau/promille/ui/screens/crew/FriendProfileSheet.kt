@@ -60,6 +60,7 @@ fun FriendProfileSheet(
     onDelete: () -> Unit,
     supabase: SupabaseService? = null
 ) {
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
     var isHome by remember { mutableStateOf(member.isHome) }
     var isSoberBuddy by remember { mutableStateOf(member.isSoberBuddy) }
     var sosActive by remember { mutableStateOf(member.sosActive) }
@@ -456,14 +457,20 @@ fun FriendProfileSheet(
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
-                            onClick = { currentBAC = (currentBAC - 0.1).coerceAtLeast(0.0) },
+                            onClick = {
+                                haptics.light()
+                                currentBAC = (currentBAC - 0.1).coerceAtLeast(0.0)
+                            },
                             colors = ButtonDefaults.buttonColors(containerColor = AppColors.card, contentColor = AppColors.text),
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text("- 0,1", style = de.tipau.promille.AppText.bodyBold)
                         }
                         Button(
-                            onClick = { currentBAC = currentBAC + 0.1 },
+                            onClick = {
+                                haptics.light()
+                                currentBAC = currentBAC + 0.1
+                            },
                             colors = ButtonDefaults.buttonColors(containerColor = AppColors.accent, contentColor = AppColors.background),
                             shape = RoundedCornerShape(8.dp)
                         ) {
@@ -493,6 +500,7 @@ fun FriendProfileSheet(
             SettingsDestructiveRow(
                 label = "Freund aus Crew entfernen",
                 onClick = {
+                    haptics.warning()
                     showDeleteConfirmation = true
                 }
             )
