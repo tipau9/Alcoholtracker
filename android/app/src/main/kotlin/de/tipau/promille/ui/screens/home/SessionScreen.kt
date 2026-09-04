@@ -64,6 +64,7 @@ fun SessionScreen(
     val skin by viewModel.statusSkin.collectAsState()
     val reducedMotion = LocalReducedMotion.current
     val trend by viewModel.bacTrend.collectAsState()
+    val hangoverForecast by viewModel.hangoverForecast.collectAsState()
     val soberIn by viewModel.soberInHours.collectAsState()
     val driveableIn by viewModel.driveableInHours.collectAsState()
     val drinks by viewModel.drinks.collectAsState()
@@ -633,7 +634,7 @@ fun SessionScreen(
 
             // Kater-Prognose Card
             item {
-                HangoverForecastCard(currentBAC = bac)
+                HangoverForecastCard(level = hangoverForecast)
             }
 
             // Weekly Limit Card

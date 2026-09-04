@@ -67,6 +67,7 @@ fun PromilleNavigation(
             sessionEventRepository = container.sessionEventRepository,
             bacPublisher = container.bacPublisher,
             jamService = container.jamService,
+            waterLog = container.waterLog,
             applicationContext = application.applicationContext
         )
     }

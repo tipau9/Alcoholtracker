@@ -388,20 +388,35 @@ fun InfoWidget(
  */
 @Composable
 fun HangoverForecastCard(
-    currentBAC: Double
+    level: de.tipau.promille.bac.HangoverLevel
 ) {
-    val (katerText, iconTint) = when {
-        currentBAC > 1.2 -> "Starker Kater möglich" to AppColors.statusRed
-        currentBAC > 0.6 -> "Leichter Kater möglich" to AppColors.statusOrange
-        else -> "Kein Kater erwartet" to AppColors.statusGreen
+    val iconTint = when (level) {
+        de.tipau.promille.bac.HangoverLevel.NONE -> AppColors.statusGreen
+        de.tipau.promille.bac.HangoverLevel.MILD -> AppColors.statusYellow
+        de.tipau.promille.bac.HangoverLevel.MODERATE -> AppColors.statusOrange
+        de.tipau.promille.bac.HangoverLevel.STRONG -> AppColors.statusRed
+        de.tipau.promille.bac.HangoverLevel.SEVERE -> AppColors.statusRed
+        de.tipau.promille.bac.HangoverLevel.LETHAL -> AppColors.statusDarkRed
+    }
+    val icon = when (level) {
+        de.tipau.promille.bac.HangoverLevel.NONE -> AppIcons.Check
+        de.tipau.promille.bac.HangoverLevel.MILD -> AppIcons.Moon
+        de.tipau.promille.bac.HangoverLevel.MODERATE,
+        de.tipau.promille.bac.HangoverLevel.STRONG -> AppIcons.Info
+        de.tipau.promille.bac.HangoverLevel.SEVERE,
+        de.tipau.promille.bac.HangoverLevel.LETHAL -> AppIcons.Car
     }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(AppColors.card)
-            .border(0.5.dp, AppColors.border, RoundedCornerShape(16.dp))
+            .background(if (level.isLethal) iconTint.copy(alpha = 0.10f) else AppColors.card)
+            .border(
+                if (level.isLethal) 1.dp else 0.5.dp,
+                if (level.isLethal) iconTint.copy(alpha = 0.5f) else AppColors.border,
+                RoundedCornerShape(16.dp)
+            )
             .padding(16.dp)
     ) {
         Row(
@@ -416,7 +431,7 @@ fun HangoverForecastCard(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painter = if (currentBAC > 0.6) androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Filled.Warning) else AppIcons.Check,
+                    painter = icon,
                     contentDescription = null,
                     tint = iconTint,
                     modifier = Modifier.size(16.dp)
@@ -425,7 +440,7 @@ fun HangoverForecastCard(
 
             Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.weight(1f)) {
                 Text(
-                    text = katerText,
+                    text = level.germanLabel,
                     color = AppColors.text,
                     fontSize = 16.sp,
                     fontFamily = AppSerif,

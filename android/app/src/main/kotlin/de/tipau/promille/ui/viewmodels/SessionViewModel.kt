@@ -43,6 +43,7 @@ class SessionViewModel(
     private val sessionEventRepository: SessionEventRepository,
     private val bacPublisher: BACPublisher,
     private val jamService: JamService,
+    private val waterLog: WaterLog? = null,
     private val applicationContext: Context? = null
 ) : ViewModel() {
 
@@ -103,18 +104,13 @@ class SessionViewModel(
         HydrationCalculator.heatSweatLossMl(temp, hours)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    val projection: StateFlow<BacProjectionInput?> = combine(
-        drinks, profileEntity, stomachStatus, rawVomits, rawMeals, ticker
-    ) { values ->
-        @Suppress("UNCHECKED_CAST")
-        val drinkList = values[0] as List<Drink>
-        val profile = values[1] as? UserProfileEntity ?: return@combine null
-        val stomach = values[2] as StomachStatus
-        @Suppress("UNCHECKED_CAST")
-        val vomits = values[3] as List<VomitEventEntity>
-        @Suppress("UNCHECKED_CAST")
-        val meals = values[4] as List<MealEventEntity>
-
+    // Split from `projection` on purpose: the forecast below is time-invariant
+    // given the drink set, and recomputing two full BAC integrations on every
+    // 30s tick is pure waste.
+    private val projectionData: StateFlow<BacProjectionInput?> = combine(
+        drinks, profileEntity, stomachStatus, rawVomits, rawMeals
+    ) { drinkList, profile, stomach, vomits, meals ->
+        if (profile == null) return@combine null
         val bacProfile = UserProfileRepository.toProfile(profile)
         BacProjectionInput(
             drinks = drinkList,
@@ -126,6 +122,29 @@ class SessionViewModel(
             pace = pace
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val projection: StateFlow<BacProjectionInput?> =
+        combine(projectionData, ticker) { proj, _ -> proj }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    // Mirrors iOS SessionViewModel.hangoverForecast: gated on the session peak,
+    // not the live BAC, so the forecast does not fall back to "kein Kater" while
+    // you sober up after a heavy night.
+    val hangoverForecast: StateFlow<HangoverLevel> = projectionData.map { proj ->
+        if (proj == null || proj.peakBac() <= 0.3) HangoverLevel.NONE
+        else HangoverPredictor.predict(
+            drinks = proj.drinks,
+            profile = proj.profile,
+            // Logged glasses, not the recommendation: null falls back to the
+            // predictor's own heuristic, same as iOS.
+            waterGlasses = waterLog?.loggedGlasses(System.currentTimeMillis() / 1000, zone)?.toDouble(),
+            stomachStatus = proj.stomachStatus,
+            conservative = proj.conservative,
+            vomitEpochSeconds = proj.vomitEpochSeconds,
+            meals = proj.meals,
+            pace = pace
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HangoverLevel.NONE)
 
     val currentBAC: StateFlow<Double> = projection.map { proj ->
         proj?.currentBac(System.currentTimeMillis() / 1000) ?: 0.0
