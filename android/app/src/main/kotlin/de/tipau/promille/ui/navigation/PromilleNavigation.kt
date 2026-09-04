@@ -1,5 +1,6 @@
 package de.tipau.promille.ui.navigation
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -10,26 +11,34 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
+import de.tipau.promille.R
 import de.tipau.promille.PromilleApplication
-import de.tipau.promille.ui.components.AppIcons
 import de.tipau.promille.ui.screens.achievements.AchievementsScreen
 import de.tipau.promille.ui.screens.admin.AdminScreen
 import de.tipau.promille.ui.screens.settings.SettingsScreen
 import de.tipau.promille.ui.viewmodels.SettingsViewModel
 
-// Labels/icons mirror ContentView.swift's MainTabView tabItems 1:1.
-enum class Tab(val route: String, val label: String, val icon: ImageVector) {
-    HOME("home", "Home", AppIcons.House),
-    HISTORY("history", "Verlauf", AppIcons.Calendar),
-    CREW("crew", "Freunde", AppIcons.Group),
-    SAFETY("safety", "Sicher", AppIcons.Shield),
-    SETTINGS("settings", "Profil", AppIcons.Person),
-    ADMIN("admin", "Admin", AppIcons.Lock)
+// Labels/icons mirror ContentView.swift's MainTabView tabItems 1:1, down to the
+// SF Symbol behind each one (ContentView.swift:42-63). The drawables come from
+// tools/sf_import.py, which pads every glyph to one canvas height so a single
+// Icon height reproduces iOS's one-point-size-for-all sizing.
+// tools/sf_import.py centres every glyph on one 72x48 canvas, so the Icon box
+// has to carry that aspect or ContentScale.Fit shrinks the wide symbols
+// (person.3.fill) to fit a square and breaks the shared scale.
+const val SF_ICON_ASPECT = 72f / 48f
+
+enum class Tab(val route: String, val label: String, @DrawableRes val icon: Int) {
+    HOME("home", "Home", R.drawable.sf_house_fill),
+    HISTORY("history", "Verlauf", R.drawable.sf_calendar),
+    CREW("crew", "Freunde", R.drawable.sf_person_3_fill),
+    SAFETY("safety", "Sicher", R.drawable.sf_shield_fill),
+    SETTINGS("settings", "Profil", R.drawable.sf_person_fill),
+    ADMIN("admin", "Admin", R.drawable.sf_lock_shield_fill)
 }
 
 @Composable
@@ -170,10 +179,12 @@ fun PromilleNavigation(
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Icon(
-                            imageVector = tab.icon,
+                            painter = painterResource(tab.icon),
                             contentDescription = tab.label,
                             tint = if (isSelected) AppColors.accent else AppColors.textDim,
-                            modifier = Modifier.size(25.dp)
+                            modifier = Modifier
+                                .height(25.dp)
+                                .aspectRatio(SF_ICON_ASPECT)
                         )
                         Text(
                             text = tab.label,
