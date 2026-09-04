@@ -155,20 +155,20 @@ fun BACCurveChartView(
             Spacer(Modifier.height(8.dp))
 
             // Canvas Chart
-            if (points.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(150.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Noch keine Verlaufskurve", color = AppColors.textMuted, style = de.tipau.promille.AppText.caption)
-                }
-            } else {
+            run {
                 val nowEpoch = remember { System.currentTimeMillis() / 1000 }
-                val startTime = points.first().epochSeconds
-                val endTime = points.last().epochSeconds
-                val maxBac = max(1.0, (points.maxOfOrNull { it.bac } ?: 0.0) + 0.2)
+                // iOS draws the chart even with nothing logged (HomeView.swift:1878),
+                // so the left-to-right reveal plays on every open. A flat zero baseline
+                // keeps the grid, the threshold and "Jetzt" on screen until the first
+                // drink lands, instead of a blank placeholder that never animates.
+                val plotPoints = remember(points, nowEpoch) {
+                    points.ifEmpty {
+                        List(97) { CurvePoint(nowEpoch - 3600 + it * 300L, 0.0) }
+                    }
+                }
+                val startTime = plotPoints.first().epochSeconds
+                val endTime = plotPoints.last().epochSeconds
+                val maxBac = max(1.0, (plotPoints.maxOfOrNull { it.bac } ?: 0.0) + 0.2)
 
                 // iOS: HomeView.swift:1921-1928 masks the chart with a leading-anchored
                 // Rectangle and eases it to full width once, on first appear only.
@@ -187,23 +187,23 @@ fun BACCurveChartView(
                         .drawWithContent {
                             clipRect(right = size.width * reveal) { this@drawWithContent.drawContent() }
                         }
-                        .pointerInput(points) {
+                        .pointerInput(plotPoints) {
                             detectTapGestures(
                                 onTap = { offset ->
                                     val fraction = (offset.x / size.width).coerceIn(0f, 1f)
                                     val targetEpoch = startTime + ((endTime - startTime) * fraction).toLong()
-                                    scrubbedPoint = points.minByOrNull { kotlin.math.abs(it.epochSeconds - targetEpoch) }
+                                    scrubbedPoint = plotPoints.minByOrNull { kotlin.math.abs(it.epochSeconds - targetEpoch) }
                                 }
                             )
                         }
-                        .pointerInput(points) {
+                        .pointerInput(plotPoints) {
                             detectDragGestures(
                                 onDragEnd = { scrubbedPoint = null },
                                 onDragCancel = { scrubbedPoint = null },
                                 onDrag = { change, _ ->
                                     val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
                                     val targetEpoch = startTime + ((endTime - startTime) * fraction).toLong()
-                                    scrubbedPoint = points.minByOrNull { kotlin.math.abs(it.epochSeconds - targetEpoch) }
+                                    scrubbedPoint = plotPoints.minByOrNull { kotlin.math.abs(it.epochSeconds - targetEpoch) }
                                 }
                             )
                         }
@@ -270,7 +270,7 @@ fun BACCurveChartView(
                     val curvePath = Path()
                     val areaPath = Path()
 
-                    points.forEachIndexed { index, p ->
+                    plotPoints.forEachIndexed { index, p ->
                         val x = ((p.epochSeconds - startTime).toFloat() / (endTime - startTime)) * w
                         val y = h - (p.bac / maxBac * h).toFloat()
 
@@ -279,7 +279,7 @@ fun BACCurveChartView(
                             areaPath.moveTo(x, h)
                             areaPath.lineTo(x, y)
                         } else {
-                            val prev = points[index - 1]
+                            val prev = plotPoints[index - 1]
                             val prevX = ((prev.epochSeconds - startTime).toFloat() / (endTime - startTime)) * w
                             val prevY = h - (prev.bac / maxBac * h).toFloat()
                             val midX = (prevX + x) / 2f
@@ -288,7 +288,7 @@ fun BACCurveChartView(
                         }
                     }
 
-                    val lastX = ((points.last().epochSeconds - startTime).toFloat() / (endTime - startTime)) * w
+                    val lastX = ((plotPoints.last().epochSeconds - startTime).toFloat() / (endTime - startTime)) * w
                     areaPath.lineTo(lastX, h)
                     areaPath.close()
 
@@ -313,7 +313,7 @@ fun BACCurveChartView(
                     drinks.forEach { drink ->
                         if (drink.timestampEpochSeconds in startTime..endTime) {
                             val drinkX = ((drink.timestampEpochSeconds - startTime).toFloat() / (endTime - startTime)) * w
-                            val nearest = points.minByOrNull { kotlin.math.abs(it.epochSeconds - drink.timestampEpochSeconds) }
+                            val nearest = plotPoints.minByOrNull { kotlin.math.abs(it.epochSeconds - drink.timestampEpochSeconds) }
                             if (nearest != null) {
                                 val drinkY = h - (nearest.bac / maxBac * h).toFloat()
                                 drawCircle(
