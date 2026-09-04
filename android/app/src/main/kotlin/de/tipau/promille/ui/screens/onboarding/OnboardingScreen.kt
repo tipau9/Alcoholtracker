@@ -1109,7 +1109,7 @@ private fun ONFavoritesPage(
                         selectedColor = AppColors.accent.copy(alpha = 0.12f),
                         selectedTextColor = AppColors.text,
                         onClick = { viewModel.removeFavorite(t.id) },
-                        icon = Icons.Filled.Close
+                        icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Filled.Close)
                     )
                 }
             }

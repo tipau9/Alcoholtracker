@@ -252,7 +252,7 @@ fun BarcodeScannerSheet(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Icon(
-                            imageVector = AppIcons.Phone,
+                            painter = AppIcons.Phone,
                             contentDescription = null,
                             tint = Color.White.copy(alpha = 0.8f),
                             modifier = Modifier.size(44.dp)

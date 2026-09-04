@@ -1,5 +1,6 @@
 package de.tipau.promille.ui.screens.history
 
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -373,7 +374,7 @@ fun TrendsView(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = AppIcons.Chart,
+                                        painter = AppIcons.Chart,
                                         contentDescription = null,
                                         tint = AppColors.accent,
                                         modifier = Modifier.size(18.dp)
@@ -458,7 +459,7 @@ fun TrendsView(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = AppIcons.Location,
+                                        painter = AppIcons.Location,
                                         contentDescription = null,
                                         tint = AppColors.accent,
                                         modifier = Modifier.size(16.dp)
@@ -621,7 +622,7 @@ private fun LocalTrendsEmpty(text: String) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = AppIcons.Chart,
+            painter = AppIcons.Chart,
             contentDescription = null,
             tint = AppColors.textMuted,
             modifier = Modifier.size(16.dp)
@@ -740,7 +741,7 @@ private fun MoodCorrelationRow(mood: DayMood, averagePeakBAC: Double, nights: In
 private fun MetricTile(
     value: String,
     label: String,
-    icon: ImageVector,
+    icon: Painter,
     iconColor: Color,
     modifier: Modifier = Modifier
 ) {
@@ -757,7 +758,7 @@ private fun MetricTile(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = icon,
+                    painter = icon,
                     contentDescription = null,
                     tint = iconColor,
                     modifier = Modifier.size(15.dp)

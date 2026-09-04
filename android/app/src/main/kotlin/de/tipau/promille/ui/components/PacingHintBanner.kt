@@ -39,7 +39,7 @@ fun PacingHintBanner(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = AppIcons.Drop,
+                painter = AppIcons.Drop,
                 contentDescription = null,
                 tint = AppColors.statusOrange,
                 modifier = Modifier.size(16.dp)

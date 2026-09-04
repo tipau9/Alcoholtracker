@@ -1,5 +1,7 @@
 package de.tipau.promille.ui.screens.home
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,19 +30,19 @@ import de.tipau.promille.ui.components.SectionLabel
 import java.util.Locale
 import kotlin.math.roundToInt
 
-enum class HomeWidgetType(val raw: String, val localizedName: String, val icon: ImageVector) {
-    TIME_TO_LIMIT("timeToLimit", "Bis 0,5 ‰", AppIcons.Car),
-    WATER("water", "Wasser", AppIcons.Water),
-    CALORIES("calories", "Kalorien", AppIcons.Fire),
-    DRINK_COUNT("drinkCount", "Drinks heute", AppIcons.Beer),
-    BAC_CURVE("bacCurve", "BAC-Verlauf", AppIcons.Chart),
-    HYDRATION("hydration", "Wasser-Tracker", AppIcons.Water),
-    STOMACH_STATUS("stomachStatus", "Magen-Status", AppIcons.Restaurant),
-    FAV_STRIP("favStrip", "Schnell hinzufügen", AppIcons.Bolt),
-    DRINK_HISTORY("drinkHistory", "Verlauf heute", AppIcons.Shot),
-    MILESTONE("milestone", "Nächster Meilenstein", AppIcons.Car),
-    DAY_STATS("dayStats", "Tages-Stats", AppIcons.Chart),
-    SAFETY_ACTIONS("safetyActions", "Safety-Aktionen", AppIcons.Shield);
+enum class HomeWidgetType(val raw: String, val localizedName: String) {
+    TIME_TO_LIMIT("timeToLimit", "Bis 0,5 ‰"),
+    WATER("water", "Wasser"),
+    CALORIES("calories", "Kalorien"),
+    DRINK_COUNT("drinkCount", "Drinks heute"),
+    BAC_CURVE("bacCurve", "BAC-Verlauf"),
+    HYDRATION("hydration", "Wasser-Tracker"),
+    STOMACH_STATUS("stomachStatus", "Magen-Status"),
+    FAV_STRIP("favStrip", "Schnell hinzufügen"),
+    DRINK_HISTORY("drinkHistory", "Verlauf heute"),
+    MILESTONE("milestone", "Nächster Meilenstein"),
+    DAY_STATS("dayStats", "Tages-Stats"),
+    SAFETY_ACTIONS("safetyActions", "Safety-Aktionen");
 
     companion object {
         val gridTypes = listOf(TIME_TO_LIMIT, WATER, CALORIES, DRINK_COUNT)
@@ -308,7 +310,7 @@ private fun StyleCard(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(
-                imageVector = AppIcons.Chart,
+                painter = AppIcons.Chart,
                 contentDescription = null,
                 tint = if (isSelected) AppColors.accent else AppColors.textDim,
                 modifier = Modifier.size(24.dp)
@@ -349,7 +351,7 @@ private fun ToggleGroup(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Icon(
-                                imageVector = wt.icon,
+                                painter = wt.icon,
                                 contentDescription = null,
                                 tint = AppColors.accent,
                                 modifier = Modifier.size(20.dp)
@@ -385,3 +387,21 @@ private fun ToggleGroup(
 }
 
 private typealias Bool = Boolean
+
+// painterResource needs a composition, so the icon cannot ride in the enum
+// constructor the way the ImageVector did.
+val HomeWidgetType.icon: Painter
+    @Composable get() = when (this) {
+        HomeWidgetType.TIME_TO_LIMIT -> AppIcons.Car
+        HomeWidgetType.WATER -> AppIcons.Water
+        HomeWidgetType.CALORIES -> AppIcons.Fire
+        HomeWidgetType.DRINK_COUNT -> AppIcons.Beer
+        HomeWidgetType.BAC_CURVE -> AppIcons.Chart
+        HomeWidgetType.HYDRATION -> AppIcons.Water
+        HomeWidgetType.STOMACH_STATUS -> AppIcons.Restaurant
+        HomeWidgetType.FAV_STRIP -> AppIcons.Bolt
+        HomeWidgetType.DRINK_HISTORY -> AppIcons.Shot
+        HomeWidgetType.MILESTONE -> AppIcons.Car
+        HomeWidgetType.DAY_STATS -> AppIcons.Chart
+        HomeWidgetType.SAFETY_ACTIONS -> AppIcons.Shield
+    }

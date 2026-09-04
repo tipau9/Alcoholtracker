@@ -650,7 +650,7 @@ fun QuickAddSheet(
                         }
                         QAActionChip(icon = de.tipau.promille.ui.components.AppIcons.Water, title = "Quick Mix", onClick = { showQuickMix = true })
                         QAActionChip(icon = de.tipau.promille.ui.components.AppIcons.Drink, title = "Cocktail", onClick = { showMixCreator = true })
-                        QAActionChip(icon = Icons.Filled.Add, title = "Eigene", onClick = { showCustomBrandDialog = true }, isFilledAccent = true)
+                        QAActionChip(icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Filled.Add), title = "Eigene", onClick = { showCustomBrandDialog = true }, isFilledAccent = true)
                     }
                 }
             }
@@ -840,7 +840,7 @@ private fun QADrinkRow(
 // MARK: - QAActionChip matching iOS QAActionChip (width: 52, height: 46)
 @Composable
 private fun QAActionChip(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: androidx.compose.ui.graphics.painter.Painter,
     title: String,
     onClick: () -> Unit,
     isFilledAccent: Boolean = false
@@ -866,7 +866,7 @@ private fun QAActionChip(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = icon,
+                painter = icon,
                 contentDescription = title,
                 modifier = Modifier.size(20.dp),
                 tint = if (isFilledAccent) AppColors.background else AppColors.accent
@@ -1092,7 +1092,7 @@ private fun SipTemplatePicker(
                             )
                         }
                         Icon(
-                            imageVector = de.tipau.promille.ui.components.AppIcons.TouchApp,
+                            painter = de.tipau.promille.ui.components.AppIcons.TouchApp,
                             contentDescription = null,
                             tint = AppColors.accent,
                             modifier = Modifier.size(12.dp)

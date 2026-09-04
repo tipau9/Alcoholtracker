@@ -30,7 +30,7 @@ fun AppIconCloseButton(
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = AppIcons.Close,
+            painter = AppIcons.Close,
             contentDescription = "Schließen",
             tint = AppColors.textDim,
             modifier = Modifier.size(14.dp)

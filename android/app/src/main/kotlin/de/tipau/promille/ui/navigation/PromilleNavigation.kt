@@ -26,12 +26,9 @@ import de.tipau.promille.ui.viewmodels.SettingsViewModel
 // Labels/icons mirror ContentView.swift's MainTabView tabItems 1:1, down to the
 // SF Symbol behind each one (ContentView.swift:42-63). The drawables come from
 // tools/sf_import.py, which pads every glyph to one canvas height so a single
-// Icon height reproduces iOS's one-point-size-for-all sizing.
-// tools/sf_import.py centres every glyph on one 72x48 canvas, so the Icon box
-// has to carry that aspect or ContentScale.Fit shrinks the wide symbols
-// (person.3.fill) to fit a square and breaks the shared scale.
-const val SF_ICON_ASPECT = 72f / 48f
-
+// Icon height reproduces iOS's one-point-size-for-all sizing. person.3.fill is
+// the one symbol here wider than that canvas, so the box takes its aspect from
+// the painter instead of a fixed size, or ContentScale.Fit would shrink it.
 enum class Tab(val route: String, val label: String, @DrawableRes val icon: Int) {
     HOME("home", "Home", R.drawable.sf_house_fill),
     HISTORY("history", "Verlauf", R.drawable.sf_calendar),
@@ -178,13 +175,14 @@ fun PromilleNavigation(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
+                        val painter = painterResource(tab.icon)
                         Icon(
-                            painter = painterResource(tab.icon),
+                            painter = painter,
                             contentDescription = tab.label,
                             tint = if (isSelected) AppColors.accent else AppColors.textDim,
                             modifier = Modifier
                                 .height(25.dp)
-                                .aspectRatio(SF_ICON_ASPECT)
+                                .aspectRatio(painter.intrinsicSize.width / painter.intrinsicSize.height)
                         )
                         Text(
                             text = tab.label,

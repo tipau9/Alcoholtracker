@@ -321,7 +321,7 @@ fun SettingsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = AppIcons.Person,
+                        painter = AppIcons.Person,
                         contentDescription = null,
                         tint = AppColors.accent,
                         modifier = Modifier.size(26.dp)
@@ -372,7 +372,7 @@ fun SettingsScreen(
                     .padding(4.dp)
             ) {
                 Icon(
-                    imageVector = AppIcons.EmojiEvents,
+                    painter = AppIcons.EmojiEvents,
                     contentDescription = null,
                     tint = AppColors.accent,
                     modifier = Modifier.size(14.dp)
@@ -652,7 +652,7 @@ fun SettingsScreen(
                                             ) {
                                                 if (isSelected) {
                                                     Icon(
-                                                        imageVector = AppIcons.Check,
+                                                        painter = AppIcons.Check,
                                                         contentDescription = null,
                                                         tint = Color.White,
                                                         modifier = Modifier.size(14.dp)

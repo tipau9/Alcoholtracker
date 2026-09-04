@@ -1,5 +1,6 @@
 package de.tipau.promille.ui.screens.home
 
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -99,7 +100,7 @@ fun HomeTopBar(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = AppIcons.Sliders,
+                    painter = AppIcons.Sliders,
                     contentDescription = "Darstellung bearbeiten",
                     tint = AppColors.textDim,
                     modifier = Modifier.size(14.dp)
@@ -326,7 +327,7 @@ fun StomachStatusPicker(
  */
 @Composable
 fun InfoWidget(
-    icon: ImageVector,
+    icon: Painter,
     label: String,
     value: String,
     iconColor: Color = AppColors.accent,
@@ -354,7 +355,7 @@ fun InfoWidget(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = icon,
+                    painter = icon,
                     contentDescription = null,
                     tint = iconColor,
                     modifier = Modifier.size(14.dp)
@@ -415,7 +416,7 @@ fun HangoverForecastCard(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (currentBAC > 0.6) Icons.Filled.Warning else AppIcons.Check,
+                    painter = if (currentBAC > 0.6) androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Filled.Warning) else AppIcons.Check,
                     contentDescription = null,
                     tint = iconTint,
                     modifier = Modifier.size(16.dp)
@@ -469,7 +470,7 @@ fun HydrationCard(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Icon(
-                            imageVector = AppIcons.Water,
+                            painter = AppIcons.Water,
                             contentDescription = null,
                             tint = AppColors.textMuted,
                             modifier = Modifier.size(18.dp)
@@ -497,7 +498,7 @@ fun HydrationCard(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = AppIcons.Water,
+                            painter = AppIcons.Water,
                             contentDescription = null,
                             tint = AppColors.statusGreen,
                             modifier = Modifier.size(14.dp)
@@ -858,7 +859,7 @@ fun SafetyActionsCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
-                        imageVector = AppIcons.Car,
+                        painter = AppIcons.Car,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
                         tint = AppColors.background
@@ -960,7 +961,7 @@ fun MealActionCard(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = AppIcons.ForkKnife,
+                    painter = AppIcons.ForkKnife,
                     contentDescription = null,
                     tint = AppColors.statusGreen,
                     modifier = Modifier.size(18.dp)
@@ -1039,7 +1040,7 @@ fun BreathalyzerCard(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = AppIcons.Wind,
+                    painter = AppIcons.Wind,
                     contentDescription = null,
                     tint = AppColors.statusOrange,
                     modifier = Modifier.size(18.dp)
@@ -1114,7 +1115,7 @@ fun VomitActionCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = AppIcons.Heart,
+                        painter = AppIcons.Heart,
                         contentDescription = null,
                         tint = AppColors.statusOrange,
                         modifier = Modifier.size(16.dp)
@@ -1149,7 +1150,7 @@ fun VomitActionCard(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = AppIcons.Undo,
+                            painter = AppIcons.Undo,
                             contentDescription = "Rückgängig",
                             tint = AppColors.textDim,
                             modifier = Modifier.size(20.dp)
@@ -1247,7 +1248,7 @@ fun DrinkHistorySection(
                         style = de.tipau.promille.AppText.captionBold
                     )
                     Icon(
-                        imageVector = if (showsAllDrinks) AppIcons.ChevronUp else AppIcons.ChevronDown,
+                        painter = if (showsAllDrinks) AppIcons.ChevronUp else AppIcons.ChevronDown,
                         contentDescription = null,
                         tint = AppColors.accent,
                         modifier = Modifier.size(11.dp)

@@ -144,7 +144,7 @@ fun DurationChipRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(
-                        imageVector = AppIcons.Sliders,
+                        painter = AppIcons.Sliders,
                         contentDescription = null,
                         tint = customTextColor,
                         modifier = Modifier.size(16.dp)

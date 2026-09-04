@@ -134,7 +134,8 @@ object ServingSizeCatalog {
         }
     }
 
-    fun getIcon(iconType: String): ImageVector {
+    @androidx.compose.runtime.Composable
+    fun getIcon(iconType: String): androidx.compose.ui.graphics.painter.Painter {
         return when (iconType) {
             "mug" -> AppIcons.Mug
             "bottle" -> AppIcons.Bottle
@@ -287,7 +288,7 @@ fun AmountInputSheet(
                                         verticalArrangement = Arrangement.spacedBy(3.dp)
                                     ) {
                                         Icon(
-                                            imageVector = ServingSizeCatalog.getIcon(preset.iconType),
+                                            painter = ServingSizeCatalog.getIcon(preset.iconType),
                                             contentDescription = null,
                                             tint = if (isSelected) AppColors.accent else AppColors.textDim,
                                             modifier = Modifier.size(20.dp)
@@ -508,7 +509,7 @@ fun AmountInputSheet(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = AppIcons.Gauge,
+                        painter = AppIcons.Gauge,
                         contentDescription = null,
                         tint = AppColors.accent,
                         modifier = Modifier.size(18.dp)

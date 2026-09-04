@@ -298,7 +298,7 @@ fun HydrationWidget(
 
 @Composable
 private fun HydrationStatRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: androidx.compose.ui.graphics.painter.Painter,
     iconColor: Color,
     label: String,
     value: String,

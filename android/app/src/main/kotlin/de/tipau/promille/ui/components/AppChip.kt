@@ -32,7 +32,7 @@ fun AppChip(
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
+    icon: Painter? = null,
     iconPainter: Painter? = null,
     shape: Shape = CircleShape,
     selectedColor: Color = AppColors.accent,
@@ -57,7 +57,7 @@ fun AppChip(
     ) {
         if (icon != null) {
             Icon(
-                imageVector = icon,
+                painter = icon,
                 contentDescription = null,
                 tint = textColor,
                 modifier = Modifier.size(13.dp)

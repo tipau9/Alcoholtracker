@@ -101,7 +101,7 @@ fun ForecastView(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = AppIcons.History,
+                painter = AppIcons.History,
                 contentDescription = null,
                 tint = AppColors.accent,
                 modifier = Modifier.size(14.dp)
@@ -225,7 +225,7 @@ fun ForecastView(
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Icon(
-                            imageVector = AppIcons.Close,
+                            painter = AppIcons.Close,
                             contentDescription = null,
                             tint = AppColors.statusRed,
                             modifier = Modifier.size(28.dp)

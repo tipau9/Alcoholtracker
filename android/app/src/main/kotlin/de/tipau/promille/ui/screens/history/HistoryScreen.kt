@@ -133,7 +133,7 @@ fun HistoryScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = AppIcons.Chart,
+                        painter = AppIcons.Chart,
                         contentDescription = "Trends",
                         tint = AppColors.accent,
                         modifier = Modifier.size(14.dp)
@@ -337,7 +337,7 @@ fun HistoryScreen(
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Icon(
-                                    imageVector = AppIcons.Calendar,
+                                    painter = AppIcons.Calendar,
                                     contentDescription = null,
                                     tint = AppColors.accent,
                                     modifier = Modifier.size(16.dp)
@@ -369,7 +369,7 @@ fun HistoryScreen(
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Icon(
-                                    imageVector = AppIcons.Drink,
+                                    painter = AppIcons.Drink,
                                     contentDescription = null,
                                     tint = AppColors.accent,
                                     modifier = Modifier.size(16.dp)
@@ -400,7 +400,7 @@ fun HistoryScreen(
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Icon(
-                                    imageVector = AppIcons.Fire,
+                                    painter = AppIcons.Fire,
                                     contentDescription = null,
                                     tint = AppColors.statusOrange,
                                     modifier = Modifier.size(16.dp)

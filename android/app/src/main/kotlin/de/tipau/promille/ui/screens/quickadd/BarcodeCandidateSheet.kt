@@ -95,7 +95,7 @@ fun BarcodeCandidateSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = if (candidate.foundInDatabase) AppIcons.Check else AppIcons.Plus,
+                    painter = if (candidate.foundInDatabase) AppIcons.Check else AppIcons.Plus,
                     contentDescription = null,
                     tint = sourceColor,
                     modifier = Modifier.size(16.dp)

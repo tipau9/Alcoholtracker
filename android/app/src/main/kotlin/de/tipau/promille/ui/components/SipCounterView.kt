@@ -137,7 +137,7 @@ fun SipCounterView(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = AppIcons.Minus,
+                    painter = AppIcons.Minus,
                     contentDescription = "Minus",
                     modifier = Modifier.size(22.dp),
                     tint = AppColors.textDim

@@ -129,7 +129,7 @@ fun CreateJamSheet(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = jamVisibilityIcon(option),
+                                painter = jamVisibilityIcon(option),
                                 contentDescription = null,
                                 tint = AppColors.accent,
                                 modifier = Modifier.size(16.dp)
@@ -150,7 +150,7 @@ fun CreateJamSheet(
                         }
                         if (locked) {
                             Icon(
-                                imageVector = AppIcons.Lock,
+                                painter = AppIcons.Lock,
                                 contentDescription = "Anmeldung nötig",
                                 tint = AppColors.textMuted,
                                 modifier = Modifier.size(14.dp)
@@ -713,7 +713,7 @@ fun ArcadePickerSheet(onDismiss: () -> Unit, onPick: (JamArcadeGame) -> Unit) {
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = when (game) {
+                            painter = when (game) {
                                 JamArcadeGame.PERFECT_SECOND -> de.tipau.promille.ui.components.AppIcons.TouchApp
                                 JamArcadeGame.BALANCE_BATTLE -> de.tipau.promille.ui.components.AppIcons.Waveform
                                 JamArcadeGame.REACTION_ROYALE -> de.tipau.promille.ui.components.AppIcons.Bolt
@@ -736,9 +736,10 @@ fun ArcadePickerSheet(onDismiss: () -> Unit, onPick: (JamArcadeGame) -> Unit) {
 }
 
 /** Jam.JamVisibility.icon, shared by the create sheet and the lobby rows. */
-internal fun jamVisibilityIcon(visibility: JamVisibility): ImageVector = when (visibility) {
+@androidx.compose.runtime.Composable
+internal fun jamVisibilityIcon(visibility: JamVisibility): androidx.compose.ui.graphics.painter.Painter = when (visibility) {
     JamVisibility.PROXIMITY_AND_CODE -> de.tipau.promille.ui.components.AppIcons.Waveform
     JamVisibility.FRIENDS_ONLY -> de.tipau.promille.ui.components.AppIcons.PersonPlus
-    JamVisibility.CODE_ONLY -> Icons.Filled.Lock
+    JamVisibility.CODE_ONLY -> androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Filled.Lock)
     JamVisibility.PROXIMITY_ONLY -> de.tipau.promille.ui.components.AppIcons.Location
 }

@@ -371,7 +371,7 @@ fun AppUpdateSheet(
                                 PrimaryButton(
                                     text = "Wiederholen",
                                     onClick = { startCheck() },
-                                    icon = Icons.Filled.Refresh,
+                                    icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Filled.Refresh),
                                     modifier = Modifier.weight(1f)
                                 )
                             }

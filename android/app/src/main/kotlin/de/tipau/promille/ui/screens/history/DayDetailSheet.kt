@@ -172,7 +172,7 @@ fun DayDetailSheet(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Icon(
-                            imageVector = AppIcons.Moon,
+                            painter = AppIcons.Moon,
                             contentDescription = null,
                             tint = AppColors.textMuted,
                             modifier = Modifier.size(32.dp)
@@ -210,7 +210,7 @@ fun DayDetailSheet(
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Icon(
-                                        imageVector = AppIcons.Drop,
+                                        painter = AppIcons.Drop,
                                         contentDescription = null,
                                         tint = bacStatus.color,
                                         modifier = Modifier.size(16.dp)
@@ -243,7 +243,7 @@ fun DayDetailSheet(
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Icon(
-                                        imageVector = AppIcons.Drink,
+                                        painter = AppIcons.Drink,
                                         contentDescription = null,
                                         tint = AppColors.accent,
                                         modifier = Modifier.size(16.dp)
@@ -274,7 +274,7 @@ fun DayDetailSheet(
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Icon(
-                                        imageVector = AppIcons.Fire,
+                                        painter = AppIcons.Fire,
                                         contentDescription = null,
                                         tint = AppColors.statusOrange,
                                         modifier = Modifier.size(16.dp)
@@ -364,7 +364,7 @@ fun DayDetailSheet(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = iconVector,
+                                    painter = iconVector,
                                     contentDescription = null,
                                     tint = levelColor,
                                     modifier = Modifier.size(18.dp)
@@ -516,7 +516,7 @@ private fun DayDetailDrinkRow(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = AppIcons.Drink,
+                    painter = AppIcons.Drink,
                     contentDescription = null,
                     tint = AppColors.accent,
                     modifier = Modifier.size(16.dp)
@@ -557,7 +557,7 @@ private fun DayDetailDrinkRow(
                     },
                     leadingIcon = {
                         Icon(
-                            imageVector = AppIcons.Trash,
+                            painter = AppIcons.Trash,
                             contentDescription = null,
                             tint = AppColors.statusRed,
                             modifier = Modifier.size(18.dp)

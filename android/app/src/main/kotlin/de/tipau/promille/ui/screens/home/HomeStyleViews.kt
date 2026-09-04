@@ -1,5 +1,6 @@
 package de.tipau.promille.ui.screens.home
 
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -355,7 +356,7 @@ fun DrunkHomeView(
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 DrunkQuickButton(
-                    icon = Icons.Filled.List,
+                    icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Filled.List),
                     title = "Drinks",
                     badge = "${drinks.size}",
                     color = AppColors.accent
@@ -468,7 +469,7 @@ private fun soberCountdownText(bac: Double, viewModel: SessionViewModel): String
 
 @Composable
 private fun DrunkQuickButton(
-    icon: ImageVector,
+    icon: Painter,
     title: String,
     badge: String?,
     color: Color,
@@ -516,7 +517,7 @@ private fun DrunkQuickButton(
 
 @Composable
 private fun DrunkPanelHeader(
-    icon: ImageVector,
+    icon: Painter,
     title: String,
     subtitle: String,
     onDismiss: () -> Unit
@@ -603,7 +604,7 @@ private fun DrunkDrinksPanel(
 
     DrunkPanelSheet(onDismiss = onDismiss) {
         DrunkPanelHeader(
-            icon = Icons.Filled.List,
+            icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Filled.List),
             title = "Deine Getränke",
             subtitle = "${drinks.size} heute eingetragen",
             onDismiss = onDismiss
@@ -702,14 +703,14 @@ private fun DrunkDrinkManageCard(
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             DrunkDrinkAction(AppIcons.Pencil, "Bearbeiten", AppColors.accent, Modifier.weight(1f), onEdit)
             DrunkDrinkAction(AppIcons.Copy, "Doppeln", AppColors.textDim, Modifier.weight(1f), onDuplicate)
-            DrunkDrinkAction(Icons.Filled.CheckCircle, "Fertig", AppColors.statusGreen, Modifier.weight(1f), onFinish)
+            DrunkDrinkAction(androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Filled.CheckCircle), "Fertig", AppColors.statusGreen, Modifier.weight(1f), onFinish)
         }
     }
 }
 
 @Composable
 private fun DrunkDrinkAction(
-    icon: ImageVector,
+    icon: Painter,
     title: String,
     color: Color,
     modifier: Modifier = Modifier,
@@ -966,7 +967,7 @@ private fun DrunkMorePanel(
 
 @Composable
 private fun DrunkStatTile(
-    icon: ImageVector,
+    icon: Painter,
     value: String,
     label: String,
     color: Color,

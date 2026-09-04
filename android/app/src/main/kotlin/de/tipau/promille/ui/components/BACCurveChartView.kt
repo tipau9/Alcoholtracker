@@ -141,7 +141,7 @@ fun BACCurveChartView(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = de.tipau.promille.ui.components.AppIcons.Expand,
+                                    painter = de.tipau.promille.ui.components.AppIcons.Expand,
                                     contentDescription = "Vollbild-Kurve",
                                     tint = AppColors.textDim,
                                     modifier = Modifier.size(13.dp)

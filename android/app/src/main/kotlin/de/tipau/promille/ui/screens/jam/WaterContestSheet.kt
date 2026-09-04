@@ -192,7 +192,7 @@ fun WaterContestSheet(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
-                            imageVector = AppIcons.Cup,
+                            painter = AppIcons.Cup,
                             contentDescription = null,
                             tint = AppColors.accent,
                             modifier = Modifier.size(34.dp)

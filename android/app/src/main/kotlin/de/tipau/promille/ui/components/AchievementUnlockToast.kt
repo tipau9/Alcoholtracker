@@ -47,7 +47,7 @@ fun AchievementUnlockToast(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = AppIcons.EmojiEvents,
+                painter = AppIcons.EmojiEvents,
                 contentDescription = null,
                 tint = AppColors.accent,
                 modifier = Modifier.size(20.dp)
@@ -74,7 +74,7 @@ fun AchievementUnlockToast(
 
         // Trailing close icon (11pt semibold in iOS: HomeView.swift:2728-2730)
         Icon(
-            imageVector = AppIcons.Close,
+            painter = AppIcons.Close,
             contentDescription = "Schließen",
             tint = AppColors.textDim,
             modifier = Modifier.size(14.dp)

@@ -332,7 +332,7 @@ fun RgbColorPickerSheet(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = AppIcons.Plus,
+                                painter = AppIcons.Plus,
                                 contentDescription = "Farbe sichern",
                                 tint = Color.White,
                                 modifier = Modifier.size(14.dp)

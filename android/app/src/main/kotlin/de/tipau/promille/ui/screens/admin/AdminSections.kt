@@ -198,7 +198,7 @@ fun AdminFlagRow(flag: AdminFeatureFlag, onEdit: () -> Unit) {
                 }
             }
             Icon(
-                imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                painter = de.tipau.promille.ui.components.AppIcons.ChevronRight,
                 contentDescription = null,
                 tint = AppColors.textMuted,
                 modifier = Modifier.size(16.dp)

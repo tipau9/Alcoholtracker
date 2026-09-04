@@ -268,7 +268,7 @@ fun AddFriendSheet(
                                 ) {
                                     Icon(
                                         // iOS: xmark.circle.fill (swift:135).
-                                        imageVector = de.tipau.promille.ui.components.AppIcons.XCircle,
+                                        painter = de.tipau.promille.ui.components.AppIcons.XCircle,
                                         contentDescription = null,
                                         tint = AppColors.statusRed,
                                         modifier = Modifier.size(16.dp)

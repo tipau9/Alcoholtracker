@@ -768,7 +768,7 @@ private fun ActiveJam(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = de.tipau.promille.ui.components.AppIcons.Waveform,
+                            painter = de.tipau.promille.ui.components.AppIcons.Waveform,
                             contentDescription = null,
                             tint = AppColors.accent,
                             modifier = Modifier.size(20.dp)
@@ -816,7 +816,7 @@ private fun ActiveJam(
                             .clickable { showInvite = true }
                     ) {
                         Icon(
-                            imageVector = de.tipau.promille.ui.components.AppIcons.PersonPlus,
+                            painter = de.tipau.promille.ui.components.AppIcons.PersonPlus,
                             contentDescription = "Einladen",
                             tint = if (canInvite) AppColors.accent else AppColors.textDim,
                             modifier = Modifier.size(16.dp)
@@ -833,7 +833,7 @@ private fun ActiveJam(
                             .clickable { showPrivacy = true }
                     ) {
                         Icon(
-                            imageVector = de.tipau.promille.ui.components.AppIcons.Sliders,
+                            painter = de.tipau.promille.ui.components.AppIcons.Sliders,
                             contentDescription = "Privatsphäre",
                             tint = AppColors.textDim,
                             modifier = Modifier.size(16.dp)
@@ -929,7 +929,7 @@ private fun ActiveJam(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = de.tipau.promille.ui.components.AppIcons.Share,
+                            painter = de.tipau.promille.ui.components.AppIcons.Share,
                             contentDescription = "Teilen",
                             tint = AppColors.accent,
                             modifier = Modifier.size(18.dp)

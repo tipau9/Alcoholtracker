@@ -1,4 +1,5 @@
 package de.tipau.promille.ui.components
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -34,7 +35,7 @@ fun PrimaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
+    icon: Painter? = null,
     isDestructive: Boolean = false,
     enabled: Boolean = true
 ) {
@@ -86,7 +87,7 @@ fun PromilleFAB(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: ImageVector = AppIcons.Plus
+    icon: Painter = AppIcons.Plus
 ) {
     val haptic = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -125,7 +126,7 @@ fun SecondaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
+    icon: Painter? = null,
     enabled: Boolean = true
 ) {
     val haptic = LocalHapticFeedback.current

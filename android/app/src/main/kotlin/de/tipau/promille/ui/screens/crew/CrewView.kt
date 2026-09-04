@@ -300,7 +300,7 @@ fun CrewView(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = de.tipau.promille.ui.components.AppIcons.Waveform,
+                        painter = de.tipau.promille.ui.components.AppIcons.Waveform,
                         contentDescription = "Jam",
                         tint = if (currentJam != null) AppColors.statusGreen else AppColors.accent,
                         modifier = Modifier.size(18.dp)
@@ -318,7 +318,7 @@ fun CrewView(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = de.tipau.promille.ui.components.AppIcons.PersonPlus,
+                        painter = de.tipau.promille.ui.components.AppIcons.PersonPlus,
                         contentDescription = "Freund hinzufügen",
                         tint = AppColors.accent,
                         modifier = Modifier.size(18.dp)
@@ -354,7 +354,7 @@ fun CrewView(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Icon(
-                                imageVector = de.tipau.promille.ui.components.AppIcons.PersonCropCircleBadgePlus,
+                                painter = de.tipau.promille.ui.components.AppIcons.PersonCropCircleBadgePlus,
                                 contentDescription = null,
                                 tint = AppColors.accent,
                                 modifier = Modifier.size(18.dp)
@@ -375,7 +375,7 @@ fun CrewView(
                                 )
                             }
                             Icon(
-                                imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                                painter = de.tipau.promille.ui.components.AppIcons.ChevronRight,
                                 contentDescription = null,
                                 tint = AppColors.textDim,
                                 modifier = Modifier.size(12.dp)
@@ -431,7 +431,7 @@ fun CrewView(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = de.tipau.promille.ui.components.AppIcons.PersonTextRectangle,
+                                painter = de.tipau.promille.ui.components.AppIcons.PersonTextRectangle,
                                 contentDescription = null,
                                 tint = AppColors.accent,
                                 modifier = Modifier.size(24.dp)
@@ -487,7 +487,7 @@ fun CrewView(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = de.tipau.promille.ui.components.AppIcons.Share,
+                                painter = de.tipau.promille.ui.components.AppIcons.Share,
                                 contentDescription = "Teilen",
                                 tint = AppColors.accent,
                                 modifier = Modifier.size(16.dp)
@@ -628,7 +628,7 @@ fun CrewView(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
-                                imageVector = de.tipau.promille.ui.components.AppIcons.PersonPlus,
+                                painter = de.tipau.promille.ui.components.AppIcons.PersonPlus,
                                 contentDescription = null,
                                 tint = AppColors.textMuted,
                                 modifier = Modifier.size(44.dp)
@@ -736,7 +736,7 @@ private fun ActiveJamBanner(jam: de.tipau.promille.bac.Jam, onTap: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = de.tipau.promille.ui.components.AppIcons.Waveform,
+                painter = de.tipau.promille.ui.components.AppIcons.Waveform,
                 contentDescription = null,
                 tint = AppColors.accent,
                 modifier = Modifier.size(18.dp)
@@ -766,7 +766,7 @@ private fun ActiveJamBanner(jam: de.tipau.promille.bac.Jam, onTap: () -> Unit) {
             )
         }
         Icon(
-            imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+            painter = de.tipau.promille.ui.components.AppIcons.ChevronRight,
             contentDescription = null,
             tint = AppColors.textMuted,
             modifier = Modifier.size(13.dp)
@@ -797,7 +797,7 @@ private fun FriendJamBanner(jam: de.tipau.promille.bac.Jam, isJoining: Boolean, 
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = de.tipau.promille.ui.components.AppIcons.Group,
+                painter = de.tipau.promille.ui.components.AppIcons.Group,
                 contentDescription = null,
                 tint = AppColors.accent,
                 modifier = Modifier.size(17.dp)
@@ -990,7 +990,7 @@ private fun SoberBuddyCard(member: CrewMemberEntity, nowSeconds: Long, canDrive:
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = if (canDrive) de.tipau.promille.ui.components.AppIcons.Car else Icons.Filled.Warning,
+                painter = if (canDrive) de.tipau.promille.ui.components.AppIcons.Car else androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Filled.Warning),
                 contentDescription = null,
                 tint = accent,
                 modifier = Modifier.size(17.dp)

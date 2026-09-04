@@ -1,5 +1,6 @@
 package de.tipau.promille.ui.screens.crew
 
+import androidx.compose.ui.graphics.painter.Painter
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -248,7 +249,7 @@ fun PhotoCaptureSheet(
                     ) {
                         if (hasCamera) {
                             SourceButton(
-                                icon = CameraFill,
+                                icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(CameraFill),
                                 label = "Kamera",
                                 modifier = Modifier.weight(1f)
                             ) {
@@ -264,7 +265,7 @@ fun PhotoCaptureSheet(
                             }
                         }
                         SourceButton(
-                            icon = PhotoStack,
+                            icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(PhotoStack),
                             label = "Bibliothek",
                             modifier = Modifier.weight(1f)
                         ) {
@@ -338,7 +339,7 @@ fun PhotoCaptureSheet(
                         modifier = Modifier
                             .padding(horizontal = 20.dp)
                             .padding(bottom = 28.dp),
-                        icon = Icons.Filled.Check,
+                        icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Filled.Check),
                         enabled = canSave
                     )
                 }
@@ -366,7 +367,7 @@ private fun newStagingFile(cacheDir: File): File {
 
 @Composable
 private fun SourceButton(
-    icon: ImageVector,
+    icon: Painter,
     label: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
@@ -382,7 +383,7 @@ private fun SourceButton(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = icon,
+            painter = icon,
             contentDescription = null,
             tint = AppColors.text,
             modifier = Modifier.size(14.dp)

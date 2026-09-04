@@ -1,5 +1,6 @@
 package de.tipau.promille.ui.components
 
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -62,7 +63,7 @@ fun SettingsToggleRow(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
-    icon: ImageVector? = null,
+    icon: Painter? = null,
     iconColor: Color = AppColors.accent
 ) {
     Row(
@@ -77,7 +78,7 @@ fun SettingsToggleRow(
                 contentAlignment = Alignment.CenterStart
             ) {
                 Icon(
-                    imageVector = icon,
+                    painter = icon,
                     contentDescription = null,
                     tint = iconColor,
                     modifier = Modifier.size(16.dp)
@@ -393,7 +394,7 @@ fun SettingsDestructiveRow(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: ImageVector? = null
+    icon: Painter? = null
 ) {
     Row(
         modifier = modifier
@@ -408,7 +409,7 @@ fun SettingsDestructiveRow(
                 contentAlignment = Alignment.CenterStart
             ) {
                 Icon(
-                    imageVector = icon,
+                    painter = icon,
                     contentDescription = null,
                     tint = AppColors.statusRed,
                     modifier = Modifier.size(16.dp)
@@ -435,7 +436,7 @@ fun SettingsNavigationRow(
     subtitle: String? = null,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
+    icon: Painter? = null,
     iconColor: Color = AppColors.accent
 ) {
     Row(
@@ -451,7 +452,7 @@ fun SettingsNavigationRow(
                 contentAlignment = Alignment.CenterStart
             ) {
                 Icon(
-                    imageVector = icon,
+                    painter = icon,
                     contentDescription = null,
                     tint = iconColor,
                     modifier = Modifier.size(16.dp)
@@ -476,7 +477,7 @@ fun SettingsNavigationRow(
             }
         }
         Icon(
-            imageVector = AppIcons.ChevronRight,
+            painter = AppIcons.ChevronRight,
             contentDescription = null,
             tint = AppColors.textDim,
             modifier = Modifier.size(14.dp)

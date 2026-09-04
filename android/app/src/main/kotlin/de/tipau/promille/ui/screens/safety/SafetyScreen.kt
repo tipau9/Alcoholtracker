@@ -133,7 +133,7 @@ fun SafetyScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Icon(
-                                imageVector = AppIcons.Water,
+                                painter = AppIcons.Water,
                                 contentDescription = null,
                                 tint = status.color,
                                 modifier = Modifier.size(12.dp)
@@ -211,7 +211,7 @@ fun SafetyScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = AppIcons.Check,
+                                    painter = AppIcons.Check,
                                     contentDescription = null,
                                     tint = if (isSoberReady) AppColors.statusGreen else AppColors.textDim,
                                     modifier = Modifier.size(14.dp)
@@ -256,7 +256,7 @@ fun SafetyScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = AppIcons.Car,
+                                    painter = AppIcons.Car,
                                     contentDescription = null,
                                     tint = if (isUnderDriveLimit) AppColors.statusGreen else AppColors.textDim,
                                     modifier = Modifier.size(14.dp)
@@ -401,7 +401,7 @@ fun SafetyScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = AppIcons.Car,
+                                    painter = AppIcons.Car,
                                     contentDescription = null,
                                     tint = AppColors.accent,
                                     modifier = Modifier.size(18.dp)
@@ -455,7 +455,7 @@ fun SafetyScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = AppIcons.Phone,
+                                        painter = AppIcons.Phone,
                                         contentDescription = null,
                                         tint = AppColors.statusOrange,
                                         modifier = Modifier.size(18.dp)

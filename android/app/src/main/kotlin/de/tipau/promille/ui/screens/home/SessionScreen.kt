@@ -923,7 +923,7 @@ fun SessionScreen(
 
 @Composable
 private fun InfoTile(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: androidx.compose.ui.graphics.painter.Painter,
     title: String,
     subtitle: String,
     accentColor: androidx.compose.ui.graphics.Color = AppColors.text,
@@ -941,7 +941,7 @@ private fun InfoTile(
                 contentAlignment = Alignment.Center
             ) {
                 androidx.compose.material3.Icon(
-                    imageVector = icon,
+                    painter = icon,
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
                     tint = AppColors.text

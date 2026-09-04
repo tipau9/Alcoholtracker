@@ -1,5 +1,10 @@
 package de.tipau.promille.ui.components
 import androidx.compose.material3.Icon
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.res.painterResource
+import de.tipau.promille.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 
@@ -12,7 +17,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
-object AppIcons {
+internal object AppVectors {
 
     // EvenOdd is opt-in (default NonZero preserves every existing icon here)
     // and needed by any glyph with a cutout: a hole, a slash, a notch.
@@ -1796,4 +1801,87 @@ object AppIcons {
     }
 }
 
-
+// iOS draws every one of these as an SF Symbol, so the ones the symbol dump
+// covers now use the real artwork (imported by tools/sf_import.py) instead of
+// Material geometry wearing an SF name. The rest keep their Material vector:
+// the dump is an SF 1.0/2.0 set and the drink, food and reward symbols this app
+// leans on (wineglass, waterbottle, cup.and.saucer, fork.knife, trophy, crown,
+// drop) all arrived in SF 3, with nothing close enough to stand in.
+object AppIcons {
+    val Minus: Painter @Composable get() = painterResource(R.drawable.sf_minus)
+    val Car: Painter @Composable get() = painterResource(R.drawable.sf_car_fill)
+    val Taxi: Painter @Composable get() = rememberVectorPainter(AppVectors.Taxi)
+    val Train: Painter @Composable get() = painterResource(R.drawable.sf_tram_fill)
+    val Phone: Painter @Composable get() = painterResource(R.drawable.sf_phone_fill)
+    val Pill: Painter @Composable get() = rememberVectorPainter(AppVectors.Pill)
+    val Water: Painter @Composable get() = rememberVectorPainter(AppVectors.Water)
+    val Fire: Painter @Composable get() = painterResource(R.drawable.sf_flame_fill)
+    val Sun: Painter @Composable get() = painterResource(R.drawable.sf_sun_max_fill)
+    val Shield: Painter @Composable get() = painterResource(R.drawable.sf_shield_fill)
+    val Group: Painter @Composable get() = painterResource(R.drawable.sf_person_2_fill)
+    val Lock: Painter @Composable get() = painterResource(R.drawable.sf_lock_fill)
+    val Chart: Painter @Composable get() = painterResource(R.drawable.sf_chart_bar_fill)
+    val Pencil: Painter @Composable get() = painterResource(R.drawable.sf_pencil)
+    val Bolt: Painter @Composable get() = painterResource(R.drawable.sf_bolt_fill)
+    val Settings: Painter @Composable get() = painterResource(R.drawable.sf_gear)
+    val Drink: Painter @Composable get() = rememberVectorPainter(AppVectors.Drink)
+    val Bottle: Painter @Composable get() = rememberVectorPainter(AppVectors.Bottle)
+    val Beer: Painter @Composable get() = rememberVectorPainter(AppVectors.Beer)
+    val Wine: Painter @Composable get() = rememberVectorPainter(AppVectors.Wine)
+    val Shot: Painter @Composable get() = rememberVectorPainter(AppVectors.Shot)
+    val EmojiEvents: Painter @Composable get() = painterResource(R.drawable.sf_rosette)
+    val Restaurant: Painter @Composable get() = rememberVectorPainter(AppVectors.Restaurant)
+    val TouchApp: Painter @Composable get() = rememberVectorPainter(AppVectors.TouchApp)
+    val Copy: Painter @Composable get() = painterResource(R.drawable.sf_doc_on_doc)
+    val Expand: Painter @Composable get() = painterResource(R.drawable.sf_arrow_up_left_and_arrow_down_right)
+    val House: Painter @Composable get() = painterResource(R.drawable.sf_house_fill)
+    val Person: Painter @Composable get() = painterResource(R.drawable.sf_person_fill)
+    val Share: Painter @Composable get() = painterResource(R.drawable.sf_square_and_arrow_up)
+    val Close: Painter @Composable get() = painterResource(R.drawable.sf_xmark)
+    val Check: Painter @Composable get() = painterResource(R.drawable.sf_checkmark)
+    val Info: Painter @Composable get() = painterResource(R.drawable.sf_info_circle)
+    val Bell: Painter @Composable get() = painterResource(R.drawable.sf_bell_fill)
+    val Trash: Painter @Composable get() = painterResource(R.drawable.sf_trash)
+    val ExitToApp: Painter @Composable get() = painterResource(R.drawable.sf_arrow_right_square)
+    val Undo: Painter @Composable get() = painterResource(R.drawable.sf_arrow_uturn_left_circle_fill)
+    val ChevronRight: Painter @Composable get() = painterResource(R.drawable.sf_chevron_right)
+    val ChevronDown: Painter @Composable get() = painterResource(R.drawable.sf_chevron_down)
+    val ChevronUp: Painter @Composable get() = painterResource(R.drawable.sf_chevron_up)
+    val TextFormat: Painter @Composable get() = painterResource(R.drawable.sf_textformat)
+    val Photo: Painter @Composable get() = painterResource(R.drawable.sf_photo)
+    val RadioWave: Painter @Composable get() = painterResource(R.drawable.sf_antenna_radiowaves_left_and_right)
+    val RadioWaveSlash: Painter @Composable get() = rememberVectorPainter(AppVectors.RadioWaveSlash)
+    val EyeSlash: Painter @Composable get() = painterResource(R.drawable.sf_eye_slash)
+    val CloudSlash: Painter @Composable get() = painterResource(R.drawable.sf_icloud_slash)
+    val PersonQuestionMark: Painter @Composable get() = rememberVectorPainter(AppVectors.PersonQuestionMark)
+    val XCircle: Painter @Composable get() = painterResource(R.drawable.sf_xmark_circle_fill)
+    val Gauge: Painter @Composable get() = painterResource(R.drawable.sf_gauge)
+    val Building: Painter @Composable get() = rememberVectorPainter(AppVectors.Building)
+    val PersonPlus: Painter @Composable get() = painterResource(R.drawable.sf_person_badge_plus)
+    val PersonCropCircleBadgePlus: Painter @Composable get() = painterResource(R.drawable.sf_person_crop_circle_badge_plus)
+    val PersonTextRectangle: Painter @Composable get() = painterResource(R.drawable.sf_person_crop_rectangle)
+    val Crown: Painter @Composable get() = rememberVectorPainter(AppVectors.Crown)
+    val PersonXmark: Painter @Composable get() = painterResource(R.drawable.sf_person_crop_circle_badge_xmark)
+    val Key: Painter @Composable get() = rememberVectorPainter(AppVectors.Key)
+    val Calendar: Painter @Composable get() = painterResource(R.drawable.sf_calendar)
+    val History: Painter @Composable get() = painterResource(R.drawable.sf_arrow_counterclockwise)
+    val Waveform: Painter @Composable get() = painterResource(R.drawable.sf_waveform)
+    val FigureStand: Painter @Composable get() = rememberVectorPainter(AppVectors.FigureStand)
+    val FigureStandDress: Painter @Composable get() = rememberVectorPainter(AppVectors.FigureStandDress)
+    val Location: Painter @Composable get() = painterResource(R.drawable.sf_location_fill)
+    val Drop: Painter @Composable get() = rememberVectorPainter(AppVectors.Drop)
+    val Moon: Painter @Composable get() = painterResource(R.drawable.sf_moon_fill)
+    val Eyedropper: Painter @Composable get() = painterResource(R.drawable.sf_eyedropper)
+    val Plus: Painter @Composable get() = painterResource(R.drawable.sf_plus)
+    val Dice: Painter @Composable get() = rememberVectorPainter(AppVectors.Dice)
+    val Camera: Painter @Composable get() = painterResource(R.drawable.sf_camera_fill)
+    val Gamepad: Painter @Composable get() = painterResource(R.drawable.sf_gamecontroller_fill)
+    val Sliders: Painter @Composable get() = painterResource(R.drawable.sf_slider_horizontal_3)
+    val Mug: Painter @Composable get() = rememberVectorPainter(AppVectors.Mug)
+    val Cup: Painter @Composable get() = rememberVectorPainter(AppVectors.Cup)
+    val ForkKnife: Painter @Composable get() = rememberVectorPainter(AppVectors.ForkKnife)
+    val Wind: Painter @Composable get() = painterResource(R.drawable.sf_wind)
+    val Heart: Painter @Composable get() = painterResource(R.drawable.sf_heart_fill)
+    val ArrowDown: Painter @Composable get() = painterResource(R.drawable.sf_arrow_down)
+    val Equal: Painter @Composable get() = painterResource(R.drawable.sf_equal)
+}
