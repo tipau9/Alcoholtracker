@@ -75,6 +75,10 @@ fun CrewView(
     // mySOSActive on the wire for every participant that shares it.
     val jamSOSActive by container.jamService.mySOSActive.collectAsState()
     var showSOSInfo by remember { mutableStateOf(false) }
+    // CrewView.swift:367. The server flag only comes back on the next poll, so
+    // without a local mirror the bar looks dead for a few seconds after a tap.
+    var myFriendSOS by remember { mutableStateOf(false) }
+    LaunchedEffect(myProfile?.sosActive) { myFriendSOS = myProfile?.sosActive == true }
 
     // The ticker also re-renders the list, which matters: every permille shown
     // here is a decayed value and would otherwise freeze at its fetched number.
@@ -130,7 +134,8 @@ fun CrewView(
                 coroutineScope.launch {
                     container.photoMemoryRepository.addMemory(
                         filename = filename,
-                        bacAtTime = null,
+                        // Same source JamView uses: SessionViewModel keeps this fed.
+                        bacAtTime = container.jamService.myCurrentBAC.value.takeIf { it > 0 },
                         caption = caption
                     )
                 }
@@ -335,7 +340,7 @@ fun CrewView(
 
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize()
+                .weight(1f)
                 .padding(horizontal = 20.dp),
             contentPadding = PaddingValues(top = 16.dp, bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -509,64 +514,6 @@ fun CrewView(
                 )
             }
 
-            // Own SOS. Mirrored on the server so friends see it on their
-            // devices, and on the jam wire for the people around you. Hiding it
-            // while signed out cut off the jam half, which needs no account.
-            item {
-                val sosOn = myProfile?.sosActive == true || jamSOSActive
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            if (sosOn) AppColors.statusRed.copy(alpha = 0.20f)
-                            else AppColors.card
-                        )
-                        .border(
-                            if (sosOn) 1.5.dp else 0.5.dp,
-                            if (sosOn) AppColors.statusRed else AppColors.border,
-                            RoundedCornerShape(14.dp)
-                        )
-                        .clickable {
-                            // CrewView.toggleSOS.
-                            if (!isSignedIn && currentJam == null) {
-                                showSOSInfo = true
-                            } else {
-                                if (isSignedIn) {
-                                    coroutineScope.launch { runCatching { supabase.setSOS(!sosOn) } }
-                                }
-                                if (currentJam != null) {
-                                    container.jamService.mySOSActive.value = !sosOn
-                                }
-                            }
-                        }
-                        .padding(14.dp)
-                ) {
-                    de.tipau.promille.ui.components.SOSGlyph(tint = AppColors.statusRed, size = 20.dp)
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            // iOS: .appBodyBold (CrewView.swift:1019).
-                            text = if (sosOn) "SOS ist aktiv" else "SOS senden",
-                            color = if (sosOn) AppColors.statusRed else AppColors.text,
-                            style = de.tipau.promille.AppText.bodyBold
-                        )
-                        Text(
-                            text = when {
-                                sosOn -> "Tippen zum Beenden."
-                                !isSignedIn && currentJam == null ->
-                                    "Dafür brauchst du ein Konto oder einen aktiven Jam."
-                                !isSignedIn -> "Alle im Jam sehen es sofort."
-                                else -> "Deine Crew bekommt sofort eine Meldung."
-                            },
-                            color = AppColors.textDim,
-                            style = de.tipau.promille.AppText.caption
-                        )
-                    }
-                }
-            }
-
             // SOS Alert Banner
             if (sosMembers.isNotEmpty()) {
                 item {
@@ -713,6 +660,84 @@ fun CrewView(
                     }
                 }
             }
+        }
+
+        // Pinned, like iOS' .safeAreaInset(edge: .bottom): an SOS you have to
+        // scroll to find is not an SOS.
+        CrewSOSBar(
+            isActive = myFriendSOS || jamSOSActive,
+            onToggle = {
+                // CrewView.toggleSOS.
+                if (!isSignedIn && currentJam == null) {
+                    showSOSInfo = true
+                } else {
+                    val willActivate = !(myFriendSOS || jamSOSActive)
+                    myFriendSOS = willActivate
+                    if (isSignedIn) {
+                        coroutineScope.launch { runCatching { supabase.setSOS(willActivate) } }
+                    }
+                    if (currentJam != null) {
+                        container.jamService.mySOSActive.value = willActivate
+                    }
+                }
+            }
+        )
+    }
+}
+
+// iOS SOSBar (CrewView.swift:1006-1052).
+@Composable
+private fun CrewSOSBar(isActive: Boolean, onToggle: () -> Unit) {
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+    Column(modifier = Modifier.fillMaxWidth().background(AppColors.background)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(24.dp)
+                .background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(AppColors.background.copy(alpha = 0f), AppColors.background)
+                    )
+                )
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 16.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(
+                    if (isActive) AppColors.statusGreen.copy(alpha = 0.15f) else AppColors.statusRed
+                )
+                .then(
+                    if (isActive) Modifier.border(1.5.dp, AppColors.statusGreen, RoundedCornerShape(18.dp))
+                    else Modifier
+                )
+                .clickable {
+                    // Only activating warns: ending an SOS is a relief, not an alarm.
+                    if (!isActive) haptics.warning()
+                    onToggle()
+                }
+                .padding(vertical = 16.dp),
+        ) {
+            if (isActive) {
+                Icon(
+                    painter = de.tipau.promille.ui.components.AppIcons.Check,
+                    contentDescription = null,
+                    tint = AppColors.statusGreen,
+                    modifier = Modifier.size(16.dp)
+                )
+            } else {
+                de.tipau.promille.ui.components.SOSGlyph(tint = AppColors.background, size = 16.dp)
+            }
+            Text(
+                // iOS: .appBodyBold (CrewView.swift:1030).
+                text = if (isActive) "SOS aktiv. Tippen zum Beenden" else "SOS senden",
+                color = if (isActive) AppColors.statusGreen else AppColors.background,
+                style = de.tipau.promille.AppText.bodyBold
+            )
         }
     }
 }
