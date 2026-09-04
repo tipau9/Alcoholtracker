@@ -171,13 +171,26 @@ class SessionViewModel(
         HydrationCalculator.recommendedGlasses(list)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    private fun zeroBaselineCurve(fromEpochSeconds: Long, hours: Double, intervalMinutes: Double): List<CurvePoint> {
+        val stepSeconds = (intervalMinutes * 60).toLong().coerceAtLeast(60L)
+        val totalSeconds = (hours * 3600).toLong()
+        val points = mutableListOf<CurvePoint>()
+        var t = fromEpochSeconds
+        val end = fromEpochSeconds + totalSeconds
+        while (t <= end) {
+            points.add(CurvePoint(t, 0.0))
+            t += stepSeconds
+        }
+        return points
+    }
+
     // Curve projections for 8h and 24h
     val bacCurve: StateFlow<List<CurvePoint>> = combine(projection, ticker) { proj, now ->
-        proj?.curve(now - 3600, 8.0, 5.0) ?: emptyList()
+        proj?.curve(now - 3600, 8.0, 5.0) ?: zeroBaselineCurve(now - 3600, 8.0, 5.0)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val bacCurve24h: StateFlow<List<CurvePoint>> = combine(projection, ticker) { proj, now ->
-        proj?.curve(now - 3600 * 3, 24.0, 10.0) ?: emptyList()
+        proj?.curve(now - 3600 * 3, 24.0, 10.0) ?: zeroBaselineCurve(now - 3600 * 3, 24.0, 10.0)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Trend calculation (comparing with 5 minutes ago)

@@ -48,6 +48,7 @@ fun BACCurveChartView(
 ) {
     var showFullDay by remember { mutableStateOf(false) }
     var scrubbedPoint by remember { mutableStateOf<CurvePoint?>(null) }
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
     val textMeasurer = rememberTextMeasurer()
 
     val timeFormatter = remember {
@@ -81,7 +82,6 @@ fun BACCurveChartView(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
@@ -185,7 +185,11 @@ fun BACCurveChartView(
                             onTap = { offset ->
                                 val fraction = (offset.x / size.width).coerceIn(0f, 1f)
                                 val targetEpoch = startTime + ((endTime - startTime) * fraction).toLong()
-                                scrubbedPoint = effectivePoints.minByOrNull { kotlin.math.abs(it.epochSeconds - targetEpoch) }
+                                val closest = effectivePoints.minByOrNull { kotlin.math.abs(it.epochSeconds - targetEpoch) }
+                                if (closest != null && closest.epochSeconds != scrubbedPoint?.epochSeconds) {
+                                    haptics.selection()
+                                    scrubbedPoint = closest
+                                }
                             }
                         )
                     }
@@ -196,7 +200,11 @@ fun BACCurveChartView(
                             onDrag = { change, _ ->
                                 val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
                                 val targetEpoch = startTime + ((endTime - startTime) * fraction).toLong()
-                                scrubbedPoint = effectivePoints.minByOrNull { kotlin.math.abs(it.epochSeconds - targetEpoch) }
+                                val closest = effectivePoints.minByOrNull { kotlin.math.abs(it.epochSeconds - targetEpoch) }
+                                if (closest != null && closest.epochSeconds != scrubbedPoint?.epochSeconds) {
+                                    haptics.selection()
+                                    scrubbedPoint = closest
+                                }
                             }
                         )
                     }

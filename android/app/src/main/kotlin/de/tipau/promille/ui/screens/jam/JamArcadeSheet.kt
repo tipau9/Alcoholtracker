@@ -241,11 +241,13 @@ private fun PerfectSecondArea(targetSeconds: Double, onFinish: (Double) -> Unit)
         style = de.tipau.promille.AppText.body,
         textAlign = TextAlign.Center
     )
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
     // The elapsed time is deliberately not shown: reading it off the screen
     // would make the round a test of eyesight rather than of timing.
     PrimaryButton(
         text = if (startedAt == null) "Start" else "Stopp",
         onClick = {
+            haptics.medium()
             val begin = startedAt
             if (begin == null) {
                 startedAt = System.currentTimeMillis()
@@ -259,6 +261,7 @@ private fun PerfectSecondArea(targetSeconds: Double, onFinish: (Double) -> Unit)
 
 @Composable
 private fun ReactionArea(signalAt: Double, nowSeconds: Double, onTap: (Double) -> Unit) {
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
     val armed = nowSeconds >= signalAt
     Box(
         contentAlignment = Alignment.Center,
@@ -274,7 +277,10 @@ private fun ReactionArea(signalAt: Double, nowSeconds: Double, onTap: (Double) -
                 if (armed) AppColors.statusGreen else AppColors.border,
                 RoundedCornerShape(20.dp)
             )
-            .clickable { onTap(System.currentTimeMillis() / 1000.0) }
+            .clickable {
+                haptics.medium()
+                onTap(System.currentTimeMillis() / 1000.0)
+            }
     ) {
         Text(
             if (armed) "JETZT" else "Warten...",

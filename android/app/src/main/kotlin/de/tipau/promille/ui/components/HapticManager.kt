@@ -36,11 +36,22 @@ class HapticManager(
         }
     }
 
+    private fun vibrateEffect(effect: VibrationEffect) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val attrs = android.os.VibrationAttributes.Builder()
+                .setUsage(android.os.VibrationAttributes.USAGE_TOUCH)
+                .build()
+            vibrator?.vibrate(effect, attrs)
+        } else {
+            vibrator?.vibrate(effect)
+        }
+    }
+
     /** UIImpactFeedbackGenerator(style: .light) */
     fun light() {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && vibrator?.hasVibrator() == true) {
-                vibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
+                vibrateEffect(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
             } else {
                 composeHaptics?.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             }
@@ -53,7 +64,7 @@ class HapticManager(
     fun medium() {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && vibrator?.hasVibrator() == true) {
-                vibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
+                vibrateEffect(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
             } else {
                 composeHaptics?.performHapticFeedback(HapticFeedbackType.LongPress)
             }
@@ -66,7 +77,7 @@ class HapticManager(
     fun heavy() {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && vibrator?.hasVibrator() == true) {
-                vibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK))
+                vibrateEffect(VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK))
             } else {
                 composeHaptics?.performHapticFeedback(HapticFeedbackType.LongPress)
             }
@@ -83,9 +94,9 @@ class HapticManager(
                     .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, 0.7f)
                     .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, 1.0f, 100)
                     .compose()
-                vibrator?.vibrate(effect)
+                vibrateEffect(effect)
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && vibrator?.hasVibrator() == true) {
-                vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 30, 80, 45), intArrayOf(0, 150, 0, 255), -1))
+                vibrateEffect(VibrationEffect.createWaveform(longArrayOf(0, 30, 80, 45), intArrayOf(0, 150, 0, 255), -1))
             } else {
                 composeHaptics?.performHapticFeedback(HapticFeedbackType.LongPress)
             }
@@ -102,9 +113,9 @@ class HapticManager(
                     .addPrimitive(VibrationEffect.Composition.PRIMITIVE_THUD, 1.0f)
                     .addPrimitive(VibrationEffect.Composition.PRIMITIVE_THUD, 0.8f, 120)
                     .compose()
-                vibrator?.vibrate(effect)
+                vibrateEffect(effect)
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && vibrator?.hasVibrator() == true) {
-                vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 60, 100, 60), intArrayOf(0, 200, 0, 180), -1))
+                vibrateEffect(VibrationEffect.createWaveform(longArrayOf(0, 60, 100, 60), intArrayOf(0, 200, 0, 180), -1))
             } else {
                 composeHaptics?.performHapticFeedback(HapticFeedbackType.LongPress)
             }
@@ -122,9 +133,9 @@ class HapticManager(
                     .addPrimitive(VibrationEffect.Composition.PRIMITIVE_QUICK_FALL, 1.0f, 80)
                     .addPrimitive(VibrationEffect.Composition.PRIMITIVE_QUICK_FALL, 1.0f, 80)
                     .compose()
-                vibrator?.vibrate(effect)
+                vibrateEffect(effect)
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && vibrator?.hasVibrator() == true) {
-                vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 50, 60, 50, 60, 50), intArrayOf(0, 255, 0, 255, 0, 255), -1))
+                vibrateEffect(VibrationEffect.createWaveform(longArrayOf(0, 50, 60, 50, 60, 50), intArrayOf(0, 255, 0, 255, 0, 255), -1))
             } else {
                 composeHaptics?.performHapticFeedback(HapticFeedbackType.LongPress)
             }
@@ -137,7 +148,7 @@ class HapticManager(
     fun selection() {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && vibrator?.hasVibrator() == true) {
-                vibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
+                vibrateEffect(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
             } else {
                 composeHaptics?.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             }
