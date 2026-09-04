@@ -52,6 +52,7 @@ fun HistoryScreen(
 ) {
     val visibleMonth by viewModel.visibleMonth.collectAsState()
     val monthStats by viewModel.monthStats.collectAsState()
+    val monthTrend by viewModel.monthTrend.collectAsState()
     val statusSkin by viewModel.statusSkin.collectAsState()
 
     var selectedDayStats by remember { mutableStateOf<DayStats?>(null) }
@@ -449,6 +450,62 @@ fun HistoryScreen(
                                     color = AppColors.textDim,
                                     style = de.tipau.promille.AppText.micro
                                 )
+                            }
+                        }
+                    }
+
+                    // Vormonats-Trend (matches iOS HistoryView.swift:344-389 trendRow)
+                    monthTrend?.let { trend ->
+                        val prev = trend.previousTotalDrinks
+                        val diff = monthStats.totalDrinks - prev
+                        val pct = if (prev > 0) {
+                            kotlin.math.round((kotlin.math.abs(diff).toDouble() / prev.toDouble()) * 100).toInt()
+                        } else 0
+
+                        val (iconVector, iconColor, trendText) = when {
+                            diff < 0 -> Triple(
+                                AppIcons.ArrowDownRight,
+                                AppColors.statusGreen,
+                                "$pct% weniger Drinks als im Vormonat"
+                            )
+                            diff > 0 -> Triple(
+                                AppIcons.ArrowUpRight,
+                                AppColors.statusOrange,
+                                "$pct% mehr Drinks als im Vormonat"
+                            )
+                            else -> Triple(
+                                AppIcons.Equal,
+                                AppColors.textDim,
+                                "Gleich viele Drinks wie im Vormonat"
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = iconVector,
+                                contentDescription = null,
+                                tint = iconColor,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                                Text(
+                                    text = trendText,
+                                    color = AppColors.textDim,
+                                    style = de.tipau.promille.AppText.micro
+                                )
+                                if (trend.limitedToDays != null) {
+                                    Text(
+                                        text = "Vergleich: jeweils die ersten ${trend.limitedToDays} Tage",
+                                        color = AppColors.textMuted,
+                                        fontSize = 9.sp
+                                    )
+                                }
                             }
                         }
                     }

@@ -57,6 +57,11 @@ data class MonthStats(
     val days: Map<LocalDate, DayStats>
 )
 
+data class MonthTrend(
+    val previousTotalDrinks: Int,
+    val limitedToDays: Int?   // non-null when the running month is compared partially
+)
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class HistoryViewModel(
     private val drinkRepository: DrinkRepository,
@@ -102,6 +107,37 @@ class HistoryViewModel(
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MonthStats(0, 0, 0, emptyMap()))
+
+    val monthTrend: StateFlow<MonthTrend?> = visibleMonth.flatMapLatest { month ->
+        val prevMonth = month.minusMonths(1)
+        val windowStart = prevMonth.atDay(1)
+            .atStartOfDay(zone).toEpochSecond()
+        val windowEnd = month.plusMonths(1).atDay(1)
+            .atStartOfDay(zone).toEpochSecond()
+
+        drinkRepository.getDrinksForHistory(windowStart, windowEnd).map { entities ->
+            val drinks = entities.map { DrinkRepository.toDomainDrink(it) }
+
+            // Running month: compare only the elapsed day range (matches iOS HistoryViewModel.swift:120)
+            val isCurrentMonth = month == YearMonth.now()
+            val limit: Int? = if (isCurrentMonth) LocalDate.now().dayOfMonth else null
+
+            // Compute previous month's drinks, optionally limited to the same elapsed days
+            val prevGrouped = drinks.groupBy { LogicalDay.dateOf(it.timestampEpochSeconds, zone) }
+                .filter { (date, _) -> YearMonth.from(date) == prevMonth }
+
+            val prevDrinks = if (limit != null) {
+                prevGrouped.filter { (date, _) -> date.dayOfMonth <= limit }
+                    .values.sumOf { dayDrinks -> dayDrinks.count { it.abv > 0 } }
+            } else {
+                prevGrouped.values.sumOf { dayDrinks -> dayDrinks.count { it.abv > 0 } }
+            }
+
+            // Only show trend if previous month had drinks (matches iOS: guard prev.totalDrinks > 0 else return nil)
+            if (prevDrinks <= 0) null
+            else MonthTrend(previousTotalDrinks = prevDrinks, limitedToDays = limit)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     fun previousMonth() {
         visibleMonth.value = visibleMonth.value.minusMonths(1)

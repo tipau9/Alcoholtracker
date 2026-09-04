@@ -59,7 +59,8 @@ fun PromilleNavigation(
             sessionEventRepository = container.sessionEventRepository,
             bacPublisher = container.bacPublisher,
             jamService = container.jamService,
-            applicationContext = application.applicationContext
+            applicationContext = application.applicationContext,
+            waterLog = container.waterLog
         )
     }
     val historyViewModel = remember {

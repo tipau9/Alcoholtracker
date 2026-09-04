@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
 import de.tipau.promille.appSpec
 import de.tipau.promille.bac.Drink
+import de.tipau.promille.bac.HangoverLevel
 import de.tipau.promille.bac.StomachStatus
 import de.tipau.promille.data.DrinkTemplateEntity
 import de.tipau.promille.ui.components.AppIcons
@@ -491,20 +492,34 @@ fun InfoWidget(
  */
 @Composable
 fun HangoverForecastCard(
-    currentBAC: Double
+    level: HangoverLevel
 ) {
-    val (katerText, iconTint) = when {
-        currentBAC > 1.2 -> "Starker Kater möglich" to AppColors.statusRed
-        currentBAC > 0.6 -> "Leichter Kater möglich" to AppColors.statusOrange
-        else -> "Kein Kater erwartet" to AppColors.statusGreen
+    val levelColor = when (level) {
+        HangoverLevel.NONE -> AppColors.statusGreen
+        HangoverLevel.MILD -> AppColors.statusYellow
+        HangoverLevel.MODERATE -> AppColors.statusOrange
+        HangoverLevel.STRONG -> AppColors.statusRed
+        HangoverLevel.SEVERE -> AppColors.statusRed
+        HangoverLevel.LETHAL -> AppColors.statusDarkRed
+    }
+
+    val iconVector = when (level) {
+        HangoverLevel.NONE -> AppIcons.Check
+        HangoverLevel.MILD -> AppIcons.Moon
+        HangoverLevel.MODERATE, HangoverLevel.STRONG -> AppIcons.Info
+        HangoverLevel.SEVERE, HangoverLevel.LETHAL -> Icons.Filled.Warning
     }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(AppColors.card)
-            .border(0.5.dp, AppColors.border, RoundedCornerShape(16.dp))
+            .background(if (level.isLethal) levelColor.copy(alpha = 0.10f) else AppColors.card)
+            .border(
+                if (level.isLethal) 1.5.dp else 0.5.dp,
+                if (level.isLethal) levelColor else AppColors.border,
+                RoundedCornerShape(16.dp)
+            )
             .padding(16.dp)
     ) {
         Row(
@@ -515,21 +530,21 @@ fun HangoverForecastCard(
                 modifier = Modifier
                     .size(32.dp)
                     .clip(CircleShape)
-                    .background(iconTint.copy(alpha = 0.13f)),
+                    .background(levelColor.copy(alpha = 0.13f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (currentBAC > 0.6) Icons.Filled.Warning else AppIcons.Check,
+                    imageVector = iconVector,
                     contentDescription = null,
-                    tint = iconTint,
+                    tint = levelColor,
                     modifier = Modifier.size(16.dp)
                 )
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.weight(1f)) {
                 Text(
-                    text = katerText,
-                    color = AppColors.text,
+                    text = level.germanLabel,
+                    color = if (level.isLethal) levelColor else AppColors.text,
                     fontSize = 16.sp,
                     fontFamily = AppSerif,
                     fontWeight = FontWeight.Light

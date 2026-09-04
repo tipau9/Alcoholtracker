@@ -1804,6 +1804,34 @@ object AppIcons {
         horizontalLineToRelative(14f)
         close()
     }
+
+    val ArrowUpRight: ImageVector = buildIcon("ArrowUpRight") {
+        moveTo(6.41f, 19f)
+        lineTo(5f, 17.59f)
+        lineTo(14.59f, 8f)
+        horizontalLineTo(7f)
+        verticalLineTo(6f)
+        horizontalLineToRelative(11f)
+        verticalLineToRelative(11f)
+        horizontalLineToRelative(-2f)
+        verticalLineTo(9.41f)
+        lineTo(6.41f, 19f)
+        close()
+    }
+
+    val ArrowDownRight: ImageVector = buildIcon("ArrowDownRight") {
+        moveTo(6.41f, 5f)
+        lineTo(5f, 6.41f)
+        lineTo(14.59f, 16f)
+        horizontalLineTo(7f)
+        verticalLineToRelative(2f)
+        horizontalLineToRelative(11f)
+        verticalLineTo(7f)
+        horizontalLineToRelative(-2f)
+        verticalLineToRelative(7.59f)
+        lineTo(6.41f, 5f)
+        close()
+    }
 }
 
 

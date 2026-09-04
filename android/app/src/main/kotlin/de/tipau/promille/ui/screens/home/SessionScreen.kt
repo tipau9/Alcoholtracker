@@ -88,6 +88,7 @@ fun SessionScreen(
     val sipTotalML by viewModel.sipTotalML.collectAsState()
     val sipPromille by viewModel.sipPromille.collectAsState()
     val currentSipVolume by viewModel.currentSipVolume.collectAsState()
+    val hangoverForecast by viewModel.hangoverForecast.collectAsState()
 
     val scope = rememberCoroutineScope()
     val crewMembers by (container?.crewRepository?.members
@@ -759,7 +760,7 @@ fun SessionScreen(
 
             // Kater-Prognose Card
             item {
-                HangoverForecastCard(currentBAC = bac)
+                HangoverForecastCard(level = hangoverForecast)
             }
 
             // Weekly Limit Card

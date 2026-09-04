@@ -43,7 +43,8 @@ class SessionViewModel(
     private val sessionEventRepository: SessionEventRepository,
     private val bacPublisher: BACPublisher,
     private val jamService: JamService,
-    private val applicationContext: Context? = null
+    private val applicationContext: Context? = null,
+    private val waterLog: WaterLog? = null
 ) : ViewModel() {
 
     private val zone = ZoneId.systemDefault()
@@ -153,6 +154,33 @@ class SessionViewModel(
             proj.hoursUntil(limit, System.currentTimeMillis() / 1000)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val hangoverForecast: StateFlow<HangoverLevel> = combine(projection, drinks, ticker) { proj, drinkList, nowSeconds ->
+        if (proj == null || drinkList.isEmpty()) return@combine HangoverLevel.NONE
+        // Gate on session peak, not live BAC: the forecast would otherwise
+        // vanish while sobering down, exactly when it matters.
+        // (Mirrors iOS SessionViewModel.swift:758-759)
+        val peak = proj.peakBac()
+        if (peak <= 0.3) return@combine HangoverLevel.NONE
+
+        val waterGlasses = (waterLog?.glassesToday(nowSeconds)
+            ?: applicationContext?.let { ctx ->
+                val prefs = ctx.getSharedPreferences("com.tipau.waterlog.v1", Context.MODE_PRIVATE)
+                val store = WaterLogStore(ctx)
+                WaterLog(store).glassesToday(nowSeconds)
+            })?.toDouble()
+
+        HangoverPredictor.predict(
+            drinks = drinkList,
+            profile = proj.profile,
+            waterGlasses = waterGlasses,
+            stomachStatus = proj.stomachStatus,
+            conservative = proj.conservative,
+            vomitEpochSeconds = proj.vomitEpochSeconds,
+            meals = proj.meals,
+            pace = pace
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HangoverLevel.NONE)
 
     val totalCalories: StateFlow<Int> = drinks.map { list ->
         list.sumOf { it.calories }
