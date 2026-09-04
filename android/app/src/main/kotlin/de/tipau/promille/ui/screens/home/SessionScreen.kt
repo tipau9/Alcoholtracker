@@ -455,7 +455,10 @@ fun SessionScreen(
                     skin = skin,
                     trend = trend,
                     isEditMode = isWidgetEditMode,
-                    onLongClick = { isWidgetEditMode = true }
+                    onLongClick = {
+                        haptics.medium()
+                        isWidgetEditMode = true
+                    }
                 )
             }
 
@@ -492,8 +495,8 @@ fun SessionScreen(
 
             // Customizable sections driven by sectionOrder with jiggle & reorder support
             sectionOrder.forEachIndexed { secIdx, secId ->
-                val moveUp: (() -> Unit)? = if (isWidgetEditMode && secIdx > 0) { { moveSection(secId, -1) } } else null
-                val moveDown: (() -> Unit)? = if (isWidgetEditMode && secIdx < sectionOrder.size - 1) { { moveSection(secId, 1) } } else null
+                val moveUp: (() -> Unit)? = if (isWidgetEditMode && secIdx > 0) { { haptics.selection(); moveSection(secId, -1) } } else null
+                val moveDown: (() -> Unit)? = if (isWidgetEditMode && secIdx < sectionOrder.size - 1) { { haptics.selection(); moveSection(secId, 1) } } else null
 
                 when (secId) {
                     "stomachStatus" -> {

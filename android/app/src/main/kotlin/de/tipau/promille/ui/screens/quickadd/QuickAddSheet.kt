@@ -1076,6 +1076,7 @@ private fun QAFavoriteCard(
     onLongPress: () -> Unit
 ) {
     val estimatedBac = (template.volume * (template.abv / 100.0) * 0.8) / (75.0 * 0.68)
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
 
     Column(
         modifier = Modifier
@@ -1085,7 +1086,10 @@ private fun QAFavoriteCard(
             .border(0.5.dp, AppColors.border, RoundedCornerShape(16.dp))
             .combinedClickable(
                 onClick = onClick,
-                onLongClick = onLongPress
+                onLongClick = {
+                    haptics.medium()
+                    onLongPress()
+                }
             )
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -1180,6 +1184,7 @@ private fun QADrinkRow(
     onTuneClick: () -> Unit
 ) {
     val estimatedBac = (template.volume * (template.abv / 100.0) * 0.8) / (75.0 * 0.68)
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
 
     Row(
         modifier = Modifier
@@ -1187,7 +1192,10 @@ private fun QADrinkRow(
             .clip(RoundedCornerShape(8.dp))
             .combinedClickable(
                 onClick = onClick,
-                onLongClick = onTuneClick
+                onLongClick = {
+                    haptics.medium()
+                    onTuneClick()
+                }
             )
             .padding(vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically

@@ -79,6 +79,7 @@ fun HydrationWidget(
     val netLabel = status.germanLabel
 
     val netValueString = if (net >= 0) "+${net.toInt()} ml" else "${net.toInt()} ml"
+    val haptics = rememberHapticManager()
 
     Column(
         modifier = modifier
@@ -112,11 +113,13 @@ fun HydrationWidget(
                 loggedGlasses = loggedGlasses,
                 loggedML = loggedML,
                 onAddGlass = {
+                    haptics.light()
                     val currentNow = System.currentTimeMillis() / 1000
                     waterLog.addGlassToday(currentNow)
                     loggedGlasses = waterLog.glassesToday(currentNow)
                 },
                 onRemoveGlass = {
+                    haptics.light()
                     val currentNow = System.currentTimeMillis() / 1000
                     waterLog.removeGlassToday(currentNow)
                     loggedGlasses = waterLog.glassesToday(currentNow)
@@ -207,11 +210,13 @@ fun HydrationWidget(
                 loggedGlasses = loggedGlasses,
                 loggedML = loggedML,
                 onAddGlass = {
+                    haptics.light()
                     val currentNow = System.currentTimeMillis() / 1000
                     waterLog.addGlassToday(currentNow)
                     loggedGlasses = waterLog.glassesToday(currentNow)
                 },
                 onRemoveGlass = {
+                    haptics.light()
                     val currentNow = System.currentTimeMillis() / 1000
                     waterLog.removeGlassToday(currentNow)
                     loggedGlasses = waterLog.glassesToday(currentNow)

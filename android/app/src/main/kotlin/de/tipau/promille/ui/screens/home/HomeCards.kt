@@ -1,5 +1,7 @@
 package de.tipau.promille.ui.screens.home
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
@@ -14,6 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -28,14 +31,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
@@ -166,6 +178,7 @@ fun EditableWidgetContainer(
             content()
         }
     } else {
+        val haptics = de.tipau.promille.ui.components.rememberHapticManager()
         val infiniteTransition = rememberInfiniteTransition(label = "jiggle")
         val jiggleAngle by infiniteTransition.animateFloat(
             initialValue = -0.75f,
@@ -202,7 +215,10 @@ fun EditableWidgetContainer(
                             .clip(CircleShape)
                             .background(AppColors.card)
                             .border(0.5.dp, AppColors.border, CircleShape)
-                            .clickable(onClick = onMoveUp),
+                            .clickable {
+                                haptics.selection()
+                                onMoveUp()
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -220,7 +236,10 @@ fun EditableWidgetContainer(
                             .clip(CircleShape)
                             .background(AppColors.card)
                             .border(0.5.dp, AppColors.border, CircleShape)
-                            .clickable(onClick = onMoveDown),
+                            .clickable {
+                                haptics.selection()
+                                onMoveDown()
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -238,7 +257,10 @@ fun EditableWidgetContainer(
                         .size(28.dp)
                         .clip(CircleShape)
                         .background(AppColors.background)
-                        .clickable(onClick = onToggleActive),
+                        .clickable {
+                            haptics.selection()
+                            onToggleActive()
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     if (isActive) {
@@ -851,9 +873,91 @@ fun WeeklyLimitCard(used: Int, limit: Int) {
 }
 
 /**
- * Horizontal Favourites Strip matching iOS FavouritesStrip
+ * Small "+1" that rises out of the tapped chip and fades, matching iOS FlyUpPlusOne (HomeView.swift:2448-2467).
+ */
+@Composable
+private fun FlyUpPlusOne(trigger: Int) {
+    val offsetY = remember { Animatable(-6f) }
+    val alpha = remember { Animatable(0f) }
+
+    LaunchedEffect(trigger) {
+        if (trigger > 0) {
+            offsetY.snapTo(-6f)
+            alpha.snapTo(1f)
+            delay(30)
+            launch {
+                offsetY.animateTo(-30f, animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing))
+            }
+            launch {
+                alpha.animateTo(0f, animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing))
+            }
+        }
+    }
+
+    if (trigger > 0 && alpha.value > 0f) {
+        Text(
+            text = "+1",
+            color = AppColors.accent,
+            style = de.tipau.promille.AppText.captionBold,
+            modifier = Modifier
+                .offset(y = offsetY.value.dp)
+                .graphicsLayer { this.alpha = alpha.value }
+        )
+    }
+}
+
+/**
+ * Quick Drink Chip matching iOS QuickDrinkChip (HomeView.swift:2435-2444)
  */
 @OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun QuickDrinkChip(
+    template: DrinkTemplateEntity,
+    onAdd: () -> Unit,
+    onLongPress: () -> Unit
+) {
+    var addTrigger by remember { mutableIntStateOf(0) }
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+
+    Box(contentAlignment = Alignment.TopCenter) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clip(CircleShape)
+                .background(AppColors.card)
+                .border(0.5.dp, AppColors.border, CircleShape)
+                .combinedClickable(
+                    onClick = {
+                        addTrigger++
+                        haptics.light()
+                        onAdd()
+                    },
+                    onLongClick = {
+                        haptics.medium()
+                        onLongPress()
+                    }
+                )
+                .padding(horizontal = 14.dp, vertical = 9.dp)
+        ) {
+            DrinkIconView(
+                iconName = template.iconName,
+                name = template.name,
+                categoryRaw = template.categoryRaw,
+                size = 14.dp,
+                tint = AppColors.accent
+            )
+            Spacer(Modifier.width(8.dp))
+            // iOS: .appCaption (HomeView.swift:2424).
+            Text(template.name, color = AppColors.text, style = de.tipau.promille.AppText.caption, maxLines = 1)
+        }
+
+        FlyUpPlusOne(trigger = addTrigger)
+    }
+}
+
+/**
+ * Horizontal Favourites Strip matching iOS FavouritesStrip
+ */
 @Composable
 fun FavouritesStrip(
     templates: List<DrinkTemplateEntity>,
@@ -868,29 +972,11 @@ fun FavouritesStrip(
             modifier = Modifier.horizontalScroll(rememberScrollState())
         ) {
             templates.forEach { template ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(AppColors.card)
-                        .border(0.5.dp, AppColors.border, CircleShape)
-                        .combinedClickable(
-                            onClick = { onAdd(template) },
-                            onLongClick = { onLongPress(template) }
-                        )
-                        .padding(horizontal = 14.dp, vertical = 9.dp)
-                ) {
-                    DrinkIconView(
-                        iconName = template.iconName,
-                        name = template.name,
-                        categoryRaw = template.categoryRaw,
-                        size = 14.dp,
-                        tint = AppColors.accent
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    // iOS: .appCaption (HomeView.swift:2424).
-                    Text(template.name, color = AppColors.text, style = de.tipau.promille.AppText.caption, maxLines = 1)
-                }
+                QuickDrinkChip(
+                    template = template,
+                    onAdd = { onAdd(template) },
+                    onLongPress = { onLongPress(template) }
+                )
             }
         }
     }
@@ -906,6 +992,7 @@ fun SafetyActionsCard(
     onToggleSOS: () -> Unit
 ) {
     var showSOSConfirm by remember { mutableStateOf(false) }
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
 
     if (showSOSConfirm) {
         de.tipau.promille.ui.components.AppAlertDialog(
@@ -917,6 +1004,7 @@ fun SafetyActionsCard(
             isDestructive = true,
             onConfirm = {
                 showSOSConfirm = false
+                haptics.warning()
                 onToggleSOS()
             },
             dismissText = "Abbrechen"
@@ -932,7 +1020,10 @@ fun SafetyActionsCard(
                     .weight(1f)
                     .clip(RoundedCornerShape(14.dp))
                     .background(AppColors.accent)
-                    .clickable(onClick = onCallRide)
+                    .clickable {
+                        haptics.light()
+                        onCallRide()
+                    }
                     .padding(vertical = 14.dp)
             ) {
                 Row(
@@ -961,7 +1052,10 @@ fun SafetyActionsCard(
                     .clip(RoundedCornerShape(14.dp))
                     .background(AppColors.statusDarkRed.copy(alpha = if (sosActive) 0.35f else 0.15f))
                     .border(0.5.dp, AppColors.statusRed.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
-                    .clickable { showSOSConfirm = true }
+                    .clickable {
+                        haptics.warning()
+                        showSOSConfirm = true
+                    }
                     .padding(vertical = 14.dp)
             ) {
                 Row(
@@ -1374,6 +1468,13 @@ fun DrinkRowView(
     }
     val isStillDrinking = nowSeconds < timing.drinkingFinishedAt
 
+    val density = LocalDensity.current
+    val thresholdPx = with(density) { 72.dp.toPx() }
+    val maxDragPx = with(density) { 110.dp.toPx() }
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+    val offsetX = remember { Animatable(0f) }
+    val coroutineScope = rememberCoroutineScope()
+
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     if (showDeleteConfirm) {
@@ -1395,100 +1496,211 @@ fun DrinkRowView(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(AppColors.card)
-            .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
-            .combinedClickable(
-                onClick = onEdit,
-                onLongClick = { showDeleteConfirm = true }
-            )
-            .padding(12.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        // Action hints revealed behind the card while dragging
+        val isRight = offsetX.value >= 0
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clip(RoundedCornerShape(14.dp))
+                .background((if (isRight) AppColors.statusGreen else AppColors.statusRed).copy(alpha = 0.18f))
+                .padding(horizontal = 18.dp),
+            contentAlignment = Alignment.Center
         ) {
-            // Drink icon container: 36x36, 10dp radius, accent 0.10 bg
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(AppColors.accent.copy(alpha = 0.10f)),
-                contentAlignment = Alignment.Center
-            ) {
-                DrinkIconView(
-                    drink = drink,
-                    size = 18.dp,
-                    tint = AppColors.accent
-                )
-            }
-
-            // Name and stats
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                // iOS: .appBodyBold (HomeView.swift:2566).
-                Text(
-                    text = drink.name,
-                    color = AppColors.text,
-                    style = de.tipau.promille.AppText.bodyBold,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                )
-                // iOS: .appMicro (HomeView.swift:2570).
-                Text(
-                    text = "${drink.volumeML.toInt()} ml · ${String.format(Locale.GERMANY, "%.1f", drink.abv)} % · ${drink.calories} kcal",
-                    color = AppColors.textDim,
-                    style = de.tipau.promille.AppText.micro
-                )
-            }
-
-            // Timestamps and Finish Button
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                // Duplicate hint (revealed on drag right)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.graphicsLayer {
+                        alpha = if (offsetX.value > with(density) { 8.dp.toPx() }) 1f else 0f
+                    }
+                ) {
+                    Icon(
+                        imageVector = AppIcons.Copy,
+                        contentDescription = "Duplizieren",
+                        tint = AppColors.statusGreen,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Duplizieren",
+                        color = AppColors.statusGreen,
+                        style = de.tipau.promille.AppText.captionBold
+                    )
+                }
+
+                // Delete hint (revealed on drag left)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.graphicsLayer {
+                        alpha = if (offsetX.value < with(density) { -8.dp.toPx() }) 1f else 0f
+                    }
+                ) {
+                    Text(
+                        text = "Entfernen",
+                        color = AppColors.statusRed,
+                        style = de.tipau.promille.AppText.captionBold
+                    )
+                    Icon(
+                        imageVector = AppIcons.Trash,
+                        contentDescription = "Entfernen",
+                        tint = AppColors.statusRed,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+
+        // Front Card
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                .clip(RoundedCornerShape(14.dp))
+                .background(AppColors.card)
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+                .pointerInput(drink.id) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            coroutineScope.launch {
+                                val current = offsetX.value
+                                if (current > thresholdPx) {
+                                    haptics.success()
+                                    onDuplicate()
+                                } else if (current < -thresholdPx) {
+                                    haptics.warning()
+                                    onDelete()
+                                }
+                                offsetX.animateTo(
+                                    0f,
+                                    animationSpec = spring(
+                                        dampingRatio = 0.8f,
+                                        stiffness = Spring.StiffnessMedium
+                                    )
+                                )
+                            }
+                        },
+                        onDragCancel = {
+                            coroutineScope.launch {
+                                offsetX.animateTo(
+                                    0f,
+                                    animationSpec = spring(
+                                        dampingRatio = 0.8f,
+                                        stiffness = Spring.StiffnessMedium
+                                    )
+                                )
+                            }
+                        },
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            coroutineScope.launch {
+                                val target = (offsetX.value + dragAmount).coerceIn(-maxDragPx, maxDragPx)
+                                offsetX.snapTo(target)
+                            }
+                        }
+                    )
+                }
+                .combinedClickable(
+                    onClick = onEdit,
+                    onLongClick = {
+                        haptics.medium()
+                        showDeleteConfirm = true
+                    }
+                )
+                .padding(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Drink icon container: 36x36, 10dp radius, accent 0.10 bg
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(AppColors.accent.copy(alpha = 0.10f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    DrinkIconView(
+                        drink = drink,
+                        size = 18.dp,
+                        tint = AppColors.accent
+                    )
+                }
+
+                // Name and stats
                 Column(
-                    horizontalAlignment = Alignment.End,
+                    modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    // iOS: .appMicro (HomeView.swift:2579).
+                    // iOS: .appBodyBold (HomeView.swift:2566).
                     Text(
-                        text = startTimeStr,
-                        color = AppColors.textMuted,
+                        text = drink.name,
+                        color = AppColors.text,
+                        style = de.tipau.promille.AppText.bodyBold,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                    // iOS: .appMicro (HomeView.swift:2570).
+                    Text(
+                        text = "${drink.volumeML.toInt()} ml · ${String.format(Locale.GERMANY, "%.1f", drink.abv)} % · ${drink.calories} kcal",
+                        color = AppColors.textDim,
                         style = de.tipau.promille.AppText.micro
                     )
-                    // iOS: .appMicro (HomeView.swift:2582).
-                    Text(
-                        text = "bis $finishedTimeStr",
-                        color = AppColors.textMuted,
-                        style = de.tipau.promille.AppText.micro
-                    )
-                    if (timing.absorptionFinishedAt - timing.drinkingFinishedAt > 60) {
-                        // iOS: .appMicro (HomeView.swift:2586).
+                }
+
+                // Timestamps and Finish Button
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        // iOS: .appMicro (HomeView.swift:2579).
                         Text(
-                            text = "Aufnahme bis $absorptionTimeStr",
+                            text = startTimeStr,
                             color = AppColors.textMuted,
                             style = de.tipau.promille.AppText.micro
                         )
-                    }
-                }
-
-                if (isStillDrinking) {
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .clickable(onClick = onFinish),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.CheckCircle,
-                            contentDescription = "Jetzt fertig",
-                            tint = AppColors.statusGreen,
-                            modifier = Modifier.size(24.dp)
+                        // iOS: .appMicro (HomeView.swift:2582).
+                        Text(
+                            text = "bis $finishedTimeStr",
+                            color = AppColors.textMuted,
+                            style = de.tipau.promille.AppText.micro
                         )
+                        if (timing.absorptionFinishedAt - timing.drinkingFinishedAt > 60) {
+                            // iOS: .appMicro (HomeView.swift:2586).
+                            Text(
+                                text = "Aufnahme bis $absorptionTimeStr",
+                                color = AppColors.textMuted,
+                                style = de.tipau.promille.AppText.micro
+                            )
+                        }
+                    }
+
+                    if (isStillDrinking) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .clickable(onClick = onFinish),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.CheckCircle,
+                                contentDescription = "Jetzt fertig",
+                                tint = AppColors.statusGreen,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                 }
             }
