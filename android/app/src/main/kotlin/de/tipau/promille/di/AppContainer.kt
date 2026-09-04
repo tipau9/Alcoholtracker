@@ -132,6 +132,7 @@ class AppContainer(context: Context) {
     val achievementService = de.tipau.promille.service.AchievementService(
         drinkRepository = drinkRepository,
         userProfileRepository = userProfileRepository,
-        crewRepository = crewRepository
+        crewRepository = crewRepository,
+        context = context
     )
 }

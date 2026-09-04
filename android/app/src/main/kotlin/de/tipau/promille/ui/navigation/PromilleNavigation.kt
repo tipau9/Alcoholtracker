@@ -189,7 +189,8 @@ fun PromilleNavigation(
         val unlockedIds by application.container.achievementService.unlockedIds.collectAsState()
         AchievementsScreen(
             unlockedIds = unlockedIds,
-            onDismiss = { showAchievements = false }
+            onDismiss = { showAchievements = false },
+            onDeleteAchievement = { application.container.achievementService.delete(it) }
         )
     }
 }

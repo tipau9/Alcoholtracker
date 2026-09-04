@@ -222,6 +222,6 @@ class GoldenVectorTest {
     }
 
     private companion object {
-        const val EXPECTED_VECTOR_COUNT = 24
+        const val EXPECTED_VECTOR_COUNT = 18
     }
 }

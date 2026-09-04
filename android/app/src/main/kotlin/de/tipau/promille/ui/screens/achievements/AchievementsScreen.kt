@@ -1,9 +1,11 @@
 package de.tipau.promille.ui.screens.achievements
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -54,11 +56,15 @@ private fun achievementIcon(icon: String): ImageVector {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AchievementsScreen(
     unlockedIds: Set<String>,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onDeleteAchievement: ((String) -> Unit)? = null
 ) {
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+    var achievementToDelete by remember { mutableStateOf<Achievement?>(null) }
     val total = AchievementCatalog.ALL.size
     val unlocked = unlockedIds.size
     val progress by animateFloatAsState(
@@ -66,6 +72,21 @@ fun AchievementsScreen(
         animationSpec = AppMotion.springMotion(),
         label = "progress"
     )
+
+    achievementToDelete?.let { achievement ->
+        de.tipau.promille.ui.components.AppAlertDialog(
+            onDismissRequest = { achievementToDelete = null },
+            title = "Achievement zurücksetzen?",
+            text = "\"${achievement.title}\" wird wieder als gesperrt markiert.",
+            confirmText = "Entfernen",
+            isDestructive = true,
+            onConfirm = {
+                onDeleteAchievement?.invoke(achievement.id)
+                achievementToDelete = null
+            },
+            dismissText = "Abbrechen"
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -144,9 +165,16 @@ fun AchievementsScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             items(AchievementCatalog.ALL) { achievement ->
+                val isUnlocked = achievement.id in unlockedIds
                 AchievementCard(
                     achievement = achievement,
-                    isUnlocked = achievement.id in unlockedIds
+                    isUnlocked = isUnlocked,
+                    onDelete = if (isUnlocked && onDeleteAchievement != null) {
+                        {
+                            haptics.warning()
+                            achievementToDelete = achievement
+                        }
+                    } else null
                 )
             }
         }
@@ -154,10 +182,12 @@ fun AchievementsScreen(
 }
 
 // MARK: - AchievementCard matching iOS AchievementsView.swift:103-182
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AchievementCard(
     achievement: Achievement,
-    isUnlocked: Boolean
+    isUnlocked: Boolean,
+    onDelete: (() -> Unit)? = null
 ) {
     val color = accentColor(achievement.accent)
 
@@ -171,6 +201,14 @@ private fun AchievementCard(
                 0.5.dp,
                 if (isUnlocked) color.copy(alpha = 0.28f) else AppColors.border.copy(alpha = 0.6f),
                 RoundedCornerShape(16.dp)
+            )
+            .then(
+                if (onDelete != null) {
+                    Modifier.combinedClickable(
+                        onClick = {},
+                        onLongClick = onDelete
+                    )
+                } else Modifier
             )
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)

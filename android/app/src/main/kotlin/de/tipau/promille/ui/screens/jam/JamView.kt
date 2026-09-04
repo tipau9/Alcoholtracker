@@ -560,6 +560,7 @@ private fun ActiveJam(
     // unreadable pick, a jam that ended meanwhile, a photo still too big at the
     // last quality step - so the reason travels in the state instead of a flag.
     val context = LocalContext.current
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
     val receivedPhotos by jamService.receivedPhotos.collectAsState()
     var photoError by remember { mutableStateOf<String?>(null) }
     var fullscreenPhoto by remember { mutableStateOf<MultipeerService.JamPhotoPayload?>(null) }
@@ -911,7 +912,18 @@ private fun ActiveJam(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                                val clip = android.content.ClipData.newPlainText("Jam Code", jam.code)
+                                clipboard?.setPrimaryClip(clip)
+                                haptics.success()
+                                android.widget.Toast.makeText(context, "Jam-Code kopiert", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                         // iOS: .appCaption (ActiveJamView.swift:279).
                         Text("Jam Code", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                         Text(
@@ -930,7 +942,21 @@ private fun ActiveJam(
                             .size(40.dp)
                             .clip(CircleShape)
                             .background(AppColors.accent.copy(alpha = 0.12f))
-                            .border(0.5.dp, AppColors.accent.copy(alpha = 0.3f), CircleShape),
+                            .border(0.5.dp, AppColors.accent.copy(alpha = 0.3f), CircleShape)
+                            .clickable {
+                                haptics.light()
+                                val sendIntent = android.content.Intent().apply {
+                                    action = android.content.Intent.ACTION_SEND
+                                    putExtra(
+                                        android.content.Intent.EXTRA_TEXT,
+                                        "Tritt meinem Jam bei! Code: ${jam.code}"
+                                    )
+                                    type = "text/plain"
+                                }
+                                context.startActivity(
+                                    android.content.Intent.createChooser(sendIntent, "Jam-Code teilen")
+                                )
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(

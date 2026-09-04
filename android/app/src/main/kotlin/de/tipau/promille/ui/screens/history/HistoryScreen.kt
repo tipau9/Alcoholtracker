@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
 import de.tipau.promille.bac.BacStatus
+import de.tipau.promille.bac.DayMood
 import de.tipau.promille.color
 import de.tipau.promille.repository.DayNoteRepository
 import de.tipau.promille.repository.DrinkRepository
@@ -60,6 +61,7 @@ fun HistoryScreen(
         .collectAsState(initial = emptyList())
     val allNotes by dayNoteRepository.getNotesBetween("0000-01-01", "9999-12-31")
         .collectAsState(initial = emptyList())
+    val notesByDay = remember(allNotes) { allNotes.associateBy { it.day } }
     val profileEntity by (userProfileRepository?.profile ?: kotlinx.coroutines.flow.flowOf(null))
         .collectAsState(initial = null)
     val profile = remember(profileEntity) {
@@ -300,7 +302,19 @@ fun HistoryScreen(
                                                 fontSize = 13.sp,
                                                 fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
                                             )
-                                            if (hadAlcohol && !isFuture) {
+                                            val note = notesByDay[date.toString()]
+                                            val mood = note?.let { DayMood.from(it.moodRaw) }
+                                            val hasMood = mood != null && mood != DayMood.NEUTRAL
+
+                                            // Mood wins over the generic dot: the cell background already
+                                            // signals alcohol, so the emoji adds information instead of hiding it (HistoryView.swift:286).
+                                            if (hasMood && !isFuture) {
+                                                Text(
+                                                    text = mood!!.emoji,
+                                                    fontSize = 8.sp,
+                                                    lineHeight = 8.sp
+                                                )
+                                            } else if (hadAlcohol && !isFuture) {
                                                 Box(
                                                     modifier = Modifier
                                                         .size(4.dp)

@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.*
 
 
 
+import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -118,6 +119,7 @@ fun CrewView(
     val memories by container.photoMemoryRepository.memories.collectAsState(initial = emptyList())
     var selectedMemory by remember { mutableStateOf<PhotoMemoryEntity?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
 
     // CrewView.swift:174-176 opens PhotoCaptureView rather than a bare picker,
     // so the camera, the preview and the caption field all sit behind this.
@@ -412,7 +414,8 @@ fun CrewView(
             }
 
             // MyCodeCard (matches iOS CrewView.swift 1:1)
-            val code = myProfile?.friendCode?.takeIf { it.isNotEmpty() } ?: "Q6SG34"
+            val rawCode = myProfile?.friendCode.orEmpty()
+            val code = rawCode.ifEmpty { "······" }
             item {
                 Box(
                     modifier = Modifier
@@ -441,7 +444,17 @@ fun CrewView(
                             )
                         }
                         Spacer(Modifier.width(16.dp))
-                        Column(Modifier.weight(1f)) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable(enabled = rawCode.isNotEmpty()) {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                                    val clip = android.content.ClipData.newPlainText("Freundescode", rawCode)
+                                    clipboard?.setPrimaryClip(clip)
+                                    haptics.success()
+                                    android.widget.Toast.makeText(context, "Freundescode kopiert", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                        ) {
                             Text(
                                 // iOS: .appCaption (CrewView.swift:550).
                                 text = "Mein Code",
@@ -472,27 +485,28 @@ fun CrewView(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(AppColors.accent.copy(alpha = 0.12f))
-                                .border(0.5.dp, AppColors.accent.copy(alpha = 0.3f), CircleShape)
-                            .clickable {
-                                val sendIntent = android.content.Intent().apply {
-                                    action = android.content.Intent.ACTION_SEND
-                                    putExtra(
-                                        android.content.Intent.EXTRA_TEXT,
-                                        "Mein Freundes-Code für promille.: $code"
+                                .background(AppColors.accent.copy(alpha = if (rawCode.isNotEmpty()) 0.12f else 0.05f))
+                                .border(0.5.dp, AppColors.accent.copy(alpha = if (rawCode.isNotEmpty()) 0.3f else 0.1f), CircleShape)
+                                .clickable(enabled = rawCode.isNotEmpty()) {
+                                    haptics.light()
+                                    val sendIntent = android.content.Intent().apply {
+                                        action = android.content.Intent.ACTION_SEND
+                                        putExtra(
+                                            android.content.Intent.EXTRA_TEXT,
+                                            "Mein Freundes-Code für promille.: $rawCode"
+                                        )
+                                        type = "text/plain"
+                                    }
+                                    context.startActivity(
+                                        android.content.Intent.createChooser(sendIntent, "Freundescode teilen")
                                     )
-                                    type = "text/plain"
-                                }
-                                context.startActivity(
-                                    android.content.Intent.createChooser(sendIntent, "Freundescode teilen")
-                                )
-                            },
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = de.tipau.promille.ui.components.AppIcons.Share,
                                 contentDescription = "Teilen",
-                                tint = AppColors.accent,
+                                tint = if (rawCode.isNotEmpty()) AppColors.accent else AppColors.textMuted,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
