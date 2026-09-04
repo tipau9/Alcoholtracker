@@ -176,10 +176,7 @@ fun AmountInputSheet(
         val factor = if (template.volume > 0) volume / template.volume else 1.0
         (template.calories * factor).toInt()
     }
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
-        confirmValueChange = { it != SheetValue.Hidden }
-    )
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,

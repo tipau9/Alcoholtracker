@@ -37,9 +37,14 @@ import de.tipau.promille.R
 import de.tipau.promille.bac.DrinkCategory
 import de.tipau.promille.data.CustomMixDao
 import de.tipau.promille.data.DrinkEntity
+import de.tipau.promille.data.CustomMixEntity
 import de.tipau.promille.data.DrinkTemplateEntity
+import de.tipau.promille.data.MixIngredient
 import de.tipau.promille.fixedSp
+import de.tipau.promille.network.CommunityMixRow
 import de.tipau.promille.network.SupabaseService
+import de.tipau.promille.network.blobJson
+import de.tipau.promille.network.fetchCommunityMixes
 import de.tipau.promille.network.contributeDrink
 import de.tipau.promille.network.lookupCommunityBarcode
 import de.tipau.promille.repository.DrinkTemplateRepository
@@ -49,7 +54,9 @@ import de.tipau.promille.service.DrinkTemplateCandidate
 import de.tipau.promille.ui.components.AppIcons
 import de.tipau.promille.ui.components.DrinkIconView
 import de.tipau.promille.ui.components.SectionLabel
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
 import java.util.Locale
 import java.util.UUID
 import de.tipau.promille.AppSerif
@@ -143,10 +150,7 @@ fun QuickAddSheet(
     supabase: SupabaseService? = null,
     customMixDao: CustomMixDao? = null
 ) {
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
-        confirmValueChange = { it != SheetValue.Hidden }
-    )
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
     var showMixCreator by remember { mutableStateOf(false) }
@@ -159,6 +163,7 @@ fun QuickAddSheet(
     var barcodeCandidate by remember { mutableStateOf<DrinkTemplateCandidate?>(null) }
     var barcodeError by remember { mutableStateOf<String?>(null) }
     var activeTab by remember { mutableStateOf(QATab.DRINKS) }
+    val savedMixes by (customMixDao?.getAll() ?: emptyFlow()).collectAsState(initial = emptyList())
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -527,131 +532,146 @@ fun QuickAddSheet(
                     .fillMaxWidth()
                     .weight(1f)
             ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 90.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Favorites Section
-                    if (searchQuery.isBlank() && selectedCategory == null && favorites.isNotEmpty()) {
-                        item {
-                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                SectionLabel("FAVORITEN")
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    val favGrid = favorites.take(2)
-                                    favGrid.forEach { fav ->
-                                        Box(modifier = Modifier.weight(1f)) {
-                                            QAFavoriteCard(
-                                                template = fav,
-                                                onClick = { selectedTemplateForAmount = fav },
-                                                onLongPress = { selectedTemplateForAmount = fav }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // If searching or category filtered: Flat Category Card
-                    if (searchQuery.isNotBlank() || selectedCategory != null) {
-                        if (filteredTemplates.isEmpty()) {
+                // iOS: QuickAddSheet.swift:131 shows the drink catalog while searching
+                // or on the Getraenke tab, and the mixes tab otherwise.
+                if (searchQuery.isNotBlank() || activeTab == QATab.DRINKS) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 90.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Favorites Section
+                        if (searchQuery.isBlank() && selectedCategory == null && favorites.isNotEmpty()) {
                             item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 48.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    SectionLabel("FAVORITEN")
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
-                                        // iOS: .appBody (QuickAddSheet.swift:682).
-                                        Text(
-                                            text = "Kein Ergebnis für \"$searchQuery\"",
-                                            color = AppColors.textDim,
-                                            style = de.tipau.promille.AppText.body
-                                        )
-                                        TextButton(onClick = { showCustomBrandDialog = true }) {
-                                            // iOS: .appCaptionBold (QuickAddSheet.swift:686).
-                                            Text(
-                                                "Als eigene Marke erfassen",
-                                                color = AppColors.accent,
-                                                style = de.tipau.promille.AppText.captionBold
-                                            )
+                                        val favGrid = favorites.take(2)
+                                        favGrid.forEach { fav ->
+                                            Box(modifier = Modifier.weight(1f)) {
+                                                QAFavoriteCard(
+                                                    template = fav,
+                                                    onClick = { selectedTemplateForAmount = fav },
+                                                    onLongPress = { selectedTemplateForAmount = fav }
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
-                        } else {
-                            item {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    SectionLabel("ERGEBNISSE (${filteredTemplates.size})")
-                                    QACategoryContainer(
-                                        templates = filteredTemplates,
-                                        onDrinkClick = { selectedTemplateForAmount = it },
-                                        onTuneClick = { selectedTemplateForAmount = it }
-                                    )
-                                }
-                            }
                         }
-                    } else {
-                        // Grouped by categories matching iOS QACategorySection
-                        val orderedCategories = listOf(
-                            "beer" to "BIER",
-                            "wine" to "WEIN",
-                            "sparkling" to "SEKT & SCHAUMWEIN",
-                            "spirits" to "SPIRITUOSEN",
-                            "liqueur" to "LIKÖR",
-                            "cocktail" to "COCKTAILS & LONGDRINKS",
-                            "cider" to "CIDER",
-                            "water" to "WASSER",
-                            "other" to "ALKOHOLFREI"
-                        )
 
-                        orderedCategories.forEach { (catKey, catTitle) ->
-                            val itemsInCat = templatesByCategory[catKey] ?: emptyList()
-                            if (itemsInCat.isNotEmpty()) {
+                        // If searching or category filtered: Flat Category Card
+                        if (searchQuery.isNotBlank() || selectedCategory != null) {
+                            if (filteredTemplates.isEmpty()) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 48.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            // iOS: .appBody (QuickAddSheet.swift:682).
+                                            Text(
+                                                text = "Kein Ergebnis für \"$searchQuery\"",
+                                                color = AppColors.textDim,
+                                                style = de.tipau.promille.AppText.body
+                                            )
+                                            TextButton(onClick = { showCustomBrandDialog = true }) {
+                                                // iOS: .appCaptionBold (QuickAddSheet.swift:686).
+                                                Text(
+                                                    "Als eigene Marke erfassen",
+                                                    color = AppColors.accent,
+                                                    style = de.tipau.promille.AppText.captionBold
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
                                 item {
                                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        SectionLabel(catTitle)
+                                        SectionLabel("ERGEBNISSE (${filteredTemplates.size})")
                                         QACategoryContainer(
-                                            templates = itemsInCat,
+                                            templates = filteredTemplates,
                                             onDrinkClick = { selectedTemplateForAmount = it },
                                             onTuneClick = { selectedTemplateForAmount = it }
                                         )
                                     }
                                 }
                             }
-                        }
-                    }
-                }
+                        } else {
+                            // Grouped by categories matching iOS QACategorySection
+                            val orderedCategories = listOf(
+                                "beer" to "BIER",
+                                "wine" to "WEIN",
+                                "sparkling" to "SEKT & SCHAUMWEIN",
+                                "spirits" to "SPIRITUOSEN",
+                                "liqueur" to "LIKÖR",
+                                "cocktail" to "COCKTAILS & LONGDRINKS",
+                                "cider" to "CIDER",
+                                "water" to "WASSER",
+                                "other" to "ALKOHOLFREI"
+                            )
 
-                // Pinned Bottom Bar matching iOS QABottomBar
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(AppColors.background)
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceAround,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        QAActionChip(icon = de.tipau.promille.ui.components.AppIcons.Bottle, title = "Flasche", onClick = { showBottleMode = true })
-                        if (onStartSipCounter != null) {
-                            QAActionChip(icon = de.tipau.promille.ui.components.AppIcons.TouchApp, title = "Schlucke", onClick = { showSipPicker = true })
+                            orderedCategories.forEach { (catKey, catTitle) ->
+                                val itemsInCat = templatesByCategory[catKey] ?: emptyList()
+                                if (itemsInCat.isNotEmpty()) {
+                                    item {
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            SectionLabel(catTitle)
+                                            QACategoryContainer(
+                                                templates = itemsInCat,
+                                                onDrinkClick = { selectedTemplateForAmount = it },
+                                                onTuneClick = { selectedTemplateForAmount = it }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
-                        QAActionChip(icon = de.tipau.promille.ui.components.AppIcons.Water, title = "Quick Mix", onClick = { showQuickMix = true })
-                        QAActionChip(icon = de.tipau.promille.ui.components.AppIcons.Drink, title = "Cocktail", onClick = { showMixCreator = true })
-                        QAActionChip(icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Filled.Add), title = "Eigene", onClick = { showCustomBrandDialog = true }, isFilledAccent = true)
                     }
+
+                    // Pinned Bottom Bar matching iOS QABottomBar
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .background(AppColors.background)
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceAround,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            QAActionChip(icon = de.tipau.promille.ui.components.AppIcons.Bottle, title = "Flasche", onClick = { showBottleMode = true })
+                            if (onStartSipCounter != null) {
+                                QAActionChip(icon = de.tipau.promille.ui.components.AppIcons.TouchApp, title = "Schlucke", onClick = { showSipPicker = true })
+                            }
+                            QAActionChip(icon = de.tipau.promille.ui.components.AppIcons.Water, title = "Quick Mix", onClick = { showQuickMix = true })
+                            QAActionChip(icon = de.tipau.promille.ui.components.AppIcons.Drink, title = "Cocktail", onClick = { showMixCreator = true })
+                            QAActionChip(icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Filled.Add), title = "Eigene", onClick = { showCustomBrandDialog = true }, isFilledAccent = true)
+                        }
+                    }
+                } else {
+                    QAMixesTab(
+                        savedMixes = savedMixes,
+                        supabase = supabase,
+                        templateRepository = templateRepository,
+                        customMixDao = customMixDao,
+                        onAdd = { drink ->
+                            onDrinkAdded(drink)
+                            onDismiss()
+                        }
+                    )
                 }
             }
         }
@@ -966,10 +986,7 @@ private fun SipTemplatePicker(
         }
     }
 
-    val pickerSheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
-        confirmValueChange = { it != SheetValue.Hidden }
-    )
+    val pickerSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -1109,4 +1126,321 @@ private fun SipTemplatePicker(
         }
     }
 }
+}
+
+// MARK: - QAMixesTab
+// 1:1 port of QAMixesTab in QuickAddSheet.swift:1262-1379. Own saved mixes come
+// from Room, the community list from the anon-key endpoint the mix creator also
+// shares to.
+@Composable
+private fun QAMixesTab(
+    savedMixes: List<CustomMixEntity>,
+    supabase: SupabaseService?,
+    templateRepository: DrinkTemplateRepository,
+    customMixDao: CustomMixDao?,
+    onAdd: (DrinkEntity) -> Unit
+) {
+    var communityMixes by remember { mutableStateOf<List<CommunityMixRow>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    val adoptedIDs = remember { mutableStateListOf<String>() }
+    val hiddenIDs = remember { mutableStateListOf<String>() }
+    val coroutineScope = rememberCoroutineScope()
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+
+    LaunchedEffect(supabase) {
+        communityMixes = supabase?.let { runCatching { it.fetchCommunityMixes() }.getOrNull() } ?: emptyList()
+        loading = false
+    }
+
+    val visibleCommunity = communityMixes.filter { it.id !in hiddenIDs }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 40.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        if (savedMixes.isNotEmpty()) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SectionLabel("MEINE MISCHE")
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(AppColors.card)
+                            .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+                            .padding(horizontal = 14.dp)
+                    ) {
+                        savedMixes.forEachIndexed { index, mix ->
+                            val ingredients = mixIngredients(mix.ingredientsJson)
+                            QAMySavedMixRow(
+                                name = mix.name,
+                                ingredients = ingredients,
+                                onDrink = { onAdd(mixDrink(mix.name, ingredients)) },
+                                onDelete = {
+                                    coroutineScope.launch { customMixDao?.delete(mix) }
+                                    haptics.medium()
+                                }
+                            )
+                            if (index < savedMixes.lastIndex) {
+                                HorizontalDivider(
+                                    color = AppColors.border.copy(alpha = 0.5f),
+                                    modifier = Modifier.padding(start = 48.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionLabel("COMMUNITY")
+                when {
+                    loading -> {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = AppColors.accent)
+                        }
+                    }
+                    visibleCommunity.isEmpty() -> {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            DrinkIconView(iconName = "cocktail", tint = AppColors.textMuted, size = 32.dp)
+                            // iOS: .appCaption (QuickAddSheet.swift:1326).
+                            Text(
+                                text = "Keine Community-Mische verfügbar.",
+                                color = AppColors.textDim,
+                                style = de.tipau.promille.AppText.caption
+                            )
+                        }
+                    }
+                    else -> {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            visibleCommunity.forEach { row ->
+                                QACommunityMixRow(
+                                    row = row,
+                                    isAdopted = row.id in adoptedIDs,
+                                    onAdopt = {
+                                        coroutineScope.launch {
+                                            adoptMix(row, templateRepository, customMixDao)
+                                        }
+                                        adoptedIDs.add(row.id)
+                                        haptics.success()
+                                    },
+                                    onDrink = { onAdd(mixDrink(row.name, row.ingredients)) },
+                                    onHide = {
+                                        hiddenIDs.add(row.id)
+                                        haptics.light()
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QAMySavedMixRow(
+    name: String,
+    ingredients: List<MixIngredient>,
+    onDrink: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val volume = ingredients.sumOf { it.volume }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(AppColors.accent.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center
+        ) {
+            DrinkIconView(iconName = "cocktail", size = 15.dp)
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            // iOS: .appBody (QuickAddSheet.swift:1397).
+            Text(
+                text = name,
+                color = AppColors.text,
+                style = de.tipau.promille.AppText.body,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+            // iOS: .appMicro (QuickAddSheet.swift:1401).
+            Text(
+                text = "${volume.toInt()} ml · ${String.format(Locale.GERMANY, "%.1f", mixAbv(ingredients))} %",
+                color = AppColors.textDim,
+                style = de.tipau.promille.AppText.micro
+            )
+        }
+        Icon(
+            painter = AppIcons.Trash,
+            contentDescription = "Löschen",
+            tint = AppColors.statusRed,
+            modifier = Modifier
+                .size(30.dp)
+                .clickable(onClick = onDelete)
+                .padding(8.dp)
+        )
+        Icon(
+            imageVector = Icons.Filled.Add,
+            contentDescription = "Trinken",
+            tint = AppColors.accent,
+            modifier = Modifier
+                .size(30.dp)
+                .clickable(onClick = onDrink)
+                .padding(5.dp)
+        )
+    }
+}
+
+@Composable
+private fun QACommunityMixRow(
+    row: CommunityMixRow,
+    isAdopted: Boolean,
+    onAdopt: () -> Unit,
+    onDrink: () -> Unit,
+    onHide: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(AppColors.card)
+            .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(AppColors.accent.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center
+        ) {
+            DrinkIconView(iconName = "cocktail", size = 16.dp)
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            // iOS: .appBody (QuickAddSheet.swift:1446).
+            Text(
+                text = row.name,
+                color = AppColors.text,
+                style = de.tipau.promille.AppText.body,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+            // iOS: .appMicro (QuickAddSheet.swift:1450).
+            Text(
+                text = "${row.ingredients.size} Zutaten · ${row.totalVolume.toInt()} ml · " +
+                    "${String.format(Locale.GERMANY, "%.1f", row.totalAbv)} %",
+                color = AppColors.textDim,
+                style = de.tipau.promille.AppText.micro
+            )
+        }
+        Icon(
+            painter = AppIcons.Minus,
+            contentDescription = "Ausblenden",
+            tint = AppColors.textDim,
+            modifier = Modifier
+                .size(28.dp)
+                .clickable(onClick = onHide)
+                .padding(7.dp)
+        )
+        if (isAdopted) {
+            Text(
+                text = "Trinken",
+                color = AppColors.accent,
+                style = de.tipau.promille.AppText.captionBold,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(AppColors.accent.copy(alpha = 0.12f))
+                    .clickable(onClick = onDrink)
+                    .padding(horizontal = 12.dp, vertical = 7.dp)
+            )
+        } else {
+            // iOS: .appCaptionBold (QuickAddSheet.swift:1477).
+            Text(
+                text = "Übernehmen",
+                color = AppColors.accent,
+                style = de.tipau.promille.AppText.captionBold,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(AppColors.accent.copy(alpha = 0.12f))
+                    .border(0.5.dp, AppColors.accent.copy(alpha = 0.3f), RoundedCornerShape(50))
+                    .clickable(onClick = onAdopt)
+                    .padding(horizontal = 12.dp, vertical = 7.dp)
+            )
+        }
+    }
+}
+
+private fun mixIngredients(json: String): List<MixIngredient> =
+    runCatching { blobJson.decodeFromString<List<MixIngredient>>(json) }.getOrDefault(emptyList())
+
+private fun mixAbv(ingredients: List<MixIngredient>): Double {
+    val volume = ingredients.sumOf { it.volume }
+    if (volume <= 0) return 0.0
+    return ingredients.sumOf { it.volume * (it.abv / 100.0) } / volume * 100.0
+}
+
+private fun mixDrink(name: String, ingredients: List<MixIngredient>): DrinkEntity {
+    val volume = ingredients.sumOf { it.volume }
+    val alcoholMl = ingredients.sumOf { it.volume * (it.abv / 100.0) }
+    return DrinkEntity(
+        id = UUID.randomUUID().toString(),
+        name = name.ifBlank { "Mix" },
+        volume = volume,
+        abv = mixAbv(ingredients),
+        calories = (alcoholMl * 0.789 * 7).toInt(),
+        iconName = "cocktail",
+        categoryRaw = "cocktail",
+        timestampEpochSeconds = System.currentTimeMillis() / 1000
+    )
+}
+
+// Same shape CustomMixCreatorSheet.persistMix writes, so an adopted community
+// mix lands in the catalog exactly like a self-built one.
+private suspend fun adoptMix(
+    row: CommunityMixRow,
+    templateRepository: DrinkTemplateRepository,
+    customMixDao: CustomMixDao?
+) {
+    val id = UUID.randomUUID().toString()
+    customMixDao?.insert(
+        CustomMixEntity(
+            id = id,
+            name = row.name,
+            ingredientsJson = blobJson.encodeToString(row.ingredients),
+            createdAt = System.currentTimeMillis() / 1000
+        )
+    )
+    val volume = row.ingredients.sumOf { it.volume }
+    val alcoholMl = row.ingredients.sumOf { it.volume * (it.abv / 100.0) }
+    templateRepository.insertLocalTemplate(
+        DrinkTemplateEntity(
+            id = id,
+            name = row.name,
+            categoryRaw = "cocktail",
+            volume = volume,
+            abv = mixAbv(row.ingredients),
+            calories = (alcoholMl * 0.789 * 7).toInt(),
+            iconName = "cocktail",
+            isCustom = true
+        )
+    )
 }

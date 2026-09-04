@@ -100,20 +100,31 @@ fun QuickMixSheet(
     }
 
     val canAdd = selectedSpirit != null && selectedMixer != null
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
-        confirmValueChange = { it != SheetValue.Hidden }
-    )
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    // Floating card, same framing as QuickAddSheet and the other sheets it opens
+    // from, instead of an edge-to-edge sheet.
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = AppColors.background,
+        containerColor = Color.Transparent,
         scrimColor = Color.Black.copy(alpha = 0.65f),
-        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
         dragHandle = null
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp, top = 16.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(AppColors.background)
+                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+        ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.92f)
+        ) {
             // Header
             Row(
                 modifier = Modifier
@@ -250,9 +261,13 @@ fun QuickMixSheet(
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        text = template.iconName.ifEmpty { "" },
-                                        fontSize = 20.sp
+                                    // iOS: DrinkIconView(iconName:) (QuickMixSheet.swift:385).
+                                    // The template carries an SF Symbol name, so
+                                    // printing it as text showed "flame.fill".
+                                    de.tipau.promille.ui.components.DrinkIconView(
+                                        template = template,
+                                        tint = if (isSelected) AppColors.background else AppColors.accent,
+                                        size = 22.dp
                                     )
                                 }
 
@@ -389,15 +404,12 @@ fun QuickMixSheet(
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        text = when (mixer.category) {
-                                            MixerCategory.ENERGY -> "Energy"
-                                            MixerCategory.JUICE -> "Saft"
-                                            MixerCategory.WATER -> "Wasser"
-                                            MixerCategory.TEA -> "Tee"
-                                            else -> "Softdrink"
-                                        },
-                                        fontSize = 16.sp
+                                    de.tipau.promille.ui.components.DrinkIconView(
+                                        iconName = mixer.icon,
+                                        name = mixer.name,
+                                        categoryRaw = mixerIconCategory(mixer.category),
+                                        tint = if (isSelected) AppColors.accent else AppColors.textDim,
+                                        size = 18.dp
                                     )
                                 }
 
@@ -468,5 +480,15 @@ fun QuickMixSheet(
                 )
             }
         }
+        }
     }
+}
+
+// Mixer symbols are SF names DrinkIcons has no direct entry for, so hand it a
+// category it does know and let the keyword scan pick the glyph.
+private fun mixerIconCategory(category: MixerCategory): String = when (category) {
+    MixerCategory.JUICE -> "juice"
+    MixerCategory.WATER -> "water"
+    MixerCategory.TEA -> "coffee_tea"
+    else -> "soft_drink"
 }

@@ -180,9 +180,12 @@ fun CrewView(
         )
     }
 
-    if (selectedMember != null) {
+    // The sheet's delete row calls onDelete() then onDismiss(), so selectedMember
+    // is already null by the time the coroutine runs. Hold the member in a local,
+    // same as memberToDelete below.
+    selectedMember?.let { member ->
         FriendProfileSheet(
-            member = selectedMember!!,
+            member = member,
             onDismiss = { selectedMember = null },
             onUpdate = { updated ->
                 coroutineScope.launch {
@@ -191,7 +194,7 @@ fun CrewView(
             },
             onDelete = {
                 coroutineScope.launch {
-                    crewRepository.delete(selectedMember!!)
+                    crewRepository.delete(member)
                 }
             },
             supabase = supabase
