@@ -22,6 +22,9 @@ interface SessionEventDao {
     @Query("SELECT * FROM meal_event WHERE timestamp >= :sinceEpochSeconds ORDER BY timestamp ASC")
     fun getMealEventsSince(sinceEpochSeconds: Long): Flow<List<MealEventEntity>>
 
+    @Query("SELECT * FROM meal_event WHERE timestamp >= :startEpochSeconds AND timestamp < :endEpochSeconds ORDER BY timestamp ASC")
+    fun getMealEventsBetween(startEpochSeconds: Long, endEpochSeconds: Long): Flow<List<MealEventEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMealEvent(event: MealEventEntity)
 
@@ -34,6 +37,9 @@ interface SessionEventDao {
     // Breathalyzer Readings
     @Query("SELECT * FROM breathalyzer_reading WHERE timestamp >= :sinceEpochSeconds ORDER BY timestamp ASC")
     fun getBreathalyzerReadingsSince(sinceEpochSeconds: Long): Flow<List<BreathalyzerReadingEntity>>
+
+    @Query("SELECT * FROM breathalyzer_reading WHERE timestamp >= :startEpochSeconds AND timestamp < :endEpochSeconds ORDER BY timestamp ASC")
+    fun getBreathalyzerReadingsBetween(startEpochSeconds: Long, endEpochSeconds: Long): Flow<List<BreathalyzerReadingEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBreathalyzerReading(reading: BreathalyzerReadingEntity)

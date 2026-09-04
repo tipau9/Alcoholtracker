@@ -60,7 +60,8 @@ data class MonthStats(
 @OptIn(ExperimentalCoroutinesApi::class)
 class HistoryViewModel(
     private val drinkRepository: DrinkRepository,
-    private val userProfileRepository: UserProfileRepository? = null
+    private val userProfileRepository: UserProfileRepository? = null,
+    private val sessionEventRepository: de.tipau.promille.repository.SessionEventRepository? = null
 ) : ViewModel() {
 
     private val zone = ZoneId.systemDefault()
@@ -154,6 +155,30 @@ class HistoryViewModel(
                     mixerWaterContent = drink.mixerWaterContentPercent
                 )
             )
+        }
+    }
+
+    fun getMealEventsForDay(date: LocalDate): Flow<List<de.tipau.promille.data.MealEventEntity>> {
+        val start = LogicalDay.startOf(date, zone)
+        val end = LogicalDay.endOf(date, zone)
+        return sessionEventRepository?.getMealEventsBetween(start, end) ?: flowOf(emptyList())
+    }
+
+    fun getBreathalyzerReadingsForDay(date: LocalDate): Flow<List<de.tipau.promille.data.BreathalyzerReadingEntity>> {
+        val start = LogicalDay.startOf(date, zone)
+        val end = LogicalDay.endOf(date, zone)
+        return sessionEventRepository?.getBreathalyzerReadingsBetween(start, end) ?: flowOf(emptyList())
+    }
+
+    fun deleteMealEvent(event: de.tipau.promille.data.MealEventEntity) {
+        viewModelScope.launch {
+            sessionEventRepository?.deleteMealEvent(event)
+        }
+    }
+
+    fun deleteBreathalyzerReading(reading: de.tipau.promille.data.BreathalyzerReadingEntity) {
+        viewModelScope.launch {
+            sessionEventRepository?.deleteBreathalyzerReading(reading)
         }
     }
 }

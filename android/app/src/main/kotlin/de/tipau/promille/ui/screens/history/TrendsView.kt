@@ -46,8 +46,13 @@ import de.tipau.promille.ui.components.SectionLabel
 import java.util.Locale
 import kotlin.math.roundToInt
 import de.tipau.promille.AppSerif
+import androidx.compose.ui.graphics.Brush
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 enum class InsightsPeriod(val label: String, val days: Int?) {
+    DAYS_7("7 Tage", 7),
     DAYS_30("30 Tage", 30),
     DAYS_90("90 Tage", 90),
     ALL("Gesamt", null)
@@ -284,56 +289,6 @@ fun TrendsView(
                     }
                 }
 
-                // Top Drinks Ranking
-                if (insights.topDrinks.isNotEmpty()) {
-                    item {
-                        SectionLabel("BELIEBTESTE GETRÄNKE")
-                    }
-                    items(insights.topDrinks.take(5)) { item ->
-                        PromilleCard {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    // iOS: .appCaptionBold (TrendsView.swift:606).
-                                    Text(item.name, color = AppColors.text, style = de.tipau.promille.AppText.captionBold)
-                                    // iOS: .appMicro (TrendsView.swift:607).
-                                    Text(item.subtitle, color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
-                                }
-                                // iOS: .appCaptionBold (TrendsView.swift:619).
-                                Text(
-                                    text = "${item.count}×",
-                                    color = AppColors.accent,
-                                    style = de.tipau.promille.AppText.captionBold.merge(de.tipau.promille.TabularFigures)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Top Categories
-                if (insights.topCategories.isNotEmpty()) {
-                    item {
-                        SectionLabel("KATEGORIEN")
-                    }
-                    items(insights.topCategories) { cat ->
-                        PromilleCard {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // iOS: .appCaption (TrendsView.swift:433).
-                                Text(cat.name, color = AppColors.text, style = de.tipau.promille.AppText.caption)
-                                // iOS: .appMicro (TrendsView.swift:438).
-                                Text("${cat.count} Drinks (${cat.subtitle})", color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
-                            }
-                        }
-                    }
-                }
-
                 // Discoveries / Entdeckungen
                 if (insights.discoveries.isNotEmpty()) {
                     item {
@@ -366,6 +321,55 @@ fun TrendsView(
                             }
                         }
                     }
+                }
+
+                // Top Drinks Ranking
+                if (insights.topDrinks.isNotEmpty()) {
+                    item {
+                        SectionLabel("BELIEBTESTE GETRÄNKE")
+                    }
+                    items(insights.topDrinks.take(5)) { item ->
+                        PromilleCard {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    // iOS: .appCaptionBold (TrendsView.swift:606).
+                                    Text(item.name, color = AppColors.text, style = de.tipau.promille.AppText.captionBold)
+                                    // iOS: .appMicro (TrendsView.swift:607).
+                                    Text(item.subtitle, color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
+                                }
+                                // iOS: .appCaptionBold (TrendsView.swift:619).
+                                Text(
+                                    text = "${item.count}×",
+                                    color = AppColors.accent,
+                                    style = de.tipau.promille.AppText.captionBold.merge(de.tipau.promille.TabularFigures)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 24h Hourly Distribution Card
+                item {
+                    TimeOfDayCard(hourly = insights.hourly)
+                }
+
+                // Weekday Distribution Card
+                item {
+                    WeekdayCard(weekdays = insights.weekdays)
+                }
+
+                // 8-Week History Chart Card
+                item {
+                    WeeklyChartCard(drinks = drinks)
+                }
+
+                // Category Bar Chart Card
+                item {
+                    CategoryBarChartCard(drinks = filteredDrinks, periodLabel = selectedPeriod.label)
                 }
 
                 // Stimmungs-Korrelation / "Morgen danach" (matches TrendsView.swift:445-484).
@@ -778,5 +782,327 @@ private fun DetailRow(
             color = valueColor,
             style = de.tipau.promille.AppText.captionBold.merge(de.tipau.promille.TabularFigures)
         )
+    }
+}
+
+@Composable
+private fun TimeOfDayCard(hourly: List<de.tipau.promille.bac.TimeBucket>, modifier: Modifier = Modifier) {
+    PromilleCard(modifier = modifier) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(11.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(AppColors.accent.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = AppIcons.History,
+                        contentDescription = null,
+                        tint = AppColors.accent,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("Uhrzeiten", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
+                    Text("Wann du Getränke einträgst", color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
+                }
+            }
+
+            val maxCount = remember(hourly) { (hourly.maxOfOrNull { it.count } ?: 1).coerceAtLeast(1) }
+            val barBrush = remember {
+                Brush.verticalGradient(
+                    colors = listOf(AppColors.accent, AppColors.accent.copy(alpha = 0.4f))
+                )
+            }
+
+            Column(modifier = Modifier.fillMaxWidth().height(150.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    (0 until 24).forEach { hour ->
+                        val bucket = hourly.find { it.value == hour }
+                        val count = bucket?.count ?: 0
+                        val fraction = if (maxCount > 0) count.toFloat() / maxCount else 0f
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
+                            contentAlignment = Alignment.BottomCenter
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(0.65f)
+                                    .fillMaxHeight(fraction.coerceAtLeast(0.04f))
+                                    .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                                    .background(if (count > 0) barBrush else Brush.linearGradient(listOf(AppColors.border.copy(alpha = 0.3f), AppColors.border.copy(alpha = 0.3f))))
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    listOf(0, 4, 8, 12, 16, 20, 23).forEach { hour ->
+                        Text(
+                            text = "${hour}h",
+                            color = AppColors.textDim,
+                            style = de.tipau.promille.AppText.micro
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WeekdayCard(weekdays: List<de.tipau.promille.bac.TimeBucket>, modifier: Modifier = Modifier) {
+    val dayNames = listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
+    PromilleCard(modifier = modifier) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(11.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(AppColors.statusOrange.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = AppIcons.Calendar,
+                        contentDescription = null,
+                        tint = AppColors.statusOrange,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("Wochentage", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
+                    Text("Dein Konsummuster", color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
+                }
+            }
+
+            val maxCount = remember(weekdays) { (weekdays.maxOfOrNull { it.count } ?: 1).coerceAtLeast(1) }
+            val orangeGradient = remember {
+                Brush.verticalGradient(
+                    colors = listOf(AppColors.statusOrange, AppColors.statusOrange.copy(alpha = 0.45f))
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                (0 until 7).forEach { dayIdx ->
+                    val bucket = weekdays.find { it.value == dayIdx }
+                    val count = bucket?.count ?: 0
+                    val fraction = if (maxCount > 0) count.toFloat() / maxCount else 0f
+                    Column(
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Bottom
+                    ) {
+                        if (count > 0) {
+                            Text(
+                                text = "$count",
+                                color = AppColors.textDim,
+                                style = de.tipau.promille.AppText.micro,
+                                fontSize = 10.sp
+                            )
+                            Spacer(Modifier.height(2.dp))
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f, fill = false)
+                                .fillMaxHeight(fraction.coerceAtLeast(0.04f))
+                                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                .background(if (count > 0) orangeGradient else Brush.linearGradient(listOf(AppColors.border.copy(alpha = 0.3f), AppColors.border.copy(alpha = 0.3f))))
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = dayNames[dayIdx],
+                            color = AppColors.textDim,
+                            style = de.tipau.promille.AppText.micro
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private data class WeeklyTrendItem(val weekStart: LocalDate, val count: Int)
+
+@Composable
+private fun WeeklyChartCard(drinks: List<Drink>, modifier: Modifier = Modifier) {
+    val weeklyData = remember(drinks) {
+        val zone = ZoneId.systemDefault()
+        val today = LocalDate.now(zone)
+        val currentMonday = today.minusDays((today.dayOfWeek.value - 1).toLong())
+        val list = mutableListOf<WeeklyTrendItem>()
+        for (i in 0 until 8) {
+            val start = currentMonday.minusWeeks(i.toLong())
+            val end = start.plusWeeks(1)
+            val sEpoch = start.atStartOfDay(zone).toEpochSecond()
+            val eEpoch = end.atStartOfDay(zone).toEpochSecond()
+            val c = drinks.count { it.timestampEpochSeconds in sEpoch until eEpoch && it.abv > 0.01 }
+            list.add(WeeklyTrendItem(start, c))
+        }
+        list.reversed()
+    }
+
+    val maxCount = remember(weeklyData) { (weeklyData.maxOfOrNull { it.count } ?: 1).coerceAtLeast(1) }
+    val barBrush = remember {
+        Brush.verticalGradient(
+            colors = listOf(AppColors.accent, AppColors.accent.copy(alpha = 0.45f))
+        )
+    }
+
+    PromilleCard(modifier = modifier) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text("Wochenverlauf (8 Wochen)", color = AppColors.text, style = de.tipau.promille.AppText.headline)
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                weeklyData.forEach { item ->
+                    val fraction = if (maxCount > 0) item.count.toFloat() / maxCount else 0f
+                    val dateLabel = remember(item.weekStart) {
+                        item.weekStart.format(DateTimeFormatter.ofPattern("d.M.", Locale.GERMAN))
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Bottom
+                    ) {
+                        if (item.count > 0) {
+                            Text(
+                                text = "${item.count}",
+                                color = AppColors.textDim,
+                                style = de.tipau.promille.AppText.micro,
+                                fontSize = 10.sp
+                            )
+                            Spacer(Modifier.height(2.dp))
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f, fill = false)
+                                .fillMaxHeight(fraction.coerceAtLeast(0.04f))
+                                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                .background(if (item.count > 0) barBrush else Brush.linearGradient(listOf(AppColors.border.copy(alpha = 0.3f), AppColors.border.copy(alpha = 0.3f))))
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = dateLabel,
+                            color = AppColors.textDim,
+                            style = de.tipau.promille.AppText.micro,
+                            fontSize = 9.sp,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private data class CategoryCountItem(val name: String, val count: Int)
+
+@Composable
+private fun CategoryBarChartCard(
+    drinks: List<Drink>,
+    periodLabel: String,
+    modifier: Modifier = Modifier
+) {
+    val categoryCounts = remember(drinks) {
+        val counts = mutableMapOf<String, Int>()
+        for (d in drinks) {
+            if (d.abv <= 0.01) continue
+            val label = d.category.germanName
+            counts[label] = (counts[label] ?: 0) + 1
+        }
+        counts.entries
+            .map { CategoryCountItem(it.key, it.value) }
+            .sortedByDescending { it.count }
+    }
+
+    if (categoryCounts.isEmpty()) return
+
+    val maxCount = remember(categoryCounts) { (categoryCounts.maxOfOrNull { it.count } ?: 1).coerceAtLeast(1) }
+    val barBrush = remember {
+        Brush.horizontalGradient(
+            colors = listOf(AppColors.statusOrange.copy(alpha = 0.6f), AppColors.statusOrange)
+        )
+    }
+
+    PromilleCard(modifier = modifier) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text(
+                text = "Getränke-Kategorien ($periodLabel)",
+                color = AppColors.text,
+                style = de.tipau.promille.AppText.headline
+            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                categoryCounts.forEach { cat ->
+                    val fraction = (cat.count.toFloat() / maxCount).coerceIn(0.05f, 1f)
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = cat.name,
+                                color = AppColors.text,
+                                style = de.tipau.promille.AppText.caption
+                            )
+                            Text(
+                                text = "${cat.count}",
+                                color = AppColors.textDim,
+                                style = de.tipau.promille.AppText.captionBold
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(AppColors.card)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(fraction)
+                                    .fillMaxHeight()
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(barBrush)
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }

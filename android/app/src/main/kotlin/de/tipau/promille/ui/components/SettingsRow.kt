@@ -250,7 +250,8 @@ fun SettingsSliderRow(
     minLabel: String = "",
     maxLabel: String = "",
     steps: Int = 0,
-    statusDotColor: Color? = null
+    statusDotColor: Color? = null,
+    onValueChangeFinished: (() -> Unit)? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val activeColor = statusDotColor ?: AppColors.accent
@@ -302,7 +303,8 @@ fun SettingsSliderRow(
             valueRange = valueRange,
             steps = steps,
             activeColor = activeColor,
-            interactionSource = interactionSource
+            interactionSource = interactionSource,
+            onValueChangeFinished = onValueChangeFinished
         )
         if (minLabel.isNotEmpty() || maxLabel.isNotEmpty()) {
             Row(

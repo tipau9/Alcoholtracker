@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.*
 
 
 import android.content.Intent
+import android.location.Geocoder
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,6 +31,10 @@ import de.tipau.promille.service.LocationService
 import de.tipau.promille.ui.components.PrimaryButton
 import de.tipau.promille.ui.components.PromilleCard
 import de.tipau.promille.ui.components.SectionLabel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,6 +44,11 @@ fun RidePickerSheet(
 ) {
     val context = LocalContext.current
     var destination by remember { mutableStateOf("") }
+    val locationStatus by LocationService.status.collectAsState()
+    val locationCoord by LocationService.coordinate.collectAsState()
+    var isGeocoding by remember { mutableStateOf(false) }
+    var geocodeError by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
     // Mirrors iOS RidePickerSheet.swift requesting location on appear - feeds
     // the weather-driven hydration heat term on Home, nothing shown in this
@@ -103,15 +113,34 @@ fun RidePickerSheet(
                 de.tipau.promille.ui.components.AppIconCloseButton(onDismiss = onDismiss)
             }
 
-            // Destination Field (optional)
-            SectionLabel("Zielort (optional)")
-            de.tipau.promille.ui.components.AppTextField(
-                value = destination,
-                onValueChange = { destination = it },
-                placeholder = "z.B. Hauptbahnhof, Heimatadresse",
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+            // Location status row
+            RideLocationStatusRow(
+                status = locationStatus,
+                hasCoordinate = locationCoord != null
             )
+
+            // Destination Field (optional)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionLabel("ZIEL (OPTIONAL)")
+                de.tipau.promille.ui.components.AppTextField(
+                    value = destination,
+                    onValueChange = {
+                        destination = it
+                        geocodeError = null
+                    },
+                    placeholder = "z.B. Hauptbahnhof, Heimatadresse",
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (geocodeError != null) {
+                    Text(
+                        text = geocodeError!!,
+                        color = AppColors.statusOrange,
+                        style = de.tipau.promille.AppText.micro,
+                        modifier = Modifier.padding(horizontal = 2.dp)
+                    )
+                }
+            }
 
             // Transport Options
             SectionLabel("Fahroptionen")
@@ -120,24 +149,58 @@ fun RidePickerSheet(
                 PromilleCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
-                            val uri = if (destination.isNotBlank()) {
-                                Uri.parse("uber://?action=setPickup&pickup=my_location&dropoff[formatted_address]=${Uri.encode(destination)}")
-                            } else {
-                                Uri.parse("uber://?action=setPickup&pickup=my_location")
-                            }
-                            val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                            }
-                            try {
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://m.uber.com")).apply {
+                        .clickable(enabled = !isGeocoding) {
+                            geocodeError = null
+                            val trimmed = destination.trim()
+                            if (trimmed.isEmpty()) {
+                                val uri = Uri.parse("uber://?action=setPickup&pickup=my_location")
+                                val intent = Intent(Intent.ACTION_VIEW, uri).apply {
                                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                 }
-                                context.startActivity(webIntent)
+                                try {
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://m.uber.com")).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    context.startActivity(webIntent)
+                                }
+                                onDismiss()
+                            } else {
+                                isGeocoding = true
+                                coroutineScope.launch {
+                                    try {
+                                        val address = withContext(Dispatchers.IO) {
+                                            try {
+                                                @Suppress("DEPRECATION")
+                                                val results = Geocoder(context, Locale.getDefault()).getFromLocationName(trimmed, 1)
+                                                results?.firstOrNull()
+                                            } catch (e: Exception) {
+                                                null
+                                            }
+                                        }
+                                        if (address != null) {
+                                            val uri = Uri.parse("uber://?action=setPickup&pickup=my_location&dropoff[latitude]=${address.latitude}&dropoff[longitude]=${address.longitude}&dropoff[formatted_address]=${Uri.encode(trimmed)}")
+                                            val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                            }
+                                            try {
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://m.uber.com")).apply {
+                                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                }
+                                                context.startActivity(webIntent)
+                                            }
+                                            onDismiss()
+                                        } else {
+                                            geocodeError = "Adresse nicht gefunden. Versuche ohne Ziel oder nutze Google Maps."
+                                        }
+                                    } finally {
+                                        isGeocoding = false
+                                    }
+                                }
                             }
-                            onDismiss()
                         }
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -147,14 +210,26 @@ fun RidePickerSheet(
                             // iOS: .appBodyBold (RidePickerSheet.swift:92).
                             Text("Mit Uber fahren", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
                             // iOS: .appCaption (RidePickerSheet.swift:439).
-                            Text("App öffnen und Fahrt bestellen", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
+                            Text(
+                                text = if (isGeocoding) "Suche Adresse..." else "App öffnen und Fahrt bestellen",
+                                color = AppColors.textDim,
+                                style = de.tipau.promille.AppText.caption
+                            )
                         }
-                        Icon(
-                            imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
-                            contentDescription = null,
-                            tint = AppColors.textMuted,
-                            modifier = Modifier.size(13.dp)
-                        )
+                        if (isGeocoding) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = AppColors.accent,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                                contentDescription = null,
+                                tint = AppColors.textMuted,
+                                modifier = Modifier.size(13.dp)
+                            )
+                        }
                     }
                 }
 
@@ -258,4 +333,43 @@ fun RidePickerSheet(
         }
     }
 }
+}
+
+@Composable
+private fun RideLocationStatusRow(
+    status: LocationService.Status,
+    hasCoordinate: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val (label, tint) = when (status) {
+        LocationService.Status.GRANTED -> Pair("Standort erkannt", AppColors.statusGreen)
+        LocationService.Status.DENIED -> Pair("Standortzugriff verweigert", AppColors.statusOrange)
+        LocationService.Status.REQUESTING -> {
+            if (hasCoordinate) Pair("Standort erkannt", AppColors.statusGreen)
+            else Pair("Standort wird ermittelt...", AppColors.textDim)
+        }
+        LocationService.Status.IDLE -> Pair("Standort wird angefragt...", AppColors.textDim)
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(tint.copy(alpha = 0.09f))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Icon(
+            imageVector = de.tipau.promille.ui.components.AppIcons.Location,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(13.dp)
+        )
+        Text(
+            text = label,
+            color = tint,
+            style = de.tipau.promille.AppText.caption
+        )
+    }
 }

@@ -43,6 +43,7 @@ import java.util.Locale
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import de.tipau.promille.bac.permilleString
 
 private enum class DayMoodOption(val raw: Int, val emoji: String, val label: String, val iconRes: Int) {
     NEUTRAL(0, "😐", "Kein Urteil", R.drawable.ic_mood_neutral),
@@ -52,6 +53,33 @@ private enum class DayMoodOption(val raw: Int, val emoji: String, val label: Str
     TERRIBLE(4, "🤢", "War zu viel", R.drawable.ic_mood_terrible)
 }
 
+sealed class DaySessionEventItem {
+    abstract val id: String
+    abstract val timestamp: Long
+    abstract val title: String
+    abstract val subtitle: String
+    abstract val icon: androidx.compose.ui.graphics.vector.ImageVector
+    abstract val color: androidx.compose.ui.graphics.Color
+
+    data class Meal(val entity: de.tipau.promille.data.MealEventEntity) : DaySessionEventItem() {
+        override val id: String get() = entity.id
+        override val timestamp: Long get() = entity.timestamp
+        override val icon: androidx.compose.ui.graphics.vector.ImageVector get() = AppIcons.Restaurant
+        override val color: androidx.compose.ui.graphics.Color get() = AppColors.statusGreen
+        override val title: String get() = if (entity.name.isNotBlank()) entity.name else de.tipau.promille.bac.MealImpact.from(entity.impactRaw).germanName
+        override val subtitle: String get() = de.tipau.promille.bac.MealImpact.from(entity.impactRaw).germanName
+    }
+
+    data class Reading(val entity: de.tipau.promille.data.BreathalyzerReadingEntity) : DaySessionEventItem() {
+        override val id: String get() = entity.id
+        override val timestamp: Long get() = entity.timestamp
+        override val icon: androidx.compose.ui.graphics.vector.ImageVector get() = AppIcons.Wind
+        override val color: androidx.compose.ui.graphics.Color get() = AppColors.statusOrange
+        override val title: String get() = "Gemessen: ${entity.measuredBAC.permilleString()}"
+        override val subtitle: String get() = "App-Schätzung: ${entity.estimatedBAC.permilleString()}"
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DayDetailSheet(
@@ -59,8 +87,12 @@ fun DayDetailSheet(
     dayNoteRepository: DayNoteRepository,
     profile: Profile? = null,
     statusSkin: StatusSkin = StatusSkin.STANDARD,
+    mealEvents: List<de.tipau.promille.data.MealEventEntity> = emptyList(),
+    breathReadings: List<de.tipau.promille.data.BreathalyzerReadingEntity> = emptyList(),
     onUpdateDrink: ((de.tipau.promille.bac.Drink, Double, Long, Double) -> Unit)? = null,
     onDeleteDrink: ((de.tipau.promille.bac.Drink) -> Unit)? = null,
+    onDeleteMeal: ((de.tipau.promille.data.MealEventEntity) -> Unit)? = null,
+    onDeleteBreathReading: ((de.tipau.promille.data.BreathalyzerReadingEntity) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     val haptics = de.tipau.promille.ui.components.rememberHapticManager()
@@ -68,6 +100,14 @@ fun DayDetailSheet(
     val dateString = dayStats.date.format(DateTimeFormatter.ISO_LOCAL_DATE)
     val isToday = dayStats.date == LocalDate.now()
     var editingDrink by remember { mutableStateOf<de.tipau.promille.bac.Drink?>(null) }
+    var eventToDelete by remember { mutableStateOf<DaySessionEventItem?>(null) }
+
+    val sessionEvents = remember(mealEvents, breathReadings) {
+        val list = mutableListOf<DaySessionEventItem>()
+        mealEvents.forEach { list.add(DaySessionEventItem.Meal(it)) }
+        breathReadings.forEach { list.add(DaySessionEventItem.Reading(it)) }
+        list.sortedBy { it.timestamp }
+    }
 
     val dateTitle = remember(dayStats.date) {
         dayStats.date.format(DateTimeFormatter.ofPattern("d. MMMM yyyy", Locale.GERMAN))
@@ -401,6 +441,86 @@ fun DayDetailSheet(
                     }
                 }
 
+                // Meals & Measurements Section matching iOS DayDetailSheet.swift:284-320
+                if (sessionEvents.isNotEmpty()) {
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            SectionLabel("MAHLZEITEN & MESSUNGEN")
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(AppColors.card)
+                                    .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+                            ) {
+                                Column {
+                                    sessionEvents.forEachIndexed { index, event ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    haptics.warning()
+                                                    eventToDelete = event
+                                                }
+                                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(32.dp)
+                                                    .clip(RoundedCornerShape(9.dp))
+                                                    .background(event.color.copy(alpha = 0.12f)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = event.icon,
+                                                    contentDescription = null,
+                                                    tint = event.color,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                            Column(
+                                                modifier = Modifier.weight(1f),
+                                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                                            ) {
+                                                Text(
+                                                    text = event.title,
+                                                    color = AppColors.text,
+                                                    style = de.tipau.promille.AppText.captionBold
+                                                )
+                                                Text(
+                                                    text = event.subtitle,
+                                                    color = AppColors.textDim,
+                                                    style = de.tipau.promille.AppText.micro
+                                                )
+                                            }
+                                            val timeStr = remember(event.timestamp) {
+                                                val instant = java.time.Instant.ofEpochSecond(event.timestamp)
+                                                java.time.format.DateTimeFormatter.ofPattern("HH:mm", Locale.GERMAN)
+                                                    .withZone(java.time.ZoneId.systemDefault())
+                                                    .format(instant)
+                                            }
+                                            Text(
+                                                text = timeStr,
+                                                color = AppColors.textMuted,
+                                                style = de.tipau.promille.AppText.caption
+                                            )
+                                        }
+                                        if (index < sessionEvents.size - 1) {
+                                            HorizontalDivider(
+                                                color = AppColors.border,
+                                                thickness = 0.5.dp,
+                                                modifier = Modifier.padding(start = 58.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Drink list (Unified 14dp card matching iOS DayDetailSheet.swift:324-350)
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -524,6 +644,24 @@ fun DayDetailSheet(
                 onDeleteDrink?.invoke(drinkToEdit)
                 editingDrink = null
             }
+        )
+    }
+
+    eventToDelete?.let { event ->
+        de.tipau.promille.ui.components.AppAlertDialog(
+            onDismissRequest = { eventToDelete = null },
+            title = "Eintrag löschen?",
+            text = "\"${event.title}\" wirklich aus der Liste entfernen?",
+            confirmText = "Löschen",
+            isDestructive = true,
+            onConfirm = {
+                when (event) {
+                    is DaySessionEventItem.Meal -> onDeleteMeal?.invoke(event.entity)
+                    is DaySessionEventItem.Reading -> onDeleteBreathReading?.invoke(event.entity)
+                }
+                eventToDelete = null
+            },
+            dismissText = "Abbrechen"
         )
     }
 }

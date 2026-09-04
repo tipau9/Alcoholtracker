@@ -202,10 +202,24 @@ class FakeSessionEventDao : SessionEventDao {
         meals.value = emptyMap()
     }
 
+    override fun getMealEventsBetween(startEpochSeconds: Long, endEpochSeconds: Long): Flow<List<MealEventEntity>> =
+        meals.map { map ->
+            map.values
+                .filter { it.timestamp in startEpochSeconds..endEpochSeconds }
+                .sortedBy { it.timestamp }
+        }
+
     override fun getBreathalyzerReadingsSince(sinceEpochSeconds: Long): Flow<List<BreathalyzerReadingEntity>> =
         breathalyzers.map { map ->
             map.values
                 .filter { it.timestamp >= sinceEpochSeconds }
+                .sortedBy { it.timestamp }
+        }
+
+    override fun getBreathalyzerReadingsBetween(startEpochSeconds: Long, endEpochSeconds: Long): Flow<List<BreathalyzerReadingEntity>> =
+        breathalyzers.map { map ->
+            map.values
+                .filter { it.timestamp in startEpochSeconds..endEpochSeconds }
                 .sortedBy { it.timestamp }
         }
 

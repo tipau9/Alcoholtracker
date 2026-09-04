@@ -58,6 +58,7 @@ fun SettingsScreen(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val haptics = rememberHapticManager()
     val profile by viewModel.profile.collectAsState()
     val unlockedCount by viewModel.unlockedCount.collectAsState()
 
@@ -91,6 +92,7 @@ fun SettingsScreen(
             confirmText = "Löschen",
             isDestructive = true,
             onConfirm = {
+                haptics.warning()
                 showDeleteAccountConfirm = false
                 coroutineScope.launch { runCatching { supabase.deleteAccount() } }
             },
@@ -106,6 +108,7 @@ fun SettingsScreen(
             confirmText = "Löschen",
             isDestructive = true,
             onConfirm = {
+                haptics.warning()
                 showDeletePhotosConfirm = false
             },
             dismissText = "Abbrechen"
@@ -340,14 +343,12 @@ fun SettingsScreen(
                             color = AppColors.text,
                             style = de.tipau.promille.AppText.title
                         )
-                        // Fixed literal on iOS too (.caption, monospaced,
-                        // bold, tracking 2) - no monospace font resource
-                        // exists on Android, so size/weight stay as-is.
+                        // Fixed literal on iOS (.caption, monospaced, bold, tracking 2)
+                        // using AppSans + TabularFigures to match San Francisco monospaced digits.
                         Text(
                             text = myProfile?.friendCode ?: "",
                             color = AppColors.accent,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
+                            style = de.tipau.promille.AppText.captionBold.merge(de.tipau.promille.TabularFigures),
                             letterSpacing = 2.sp
                         )
                     } else {
@@ -711,7 +712,13 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     SectionLabel(text = "STATUS-SCHWELLEN")
-                    TextButton(onClick = { viewModel.resetThresholds() }, contentPadding = PaddingValues(0.dp)) {
+                    TextButton(
+                        onClick = {
+                            haptics.light()
+                            viewModel.resetThresholds()
+                        },
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
                         // iOS: .appCaption - was 12sp.
                         Text(text = "Zurücksetzen", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                     }
@@ -731,7 +738,8 @@ fun SettingsScreen(
                             onValueChange = { viewModel.updateTipsyThreshold(it.toDouble()) },
                             valueRange = 0.01f..(p.drunkThreshold.toFloat() - 0.05f).coerceAtLeast(0.01f),
                             valueDisplay = formatPromille(p.tipsyThreshold),
-                            statusDotColor = AppColors.statusYellow
+                            statusDotColor = AppColors.statusYellow,
+                            onValueChangeFinished = { haptics.selection() }
                         )
                         SettingsDivider()
                         SettingsSliderRow(
@@ -740,7 +748,8 @@ fun SettingsScreen(
                             onValueChange = { viewModel.updateDrunkThreshold(it.toDouble()) },
                             valueRange = (p.tipsyThreshold.toFloat() + 0.05f).coerceAtMost(2.5f)..(p.carefulThreshold.toFloat() - 0.05f).coerceAtLeast(0.01f),
                             valueDisplay = formatPromille(p.drunkThreshold),
-                            statusDotColor = AppColors.statusOrange
+                            statusDotColor = AppColors.statusOrange,
+                            onValueChangeFinished = { haptics.selection() }
                         )
                         SettingsDivider()
                         SettingsSliderRow(
@@ -749,7 +758,8 @@ fun SettingsScreen(
                             onValueChange = { viewModel.updateCarefulThreshold(it.toDouble()) },
                             valueRange = (p.drunkThreshold.toFloat() + 0.05f).coerceAtMost(2.5f)..(p.dangerThreshold.toFloat() - 0.05f).coerceAtLeast(0.01f),
                             valueDisplay = formatPromille(p.carefulThreshold),
-                            statusDotColor = AppColors.statusRed
+                            statusDotColor = AppColors.statusRed,
+                            onValueChangeFinished = { haptics.selection() }
                         )
                         SettingsDivider()
                         SettingsSliderRow(
@@ -758,7 +768,8 @@ fun SettingsScreen(
                             onValueChange = { viewModel.updateDangerThreshold(it.toDouble()) },
                             valueRange = (p.carefulThreshold.toFloat() + 0.05f).coerceAtMost(2.5f)..2.50f,
                             valueDisplay = formatPromille(p.dangerThreshold),
-                            statusDotColor = AppColors.statusDarkRed
+                            statusDotColor = AppColors.statusDarkRed,
+                            onValueChangeFinished = { haptics.selection() }
                         )
                     }
                 }

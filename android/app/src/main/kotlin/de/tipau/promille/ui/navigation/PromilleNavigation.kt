@@ -65,7 +65,8 @@ fun PromilleNavigation(
     val historyViewModel = remember {
         de.tipau.promille.ui.viewmodels.HistoryViewModel(
             drinkRepository = container.drinkRepository,
-            userProfileRepository = container.userProfileRepository
+            userProfileRepository = container.userProfileRepository,
+            sessionEventRepository = container.sessionEventRepository
         )
     }
     val safetyViewModel = remember {

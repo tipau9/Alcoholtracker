@@ -22,6 +22,12 @@ object LogicalDay {
     fun startOf(epochSeconds: Long, zone: ZoneId = ZoneId.systemDefault()): Long =
         dateOf(epochSeconds, zone).atTime(LocalTime.of(START_HOUR, 0)).atZone(zone).toEpochSecond()
 
+    fun startOf(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Long =
+        date.atTime(LocalTime.of(START_HOUR, 0)).atZone(zone).toEpochSecond()
+
+    fun endOf(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Long =
+        date.plusDays(1).atTime(LocalTime.of(START_HOUR, 0)).atZone(zone).toEpochSecond()
+
     fun sameLogicalDay(a: Long, b: Long, zone: ZoneId = ZoneId.systemDefault()): Boolean =
         dateOf(a, zone) == dateOf(b, zone)
 }

@@ -91,14 +91,26 @@ fun HistoryScreen(
         )
     }
 
+    val selectedDayMeals by remember(selectedDayStats) {
+        selectedDayStats?.let { viewModel.getMealEventsForDay(it.date) } ?: kotlinx.coroutines.flow.flowOf(emptyList())
+    }.collectAsState(initial = emptyList())
+
+    val selectedDayBreathReadings by remember(selectedDayStats) {
+        selectedDayStats?.let { viewModel.getBreathalyzerReadingsForDay(it.date) } ?: kotlinx.coroutines.flow.flowOf(emptyList())
+    }.collectAsState(initial = emptyList())
+
     if (selectedDayStats != null) {
         DayDetailSheet(
             dayStats = selectedDayStats!!,
             dayNoteRepository = dayNoteRepository,
             profile = profile,
             statusSkin = statusSkin,
+            mealEvents = selectedDayMeals,
+            breathReadings = selectedDayBreathReadings,
             onUpdateDrink = { drink, volume, ts, dur -> viewModel.updateDrink(drink, volume, ts, dur) },
             onDeleteDrink = { viewModel.deleteDrink(it) },
+            onDeleteMeal = { viewModel.deleteMealEvent(it) },
+            onDeleteBreathReading = { viewModel.deleteBreathalyzerReading(it) },
             onDismiss = { selectedDayStats = null }
         )
     }

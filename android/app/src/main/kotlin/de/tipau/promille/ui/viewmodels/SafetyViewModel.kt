@@ -39,6 +39,10 @@ class SafetyViewModel(
         sessionEventRepository.getVomitEventsSince(lookbackSeconds)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val vomitEpochSeconds: StateFlow<List<Long>> = rawVomits.map { list ->
+        list.map { it.timestamp }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val domainDrinks: StateFlow<List<Drink>> = rawDrinks.map { list ->
         list.map { DrinkRepository.toDomainDrink(it) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -50,6 +54,10 @@ class SafetyViewModel(
     private val rawMeals: StateFlow<List<MealEventEntity>> =
         sessionEventRepository.getMealEventsSince(lookbackSeconds)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val mealEvents: StateFlow<List<MealEvent>> = rawMeals.map { list ->
+        list.map { SessionEventRepository.toDomainMealEvent(it) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val ticker = flow {
         while (true) {

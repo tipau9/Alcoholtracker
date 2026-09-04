@@ -71,6 +71,8 @@ fun SafetyScreen(
     val contactPhone by viewModel.emergencyContactPhone.collectAsState()
     val isProbationary by viewModel.isProbationaryDriver.collectAsState()
     val drinks by viewModel.domainDrinks.collectAsState()
+    val vomits by viewModel.vomitEpochSeconds.collectAsState()
+    val meals by viewModel.mealEvents.collectAsState()
     val profile by viewModel.bacProfile.collectAsState()
     val haptic = de.tipau.promille.ui.components.rememberHapticManager()
 
@@ -381,7 +383,9 @@ fun SafetyScreen(
             if (profile != null) {
                 ForecastView(
                     drinks = drinks,
-                    profile = profile!!
+                    profile = profile!!,
+                    vomitEpochSeconds = vomits,
+                    mealEvents = meals
                 )
             }
 

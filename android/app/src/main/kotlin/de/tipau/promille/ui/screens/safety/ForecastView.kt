@@ -32,12 +32,15 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import de.tipau.promille.bac.MealEvent
 import java.util.Locale
 
 @Composable
 fun ForecastView(
     drinks: List<Drink>,
     profile: Profile,
+    vomitEpochSeconds: List<Long> = emptyList(),
+    mealEvents: List<MealEvent> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     val haptics = rememberHapticManager()
@@ -74,12 +77,14 @@ fun ForecastView(
         "$dayPrefix, $timeStr Uhr"
     }
 
-    val projection = remember(drinks, profile) {
+    val projection = remember(drinks, profile, vomitEpochSeconds, mealEvents) {
         BacProjectionInput(
             drinks = drinks,
             profile = profile,
             stomachStatus = profile.defaultStomachStatus,
-            conservative = profile.conservativeForSafety
+            conservative = profile.conservativeForSafety,
+            vomitEpochSeconds = vomitEpochSeconds,
+            meals = mealEvents
         )
     }
 
