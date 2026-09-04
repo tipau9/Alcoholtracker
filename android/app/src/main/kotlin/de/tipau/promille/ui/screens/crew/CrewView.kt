@@ -672,9 +672,15 @@ fun CrewView(
                     showSOSInfo = true
                 } else {
                     val willActivate = !(myFriendSOS || jamSOSActive)
-                    myFriendSOS = willActivate
                     if (isSignedIn) {
-                        coroutineScope.launch { runCatching { supabase.setSOS(willActivate) } }
+                        // Only mirror what was actually sent: a bar claiming
+                        // "SOS aktiv" over a failed write is worse than a slow one.
+                        myFriendSOS = willActivate
+                        coroutineScope.launch {
+                            if (runCatching { supabase.setSOS(willActivate) }.isFailure) {
+                                myFriendSOS = !willActivate
+                            }
+                        }
                     }
                     if (currentJam != null) {
                         container.jamService.mySOSActive.value = willActivate

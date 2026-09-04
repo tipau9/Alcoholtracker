@@ -106,7 +106,9 @@ class SessionViewModel(
 
     // Split from `projection` on purpose: the forecast below is time-invariant
     // given the drink set, and recomputing two full BAC integrations on every
-    // 30s tick is pure waste.
+    // 30s tick is pure waste. Ceiling: the forecast only recomputes when the
+    // drink set changes, so a freshly logged water glass moves it late. Add a
+    // water tick here if the hydration card ever has to drive it live.
     private val projectionData: StateFlow<BacProjectionInput?> = combine(
         drinks, profileEntity, stomachStatus, rawVomits, rawMeals
     ) { drinkList, profile, stomach, vomits, meals ->

@@ -129,9 +129,6 @@ class HistoryViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MonthStats(0, 0, 0, emptyMap()))
 
-    val monthTrend: StateFlow<MonthTrend?> = monthStats.map { it.trend }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
     fun previousMonth() {
         visibleMonth.value = visibleMonth.value.minusMonths(1)
     }
