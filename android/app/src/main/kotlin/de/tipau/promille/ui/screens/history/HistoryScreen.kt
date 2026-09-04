@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +37,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.roundToInt
 import de.tipau.promille.AppSerif
 
 private val WEEKDAY_LABELS = listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
@@ -417,6 +419,56 @@ fun HistoryScreen(
                                     style = de.tipau.promille.AppText.micro
                                 )
                             }
+                        }
+                    }
+                }
+            }
+
+            // Vormonats-Trend (iOS HistoryView.swift:344-389). Only shown once
+            // there is something to compare against.
+            monthStats.trend?.let { trend ->
+                item {
+                    val diff = monthStats.totalDrinks - trend.previousTotalDrinks
+                    val pct = (kotlin.math.abs(diff).toDouble() /
+                        trend.previousTotalDrinks * 100).roundToInt()
+                    val tint = when {
+                        diff < 0 -> AppColors.statusGreen
+                        diff > 0 -> AppColors.statusOrange
+                        else -> AppColors.textDim
+                    }
+                    Column(
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                painter = if (diff == 0) AppIcons.Equal else AppIcons.ArrowDown,
+                                contentDescription = null,
+                                tint = tint,
+                                // No arrow-up asset; the down one flipped is the same glyph.
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .then(if (diff > 0) Modifier.rotate(180f) else Modifier)
+                            )
+                            Text(
+                                text = when {
+                                    diff < 0 -> "$pct% weniger Drinks als im Vormonat"
+                                    diff > 0 -> "$pct% mehr Drinks als im Vormonat"
+                                    else -> "Gleich viele Drinks wie im Vormonat"
+                                },
+                                color = tint,
+                                style = de.tipau.promille.AppText.caption
+                            )
+                        }
+                        trend.limitedToDays?.let { days ->
+                            Text(
+                                text = "Vergleich: jeweils die ersten $days Tage",
+                                color = AppColors.textMuted,
+                                fontSize = 9.sp
+                            )
                         }
                     }
                 }

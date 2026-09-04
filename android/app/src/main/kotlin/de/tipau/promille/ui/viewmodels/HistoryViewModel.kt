@@ -54,8 +54,33 @@ data class MonthStats(
     val drinkDays: Int,
     val totalDrinks: Int,
     val totalCalories: Int,
-    val days: Map<LocalDate, DayStats>
+    val days: Map<LocalDate, DayStats>,
+    val trend: MonthTrend? = null
 )
+
+data class MonthTrend(
+    val previousTotalDrinks: Int,
+    // Set while the visible month is still running: comparing a half month
+    // against a full one would always read "weniger als im Vormonat".
+    val limitedToDays: Int?
+)
+
+// iOS HistoryViewModel.previousMonthComparison. Keys are logical days already,
+// so a 02:00 drink counts towards the night before.
+internal fun previousMonthTrend(
+    daysByDate: Map<LocalDate, List<Drink>>,
+    month: YearMonth,
+    today: LocalDate
+): MonthTrend? {
+    val limit = if (month == YearMonth.from(today)) today.dayOfMonth else null
+    val previous = month.minusMonths(1)
+    val total = daysByDate
+        .filter { (date, _) ->
+            YearMonth.from(date) == previous && (limit == null || date.dayOfMonth <= limit)
+        }
+        .values.sumOf { it.size }
+    return if (total > 0) MonthTrend(total, limit) else null
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HistoryViewModel(
@@ -97,10 +122,15 @@ class HistoryViewModel(
                 drinkDays = dayStatsMap.count { it.value.hadAlcohol },
                 totalDrinks = dayStatsMap.values.sumOf { it.drinkCount },
                 totalCalories = dayStatsMap.values.sumOf { it.totalCalories },
-                days = dayStatsMap
+                days = dayStatsMap,
+                // The window already spans the previous month, so no second query.
+                trend = previousMonthTrend(grouped, month, LocalDate.now())
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MonthStats(0, 0, 0, emptyMap()))
+
+    val monthTrend: StateFlow<MonthTrend?> = monthStats.map { it.trend }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     fun previousMonth() {
         visibleMonth.value = visibleMonth.value.minusMonths(1)
