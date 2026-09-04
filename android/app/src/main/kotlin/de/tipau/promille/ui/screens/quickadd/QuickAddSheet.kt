@@ -190,7 +190,7 @@ fun QuickAddSheet(
         mutableStateOf(mutableStateListOf<DrinkTemplateEntity>())
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(showQuickMix, showMixCreator, activeTab) {
         val list = templateRepository.getAll()
         allTemplates.clear()
         allTemplates.addAll(list)
@@ -214,8 +214,8 @@ fun QuickAddSheet(
     var isLoadingCommunityMixes by remember { mutableStateOf(false) }
     var selectedMixFilter by remember { mutableStateOf("all") }
 
-    LaunchedEffect(activeTab) {
-        if (activeTab == QATab.MIXES && communityMixes.isEmpty() && supabase != null) {
+    LaunchedEffect(activeTab, showQuickMix, showMixCreator) {
+        if (activeTab == QATab.MIXES && supabase != null) {
             isLoadingCommunityMixes = true
             val rows = runCatching { supabase.fetchCommunityMixes() }.getOrNull() ?: emptyList()
             communityMixes = rows
@@ -296,7 +296,10 @@ fun QuickAddSheet(
                 onDrinkAdded(drink)
                 onDismiss()
             },
-            onDismiss = { showQuickMix = false }
+            onDismiss = { showQuickMix = false },
+            supabase = supabase,
+            customMixDao = customMixDao,
+            templateRepository = templateRepository
         )
     }
 

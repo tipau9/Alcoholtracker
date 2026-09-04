@@ -31,16 +31,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import de.tipau.promille.AppColors
 import de.tipau.promille.bac.DrinkCategory
 import de.tipau.promille.bac.Mixer
 import de.tipau.promille.bac.MixerCategory
 import de.tipau.promille.bac.MixerDatabase
+import de.tipau.promille.data.CustomMixDao
+import de.tipau.promille.data.CustomMixEntity
 import de.tipau.promille.data.DrinkEntity
 import de.tipau.promille.data.DrinkTemplateEntity
+import de.tipau.promille.data.MixIngredient
+import de.tipau.promille.network.SupabaseService
+import de.tipau.promille.network.blobJson
+import de.tipau.promille.network.contributeMix
+import de.tipau.promille.repository.DrinkTemplateRepository
 import de.tipau.promille.ui.components.MixRatioSlider
 import de.tipau.promille.ui.components.PrimaryButton
 import de.tipau.promille.ui.components.SectionLabel
+import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
 import java.util.Locale
 import java.util.UUID
 
@@ -55,8 +65,16 @@ import java.util.UUID
 fun QuickMixSheet(
     templates: List<DrinkTemplateEntity>,
     onAdd: (DrinkEntity) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    supabase: SupabaseService? = null,
+    customMixDao: CustomMixDao? = null,
+    templateRepository: DrinkTemplateRepository? = null
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var showShareConfirmation by remember { mutableStateOf(false) }
+    var showShareSuccess by remember { mutableStateOf(false) }
+
     var selectedSpirit by remember { mutableStateOf<DrinkTemplateEntity?>(null) }
     var selectedMixer by remember { mutableStateOf<Mixer?>(null) }
     var spiritFraction by remember { mutableStateOf(0.25) }
@@ -106,6 +124,61 @@ fun QuickMixSheet(
     }
 
     val canAdd = selectedSpirit != null && selectedMixer != null
+
+    fun shareMix() {
+        val spirit = selectedSpirit ?: return
+        val mixer = selectedMixer ?: return
+        val name = "${spirit.name} + ${mixer.name}"
+        val ings = listOf(
+            MixIngredient(name = spirit.name, abv = spirit.abv, volume = spiritVol),
+            MixIngredient(name = mixer.name, abv = 0.0, volume = mixerVol)
+        )
+        coroutineScope.launch {
+            val id = UUID.randomUUID().toString()
+            if (customMixDao != null) {
+                try {
+                    customMixDao.insert(
+                        CustomMixEntity(
+                            id = id,
+                            name = name,
+                            ingredientsJson = blobJson.encodeToString(ings),
+                            createdAt = System.currentTimeMillis() / 1000
+                        )
+                    )
+                } catch (_: Exception) {}
+            }
+            if (templateRepository != null) {
+                try {
+                    templateRepository.insertLocalTemplate(
+                        DrinkTemplateEntity(
+                            id = id,
+                            name = name,
+                            categoryRaw = "cocktail",
+                            volume = totalVolumeMl,
+                            abv = effectiveABV,
+                            calories = totalCalories,
+                            iconName = spirit.iconName.ifBlank { "wineglass" },
+                            isCustom = true
+                        )
+                    )
+                } catch (_: Exception) {}
+            }
+            if (supabase != null) {
+                try {
+                    supabase.contributeMix(
+                        context = context,
+                        name = name,
+                        ingredients = ings,
+                        totalVolume = totalVolumeMl,
+                        totalAbv = effectiveABV,
+                        calories = totalCalories
+                    )
+                } catch (_: Exception) {}
+            }
+            showShareSuccess = true
+        }
+    }
+
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
@@ -514,7 +587,7 @@ fun QuickMixSheet(
                 }
             }
 
-            // Sticky Bottom Add Button
+            // Sticky Bottom Bar with Share & Add Button
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -522,39 +595,94 @@ fun QuickMixSheet(
                     .border(0.5.dp, AppColors.border)
                     .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
-                PrimaryButton(
-                    text = "Hinzufügen",
-                    enabled = canAdd,
-                    onClick = {
-                        if (selectedSpirit != null && selectedMixer != null) {
-                            val spirit = selectedSpirit!!
-                            val mixer = selectedMixer!!
-                            val blendedABV = spirit.abv * spiritFraction
-                            val spiritCals = if (spirit.volume > 0) {
-                                (spiritVol * spirit.calories.toDouble() / spirit.volume).toInt()
-                            } else 0
-                            val mixerCals = (mixerVol / 100.0 * mixer.caloriesPer100ml.toDouble()).toInt()
-
-                            val drink = DrinkEntity(
-                                id = UUID.randomUUID().toString(),
-                                templateID = spirit.id,
-                                name = "${spirit.name} + ${mixer.name}",
-                                volume = totalVolumeMl,
-                                abv = blendedABV,
-                                calories = spiritCals + mixerCals,
-                                iconName = spirit.iconName,
-                                timestampEpochSeconds = System.currentTimeMillis() / 1000,
-                                categoryRaw = DrinkCategory.MIXED.raw,
-                                mixerVolume = mixerVol,
-                                mixerWaterContent = mixer.waterContentPercent
-                            )
-                            onAdd(drink)
-                            onDismiss()
-                        }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Share Button (iOS parity: square.and.arrow.up, QuickMixSheet.swift:123)
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(AppColors.card)
+                            .border(0.5.dp, AppColors.border, RoundedCornerShape(16.dp))
+                            .then(
+                                if (canAdd) Modifier.clickable { showShareConfirmation = true }
+                                else Modifier
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Share,
+                            contentDescription = "Mix teilen",
+                            tint = if (canAdd) AppColors.accent else AppColors.textMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
-                )
+
+                    Box(modifier = Modifier.weight(1f)) {
+                        PrimaryButton(
+                            text = "Hinzufügen",
+                            enabled = canAdd,
+                            onClick = {
+                                if (selectedSpirit != null && selectedMixer != null) {
+                                    val spirit = selectedSpirit!!
+                                    val mixer = selectedMixer!!
+                                    val blendedABV = spirit.abv * spiritFraction
+                                    val spiritCals = if (spirit.volume > 0) {
+                                        (spiritVol * spirit.calories.toDouble() / spirit.volume).toInt()
+                                    } else 0
+                                    val mixerCals = (mixerVol / 100.0 * mixer.caloriesPer100ml.toDouble()).toInt()
+
+                                    val drink = DrinkEntity(
+                                        id = UUID.randomUUID().toString(),
+                                        templateID = spirit.id,
+                                        name = "${spirit.name} + ${mixer.name}",
+                                        volume = totalVolumeMl,
+                                        abv = blendedABV,
+                                        calories = spiritCals + mixerCals,
+                                        iconName = spirit.iconName,
+                                        timestampEpochSeconds = System.currentTimeMillis() / 1000,
+                                        categoryRaw = DrinkCategory.MIXED.raw,
+                                        mixerVolume = mixerVol,
+                                        mixerWaterContent = mixer.waterContentPercent
+                                    )
+                                    onAdd(drink)
+                                    onDismiss()
+                                }
+                            }
+                        )
+                    }
+                }
             }
         }
+    }
+
+    if (showShareConfirmation) {
+        de.tipau.promille.ui.components.AppAlertDialog(
+            onDismissRequest = { showShareConfirmation = false },
+            title = "Mix wirklich teilen?",
+            text = "Der Mix wird an die Community-Datenbank gesendet und kann nach Bestätigung für andere sichtbar werden.",
+            confirmText = "Teilen",
+            onConfirm = {
+                showShareConfirmation = false
+                shareMix()
+            },
+            dismissText = "Abbrechen",
+            onDismiss = { showShareConfirmation = false }
+        )
+    }
+
+    if (showShareSuccess) {
+        de.tipau.promille.ui.components.AppAlertDialog(
+            onDismissRequest = { showShareSuccess = false },
+            title = "Mix geteilt",
+            text = "Danke! Dein Mix wird für andere sichtbar, sobald genug Leute ihn teilen oder er freigegeben wird.",
+            confirmText = "OK",
+            onConfirm = { showShareSuccess = false },
+            dismissText = null
+        )
     }
 }
 }
