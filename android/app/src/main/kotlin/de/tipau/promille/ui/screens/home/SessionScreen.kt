@@ -488,6 +488,7 @@ fun SessionScreen(
                 ) {
                     BACCurveChartView(
                         points = curvePoints,
+                        points24h = curvePoints24h,
                         drinks = drinks,
                         warningThreshold = 0.5,
                         onFullScreenTap = { showFullScreenChart = true }

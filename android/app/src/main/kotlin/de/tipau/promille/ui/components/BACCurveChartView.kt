@@ -48,6 +48,9 @@ import kotlin.math.max
 @Composable
 fun BACCurveChartView(
     points: List<CurvePoint>,
+    // iOS switches session.bacCurve for session.bacCurve24h behind the toggle
+    // (HomeView.swift:1785). Without this the 24h button only relabelled the axis.
+    points24h: List<CurvePoint> = emptyList(),
     drinks: List<Drink>,
     warningThreshold: Double = 0.5,
     modifier: Modifier = Modifier,
@@ -161,9 +164,12 @@ fun BACCurveChartView(
                 // so the left-to-right reveal plays on every open. A flat zero baseline
                 // keeps the grid, the threshold and "Jetzt" on screen until the first
                 // drink lands, instead of a blank placeholder that never animates.
-                val plotPoints = remember(points, nowEpoch) {
-                    points.ifEmpty {
-                        List(97) { CurvePoint(nowEpoch - 3600 + it * 300L, 0.0) }
+                val source = if (showFullDay && points24h.isNotEmpty()) points24h else points
+                val plotPoints = remember(source, nowEpoch, showFullDay) {
+                    source.ifEmpty {
+                        val hours = if (showFullDay) 24 else 8
+                        val start = nowEpoch - if (showFullDay) 3 * 3600 else 3600
+                        List(hours * 12 + 1) { CurvePoint(start + it * 300L, 0.0) }
                     }
                 }
                 val startTime = plotPoints.first().epochSeconds
@@ -279,12 +285,13 @@ fun BACCurveChartView(
                             areaPath.moveTo(x, h)
                             areaPath.lineTo(x, y)
                         } else {
-                            val prev = plotPoints[index - 1]
-                            val prevX = ((prev.epochSeconds - startTime).toFloat() / (endTime - startTime)) * w
-                            val prevY = h - (prev.bac / maxBac * h).toFloat()
-                            val midX = (prevX + x) / 2f
-                            curvePath.cubicTo(midX, prevY, midX, y, x, y)
-                            areaPath.cubicTo(midX, prevY, midX, y, x, y)
+                            // Straight segments, not the old cubic through
+                            // (midX, prevY)/(midX, y): that one left and entered every
+                            // sample horizontally, so a rising curve came out as a
+                            // staircase of tiny steps. The engine samples every 5 min,
+                            // a few pixels per segment, so lines already read smooth.
+                            curvePath.lineTo(x, y)
+                            areaPath.lineTo(x, y)
                         }
                     }
 

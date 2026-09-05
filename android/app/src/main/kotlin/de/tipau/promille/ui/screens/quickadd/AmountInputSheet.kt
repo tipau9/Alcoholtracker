@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -17,7 +20,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -159,6 +167,7 @@ fun AmountInputSheet(
     onDrinkAdded: (DrinkEntity) -> Unit
 ) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val presets = remember(template.categoryRaw) { ServingSizeCatalog.presets(template.categoryRaw) }
     val sliderRange = remember(template.categoryRaw) { ServingSizeCatalog.getSliderRange(template.categoryRaw) }
 
@@ -345,14 +354,45 @@ fun AmountInputSheet(
                         verticalAlignment = Alignment.Bottom,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Text(
+                        // Tapping the number types an exact millilitre value; the
+                        // slider stays the coarse control and writes the same state.
+                        BasicTextField(
+                            value = volumeText,
+                            onValueChange = { input ->
+                                // Digits only: this is a millilitre count, not a term.
+                                val digits = input.filter { it.isDigit() }.take(4)
+                                volumeText = digits
+                                digits.toIntOrNull()?.let { typed ->
+                                    volume = typed.toDouble().coerceIn(
+                                        sliderRange.start.toDouble(),
+                                        sliderRange.endInclusive.toDouble()
+                                    )
+                                    selectedPresetID = presets
+                                        .firstOrNull { kotlin.math.abs(it.volumeML - volume) < 5.0 }?.id
+                                }
+                            },
                             // iOS: .system(size: 48, weight: .light, design: .serif) (AmountInputSheet.swift:174).
-                            text = volumeText,
-                            color = AppColors.text,
-                            fontSize = fixedSp(48f),
-                            fontWeight = FontWeight.Light,
-                            fontFamily = AppSerif,
-                            style = TabularFigures
+                            textStyle = TabularFigures.copy(
+                                color = AppColors.text,
+                                fontSize = fixedSp(48f),
+                                fontWeight = FontWeight.Light,
+                                fontFamily = AppSerif
+                            ),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                            cursorBrush = SolidColor(AppColors.accent),
+                            modifier = Modifier
+                                .width(IntrinsicSize.Min)
+                                .onFocusChanged { state ->
+                                    // Leaving the field snaps the text back onto the
+                                    // clamped value, so "5" in a 100..2000 range does
+                                    // not linger next to a slider sitting at 100.
+                                    if (!state.isFocused) volumeText = volume.toInt().toString()
+                                }
                         )
                         Text(
                             // iOS: .system(size: 16, weight: .regular) (AmountInputSheet.swift:189).

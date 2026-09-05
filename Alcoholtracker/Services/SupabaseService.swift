@@ -488,7 +488,14 @@ final class SupabaseService {
         ]
         participantBody["current_bac"] = me?.currentBAC ?? NSNull()
         
-        try await restPOST("/rest/v1/jam_participants", body: participantBody, ignoreDuplicates: true)
+        do {
+            try await restPOST("/rest/v1/jam_participants?on_conflict=jam_id,user_id", body: participantBody, ignoreDuplicates: true)
+        } catch let SupabaseError.serverError(code, msg) where code == 409 || msg.contains("409") || msg.contains("jam_participants_one_row_per_user") {
+            try await restPATCH(
+                "/rest/v1/jam_participants?jam_id=eq.\(jam.id.uuidString)&user_id=eq.\(s.userId)",
+                body: participantBody
+            )
+        }
     }
 
     // MARK: Admin
@@ -702,7 +709,14 @@ final class SupabaseService {
         ]
         body["current_bac"] = initialBAC ?? NSNull()
 
-        try await restPOST("/rest/v1/jam_participants", body: body, ignoreDuplicates: true)
+        do {
+            try await restPOST("/rest/v1/jam_participants?on_conflict=jam_id,user_id", body: body, ignoreDuplicates: true)
+        } catch let SupabaseError.serverError(code, msg) where code == 409 || msg.contains("409") || msg.contains("jam_participants_one_row_per_user") {
+            try await restPATCH(
+                "/rest/v1/jam_participants?jam_id=eq.\(jamID.uuidString)&user_id=eq.\(s.userId)",
+                body: body
+            )
+        }
     }
 
     func leaveJam(_ jamID: UUID) async throws {
