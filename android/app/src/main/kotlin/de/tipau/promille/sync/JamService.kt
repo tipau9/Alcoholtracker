@@ -87,6 +87,7 @@ class JamService(
 
     private val _waterScores = MutableStateFlow<List<WaterScore>>(emptyList())
     val waterScores: StateFlow<List<WaterScore>> = _waterScores.asStateFlow()
+    private var lastWaterSubmitTime = 0L
 
     private val _incomingRoulette = MutableStateFlow<JamRoulettePayload?>(null)
     val incomingRoulette: StateFlow<JamRoulettePayload?> = _incomingRoulette.asStateFlow()
@@ -158,12 +159,13 @@ class JamService(
             }
             mp.onWaterReceived = { payload ->
                 if (payload.jamID == _currentJam.value?.id) {
-                    _waterScores.value = when (payload.kind) {
-                        MultipeerService.WaterKind.RESET -> emptyList()
-                        MultipeerService.WaterKind.RESULT -> mergeWaterScores(
-                            local = listOf(WaterScore(payload.participantID, payload.name, payload.milliseconds)),
-                            server = _waterScores.value.filterNot { it.participantID == payload.participantID },
-                            myParticipantID = myParticipantID
+                    when (payload.kind) {
+                        MultipeerService.WaterKind.RESET -> {
+                            lastWaterSubmitTime = 0L
+                            _waterScores.value = emptyList()
+                        }
+                        MultipeerService.WaterKind.RESULT -> applyWaterScore(
+                            WaterScore(payload.participantID, payload.name, payload.milliseconds)
                         )
                     }
                 }
@@ -512,15 +514,27 @@ class JamService(
 
     // MARK: Mini games
 
+    // Keeps the best (lowest) time per participant, matching iOS JamService.applyWaterScore.
+    private fun applyWaterScore(score: WaterScore) {
+        val current = _waterScores.value
+        val existingIndex = current.indexOfFirst { it.participantID == score.participantID }
+        val updated = if (existingIndex >= 0) {
+            if (score.ms < current[existingIndex].ms) {
+                current.toMutableList().apply { set(existingIndex, score) }
+            } else {
+                current
+            }
+        } else {
+            current + score
+        }
+        _waterScores.value = updated.sortedWith(compareBy({ it.ms }, { it.participantID }))
+    }
+
     suspend fun submitWaterTime(milliseconds: Int) {
         val jam = _currentJam.value ?: return
         val name = myDisplayName()
-        // Shown at once, so the tap feels immediate even before the round trip.
-        _waterScores.value = mergeWaterScores(
-            local = listOf(WaterScore(myParticipantID, name, milliseconds)),
-            server = _waterScores.value.filterNot { it.participantID == myParticipantID },
-            myParticipantID = myParticipantID
-        )
+        lastWaterSubmitTime = System.currentTimeMillis()
+        applyWaterScore(WaterScore(myParticipantID, name, milliseconds))
         if (jam.visibility.usesProximity) {
             multipeer?.broadcastWater(
                 MultipeerService.WaterPayload(jam.id, MultipeerService.WaterKind.RESULT, myParticipantID, name, milliseconds)
@@ -533,7 +547,7 @@ class JamService(
 
     suspend fun resetWaterLeaderboard() {
         val jam = _currentJam.value ?: return
-        if (!_amHost.value) return
+        lastWaterSubmitTime = 0L
         _waterScores.value = emptyList()
         if (jam.visibility.usesProximity) {
             multipeer?.broadcastWater(
@@ -720,7 +734,8 @@ class JamService(
                 ?.let { _arcadeResults.value = it }
         }
         runCatching { supabase.fetchJamWaterScores(jam.id) }.getOrNull()?.let { server ->
-            _waterScores.value = mergeWaterScores(_waterScores.value, server, myParticipantID)
+            val hasInFlight = (System.currentTimeMillis() - lastWaterSubmitTime) < 7000L
+            _waterScores.value = mergeWaterScores(_waterScores.value, server, myParticipantID, hasInFlightSubmit = hasInFlight)
         }
     }
 

@@ -668,7 +668,7 @@ private fun ActiveJam(
     if (showWater) {
         WaterContestSheet(
             scores = waterScores,
-            canReset = amHost,
+            canReset = true,
             onFinish = { ms -> scope.launch { jamService.submitWaterTime(ms) } },
             onReset = { scope.launch { jamService.resetWaterLeaderboard() } },
             onDismiss = { showWater = false }
