@@ -1832,6 +1832,70 @@ object AppIcons {
         lineTo(6.41f, 5f)
         close()
     }
+
+    val Hourglass: ImageVector = buildIcon("Hourglass") {
+        moveTo(6f, 2f)
+        verticalLineToRelative(6f)
+        lineToRelative(4f, 4f)
+        lineToRelative(-4f, 4f)
+        verticalLineToRelative(6f)
+        horizontalLineToRelative(12f)
+        verticalLineToRelative(-6f)
+        lineToRelative(-4f, -4f)
+        lineToRelative(4f, -4f)
+        verticalLineTo(2f)
+        horizontalLineTo(6f)
+        close()
+        moveTo(16f, 16.5f)
+        verticalLineTo(20f)
+        horizontalLineTo(8f)
+        verticalLineToRelative(-3.5f)
+        lineToRelative(4f, -4f)
+        lineToRelative(4f, 4f)
+        close()
+        moveTo(12f, 11.5f)
+        lineTo(8f, 7.5f)
+        verticalLineTo(4f)
+        horizontalLineToRelative(8f)
+        verticalLineToRelative(3.5f)
+        lineToRelative(-4f, 4f)
+        close()
+    }
+
+    val HandRaised: ImageVector = buildIcon("HandRaised") {
+        moveTo(10.5f, 5f)
+        curveToRelative(0f, -1.38f, 1.12f, -2.5f, 2.5f, -2.5f)
+        reflectiveCurveToRelative(2.5f, 1.12f, 2.5f, 2.5f)
+        verticalLineToRelative(6.19f)
+        curveToRelative(0.48f, -0.23f, 1.02f, -0.36f, 1.59f, -0.36f)
+        curveToRelative(1.38f, 0f, 2.5f, 1.12f, 2.5f, 2.5f)
+        verticalLineToRelative(3.67f)
+        curveToRelative(0f, 5.52f, -4.48f, 10f, -10f, 10f)
+        curveToRelative(-3.04f, 0f, -5.79f, -1.36f, -7.66f, -3.51f)
+        lineToRelative(4.91f, -4.91f)
+        curveToRelative(0.57f, -0.57f, 1.34f, -0.89f, 2.15f, -0.89f)
+        horizontalLineToRelative(1.51f)
+        verticalLineTo(5f)
+        close()
+    }
+
+    val ArrowClockwise: ImageVector = buildIcon("ArrowClockwise") {
+        moveTo(17.65f, 6.35f)
+        curveTo(16.2f, 4.9f, 14.21f, 4f, 12f, 4f)
+        curveToRelative(-4.42f, 0f, -7.99f, 3.58f, -7.99f, 8f)
+        reflectiveCurveToRelative(3.57f, 8f, 7.99f, 8f)
+        curveToRelative(3.73f, 0f, 6.84f, -2.55f, 7.73f, -6f)
+        horizontalLineToRelative(-2.08f)
+        curveToRelative(-0.82f, 2.33f, -3.04f, 4f, -5.65f, 4f)
+        curveToRelative(-3.31f, 0f, -6f, -2.69f, -6f, -6f)
+        reflectiveCurveToRelative(2.69f, -6f, 6f, -6f)
+        curveToRelative(1.66f, 0f, 3.14f, 0.69f, 4.22f, 1.78f)
+        lineTo(13f, 11f)
+        horizontalLineToRelative(7f)
+        verticalLineTo(4f)
+        lineToRelative(-2.35f, 2.35f)
+        close()
+    }
 }
 
 

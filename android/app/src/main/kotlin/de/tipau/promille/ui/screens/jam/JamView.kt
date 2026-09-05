@@ -680,10 +680,12 @@ private fun ActiveJam(
             round = round,
             results = arcadeResults,
             participantCount = jam.participants.size,
+            canRestart = jamService.canRestartArcade(round),
             onSubmit = { value, disqualified ->
                 scope.launch { jamService.submitArcadeResult(value, disqualified) }
             },
-            onDismiss = { jamService.closeArcade() }
+            onRestart = { scope.launch { jamService.startArcade(round.game) } },
+            onClose = { jamService.closeArcade() }
         )
     }
 

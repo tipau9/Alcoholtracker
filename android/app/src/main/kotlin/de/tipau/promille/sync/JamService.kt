@@ -576,6 +576,9 @@ class JamService(
         if (jam.visibility.usesServer) runCatching { supabase.setJamRoulette(payload) }
     }
 
+    fun canRestartArcade(round: JamArcadeRoundPayload): Boolean =
+        round.jamID == _currentJam.value?.id && round.starterID == myParticipantID
+
     suspend fun startArcade(game: JamArcadeGame) {
         val jam = _currentJam.value ?: return
         val start = nowSeconds().toDouble() + ARCADE_LEAD_SECONDS
