@@ -34,12 +34,10 @@ class JamRosterTest {
     fun `privacy labels split shared from hidden and ignore local preferences`() {
         val (shared, hidden) = JamSettings(
             shareBAC = false,
-            shareDrinkCount = false,
-            shareLocation = true,
-            allowWaves = false
+            shareSOSStatus = true
         ).privacyLabels()
-        assertEquals(listOf("Status", "Drinks", "SOS-Status", "Fotos"), shared)
-        assertEquals(listOf("Promille-Wert", "Anzahl Drinks"), hidden)
+        assertEquals(listOf("Status", "SOS-Status", "Fotos"), shared)
+        assertEquals(listOf("Promille-Wert"), hidden)
     }
 
     @Test
