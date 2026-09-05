@@ -74,9 +74,14 @@ where a.jam_id = b.jam_id
       or (a.joined_at = b.joined_at and a.ctid > b.ctid)
   );
 
+-- Drop the old partial index (WHERE user_id IS NOT NULL) — PostgREST cannot
+-- match on_conflict=jam_id,user_id against a partial index, causing HTTP 400:
+-- "there is no unique or exclusion constraint matching the ON CONFLICT specification".
+drop index if exists public.jam_participants_one_row_per_user;
+
+-- Re-create as a FULL (non-partial) unique index so PostgREST can resolve it.
 create unique index if not exists jam_participants_one_row_per_user
-    on public.jam_participants (jam_id, user_id)
-    where user_id is not null;
+    on public.jam_participants (jam_id, user_id);
 
 create table if not exists public.jam_lookup_events (
     caller_id  uuid not null,
