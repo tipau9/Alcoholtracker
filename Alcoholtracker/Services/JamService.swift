@@ -115,8 +115,8 @@ final class JamService {
     private let supabase: SupabaseService
 
     // Stable ID for the local user's participant row within the current jam session.
-    // Using UUID() per call caused anonymous users to be duplicated every 30s.
-    private let myParticipantID = UUID()
+    // Regenerated per jam join/create to avoid stale IDs across sessions.
+    private var myParticipantID = UUID()
     // Track how we joined so broadcastNow sends the correct connection type.
     private var myConnectionType: JamParticipant.ConnectionType = .code
 
@@ -491,6 +491,7 @@ final class JamService {
         }
 
         mySettings = settings
+        myParticipantID = UUID()
         myJoinedAt = Date()
         myConnectionType = .code
         amHost = true
@@ -521,6 +522,7 @@ final class JamService {
     // MARK: Join per Code
 
     func joinJamByCode(_ code: String) async throws {
+        myParticipantID = UUID()
         guard let jam = try await supabase.findJamByCode(code) else {
             throw JamError.notFound
         }
@@ -544,6 +546,7 @@ final class JamService {
     // MARK: Join per Proximity
 
     func joinJamNearby(_ jam: Jam) async throws {
+        myParticipantID = UUID()
         // If the jam also uses a Supabase server, register there too so non-proximity
         // peers can see us when they poll.
         if jam.visibility.usesServer {
@@ -559,6 +562,7 @@ final class JamService {
     // MARK: Join from Friend
 
     func joinJamFromFriend(_ jam: Jam) async throws {
+        myParticipantID = UUID()
         try await supabase.joinJam(
             jam.id, participantID: myParticipantID,
             initialBAC: mySettings.shareBAC ? myCurrentBAC : nil,

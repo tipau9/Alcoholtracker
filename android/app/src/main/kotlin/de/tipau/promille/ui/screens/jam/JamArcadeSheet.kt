@@ -139,7 +139,7 @@ fun JamArcadeSheet(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = when (round.game) {
+                            painter = when (round.game) {
                                 JamArcadeGame.PERFECT_SECOND -> AppIcons.TouchApp
                                 JamArcadeGame.BALANCE_BATTLE -> AppIcons.Waveform
                                 JamArcadeGame.REACTION_ROYALE -> AppIcons.Bolt
@@ -173,7 +173,7 @@ fun JamArcadeSheet(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = AppIcons.Close,
+                            painter = AppIcons.Close,
                             contentDescription = "Schließen",
                             tint = Color.White.copy(alpha = 0.75f),
                             modifier = Modifier.size(16.dp)
@@ -367,7 +367,7 @@ fun JamArcadeSheet(
                             )
                         ) {
                             Icon(
-                                imageVector = AppIcons.ArrowClockwise,
+                                painter = AppIcons.ArrowClockwise,
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -462,7 +462,7 @@ private fun PerfectSecondArea(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = if (isHolding) AppIcons.Hourglass else AppIcons.TouchApp,
+                painter = if (isHolding) AppIcons.Hourglass else AppIcons.TouchApp,
                 contentDescription = "Stoppuhr gedrückt halten",
                 tint = AppColors.background,
                 modifier = Modifier.size(45.dp)
@@ -510,7 +510,7 @@ private fun ReactionArea(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = if (signalled) AppIcons.Bolt else AppIcons.HandRaised,
+                painter = if (signalled) AppIcons.Bolt else AppIcons.HandRaised,
                 contentDescription = if (signalled) "Jetzt tippen" else "Noch warten",
                 tint = Color.White,
                 modifier = Modifier.size(58.dp)

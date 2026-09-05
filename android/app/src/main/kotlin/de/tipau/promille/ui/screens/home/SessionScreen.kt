@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 
 
 import androidx.compose.ui.Alignment
@@ -65,6 +64,7 @@ fun SessionScreen(
     val skin by viewModel.statusSkin.collectAsState()
     val reducedMotion = LocalReducedMotion.current
     val trend by viewModel.bacTrend.collectAsState()
+    val hangoverForecast by viewModel.hangoverForecast.collectAsState()
     val soberIn by viewModel.soberInHours.collectAsState()
     val driveableIn by viewModel.driveableInHours.collectAsState()
     val drinks by viewModel.drinks.collectAsState()
@@ -88,7 +88,6 @@ fun SessionScreen(
     val sipTotalML by viewModel.sipTotalML.collectAsState()
     val sipPromille by viewModel.sipPromille.collectAsState()
     val currentSipVolume by viewModel.currentSipVolume.collectAsState()
-    val hangoverForecast by viewModel.hangoverForecast.collectAsState()
 
     val scope = rememberCoroutineScope()
     val crewMembers by (container?.crewRepository?.members
@@ -146,22 +145,6 @@ fun SessionScreen(
     var showFullScreenChart by remember { mutableStateOf(false) }
     var showHomeEditSheet by remember { mutableStateOf(false) }
     var isWidgetEditMode by remember { mutableStateOf(false) }
-
-    val defaultSectionOrder = remember {
-        listOf(
-            "stomachStatus",
-            "bacCurve",
-            "milestone",
-            "hydration",
-            "gridTiles",
-            "dayStats",
-            "favStrip",
-            "drinkHistory",
-            "safety"
-        )
-    }
-    var sectionOrder by rememberSaveable { mutableStateOf(defaultSectionOrder) }
-
     var showMorningMoodPrompt by remember { mutableStateOf(false) }
     var availableUpdate by remember { mutableStateOf<UpdateCheckResult.UpdateAvailable?>(null) }
     var showUpdateSheet by remember { mutableStateOf(false) }
@@ -217,19 +200,6 @@ fun SessionScreen(
     }
 
     val haptics = de.tipau.promille.ui.components.rememberHapticManager()
-
-    fun moveSection(id: String, direction: Int) {
-        val current = sectionOrder.toMutableList()
-        val idx = current.indexOf(id)
-        if (idx < 0) return
-        val newIdx = idx + direction
-        if (newIdx in current.indices) {
-            val item = current.removeAt(idx)
-            current.add(newIdx, item)
-            sectionOrder = current
-            haptics.selection()
-        }
-    }
 
     // Achievement toast (HomeView.swift:200-217, 2702-2744).
     val unlockedIds by (container?.achievementService?.unlockedIds
@@ -456,10 +426,7 @@ fun SessionScreen(
                     skin = skin,
                     trend = trend,
                     isEditMode = isWidgetEditMode,
-                    onLongClick = {
-                        haptics.medium()
-                        isWidgetEditMode = true
-                    }
+                    onLongClick = { isWidgetEditMode = true }
                 )
             }
 
@@ -470,7 +437,21 @@ fun SessionScreen(
                 }
             }
 
-            // Event Logging Cards (Essen protokollieren & Breathalyser Messung)
+            // 2. Stomach Status Selector (MAGEN: Leer / Leicht gefüllt / Satt)
+            item {
+                EditableWidgetContainer(
+                    isEditMode = isWidgetEditMode,
+                    isActive = activeWidgets.contains(HomeWidgetType.STOMACH_STATUS),
+                    onToggleActive = { viewModel.toggleWidget("stomachStatus") }
+                ) {
+                    StomachStatusPicker(
+                        currentStatus = stomachStatus,
+                        onStatusSelected = { viewModel.stomachStatus.value = it }
+                    )
+                }
+            }
+
+            // 3. Event Logging Cards (Essen protokollieren & Breathalyser Messung)
             if (drinks.isNotEmpty() && !isWidgetEditMode) {
                 item {
                     MealActionCard(
@@ -485,6 +466,10 @@ fun SessionScreen(
                         onClick = { showBreathalyzerDialog = true }
                     )
                 }
+            }
+
+            // 4. Übergeben
+            if (drinks.isNotEmpty() && !isWidgetEditMode) {
                 item {
                     VomitActionCard(
                         vomitCount = vomits.size,
@@ -494,264 +479,154 @@ fun SessionScreen(
                 }
             }
 
-            // Customizable sections driven by sectionOrder with jiggle & reorder support
-            sectionOrder.forEachIndexed { secIdx, secId ->
-                val moveUp: (() -> Unit)? = if (isWidgetEditMode && secIdx > 0) { { haptics.selection(); moveSection(secId, -1) } } else null
-                val moveDown: (() -> Unit)? = if (isWidgetEditMode && secIdx < sectionOrder.size - 1) { { haptics.selection(); moveSection(secId, 1) } } else null
+            // 5. BAC Verlauf (Timeline Chart)
+            item {
+                EditableWidgetContainer(
+                    isEditMode = isWidgetEditMode,
+                    isActive = activeWidgets.contains(HomeWidgetType.BAC_CURVE),
+                    onToggleActive = { viewModel.toggleWidget("bacCurve") }
+                ) {
+                    BACCurveChartView(
+                        points = curvePoints,
+                        points24h = curvePoints24h,
+                        drinks = drinks,
+                        warningThreshold = 0.5,
+                        onFullScreenTap = { showFullScreenChart = true }
+                    )
+                }
+            }
 
-                when (secId) {
-                    "stomachStatus" -> {
-                        item(key = "stomachStatus") {
-                            EditableWidgetContainer(
-                                isEditMode = isWidgetEditMode,
-                                isActive = activeWidgets.contains(HomeWidgetType.STOMACH_STATUS),
-                                onToggleActive = { viewModel.toggleWidget("stomachStatus") },
-                                onMoveUp = moveUp,
-                                onMoveDown = moveDown
-                            ) {
-                                StomachStatusPicker(
-                                    currentStatus = stomachStatus,
-                                    onStatusSelected = { viewModel.stomachStatus.value = it }
-                                )
-                            }
-                        }
-                    }
-                    "bacCurve" -> {
-                        item(key = "bacCurve") {
-                            EditableWidgetContainer(
-                                isEditMode = isWidgetEditMode,
-                                isActive = activeWidgets.contains(HomeWidgetType.BAC_CURVE),
-                                onToggleActive = { viewModel.toggleWidget("bacCurve") },
-                                onMoveUp = moveUp,
-                                onMoveDown = moveDown
-                            ) {
-                                BACCurveChartView(
-                                    points = curvePoints,
-                                    drinks = drinks,
-                                    warningThreshold = 0.5,
-                                    onFullScreenTap = { showFullScreenChart = true }
-                                )
-                            }
-                        }
-                    }
-                    "milestone" -> {
-                        if (drinks.isNotEmpty() || isWidgetEditMode) {
-                            item(key = "milestone") {
-                                EditableWidgetContainer(
-                                    isEditMode = isWidgetEditMode,
-                                    isActive = activeWidgets.contains(HomeWidgetType.MILESTONE),
-                                    onToggleActive = { viewModel.toggleWidget("milestone") },
-                                    onMoveUp = moveUp,
-                                    onMoveDown = moveDown
-                                ) {
-                                    val hoursUntilTarget = remember(nowSeconds, profile) {
-                                        viewModel.hoursUntil(
-                                            if (profile?.isProbationaryDriver == true) {
-                                                profile?.tipsyThreshold ?: 0.01
-                                            } else {
-                                                0.5
-                                            }
-                                        )
-                                    }
-                                    MilestoneCard(
-                                        hoursUntilTarget = hoursUntilTarget,
-                                        isProbationaryDriver = profile?.isProbationaryDriver == true
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    "hydration" -> {
-                        item(key = "hydration") {
-                            EditableWidgetContainer(
-                                isEditMode = isWidgetEditMode,
-                                isActive = activeWidgets.contains(HomeWidgetType.WATER) || activeWidgets.contains(HomeWidgetType.HYDRATION),
-                                onToggleActive = { viewModel.toggleWidget("hydration") },
-                                onMoveUp = moveUp,
-                                onMoveDown = moveDown
-                            ) {
-                                if (container?.waterLog != null) {
-                                    HydrationWidget(
-                                        drinks = drinks,
-                                        profile = profile?.let { de.tipau.promille.repository.UserProfileRepository.toProfile(it) },
-                                        extraSweatML = extraSweatML,
-                                        vomitCount = vomits.size,
-                                        waterLog = container.waterLog
-                                    )
+            // 6. Unter 0,5% / Nächster Meilenstein
+            if (drinks.isNotEmpty() || isWidgetEditMode) {
+                item {
+                    EditableWidgetContainer(
+                        isEditMode = isWidgetEditMode,
+                        isActive = activeWidgets.contains(HomeWidgetType.MILESTONE),
+                        onToggleActive = { viewModel.toggleWidget("milestone") }
+                    ) {
+                        val hoursUntilTarget = remember(nowSeconds, profile) {
+                            viewModel.hoursUntil(
+                                if (profile?.isProbationaryDriver == true) {
+                                    profile?.tipsyThreshold ?: 0.01
                                 } else {
-                                    HydrationCard(
-                                        drinksCount = drinks.size,
-                                        waterGlasses = loggedGlasses,
-                                        recommendedWaterMl = recommendedWater,
-                                        onAddGlass = { loggedGlasses++ },
-                                        onRemoveGlass = { loggedGlasses = (loggedGlasses - 1).coerceAtLeast(0) }
-                                    )
+                                    0.5
                                 }
-                            }
+                            )
                         }
+                        MilestoneCard(
+                            hoursUntilTarget = hoursUntilTarget,
+                            isProbationaryDriver = profile?.isProbationaryDriver == true
+                        )
                     }
-                    "gridTiles" -> {
-                        val showTime = activeWidgets.contains(HomeWidgetType.TIME_TO_LIMIT)
-                        val showWater = activeWidgets.contains(HomeWidgetType.WATER)
-                        val showCalories = activeWidgets.contains(HomeWidgetType.CALORIES)
-                        val showCount = activeWidgets.contains(HomeWidgetType.DRINK_COUNT)
+                }
+            }
 
-                        item(key = "gridTiles") {
-                            EditableWidgetContainer(
-                                isEditMode = isWidgetEditMode,
-                                isActive = showTime || showWater || showCalories || showCount,
-                                onToggleActive = { viewModel.toggleGridTiles() },
-                                onMoveUp = moveUp,
-                                onMoveDown = moveDown
+            // 7. Hydration Section
+            item {
+                EditableWidgetContainer(
+                    isEditMode = isWidgetEditMode,
+                    isActive = activeWidgets.contains(HomeWidgetType.WATER) || activeWidgets.contains(HomeWidgetType.HYDRATION),
+                    onToggleActive = { viewModel.toggleWidget("hydration") }
+                ) {
+                    if (container?.waterLog != null) {
+                        HydrationWidget(
+                            drinks = drinks,
+                            profile = profile?.let { de.tipau.promille.repository.UserProfileRepository.toProfile(it) },
+                            extraSweatML = extraSweatML,
+                            vomitCount = vomits.size,
+                            waterLog = container.waterLog
+                        )
+                    } else {
+                        HydrationCard(
+                            drinksCount = drinks.size,
+                            waterGlasses = loggedGlasses,
+                            recommendedWaterMl = recommendedWater,
+                            onAddGlass = {
+                                loggedGlasses++
+                            },
+                            onRemoveGlass = {
+                                loggedGlasses = (loggedGlasses - 1).coerceAtLeast(0)
+                            }
+                        )
+                    }
+                }
+            }
+
+            // 8. 2x2 Info Tiles Grid (Unter Grenzwert / Wasser / Kalorien / Drinks heute)
+            val showTime = activeWidgets.contains(HomeWidgetType.TIME_TO_LIMIT)
+            val showWater = activeWidgets.contains(HomeWidgetType.WATER)
+            val showCalories = activeWidgets.contains(HomeWidgetType.CALORIES)
+            val showCount = activeWidgets.contains(HomeWidgetType.DRINK_COUNT)
+
+            item {
+                EditableWidgetContainer(
+                    isEditMode = isWidgetEditMode,
+                    isActive = showTime || showWater || showCalories || showCount,
+                    onToggleActive = { viewModel.toggleGridTiles() }
+                ) {
+                    // Each tile follows its own switch, as iOS's HomeWidgetGrid
+                    // does. The four used to render unconditionally, so turning
+                    // Wasser, Kalorien or Drinks heute off in the edit sheet
+                    // changed nothing on screen. Building the list and chunking
+                    // it by two is what iOS's two-column LazyVGrid does with an
+                    // odd number of tiles; the trailing Spacer keeps the last
+                    // one at half width instead of letting it stretch.
+                    val drivingLimit = profile
+                        ?.let { de.tipau.promille.repository.UserProfileRepository.toProfile(it).drivingLimit } ?: 0.5
+                    val overLimit = bac > drivingLimit + 0.005
+                    val tiles = buildList<@Composable (Modifier) -> Unit> {
+                        if (showTime) add { m ->
+                            val driveText = driveableIn?.let { if (it <= 0) "Nüchtern" else "in ${formatHours(it)}" } ?: "Nüchtern"
+                            InfoWidget(
+                                icon = AppIcons.Car,
+                                label = if (profile?.isProbationaryDriver == true) "Bis 0,0 ‰" else "Bis 0,5 ‰",
+                                value = driveText,
+                                iconColor = if (overLimit) AppColors.statusOrange else AppColors.accent,
+                                isHighlighted = overLimit,
+                                modifier = m
+                            )
+                        }
+                        if (showWater) add { m ->
+                            val waterText = if (recommendedWater <= 0) {
+                                "Ausreichend"
+                            } else {
+                                "$waterGlasses ${if (waterGlasses == 1) "Glas" else "Gläser"}"
+                            }
+                            InfoWidget(
+                                icon = AppIcons.Water,
+                                label = "Wasser",
+                                value = waterText,
+                                iconColor = AppColors.accent,
+                                modifier = m
+                            )
+                        }
+                        if (showCalories) add { m ->
+                            InfoWidget(
+                                icon = AppIcons.Fire,
+                                label = "Kalorien",
+                                value = "$totalCalories kcal",
+                                iconColor = AppColors.statusOrange,
+                                modifier = m
+                            )
+                        }
+                        if (showCount) add { m ->
+                            InfoWidget(
+                                icon = AppIcons.Person,
+                                label = "Drinks heute",
+                                value = "${drinks.size}",
+                                iconColor = AppColors.statusGreen,
+                                modifier = m
+                            )
+                        }
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        tiles.chunked(2).forEach { row ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                val drivingLimit = profile?.let { de.tipau.promille.repository.UserProfileRepository.toProfile(it).drivingLimit } ?: 0.5
-                                val overLimit = bac > drivingLimit + 0.005
-                                val tiles = buildList<@Composable (Modifier) -> Unit> {
-                                    if (showTime) add { m ->
-                                        val driveText = driveableIn?.let { if (it <= 0) "Nüchtern" else "in ${formatHours(it)}" } ?: "Nüchtern"
-                                        InfoWidget(
-                                            icon = AppIcons.Car,
-                                            label = if (profile?.isProbationaryDriver == true) "Bis 0,0 ‰" else "Bis 0,5 ‰",
-                                            value = driveText,
-                                            iconColor = if (overLimit) AppColors.statusOrange else AppColors.accent,
-                                            isHighlighted = overLimit,
-                                            modifier = m
-                                        )
-                                    }
-                                    if (showWater) add { m ->
-                                        val waterText = if (recommendedWater <= 0) "Ausreichend" else "$waterGlasses ${if (waterGlasses == 1) "Glas" else "Gläser"}"
-                                        InfoWidget(
-                                            icon = AppIcons.Water,
-                                            label = "Wasser",
-                                            value = waterText,
-                                            iconColor = AppColors.accent,
-                                            modifier = m
-                                        )
-                                    }
-                                    if (showCalories) add { m ->
-                                        InfoWidget(
-                                            icon = AppIcons.Fire,
-                                            label = "Kalorien",
-                                            value = "$totalCalories kcal",
-                                            iconColor = AppColors.statusOrange,
-                                            modifier = m
-                                        )
-                                    }
-                                    if (showCount) add { m ->
-                                        InfoWidget(
-                                            icon = AppIcons.Person,
-                                            label = "Drinks heute",
-                                            value = "${drinks.size}",
-                                            iconColor = AppColors.statusGreen,
-                                            modifier = m
-                                        )
-                                    }
-                                }
-                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    tiles.chunked(2).forEach { row ->
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                        ) {
-                                            row.forEach { tile -> tile(Modifier.weight(1f)) }
-                                            if (row.size == 1) Spacer(Modifier.weight(1f))
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    "dayStats" -> {
-                        item(key = "dayStats") {
-                            EditableWidgetContainer(
-                                isEditMode = isWidgetEditMode,
-                                isActive = activeWidgets.contains(HomeWidgetType.DAY_STATS),
-                                onToggleActive = { viewModel.toggleWidget("dayStats") },
-                                onMoveUp = moveUp,
-                                onMoveDown = moveDown
-                            ) {
-                                DayStatsCard(
-                                    drinkCount = drinks.size,
-                                    maxToday = maxToday,
-                                    minutesSinceLastDrink = minutesSinceLast
-                                )
-                            }
-                        }
-                    }
-                    "favStrip" -> {
-                        if (favorites.isNotEmpty() || isWidgetEditMode) {
-                            item(key = "favStrip") {
-                                EditableWidgetContainer(
-                                    isEditMode = isWidgetEditMode,
-                                    isActive = activeWidgets.contains(HomeWidgetType.FAV_STRIP),
-                                    onToggleActive = { viewModel.toggleWidget("favStrip") },
-                                    onMoveUp = moveUp,
-                                    onMoveDown = moveDown
-                                ) {
-                                    FavouritesStrip(
-                                        templates = favorites,
-                                        onAdd = { template ->
-                                            val quickDrink = DrinkEntity(
-                                                id = UUID.randomUUID().toString(),
-                                                templateID = template.id,
-                                                name = template.name,
-                                                volume = template.volume,
-                                                abv = template.abv,
-                                                calories = template.calories,
-                                                iconName = template.iconName,
-                                                categoryRaw = template.categoryRaw,
-                                                timestampEpochSeconds = System.currentTimeMillis() / 1000
-                                            )
-                                            viewModel.addDrink(quickDrink)
-                                            pingCityTrend(quickDrink)
-                                        },
-                                        onLongPress = { amountTemplate = it }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    "drinkHistory" -> {
-                        if (drinks.isNotEmpty() || isWidgetEditMode) {
-                            item(key = "drinkHistory") {
-                                EditableWidgetContainer(
-                                    isEditMode = isWidgetEditMode,
-                                    isActive = activeWidgets.contains(HomeWidgetType.DRINK_HISTORY),
-                                    onToggleActive = { viewModel.toggleWidget("drinkHistory") },
-                                    onMoveUp = moveUp,
-                                    onMoveDown = moveDown
-                                ) {
-                                    DrinkHistorySection(
-                                        drinks = drinks,
-                                        stomachStatus = stomachStatus,
-                                        onEdit = { editingDrink = it },
-                                        onFinish = { viewModel.finishDrinkNow(it) },
-                                        onDuplicate = { viewModel.duplicateDrink(it) },
-                                        onDelete = { viewModel.removeDrink(it) }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    "safety" -> {
-                        if (container != null) {
-                            item(key = "safety") {
-                                EditableWidgetContainer(
-                                    isEditMode = isWidgetEditMode,
-                                    isActive = activeWidgets.contains(HomeWidgetType.SAFETY_ACTIONS),
-                                    onToggleActive = { viewModel.toggleWidget("safetyActions") },
-                                    onMoveUp = moveUp,
-                                    onMoveDown = moveDown
-                                ) {
-                                    SafetyActionsCard(
-                                        sosActive = myProfile?.sosActive == true,
-                                        onCallRide = { showRidePicker = true },
-                                        onToggleSOS = {
-                                            val next = myProfile?.sosActive != true
-                                            scope.launch { runCatching { container.supabase.setSOS(next) } }
-                                        }
-                                    )
-                                }
+                                row.forEach { tile -> tile(Modifier.weight(1f)) }
+                                if (row.size == 1) Spacer(Modifier.weight(1f))
                             }
                         }
                     }
@@ -767,6 +642,92 @@ fun SessionScreen(
             if (!isWidgetEditMode) {
                 profile?.weeklyDrinkLimit?.takeIf { it > 0 }?.let { limit ->
                     item { WeeklyLimitCard(used = weekCount, limit = limit) }
+                }
+            }
+
+            // 9. Day Stats (Drinks, Maximum, Letzter Drink)
+            item {
+                EditableWidgetContainer(
+                    isEditMode = isWidgetEditMode,
+                    isActive = activeWidgets.contains(HomeWidgetType.DAY_STATS),
+                    onToggleActive = { viewModel.toggleWidget("dayStats") }
+                ) {
+                    DayStatsCard(
+                        drinkCount = drinks.size,
+                        maxToday = maxToday,
+                        minutesSinceLastDrink = minutesSinceLast
+                    )
+                }
+            }
+
+            // 10. Schnell hinzufügen (Favourites Strip)
+            if (favorites.isNotEmpty() || isWidgetEditMode) {
+                item {
+                    EditableWidgetContainer(
+                        isEditMode = isWidgetEditMode,
+                        isActive = activeWidgets.contains(HomeWidgetType.FAV_STRIP),
+                        onToggleActive = { viewModel.toggleWidget("favStrip") }
+                    ) {
+                        FavouritesStrip(
+                            templates = favorites,
+                            onAdd = { template ->
+                                val quickDrink = DrinkEntity(
+                                    id = UUID.randomUUID().toString(),
+                                    templateID = template.id,
+                                    name = template.name,
+                                    volume = template.volume,
+                                    abv = template.abv,
+                                    calories = template.calories,
+                                    iconName = template.iconName,
+                                    categoryRaw = template.categoryRaw,
+                                    timestampEpochSeconds = System.currentTimeMillis() / 1000
+                                )
+                                viewModel.addDrink(quickDrink)
+                                pingCityTrend(quickDrink)
+                            },
+                            onLongPress = { amountTemplate = it }
+                        )
+                    }
+                }
+            }
+
+            // 11. Heute mit der Drinks Auflistung
+            if (drinks.isNotEmpty() || isWidgetEditMode) {
+                item {
+                    EditableWidgetContainer(
+                        isEditMode = isWidgetEditMode,
+                        isActive = activeWidgets.contains(HomeWidgetType.DRINK_HISTORY),
+                        onToggleActive = { viewModel.toggleWidget("drinkHistory") }
+                    ) {
+                        DrinkHistorySection(
+                            drinks = drinks,
+                            stomachStatus = stomachStatus,
+                            onEdit = { editingDrink = it },
+                            onFinish = { viewModel.finishDrinkNow(it) },
+                            onDuplicate = { viewModel.duplicateDrink(it) },
+                            onDelete = { viewModel.removeDrink(it) }
+                        )
+                    }
+                }
+            }
+
+            // 12. Sicher nach Hause (Safety Actions)
+            if (container != null) {
+                item {
+                    EditableWidgetContainer(
+                        isEditMode = isWidgetEditMode,
+                        isActive = activeWidgets.contains(HomeWidgetType.SAFETY_ACTIONS),
+                        onToggleActive = { viewModel.toggleWidget("safetyActions") }
+                    ) {
+                        SafetyActionsCard(
+                            sosActive = myProfile?.sosActive == true,
+                            onCallRide = { showRidePicker = true },
+                            onToggleSOS = {
+                                val next = myProfile?.sosActive != true
+                                scope.launch { runCatching { container.supabase.setSOS(next) } }
+                            }
+                        )
+                    }
                 }
             }
 
@@ -901,8 +862,8 @@ fun SessionScreen(
         // Floating Achievement Unlock Toast (bottom-rising toast matching iOS HomeView.swift:200-217)
         AnimatedVisibility(
             visible = unlockedAchievementToast != null && activeSipDrink == null,
-            enter = if (reducedMotion) fadeIn() else de.tipau.promille.AppMotion.toastBottomEnter,
-            exit = if (reducedMotion) fadeOut() else de.tipau.promille.AppMotion.toastBottomExit,
+            enter = if (reducedMotion) fadeIn() else slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = if (reducedMotion) fadeOut() else slideOutVertically(targetOffsetY = { it }) + fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = if (undoAction != null) 148.dp else 84.dp)
@@ -919,8 +880,8 @@ fun SessionScreen(
         // Floating Sip Counter Overlay (replaces bottom area while counting)
         AnimatedVisibility(
             visible = activeSipDrink != null,
-            enter = if (reducedMotion) fadeIn() else de.tipau.promille.AppMotion.toastBottomEnter,
-            exit = if (reducedMotion) fadeOut() else de.tipau.promille.AppMotion.toastBottomExit,
+            enter = if (reducedMotion) fadeIn() else slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = if (reducedMotion) fadeOut() else slideOutVertically(targetOffsetY = { it }) + fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(horizontal = 16.dp, vertical = 20.dp)
@@ -964,7 +925,7 @@ fun SessionScreen(
 
 @Composable
 private fun InfoTile(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: androidx.compose.ui.graphics.painter.Painter,
     title: String,
     subtitle: String,
     accentColor: androidx.compose.ui.graphics.Color = AppColors.text,
@@ -982,7 +943,7 @@ private fun InfoTile(
                 contentAlignment = Alignment.Center
             ) {
                 androidx.compose.material3.Icon(
-                    imageVector = icon,
+                    painter = icon,
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
                     tint = AppColors.text

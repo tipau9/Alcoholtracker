@@ -224,6 +224,7 @@ suspend fun SupabaseService.publishJam(jam: Jam) {
                 transport.restPATCH(
                     "/rest/v1/jam_participants?jam_id=eq.${jam.id}&user_id=eq.$me",
                     buildJsonObject {
+                        mine?.id?.let { put("id", it) }
                         put("display_name", myProfile.value?.displayName ?: jam.hostName)
                         put("connection_type", JamConnectionType.CODE.raw)
                         put("last_updated", Timestamps.format(nowSeconds()))
@@ -275,6 +276,7 @@ suspend fun SupabaseService.joinJam(
                 transport.restPATCH(
                     "/rest/v1/jam_participants?jam_id=eq.$jamID&user_id=eq.$me",
                     buildJsonObject {
+                        put("id", participantID)
                         put("display_name", myProfile.value?.displayName ?: "Anonym")
                         put("connection_type", connectionType)
                         put("last_updated", Timestamps.format(nowSeconds()))
