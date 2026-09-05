@@ -202,20 +202,39 @@ suspend fun SupabaseService.publishJam(jam: Jam) {
         put("settings", supabaseJson.encodeToJsonElement(JamSettingsRow.from(jam.settings)))
     })
     val mine = jam.participants.firstOrNull { it.userID == me }
-    transport.restPOST(
-        "/rest/v1/jam_participants",
-        buildJsonObject {
-            put("id", mine?.id ?: java.util.UUID.randomUUID().toString())
-            put("jam_id", jam.id)
-            put("user_id", me)
-            put("display_name", myProfile.value?.displayName ?: jam.hostName)
-            put("connection_type", JamConnectionType.CODE.raw)
-            put("has_sos_active", false)
-            put("last_updated", Timestamps.format(nowSeconds()))
-            put("current_bac", nullableDouble(mine?.currentBAC))
-        },
-        ignoreDuplicates = true
-    )
+    try {
+        transport.restPOST(
+            "/rest/v1/jam_participants?on_conflict=jam_id,user_id",
+            buildJsonObject {
+                put("id", mine?.id ?: java.util.UUID.randomUUID().toString())
+                put("jam_id", jam.id)
+                put("user_id", me)
+                put("display_name", myProfile.value?.displayName ?: jam.hostName)
+                put("connection_type", JamConnectionType.CODE.raw)
+                put("has_sos_active", false)
+                put("last_updated", Timestamps.format(nowSeconds()))
+                put("current_bac", nullableDouble(mine?.currentBAC))
+            },
+            ignoreDuplicates = true
+        )
+    } catch (e: Exception) {
+        val msg = e.message.orEmpty()
+        if (msg.contains("409") || msg.contains("jam_participants_one_row_per_user")) {
+            runCatching {
+                transport.restPATCH(
+                    "/rest/v1/jam_participants?jam_id=eq.${jam.id}&user_id=eq.$me",
+                    buildJsonObject {
+                        put("display_name", myProfile.value?.displayName ?: jam.hostName)
+                        put("connection_type", JamConnectionType.CODE.raw)
+                        put("last_updated", Timestamps.format(nowSeconds()))
+                        put("current_bac", nullableDouble(mine?.currentBAC))
+                    }
+                )
+            }
+        } else {
+            throw e
+        }
+    }
 }
 
 suspend fun SupabaseService.findJamByCode(code: String): Jam? {
@@ -234,20 +253,39 @@ suspend fun SupabaseService.joinJam(
     connectionType: String = JamConnectionType.CODE.raw
 ) {
     val me = requireUserId()
-    transport.restPOST(
-        "/rest/v1/jam_participants",
-        buildJsonObject {
-            put("id", participantID)
-            put("jam_id", jamID)
-            put("user_id", me)
-            put("display_name", myProfile.value?.displayName ?: "Anonym")
-            put("connection_type", connectionType)
-            put("has_sos_active", false)
-            put("last_updated", Timestamps.format(nowSeconds()))
-            put("current_bac", nullableDouble(initialBAC))
-        },
-        ignoreDuplicates = true
-    )
+    try {
+        transport.restPOST(
+            "/rest/v1/jam_participants?on_conflict=jam_id,user_id",
+            buildJsonObject {
+                put("id", participantID)
+                put("jam_id", jamID)
+                put("user_id", me)
+                put("display_name", myProfile.value?.displayName ?: "Anonym")
+                put("connection_type", connectionType)
+                put("has_sos_active", false)
+                put("last_updated", Timestamps.format(nowSeconds()))
+                put("current_bac", nullableDouble(initialBAC))
+            },
+            ignoreDuplicates = true
+        )
+    } catch (e: Exception) {
+        val msg = e.message.orEmpty()
+        if (msg.contains("409") || msg.contains("jam_participants_one_row_per_user")) {
+            runCatching {
+                transport.restPATCH(
+                    "/rest/v1/jam_participants?jam_id=eq.$jamID&user_id=eq.$me",
+                    buildJsonObject {
+                        put("display_name", myProfile.value?.displayName ?: "Anonym")
+                        put("connection_type", connectionType)
+                        put("last_updated", Timestamps.format(nowSeconds()))
+                        put("current_bac", nullableDouble(initialBAC))
+                    }
+                )
+            }
+        } else {
+            throw e
+        }
+    }
 }
 
 suspend fun SupabaseService.leaveJam(jamID: String) {
