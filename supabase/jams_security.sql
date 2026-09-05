@@ -227,9 +227,12 @@ create policy "jams_insert_host" on public.jams
     for insert with check (host_user_id::uuid = auth.uid());
 
 -- Only the host may modify or end/delete their jam.
+-- WITH CHECK (true) allows the current host to hand off the jam to another user
+-- (transfer host / ghost-jam auto-election).
+drop policy if exists "jams_update_host" on public.jams;
 create policy "jams_update_host" on public.jams
     for update using (host_user_id::uuid = auth.uid())
-            with check (host_user_id::uuid = auth.uid());
+            with check (true);
 create policy "jams_delete_host" on public.jams
     for delete using (host_user_id::uuid = auth.uid());
 
@@ -323,3 +326,40 @@ revoke all on function public.friend_jams(uuid[])  from public, anon;
 revoke all on table public.jam_lookup_events from public, anon, authenticated;
 grant execute on function public.jam_by_code(text)   to authenticated;
 grant execute on function public.friend_jams(uuid[]) to authenticated;
+
+-- =========================================================================
+-- 5. Empty-jam automatic cleanup trigger
+-- =========================================================================
+
+-- Deletes empty jams or jams when the host departs without transferring
+create or replace function public.check_jam_cleanup()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    v_host_id text;
+begin
+    -- Check if the jam still exists
+    select host_user_id into v_host_id from public.jams where id = old.jam_id;
+    if not found then
+        return old;
+    end if;
+
+    -- If departing participant was host or no participants remain, delete the jam
+    if (v_host_id = old.user_id) or not exists (select 1 from public.jam_participants where jam_id = old.jam_id) then
+        delete from public.jams where id = old.jam_id;
+    end if;
+    return old;
+end;
+$$;
+
+drop trigger if exists trg_check_jam_cleanup on public.jam_participants;
+create trigger trg_check_jam_cleanup
+after delete on public.jam_participants
+for each row execute function public.check_jam_cleanup();
+
+-- Delete abandoned jams older than 24 hours
+delete from public.jams
+where created_at < now() - interval '24 hours';

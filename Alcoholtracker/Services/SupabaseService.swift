@@ -370,9 +370,9 @@ final class SupabaseService {
             let data = try await restRPC("friend_profiles_by_codes", body: ["p_codes": batch])
             profiles += try Self.decoder.decode([FriendProfile].self, from: data)
         }
-        // The function returns non-sharing friends too (with BAC nulled out);
-        // keep the old behaviour of surfacing only the ones actively sharing.
-        return profiles.filter { $0.isSharing }
+        // Returns all friends (including those with BAC sharing off) so their
+        // SOS state is reliably updated and active alerts are never frozen or missed.
+        return profiles
     }
 
     // Friend code of a single user id, used to verify friends-only jam access.
