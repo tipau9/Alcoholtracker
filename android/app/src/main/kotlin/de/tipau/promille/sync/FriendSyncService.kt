@@ -46,8 +46,8 @@ fun applyFriendUpdate(
     }
 
     val next = member.copy(
-        currentBAC = remote.currentBac ?: 0.0,
-        lastDrinkTimestamp = updatedAt,
+        currentBAC = if (remote.isSharing) remote.currentBac ?: 0.0 else 0.0,
+        lastDrinkTimestamp = if (remote.isSharing) updatedAt else null,
         isProbationaryDriver = remote.isProbationary,
         sosActive = remote.sosActive,
         highAlertFired = highFired
