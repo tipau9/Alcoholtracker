@@ -1254,6 +1254,16 @@ private fun MemberCard(
                         color = AppColors.text,
                         style = de.tipau.promille.AppText.body
                     )
+                    if (!member.isMutual) {
+                        Spacer(Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .background(AppColors.statusOrange.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text("Ausstehend", color = AppColors.statusOrange, style = de.tipau.promille.AppText.micro.copy(fontWeight = FontWeight.Bold))
+                        }
+                    }
                     if (member.isSoberBuddy) {
                         Spacer(Modifier.width(6.dp))
                         Box(
@@ -1277,12 +1287,14 @@ private fun MemberCard(
                 }
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = if (member.lastDrinkTimestamp == null && member.friendCode != null) {
+                    text = if (!member.isMutual) {
+                        "Noch nicht zurückgeaddet · SOS inaktiv"
+                    } else if (member.lastDrinkTimestamp == null && member.friendCode != null) {
                         "Noch kein Wert übertragen"
                     } else {
                         String.format(Locale.GERMANY, "%.2f ‰", estimated)
                     },
-                    color = if (estimated > 0.8) AppColors.statusOrange else AppColors.textDim,
+                    color = if (!member.isMutual) AppColors.statusOrange else if (estimated > 0.8) AppColors.statusOrange else AppColors.textDim,
                     // iOS: .appCaption (CrewView.swift:943).
                     style = de.tipau.promille.AppText.caption
                 )

@@ -126,7 +126,8 @@ data class CrewMemberEntity(
     val sosActive: Boolean = false,
     val isProbationaryDriver: Boolean = false,
     val alertWhenHigh: Boolean = false,
-    val highAlertFired: Boolean = false
+    val highAlertFired: Boolean = false,
+    val isMutual: Boolean = true
 )
 
 @Entity(tableName = "photo_memory")

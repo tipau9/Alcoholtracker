@@ -104,10 +104,13 @@ fun FriendProfileSheet(
         // Both of these need the friendships table, which older installs and a
         // hardened database may not hand out. iOS treats them the same way:
         // missing schema just leaves the sections empty.
+        found.isMutual?.let { followsMe = it }
         runCatching {
             val theirIDs = supabase.fetchFriendIDs(found.id)
             val myID = myProfile?.id
-            followsMe = myID != null && theirIDs.contains(myID)
+            if (found.isMutual == null) {
+                followsMe = myID != null && theirIDs.contains(myID)
+            }
             if (myID != null) {
                 val mine = supabase.fetchFriendIDs(myID).toSet()
                 val mutual = theirIDs.filter { it in mine && it != myID && it != found.id }

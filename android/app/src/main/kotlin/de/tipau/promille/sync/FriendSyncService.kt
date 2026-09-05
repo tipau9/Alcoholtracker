@@ -30,8 +30,10 @@ fun applyFriendUpdate(
     val alerts = mutableListOf<FriendAlert>()
     val updatedAt = remote.bacUpdatedAt?.toLong()
 
-    // Rising edge only: the friend has to have been quiet before.
-    if (remote.sosActive && !member.sosActive) alerts += FriendAlert.SOS
+    val isMutual = remote.isMutual ?: member.isMutual
+
+    // Rising edge only: the friend has to have been quiet before and mutual.
+    if (remote.sosActive && isMutual && !member.sosActive) alerts += FriendAlert.SOS
 
     val estimated = CrewMath.estimatedBac(remote.currentBac ?: 0.0, updatedAt, nowEpochSeconds)
     var highFired = member.highAlertFired
@@ -50,7 +52,8 @@ fun applyFriendUpdate(
         lastDrinkTimestamp = if (remote.isSharing) updatedAt else null,
         isProbationaryDriver = remote.isProbationary,
         sosActive = remote.sosActive,
-        highAlertFired = highFired
+        highAlertFired = highFired,
+        isMutual = isMutual
     )
     return next to alerts
 }
@@ -91,7 +94,8 @@ class FriendSyncService(
                     lastDrinkTimestamp = next.lastDrinkTimestamp,
                     isProbationaryDriver = next.isProbationaryDriver,
                     sosActive = next.sosActive,
-                    highAlertFired = next.highAlertFired
+                    highAlertFired = next.highAlertFired,
+                    isMutual = next.isMutual
                 )
                 for (alert in alerts) notify(alert, next, now)
             }

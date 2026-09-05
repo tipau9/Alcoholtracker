@@ -600,7 +600,8 @@ final class JamService {
         // the session is still up. Done before stopAll() tears it down.
         multipeer.broadcastControl(
             JamControl(action: .leave, jamID: jam.id,
-                       participantID: myParticipantID, userID: supabase.session?.userId)
+                       participantID: myParticipantID, userID: supabase.session?.userId,
+                       senderParticipantID: myParticipantID, senderUserID: supabase.session?.userId)
         )
         stopTimers()
         multipeer.stopAll()
@@ -661,7 +662,8 @@ final class JamService {
 
         multipeer.broadcastControl(
             JamControl(action: .kick, jamID: jam.id,
-                       participantID: participant.id, userID: participant.userID)
+                       participantID: participant.id, userID: participant.userID,
+                       senderParticipantID: myParticipantID, senderUserID: supabase.session?.userId)
         )
 
         if jam.visibility.usesServer {
@@ -720,7 +722,8 @@ final class JamService {
         multipeer.broadcastControl(JamControl(
             action: .transferHost, jamID: jam.id,
             participantID: participant.id, userID: participant.userID,
-            newHostName: participant.displayName))
+            newHostName: participant.displayName,
+            senderParticipantID: myParticipantID, senderUserID: supabase.session?.userId))
     }
 
     // Applies a host change announced by someone else (a transferHost control or a
@@ -761,6 +764,11 @@ final class JamService {
         guard var jam = currentJam, jam.id == control.jamID else { return }
         switch control.action {
         case .leave:
+            // Sender validation: peers can only announce their own departure.
+            // A forged leave for another participant is ignored.
+            if let senderPID = control.senderParticipantID, senderPID != control.participantID {
+                return
+            }
             tombstone(control.participantID)
             jam.participants.removeAll {
                 $0.id == control.participantID
@@ -768,6 +776,17 @@ final class JamService {
             }
             currentJam = jam
         case .kick:
+            // Sender validation: only the host can kick participants.
+            let senderIsHost: Bool
+            if !jam.hostUserID.isEmpty {
+                senderIsHost = (control.senderUserID == jam.hostUserID)
+            } else if let hostP = jam.participants.first(where: { $0.isHost }) {
+                senderIsHost = (control.senderParticipantID == hostP.id)
+            } else {
+                senderIsHost = false
+            }
+            guard senderIsHost else { return }
+
             let meTargeted = control.participantID == myParticipantID
                 || (control.userID != nil && control.userID == supabase.session?.userId)
             if meTargeted {
@@ -781,6 +800,17 @@ final class JamService {
                 currentJam = jam
             }
         case .transferHost:
+            // Sender validation: only the current host can transfer host ownership.
+            let senderIsHost: Bool
+            if !jam.hostUserID.isEmpty {
+                senderIsHost = (control.senderUserID == jam.hostUserID)
+            } else if let hostP = jam.participants.first(where: { $0.isHost }) {
+                senderIsHost = (control.senderParticipantID == hostP.id)
+            } else {
+                senderIsHost = false
+            }
+            guard senderIsHost else { return }
+
             let name = control.newHostName
                 ?? jam.participants.first(where: { $0.id == control.participantID })?.displayName
                 ?? jam.hostName
@@ -897,7 +927,7 @@ final class JamService {
                     jamID: jam.id,
                     bac: mySettings.shareBAC ? myCurrentBAC : nil,
                     status: mySettings.shareStatus ? myCurrentStatus : nil,
-                    sosActive: mySOSActive
+                    sosActive: mySettings.shareSOSStatus && mySOSActive
                 )
             }
         }
@@ -1055,7 +1085,7 @@ final class JamService {
             connectionType: type,
             currentBAC: mySettings.shareBAC ? myCurrentBAC : nil,
             currentStatus: mySettings.shareStatus ? myCurrentStatus : nil,
-            hasSOSActive: mySOSActive,
+            hasSOSActive: mySettings.shareSOSStatus && mySOSActive,
             lastUpdated: Date(),
             sharedSettings: mySettings
         )

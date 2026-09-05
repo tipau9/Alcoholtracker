@@ -21,6 +21,8 @@ struct FriendProfile: Codable, Identifiable {
     // The user's own Probezeit (0,0 ‰ driving limit); false until the
     // is_probationary column exists server-side (see SupabaseService).
     var isProbationary: Bool
+    // True if both sides have added each other. False if the other user has not added you back.
+    var isMutual: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -32,6 +34,7 @@ struct FriendProfile: Codable, Identifiable {
         case achievements
         case sosActive      = "sos_active"
         case isProbationary = "is_probationary"
+        case isMutual       = "is_mutual"
     }
 
     init(from decoder: Decoder) throws {
@@ -45,6 +48,7 @@ struct FriendProfile: Codable, Identifiable {
         achievements = try? c.decodeIfPresent([String].self, forKey: .achievements)
         sosActive    = (try? c.decodeIfPresent(Bool.self, forKey: .sosActive)) ?? false
         isProbationary = (try? c.decodeIfPresent(Bool.self, forKey: .isProbationary)) ?? false
+        isMutual     = try? c.decodeIfPresent(Bool.self, forKey: .isMutual)
     }
 }
 

@@ -41,6 +41,11 @@ final class CrewMember {
     // friend drops back below the threshold.
     var highAlertFired: Bool = false
 
+    // Friend's mutual status from friend_profiles_by_codes / friend_profiles_by_ids.
+    // When false, the other user hasn't added this user back yet (SOS inaktiv).
+    // Inline default required for SwiftData lightweight migration.
+    var isMutual: Bool = true
+
     // MARK: Computed
 
     var bacUpdatedMinutesAgo: Int? {

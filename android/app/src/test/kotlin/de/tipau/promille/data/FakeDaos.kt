@@ -248,7 +248,8 @@ class FakeCrewMemberDao : CrewMemberDao {
         lastDrinkTimestamp: Long?,
         isProbationaryDriver: Boolean,
         sosActive: Boolean,
-        highAlertFired: Boolean
+        highAlertFired: Boolean,
+        isMutual: Boolean
     ) {
         members.update { map ->
             val existing = map[id] ?: return@update map
@@ -257,7 +258,8 @@ class FakeCrewMemberDao : CrewMemberDao {
                 lastDrinkTimestamp = lastDrinkTimestamp,
                 isProbationaryDriver = isProbationaryDriver,
                 sosActive = sosActive,
-                highAlertFired = highAlertFired
+                highAlertFired = highAlertFired,
+                isMutual = isMutual
             ))
         }
     }
