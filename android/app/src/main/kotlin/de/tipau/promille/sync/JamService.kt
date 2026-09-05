@@ -283,7 +283,7 @@ class JamService(
                 _currentJam.value = jam.copy(participants = jam.participants.filterNot { it.id == control.participantID })
             }
             MultipeerService.ControlAction.TRANSFER_HOST -> {
-                val uid = control.userID ?: return
+                val uid = control.userID ?: ""
                 _amHost.value = control.participantID == myParticipantID
                 _currentJam.value = jam.copy(hostUserID = uid, hostName = control.newHostName ?: jam.hostName)
             }
@@ -489,13 +489,17 @@ class JamService(
         }
     }
 
-    fun canTransferHost(participant: JamParticipant): Boolean =
-        _amHost.value && participant.id != myParticipantID && participant.userID != null
+    fun canTransferHost(participant: JamParticipant): Boolean {
+        val jam = _currentJam.value ?: return false
+        if (!_amHost.value || participant.id == myParticipantID) return false
+        if (jam.visibility.usesServer && participant.userID == null) return false
+        return true
+    }
 
     fun transferHost(participant: JamParticipant) {
         val jam = _currentJam.value ?: return
         if (!canTransferHost(participant)) return
-        val uid = participant.userID ?: return
+        val uid = participant.userID ?: ""
         _amHost.value = false
         _currentJam.value = jam.copy(hostUserID = uid, hostName = participant.displayName)
         if (jam.visibility.usesProximity) {
@@ -504,12 +508,12 @@ class JamService(
                     action = MultipeerService.ControlAction.TRANSFER_HOST,
                     jamID = jam.id,
                     participantID = participant.id,
-                    userID = uid,
+                    userID = participant.userID,
                     newHostName = participant.displayName
                 )
             )
         }
-        if (jam.visibility.usesServer) {
+        if (jam.visibility.usesServer && uid.isNotEmpty()) {
             scope.launch { runCatching { supabase.updateJamHost(jam.id, uid, participant.displayName) } }
         }
     }

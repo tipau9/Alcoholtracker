@@ -148,7 +148,7 @@ final class JamService {
     // broadcast arriving late (e.g. after an offline peer reconnects) cannot
     // resurrect them. Bounded by a TTL; after that a genuine rejoin is allowed.
     private var tombstones: [UUID: Date] = [:]
-    private let tombstoneTTL: TimeInterval = 300
+    private let tombstoneTTL: TimeInterval = 180
 
     private func tombstone(_ id: UUID) { tombstones[id] = Date() }
 
@@ -756,8 +756,19 @@ final class JamService {
     // proximity-only peers are never pruned, so "host absent" cannot be detected
     // there without a live-connection signal. Called from syncParticipants.
     private func reconcileHostPresence() {
-        guard let jam = currentJam, jam.visibility.usesServer, !amHost else { return }
+        guard let jam = currentJam, jam.visibility.usesServer else { return }
         guard !jam.hostUserID.isEmpty else { return }
+
+        // If we believe we are host, but the server jam's hostUserID is someone else
+        // (e.g. an election took place while we were disconnected), step down immediately.
+        if amHost {
+            if let myUID = supabase.session?.userId, jam.hostUserID != myUID {
+                amHost = false
+                multipeer.stopAdvertising()
+            }
+            return
+        }
+
         let hostPresent = jam.participants.contains { $0.userID == jam.hostUserID }
         if hostPresent { return }
         guard let elected = electHost(excluding: jam.hostUserID, from: jam.participants) else { return }
@@ -844,16 +855,21 @@ final class JamService {
         // Keep the user's own sharing preferences — do not overwrite with the host's settings.
         myConnectionType = type
         myJoinedAt = Date()
-        amHost = false
+        let isReturningHost = !jam.hostUserID.isEmpty && (jam.hostUserID == supabase.session?.userId)
+        amHost = isReturningHost
         confirmedOnServer = false
         var mutableJam = jam
         mutableJam.participants.upsert(makeMyParticipant(type: type))
         currentJam = mutableJam
 
-        // As a joiner, browse for proximity peers but do NOT advertise as host.
+        // If returning as the host, advertise; otherwise browse for proximity peers.
         // activeJamID gates multipeer connections to this jam's peers only.
         multipeer.activeJamID = jam.id
-        multipeer.startBrowsing()
+        if isReturningHost {
+            multipeer.startAdvertisingJam(jam)
+        } else {
+            multipeer.startBrowsing()
+        }
         startTimers(useServer: jam.visibility.usesServer)
 
         // Pull the existing roster right away so the host and other members show

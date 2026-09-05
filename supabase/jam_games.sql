@@ -239,23 +239,29 @@ begin
     if n is null or n < 2 or n > 50 then
         raise exception 'invalid participant count';
     end if;
-    if p_winner_index < 0 or p_winner_index >= n then
-        raise exception 'winner index out of range';
-    end if;
-    insert into public.jam_roulette (
-        jam_id, draw_id, participants, winner_index, starter_name, starter_id, created_at
-    )
-    values (
-        p_jam_id, p_draw_id, p_participants, p_winner_index,
-        left(coalesce(p_starter_name, ''), 40), p_starter_id, now()
-    )
-    on conflict (jam_id) do update
-        set draw_id      = excluded.draw_id,
-            participants = excluded.participants,
-            winner_index = excluded.winner_index,
-            starter_name = excluded.starter_name,
-            starter_id   = excluded.starter_id,
-            created_at   = now();
+
+    -- Authoritative server-side draw: winner is chosen via random() rather
+    -- than trusting the starter client's chosen index.
+    declare
+        v_winner integer := floor(random() * n)::integer;
+    begin
+        if v_winner >= n then v_winner := n - 1; end if;
+
+        insert into public.jam_roulette (
+            jam_id, draw_id, participants, winner_index, starter_name, starter_id, created_at
+        )
+        values (
+            p_jam_id, p_draw_id, p_participants, v_winner,
+            left(coalesce(p_starter_name, ''), 40), p_starter_id, now()
+        )
+        on conflict (jam_id) do update
+            set draw_id      = excluded.draw_id,
+                participants = excluded.participants,
+                winner_index = excluded.winner_index,
+                starter_name = excluded.starter_name,
+                starter_id   = excluded.starter_id,
+                created_at   = now();
+    end;
 end $$;
 
 -- Compatibility overload for clients released before starter_id was added.
@@ -321,6 +327,8 @@ as $$
 declare
     v_existing_starter uuid;
     v_existing_created timestamptz;
+    v_start_at timestamptz := p_start_at;
+    v_signal_at timestamptz := p_signal_at;
 begin
     if p_game_type not in ('perfectSecond', 'balanceBattle', 'reactionRoyale') then
         raise exception 'invalid arcade game';
@@ -347,13 +355,25 @@ begin
         raise exception 'only the arcade starter may restart';
     end if;
 
+    -- Bound client clock drift: ensure start_at is in the near future (between 2 and 20 seconds from now).
+    if v_start_at is null or v_start_at < now() + interval '2 seconds' or v_start_at > now() + interval '20 seconds' then
+        if p_signal_at is not null and p_start_at is not null and p_signal_at >= p_start_at then
+            v_signal_at := now() + interval '4 seconds' + (p_signal_at - p_start_at);
+        elsif p_game_type = 'reactionRoyale' then
+            v_signal_at := now() + interval '4 seconds' + ((3 + random() * 4) * interval '1 second');
+        else
+            v_signal_at := null;
+        end if;
+        v_start_at := now() + interval '4 seconds';
+    end if;
+
     delete from public.jam_arcade_results where jam_id = p_jam_id;
     insert into public.jam_arcade_rounds (
         jam_id, round_id, game_type, starter_id, starter_name,
         start_at, signal_at, duration_seconds, created_at
     ) values (
         p_jam_id, p_round_id, p_game_type, p_starter_id,
-        left(coalesce(p_starter_name, ''), 40), p_start_at, p_signal_at,
+        left(coalesce(p_starter_name, ''), 40), v_start_at, v_signal_at,
         p_duration_seconds, now()
     )
     on conflict (jam_id) do update set

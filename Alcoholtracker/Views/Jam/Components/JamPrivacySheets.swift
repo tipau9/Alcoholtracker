@@ -26,13 +26,8 @@ struct JamPrivacySheet: View {
                     Section("Was teilst du gerade?") {
                         Toggle("Promille-Wert", isOn: $draft.shareBAC)
                         Toggle("Status (Lustig, Wackelig...)", isOn: $draft.shareStatus)
-                        Toggle("Was du getrunken hast", isOn: $draft.shareDrinks)
-                        Toggle("Anzahl der Drinks", isOn: $draft.shareDrinkCount)
                         Toggle("SOS-Aktivierung", isOn: $draft.shareSOSStatus)
                         Toggle("Foto-Memories", isOn: $draft.sharePhotos)
-                    }
-                    Section("Interaktion") {
-                        Toggle("Andere können dir winken", isOn: $draft.allowWaves)
                     }
                     Section {
                         Text("Änderungen werden sofort an alle Teilnehmer übertragen.")
@@ -77,8 +72,6 @@ struct ParticipantPrivacySheet: View {
         var list: [String] = []
         if s.shareBAC        { list.append("Promille-Wert") }
         if s.shareStatus     { list.append("Status") }
-        if s.shareDrinks     { list.append("Drinks") }
-        if s.shareDrinkCount { list.append("Anzahl Drinks") }
         if s.shareSOSStatus  { list.append("SOS-Status") }
         if s.sharePhotos     { list.append("Fotos") }
         return list
@@ -89,8 +82,6 @@ struct ParticipantPrivacySheet: View {
         var list: [String] = []
         if !s.shareBAC        { list.append("Promille-Wert") }
         if !s.shareStatus     { list.append("Status") }
-        if !s.shareDrinks     { list.append("Drinks") }
-        if !s.shareDrinkCount { list.append("Anzahl Drinks") }
         if !s.shareSOSStatus  { list.append("SOS-Status") }
         if !s.sharePhotos     { list.append("Fotos") }
         return list
