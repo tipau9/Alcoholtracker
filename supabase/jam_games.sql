@@ -70,6 +70,11 @@ create table if not exists public.jam_arcade_results (
     primary key (jam_id, round_id, participant_id)
 );
 
+create unique index if not exists jam_water_scores_pk_idx on public.jam_water_scores (jam_id, participant_id);
+create unique index if not exists jam_roulette_jam_id_idx on public.jam_roulette (jam_id);
+create unique index if not exists jam_arcade_rounds_jam_id_idx on public.jam_arcade_rounds (jam_id);
+create unique index if not exists jam_arcade_results_pk_idx on public.jam_arcade_results (jam_id, round_id, participant_id);
+
 -- =========================================================================
 -- 1. Lock both tables: RLS on, drop EVERY existing policy, add none. Only the
 --    SECURITY DEFINER functions below (which run as the table owner and bypass

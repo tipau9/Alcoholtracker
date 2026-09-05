@@ -16,6 +16,9 @@ create table if not exists public.jam_invitations (
 create index if not exists jam_invitations_invitee_idx
     on public.jam_invitations (invitee_code);
 
+create unique index if not exists jam_invitations_invitee_jam_idx
+    on public.jam_invitations (invitee_code, jam_id);
+
 create table if not exists public.jam_invitation_events (
     inviter_id uuid not null,
     created_at timestamptz not null default now()

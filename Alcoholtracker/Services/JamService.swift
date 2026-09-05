@@ -797,7 +797,7 @@ final class JamService {
             let senderIsHost: Bool
             if !jam.hostUserID.isEmpty {
                 senderIsHost = (control.senderUserID == jam.hostUserID)
-            } else if let hostP = jam.participants.first(where: { $0.isHost }) {
+            } else if let hostP = jam.participants.first(where: { $0.displayName == jam.hostName }) {
                 senderIsHost = (control.senderParticipantID == hostP.id)
             } else {
                 senderIsHost = false
@@ -821,7 +821,7 @@ final class JamService {
             let senderIsHost: Bool
             if !jam.hostUserID.isEmpty {
                 senderIsHost = (control.senderUserID == jam.hostUserID)
-            } else if let hostP = jam.participants.first(where: { $0.isHost }) {
+            } else if let hostP = jam.participants.first(where: { $0.displayName == jam.hostName }) {
                 senderIsHost = (control.senderParticipantID == hostP.id)
             } else {
                 senderIsHost = false
