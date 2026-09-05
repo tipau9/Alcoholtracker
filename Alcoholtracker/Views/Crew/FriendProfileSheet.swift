@@ -494,16 +494,16 @@ struct FriendProfileSheet: View {
             // Friendship data is best-effort: a missing friendships table
             // (SQL not yet run) just leaves both sections empty.
             if let myID = supabase.session?.userId {
-                let theirIDs = (try? await supabase.fetchFriendIDs(of: p.id)) ?? []
-                followsMe = theirIDs.contains(myID)
+                if let mutual = p.isMutual {
+                    followsMe = mutual
+                } else {
+                    let theirIDs = (try? await supabase.fetchFriendIDs(of: p.id)) ?? []
+                    followsMe = theirIDs.contains(myID)
+                }
 
-                let myIDs = (try? await supabase.fetchFriendIDs(of: myID)) ?? []
-                let mutualIDs = Set(theirIDs)
-                    .intersection(myIDs)
-                    .subtracting([myID, p.id])
-                if !mutualIDs.isEmpty {
-                    mutualFriends = ((try? await supabase.fetchProfiles(ids: Array(mutualIDs))) ?? [])
-                        .sorted { $0.displayName < $1.displayName }
+                // Server-side mutual friends RPC (supabase/mutual_friends.sql)
+                if let mutual = try? await supabase.fetchMutualFriends(with: p.id) {
+                    mutualFriends = mutual.sorted { $0.displayName < $1.displayName }
                 }
             }
             loadState = .loaded

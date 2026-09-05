@@ -29,6 +29,8 @@ class SupabaseService(internal val transport: SupabaseTransport) {
     private val _isSignedIn = MutableStateFlow(transport.isSignedIn)
     val isSignedIn: StateFlow<Boolean> = _isSignedIn.asStateFlow()
 
+    internal val friendCodeToHostIDCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
     val isConfigured: Boolean get() = transport.isConfigured
     val userId: String? get() = transport.session?.userId
 

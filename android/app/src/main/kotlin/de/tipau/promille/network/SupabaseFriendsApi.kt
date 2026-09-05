@@ -42,11 +42,18 @@ suspend fun SupabaseService.fetchFriendsBAC(codes: List<String>): List<FriendPro
     val cleaned = codes.map(::sanitizeFriendCode).filter { it.isNotEmpty() }
     if (cleaned.isEmpty()) return emptyList()
     return cleaned.chunked(50).flatMap { batch ->
-        decodeList<FriendProfile>(
+        val list = decodeList<FriendProfile>(
             transport.restRPC("friend_profiles_by_codes", buildJsonObject {
                 put("p_codes", jsonStrings(batch))
             })
         )
+        for (p in list) {
+            val code = sanitizeFriendCode(p.friendCode)
+            if (code.isNotEmpty()) {
+                friendCodeToHostIDCache[code] = p.id
+            }
+        }
+        list
     }
 }
 
@@ -70,6 +77,15 @@ suspend fun SupabaseService.fetchProfiles(ids: List<String>): List<FriendProfile
             })
         )
     }
+}
+
+/** Server-side mutual friends intersection (supabase/mutual_friends.sql). */
+suspend fun SupabaseService.fetchMutualFriends(otherUserID: String): List<FriendProfile> {
+    if (!isConfigured || userId == null || !isUuid(otherUserID)) return emptyList()
+    val data = transport.restRPC("mutual_friends_with", buildJsonObject {
+        put("p_other", otherUserID)
+    })
+    return decodeList<FriendProfile>(data).sortedBy { it.displayName }
 }
 
 suspend fun SupabaseService.addFriendship(friendID: String) {

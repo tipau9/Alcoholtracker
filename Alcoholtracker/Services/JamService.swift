@@ -298,7 +298,7 @@ final class JamService {
     func closeArcade() {
         incomingArcadeRound = nil
         arcadeResults.removeAll()
-        if currentJam?.visibility.usesServer != true { stopArcadePolling() }
+        stopArcadePolling()
     }
 
     private func presentArcadeRound(_ round: JamArcadeRoundPayload) {
@@ -336,11 +336,17 @@ final class JamService {
     }
 
     private func syncArcadeGame() async {
-        guard let jam = currentJam, jam.visibility.usesServer else { return }
-        if let round = try? await supabase.fetchJamArcadeRound(jam.id) {
-            presentArcadeRound(round)
+        guard let jam = currentJam, jam.visibility.usesServer else {
+            stopArcadePolling()
+            return
         }
-        guard let round = incomingArcadeRound else { return }
+        guard let round = incomingArcadeRound else {
+            stopArcadePolling()
+            return
+        }
+        if Date().timeIntervalSince(round.startAt) > round.durationSeconds + 15 {
+            stopArcadePolling()
+        }
         if let results = try? await supabase.fetchJamArcadeResults(jamID: jam.id, roundID: round.id) {
             for result in results { applyArcadeResult(result) }
         }
@@ -886,9 +892,6 @@ final class JamService {
                     await self?.syncJamGames()
                 }
             }
-            // Arcade rounds need to be discovered before their absolute startAt;
-            // the normal 12-second roster poll is intentionally too slow for that.
-            startArcadePolling()
         }
     }
 

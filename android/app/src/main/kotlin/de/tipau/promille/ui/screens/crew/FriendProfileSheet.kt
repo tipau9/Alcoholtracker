@@ -37,6 +37,7 @@ import de.tipau.promille.data.CrewMemberEntity
 import de.tipau.promille.network.FriendProfile
 import de.tipau.promille.network.SupabaseService
 import de.tipau.promille.network.fetchFriendIDs
+import de.tipau.promille.network.fetchMutualFriends
 import de.tipau.promille.network.fetchProfiles
 import de.tipau.promille.network.lookupFriend
 import de.tipau.promille.ui.components.PrimaryButton
@@ -106,16 +107,12 @@ fun FriendProfileSheet(
         // missing schema just leaves the sections empty.
         found.isMutual?.let { followsMe = it }
         runCatching {
-            val theirIDs = supabase.fetchFriendIDs(found.id)
-            val myID = myProfile?.id
             if (found.isMutual == null) {
+                val theirIDs = supabase.fetchFriendIDs(found.id)
+                val myID = myProfile?.id
                 followsMe = myID != null && theirIDs.contains(myID)
             }
-            if (myID != null) {
-                val mine = supabase.fetchFriendIDs(myID).toSet()
-                val mutual = theirIDs.filter { it in mine && it != myID && it != found.id }
-                mutualFriends = supabase.fetchProfiles(mutual).sortedBy { it.displayName }
-            }
+            mutualFriends = supabase.fetchMutualFriends(found.id)
         }
     }
 
