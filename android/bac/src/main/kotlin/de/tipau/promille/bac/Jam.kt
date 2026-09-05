@@ -71,8 +71,6 @@ fun JamSettings.privacyLabels(): Pair<List<String>, List<String>> {
     val flags = listOf(
         shareBAC to "Promille-Wert",
         shareStatus to "Status",
-        shareDrinks to "Drinks",
-        shareDrinkCount to "Anzahl Drinks",
         shareSOSStatus to "SOS-Status",
         sharePhotos to "Fotos"
     )
