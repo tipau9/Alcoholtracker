@@ -35,6 +35,7 @@ import de.tipau.promille.data.CrewMemberEntity
 import de.tipau.promille.data.PhotoMemoryEntity
 import de.tipau.promille.di.AppContainer
 import de.tipau.promille.network.FriendProfile
+import de.tipau.promille.network.PendingJamInvite
 import de.tipau.promille.network.addFriendship
 import de.tipau.promille.repository.CrewRepository
 import de.tipau.promille.repository.UserProfileRepository
@@ -88,8 +89,9 @@ fun CrewView(
             // Read inside the loop: the profile arrives after the first
             // composition, and a captured 1.5 would outlive the real threshold.
             container.friendSync.sync(profile?.dangerThreshold ?: 1.5)
-            // Refresh joinable friend jams for the banner while not in a jam
+            // Refresh joinable friend jams and incoming invitations for the banner while not in a jam
             // (mirrors iOS CrewView.swift's syncFriendsLoop).
+            container.jamService.refreshInvitations()
             container.jamService.refreshFriendJams(members.mapNotNull { it.friendCode })
             delay(60_000)
         }
@@ -118,6 +120,8 @@ fun CrewView(
 
     val currentJam by container.jamService.currentJam.collectAsState()
     val availableJamsFromFriends by container.jamService.availableJamsFromFriends.collectAsState()
+    val invitations by container.jamService.invitations.collectAsState()
+    var joiningInviteID by remember { mutableStateOf<String?>(null) }
     val memories by container.photoMemoryRepository.memories.collectAsState(initial = emptyList())
     var selectedMemory by remember { mutableStateOf<PhotoMemoryEntity?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -418,6 +422,28 @@ fun CrewView(
                     ActiveJamBanner(jam = currentJam!!, onTap = { showJam = true })
                 }
             } else {
+                items(invitations, key = { "crew-invite-${it.id}" }) { invite ->
+                    PendingInvitationBanner(
+                        invite = invite,
+                        isJoining = joiningInviteID == invite.id,
+                        onJoin = {
+                            if (joiningInviteID == null) {
+                                joiningInviteID = invite.id
+                                coroutineScope.launch {
+                                    runCatching {
+                                        container.jamService.joinByInvite(invite)
+                                    }
+                                    joiningInviteID = null
+                                }
+                            }
+                        },
+                        onDismiss = {
+                            coroutineScope.launch {
+                                container.jamService.dismissInvitation(invite.id)
+                            }
+                        }
+                    )
+                }
                 items(availableJamsFromFriends, key = { it.id }) { jam ->
                     FriendJamBanner(
                         jam = jam,
@@ -775,6 +801,89 @@ private fun ActiveJamBanner(jam: de.tipau.promille.bac.Jam, onTap: () -> Unit) {
             tint = AppColors.textMuted,
             modifier = Modifier.size(13.dp)
         )
+    }
+}
+
+// Displays pending jam invitations addressed to the user right in the Crew tab,
+// matching the FriendJamBanner style and giving immediate access to join or decline.
+@Composable
+private fun PendingInvitationBanner(
+    invite: PendingJamInvite,
+    isJoining: Boolean,
+    onJoin: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(AppColors.accent.copy(alpha = 0.08f))
+            .border(0.8.dp, AppColors.accent.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(AppColors.statusOrange.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Notifications,
+                contentDescription = null,
+                tint = AppColors.statusOrange,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                text = "${invite.hostName.ifBlank { "Jemand" }} lädt dich ein",
+                color = AppColors.text,
+                style = de.tipau.promille.AppText.bodyBold
+            )
+            Text(
+                text = "Code: ${invite.jamCode} · Tippen zum Beitreten",
+                color = AppColors.textDim,
+                style = de.tipau.promille.AppText.caption
+            )
+        }
+        if (isJoining) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                color = AppColors.accent,
+                strokeWidth = 2.dp
+            )
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "Beitreten",
+                    color = AppColors.accent,
+                    style = de.tipau.promille.AppText.captionBold,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(AppColors.accent.copy(alpha = 0.15f))
+                        .border(0.5.dp, AppColors.accent.copy(alpha = 0.4f), RoundedCornerShape(50))
+                        .clickable(onClick = onJoin)
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                )
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Ablehnen",
+                        tint = AppColors.textDim,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
     }
 }
 

@@ -83,7 +83,7 @@ class AppContainer(context: Context) {
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** Its polling has to outlive the jam screen, not the composition. */
-    val jamService = JamService(supabase, syncScope, MultipeerService(context))
+    val jamService = JamService(supabase, syncScope, MultipeerService(context), context)
 
     private val connectivity = ConnectivityWatcher(context, syncScope) {
         offlineSync.syncAll()
@@ -116,6 +116,7 @@ class AppContainer(context: Context) {
             // leave an admin without their console until the next sign-in.
             runCatching { supabase.refreshAdminStatus() }
             historySync.sync()
+            runCatching { jamService.refreshInvitations() }
         }
     }
 
@@ -125,7 +126,12 @@ class AppContainer(context: Context) {
      * dismissing the auth sheet does not cancel a half-finished merge.
      */
     fun syncAfterSignIn() {
-        syncScope.launch { historySync.sync(merge = true) }
+        syncScope.launch {
+            runCatching { supabase.syncMyProfile() }
+            runCatching { supabase.refreshAdminStatus() }
+            runCatching { jamService.refreshInvitations() }
+            historySync.sync(merge = true)
+        }
     }
 
     // Services

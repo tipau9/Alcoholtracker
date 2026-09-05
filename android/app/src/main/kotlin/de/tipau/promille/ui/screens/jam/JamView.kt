@@ -323,10 +323,7 @@ private fun JamLobby(
                             )
                         }
                         TextButton(onClick = {
-                            run {
-                                jamService.joinJamByCode(invite.jamCode)
-                                jamService.dismissInvitation(invite.id)
-                            }
+                            run { jamService.joinByInvite(invite) }
                         }) {
                             // iOS: .appCaptionBold (JamLobbyView.swift:121).
                             Text("Beitreten", color = AppColors.accent, style = de.tipau.promille.AppText.captionBold)
