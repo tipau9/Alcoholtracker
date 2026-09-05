@@ -373,8 +373,9 @@ struct CrewView: View {
                 $0.friendCode?.uppercased() == p.friendCode.uppercased()
             }) else { continue }
 
-            member.currentBAC = p.currentBac ?? 0
-            member.lastDrinkTimestamp = p.bacUpdatedAt
+            member.isSharing = p.isSharing
+            member.currentBAC = p.isSharing ? (p.currentBac ?? 0) : 0
+            member.lastDrinkTimestamp = p.isSharing ? p.bacUpdatedAt : nil
             member.isProbationaryDriver = p.isProbationary
 
             // Friend SOS: notify on the rising edge (was off, now on).

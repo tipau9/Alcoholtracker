@@ -40,10 +40,28 @@ as $$
 declare
     v_my_code text;
     v_recent integer;
+    v_real_code text;
+    v_real_host text;
 begin
     if auth.uid() is null then
         return;
     end if;
+
+    -- Security check: Caller MUST belong to p_jam_id (as participant or host)
+    if not exists (
+        select 1 from public.jam_participants
+        where jam_id = p_jam_id and user_id = auth.uid()::text
+    ) and not exists (
+        select 1 from public.jams
+        where id = p_jam_id and host_user_id = auth.uid()::text
+    ) then
+        return;
+    end if;
+
+    -- Pull verified jam_code and host_name from public.jams if present
+    select code, host_name into v_real_code, v_real_host
+    from public.jams
+    where id = p_jam_id;
 
     delete from public.jam_invitation_events
     where created_at < now() - interval '7 days';
@@ -76,8 +94,8 @@ begin
         upper(trim(v_my_code)),
         upper(trim(p_invitee_code)),
         p_jam_id,
-        upper(trim(p_jam_code)),
-        coalesce(nullif(trim(p_host_name), ''), 'Jemand')
+        upper(trim(coalesce(nullif(v_real_code, ''), p_jam_code))),
+        coalesce(nullif(trim(v_real_host), ''), nullif(trim(p_host_name), ''), 'Jemand')
     )
     on conflict (invitee_code, jam_id) do update
         set seen_at    = null,
