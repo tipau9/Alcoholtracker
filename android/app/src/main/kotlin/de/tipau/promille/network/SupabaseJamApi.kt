@@ -370,7 +370,7 @@ suspend fun SupabaseService.fetchFriendJams(friendCodes: List<String>): List<Jam
 
 @Serializable
 data class PendingJamInvite(
-    val id: String,
+    val id: String = "",
     @SerialName("inviter_code") val inviterCode: String = "",
     @SerialName("jam_id") val jamID: String = "",
     @SerialName("jam_code") val jamCode: String = "",

@@ -48,10 +48,10 @@ object NotificationService {
             manager.createNotificationChannel(
                 NotificationChannel(
                     CHANNEL_ALERTS,
-                    "Crew-Warnungen",
+                    "Crew-Warnungen & Einladungen",
                     NotificationManager.IMPORTANCE_HIGH
                 ).apply {
-                    description = "SOS und hohe Promillewerte deiner Freunde."
+                    description = "SOS, Warnungen und Jam-Einladungen deiner Freunde."
                 }
             )
             manager.createNotificationChannel(
@@ -159,10 +159,21 @@ object NotificationService {
         if (!isAuthorized(context)) return
         ensureChannels(context)
 
+        val mainIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val mainPendingIntent = PendingIntent.getActivity(
+            context,
+            id.hashCode(),
+            mainIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle(title)
             .setContentText(body)
+            .setContentIntent(mainPendingIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .build()

@@ -41,9 +41,11 @@ import de.tipau.promille.network.submitJamArcadeResult
 import de.tipau.promille.network.submitJamWaterTime
 import de.tipau.promille.network.updateJamHost
 import de.tipau.promille.network.updateMyJamStatus
+import android.content.Context
 import android.graphics.Bitmap
 import de.tipau.promille.service.MAX_PHOTO_BYTES
 import de.tipau.promille.service.MultipeerService
+import de.tipau.promille.service.NotificationService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -73,6 +75,7 @@ class JamService(
     private val supabase: SupabaseService,
     private val scope: CoroutineScope,
     private val multipeer: MultipeerService? = null,
+    private val context: Context? = null,
     private val nowSeconds: () -> Long = { System.currentTimeMillis() / 1000 }
 ) {
 
@@ -128,6 +131,8 @@ class JamService(
     private val tombstones = mutableMapOf<String, Long>()
     private var pollJob: Job? = null
     private var statusJob: Job? = null
+    private var invitationPollJob: Job? = null
+    private val notifiedInviteIds = mutableSetOf<String>()
 
     private fun tombstone(id: String) {
         tombstones[id] = nowSeconds()
@@ -143,6 +148,17 @@ class JamService(
     val nearbyJams: StateFlow<List<Jam>> = multipeer?.discoveredJams ?: MutableStateFlow(emptyList())
 
     init {
+        scope.launch {
+            supabase.isSignedIn.collect { signedIn ->
+                if (signedIn) {
+                    startInvitationPolling()
+                } else {
+                    stopInvitationPolling()
+                    _invitations.value = emptyList()
+                    notifiedInviteIds.clear()
+                }
+            }
+        }
         multipeer?.let { mp ->
             mp.onStatusReceived = { broadcast ->
                 if (broadcast.jamID == _currentJam.value?.id) {
@@ -492,14 +508,66 @@ class JamService(
         supabase.sendJamInvitation(friendCode, jam.id, jam.code, jam.hostName)
     }
 
+    private fun startInvitationPolling() {
+        if (invitationPollJob?.isActive == true) return
+        invitationPollJob = scope.launch {
+            while (true) {
+                if (_currentJam.value == null) {
+                    refreshInvitations()
+                }
+                delay(INVITATION_POLL_INTERVAL_MS)
+            }
+        }
+    }
+
+    private fun stopInvitationPolling() {
+        invitationPollJob?.cancel()
+        invitationPollJob = null
+    }
+
     suspend fun refreshInvitations() {
         if (!supabase.isSignedIn.value) return
-        _invitations.value = runCatching { supabase.fetchMyJamInvitations() }.getOrDefault(emptyList())
+        val fresh = runCatching { supabase.fetchMyJamInvitations() }.getOrDefault(emptyList())
+        _invitations.value = fresh
+
+        val ctx = context
+        if (ctx != null && fresh.isNotEmpty()) {
+            for (invite in fresh) {
+                if (invite.id.isNotBlank() && !notifiedInviteIds.contains(invite.id)) {
+                    notifiedInviteIds.add(invite.id)
+                    val host = invite.hostName.ifBlank { "Jemand" }
+                    val title = "$host lädt dich ein"
+                    val body = if (invite.jamCode.isNotBlank()) {
+                        "$host lädt dich zum Jam ein (Code: ${invite.jamCode}). Tippe zum Beitreten."
+                    } else {
+                        "$host lädt dich zum Jam ein. Tippe zum Beitreten."
+                    }
+                    NotificationService.notifyNow(
+                        context = ctx,
+                        id = "promille.jam.invite.${invite.id}",
+                        title = title,
+                        body = body
+                    )
+                }
+            }
+        }
+
+        val freshIds = fresh.map { it.id }.toSet()
+        notifiedInviteIds.retainAll { it in freshIds }
     }
 
     suspend fun dismissInvitation(id: String) {
         runCatching { supabase.markInvitationSeen(id) }
         _invitations.value = _invitations.value.filterNot { it.id == id }
+        notifiedInviteIds.add(id)
+    }
+
+    suspend fun joinByInvite(invite: PendingJamInvite) {
+        if (invite.inviterCode.isNotBlank() && !friendCodes.contains(invite.inviterCode)) {
+            friendCodes = friendCodes + invite.inviterCode
+        }
+        joinJamByCode(invite.jamCode)
+        dismissInvitation(invite.id)
     }
 
     suspend fun refreshFriendJams(codes: List<String>) {
@@ -764,6 +832,7 @@ class JamService(
         /** Two GETs per tick, so 12s is about ten requests a minute. */
         const val POLL_INTERVAL_MS = 12_000L
         const val STATUS_INTERVAL_MS = 30_000L
+        const val INVITATION_POLL_INTERVAL_MS = 20_000L
         const val TOMBSTONE_SECONDS = 180L
 
         /** Enough lead for every client to see the round before it starts. */
