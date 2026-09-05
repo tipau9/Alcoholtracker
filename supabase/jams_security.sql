@@ -280,7 +280,7 @@ begin
     values (auth.uid(), 'code');
 
     return query
-    select c.id, c.code, c.host_user_id, c.host_name, c.visibility, c.settings, c.created_at
+    select c.id, c.code, c.host_user_id::text, c.host_name, c.visibility, c.settings, c.created_at
     from public.jams c
     where c.ended_at is null
       and upper(regexp_replace(c.code,   '[^A-Za-z0-9]', '', 'g'))
@@ -309,7 +309,7 @@ security definer
 set search_path = public
 stable
 as $$
-    select c.id, c.code, c.host_user_id, c.host_name, c.visibility, c.settings, c.created_at
+    select c.id, c.code, c.host_user_id::text, c.host_name, c.visibility, c.settings, c.created_at
     from public.jams c
     where c.ended_at is null
       and c.visibility = 'Nur Freunde'
