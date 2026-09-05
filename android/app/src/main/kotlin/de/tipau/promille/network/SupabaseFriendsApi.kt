@@ -47,7 +47,7 @@ suspend fun SupabaseService.fetchFriendsBAC(codes: List<String>): List<FriendPro
                 put("p_codes", jsonStrings(batch))
             })
         )
-    }.filter { it.isSharing }
+    }
 }
 
 /** Friend code of one user id, used to verify friends-only jam access. */
