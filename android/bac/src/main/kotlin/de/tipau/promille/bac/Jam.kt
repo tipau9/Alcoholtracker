@@ -288,13 +288,18 @@ data class JamArcadeResultPayload(
 fun mergeWaterScores(
     local: List<WaterScore>,
     server: List<WaterScore>,
-    myParticipantID: String
+    myParticipantID: String,
+    hasInFlightSubmit: Boolean = true
 ): List<WaterScore> {
     val merged = server.associateBy { it.participantID }.toMutableMap()
     val mine = local.firstOrNull { it.participantID == myParticipantID }
     if (mine != null) {
         val onServer = merged[myParticipantID]
-        if (onServer == null || mine.ms < onServer.ms) merged[myParticipantID] = mine
+        if (onServer != null) {
+            if (mine.ms < onServer.ms) merged[myParticipantID] = mine
+        } else if (hasInFlightSubmit) {
+            merged[myParticipantID] = mine
+        }
     }
     return merged.values.sortedWith(compareBy({ it.ms }, { it.participantID }))
 }

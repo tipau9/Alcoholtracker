@@ -279,7 +279,12 @@ private fun JamLobby(
                             style = de.tipau.promille.AppText.caption
                         )
                     }
-                    Text("›", color = AppColors.accent, fontSize = 20.sp)
+                    Icon(
+                        imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                        contentDescription = null,
+                        tint = AppColors.accent,
+                        modifier = Modifier.size(13.dp)
+                    )
                 }
             }
         }
@@ -555,6 +560,7 @@ private fun ActiveJam(
     // unreadable pick, a jam that ended meanwhile, a photo still too big at the
     // last quality step - so the reason travels in the state instead of a flag.
     val context = LocalContext.current
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
     val receivedPhotos by jamService.receivedPhotos.collectAsState()
     var photoError by remember { mutableStateOf<String?>(null) }
     var fullscreenPhoto by remember { mutableStateOf<MultipeerService.JamPhotoPayload?>(null) }
@@ -662,7 +668,7 @@ private fun ActiveJam(
     if (showWater) {
         WaterContestSheet(
             scores = waterScores,
-            canReset = amHost,
+            canReset = true,
             onFinish = { ms -> scope.launch { jamService.submitWaterTime(ms) } },
             onReset = { scope.launch { jamService.resetWaterLeaderboard() } },
             onDismiss = { showWater = false }
@@ -768,7 +774,7 @@ private fun ActiveJam(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            painter = de.tipau.promille.ui.components.AppIcons.Waveform,
+                            imageVector = de.tipau.promille.ui.components.AppIcons.Waveform,
                             contentDescription = null,
                             tint = AppColors.accent,
                             modifier = Modifier.size(20.dp)
@@ -816,7 +822,7 @@ private fun ActiveJam(
                             .clickable { showInvite = true }
                     ) {
                         Icon(
-                            painter = de.tipau.promille.ui.components.AppIcons.PersonPlus,
+                            imageVector = de.tipau.promille.ui.components.AppIcons.PersonPlus,
                             contentDescription = "Einladen",
                             tint = if (canInvite) AppColors.accent else AppColors.textDim,
                             modifier = Modifier.size(16.dp)
@@ -833,7 +839,7 @@ private fun ActiveJam(
                             .clickable { showPrivacy = true }
                     ) {
                         Icon(
-                            painter = de.tipau.promille.ui.components.AppIcons.Sliders,
+                            imageVector = de.tipau.promille.ui.components.AppIcons.Sliders,
                             contentDescription = "Privatsphäre",
                             tint = AppColors.textDim,
                             modifier = Modifier.size(16.dp)
@@ -906,7 +912,18 @@ private fun ActiveJam(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                                val clip = android.content.ClipData.newPlainText("Jam Code", jam.code)
+                                clipboard?.setPrimaryClip(clip)
+                                haptics.success()
+                                android.widget.Toast.makeText(context, "Jam-Code kopiert", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                         // iOS: .appCaption (ActiveJamView.swift:279).
                         Text("Jam Code", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                         Text(
@@ -925,11 +942,25 @@ private fun ActiveJam(
                             .size(40.dp)
                             .clip(CircleShape)
                             .background(AppColors.accent.copy(alpha = 0.12f))
-                            .border(0.5.dp, AppColors.accent.copy(alpha = 0.3f), CircleShape),
+                            .border(0.5.dp, AppColors.accent.copy(alpha = 0.3f), CircleShape)
+                            .clickable {
+                                haptics.light()
+                                val sendIntent = android.content.Intent().apply {
+                                    action = android.content.Intent.ACTION_SEND
+                                    putExtra(
+                                        android.content.Intent.EXTRA_TEXT,
+                                        "Tritt meinem Jam bei! Code: ${jam.code}"
+                                    )
+                                    type = "text/plain"
+                                }
+                                context.startActivity(
+                                    android.content.Intent.createChooser(sendIntent, "Jam-Code teilen")
+                                )
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            painter = de.tipau.promille.ui.components.AppIcons.Share,
+                            imageVector = de.tipau.promille.ui.components.AppIcons.Share,
                             contentDescription = "Teilen",
                             tint = AppColors.accent,
                             modifier = Modifier.size(18.dp)
@@ -1169,7 +1200,12 @@ private fun ActiveJam(
                         Spacer(Modifier.width(12.dp))
                         // iOS: .appBodyBold (ActiveJamView.swift:389).
                         Text("Jam Arcade", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold, modifier = Modifier.weight(1f))
-                        Text("›", color = AppColors.textMuted, fontSize = 20.sp)
+                        Icon(
+                            imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = AppColors.textMuted,
+                            modifier = Modifier.size(13.dp)
+                        )
                     }
 
                     // Freunde einladen
@@ -1187,7 +1223,12 @@ private fun ActiveJam(
                         Spacer(Modifier.width(12.dp))
                         // iOS: .appBodyBold (ActiveJamView.swift:392).
                         Text("Freunde einladen", color = AppColors.text, style = de.tipau.promille.AppText.bodyBold, modifier = Modifier.weight(1f))
-                        Text("›", color = AppColors.textMuted, fontSize = 20.sp)
+                        Icon(
+                            imageVector = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = AppColors.textMuted,
+                            modifier = Modifier.size(13.dp)
+                        )
                     }
                 }
             }
