@@ -207,6 +207,9 @@ as $$
     );
 $$;
 
+drop function if exists public.friend_profiles_by_codes(text[]);
+drop function if exists public.friend_profiles_by_ids(uuid[]);
+
 create or replace function public.friend_profiles_by_codes(p_codes text[])
 returns table (
     id uuid,
