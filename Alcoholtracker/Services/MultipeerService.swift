@@ -25,6 +25,10 @@ struct JamControl: Codable {
     // New host's display name on a transferHost (so receivers update the label even
     // if that participant is not in their local roster). Defaulted for back-compat.
     var newHostName: String? = nil
+    // Sender identity: used by receivers to authenticate that kicks/host transfers
+    // originate only from the actual jam host, and leaves only from the leaving peer.
+    var senderParticipantID: UUID? = nil
+    var senderUserID: String? = nil
 }
 
 // Round roulette: the starter picks the loser and broadcasts the ordered
@@ -384,9 +388,8 @@ final class MultipeerService: NSObject {
 
     @discardableResult
     private func makeSession() -> MCSession {
-        // FIX BUG4: .required fails between certain device/OS combinations; .optional keeps privacy
-        // while avoiding handshake rejections that silently prevent peers from connecting
-        let s = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .optional)
+        // Proximity hardening: .required enforces TLS encryption on peer-to-peer transport.
+        let s = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .required)
         s.delegate = self
         mcSession = s
         return s

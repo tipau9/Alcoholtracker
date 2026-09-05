@@ -19,7 +19,7 @@ import androidx.room.RoomDatabase
         MealEventEntity::class,
         BreathalyzerReadingEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

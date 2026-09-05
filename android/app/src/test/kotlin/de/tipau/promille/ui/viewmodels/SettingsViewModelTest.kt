@@ -91,7 +91,8 @@ class SettingsViewModelTest {
             lastDrinkTimestamp: Long?,
             isProbationaryDriver: Boolean,
             sosActive: Boolean,
-            highAlertFired: Boolean
+            highAlertFired: Boolean,
+            isMutual: Boolean
         ) {}
         override suspend fun delete(member: CrewMemberEntity) {}
         override suspend fun deleteAll() {}

@@ -727,7 +727,7 @@ private fun ActiveJam(
         // view, and that is the one thing a safety banner must not lose: as a
         // list item it would scroll away. Out here it also gets iOS's edge to
         // edge red, which the list cannot do with its 20.dp inset per item.
-        val sosParticipants = jam.participants.filter { it.hasSOSActive }
+        val sosParticipants = jam.participants.filter { it.hasSOSActive && it.sharedSettings?.shareSOSStatus != false }
         if (sosParticipants.isNotEmpty()) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -986,20 +986,21 @@ private fun ActiveJam(
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            val showSOS = participant.hasSOSActive && participant.sharedSettings?.shareSOSStatus != false
                             Box(
                                 contentAlignment = Alignment.Center,
                                 modifier = Modifier
                                     .size(40.dp)
                                     .clip(CircleShape)
                                     .background(
-                                        if (participant.hasSOSActive) AppColors.statusRed.copy(alpha = 0.2f)
+                                        if (showSOS) AppColors.statusRed.copy(alpha = 0.2f)
                                         else AppColors.accent.copy(alpha = 0.15f)
                                     )
                             ) {
                                 Text(
                                     // iOS: .system(size: 15, weight: .semibold) (ActiveJamView.swift:570).
                                     participant.displayName.take(1).uppercase(),
-                                    color = if (participant.hasSOSActive) AppColors.statusRed else AppColors.accent,
+                                    color = if (showSOS) AppColors.statusRed else AppColors.accent,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )

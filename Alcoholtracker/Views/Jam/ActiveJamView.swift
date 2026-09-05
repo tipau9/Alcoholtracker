@@ -45,7 +45,7 @@ struct ActiveJamView: View {
     }
 
     private var sosParticipants: [JamParticipant] {
-        jam.participants.filter { $0.hasSOSActive }
+        jam.participants.filter { $0.hasSOSActive && $0.sharedSettings?.shareSOSStatus != false }
     }
 
     var body: some View {
@@ -574,7 +574,7 @@ private struct ActiveParticipantRow: View {
                     .clipShape(Circle())
                     .overlay(Circle().strokeBorder(Color.appBorder, lineWidth: 1))
 
-                if participant.hasSOSActive {
+                if participant.hasSOSActive && participant.sharedSettings?.shareSOSStatus != false {
                     Circle()
                         .fill(Color.statusRed)
                         .frame(width: 12, height: 12)

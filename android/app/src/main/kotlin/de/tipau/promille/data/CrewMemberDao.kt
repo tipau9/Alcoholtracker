@@ -30,7 +30,8 @@ interface CrewMemberDao {
            lastDrinkTimestamp = :lastDrinkTimestamp,
            isProbationaryDriver = :isProbationaryDriver,
            sosActive = :sosActive,
-           highAlertFired = :highAlertFired
+           highAlertFired = :highAlertFired,
+           isMutual = :isMutual
            WHERE id = :id"""
     )
     suspend fun applyServerUpdate(
@@ -39,7 +40,8 @@ interface CrewMemberDao {
         lastDrinkTimestamp: Long?,
         isProbationaryDriver: Boolean,
         sosActive: Boolean,
-        highAlertFired: Boolean
+        highAlertFired: Boolean,
+        isMutual: Boolean
     )
 
     @Delete

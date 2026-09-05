@@ -19,7 +19,8 @@ data class FriendProfile(
     @SerialName("is_sharing") val isSharing: Boolean = true,
     val achievements: List<String>? = null,
     @SerialName("sos_active") val sosActive: Boolean = false,
-    @SerialName("is_probationary") val isProbationary: Boolean = false
+    @SerialName("is_probationary") val isProbationary: Boolean = false,
+    @SerialName("is_mutual") val isMutual: Boolean? = null
 ) {
     val bacUpdatedAt: Double? get() = Timestamps.parse(bacUpdatedAtRaw)
 }

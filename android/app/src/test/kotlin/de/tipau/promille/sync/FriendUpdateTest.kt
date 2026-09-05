@@ -47,6 +47,14 @@ class FriendUpdateTest {
     }
 
     @Test
+    fun `SOS stays quiet if friend is not mutual`() {
+        val nonMutualRemote = remote(sos = true).copy(isMutual = false)
+        val (first, alerts) = applyFriendUpdate(member(), nonMutualRemote, 1.5, now)
+        assertTrue(alerts.isEmpty(), "non-mutual friend must not alert SOS")
+        assertFalse(first.isMutual)
+    }
+
+    @Test
     fun `a high value alerts once, then only again after dropping below`() {
         val (high, alerts) = applyFriendUpdate(
             member(), remote(bac = 1.8, updatedAt = now), 1.5, now

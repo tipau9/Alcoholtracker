@@ -377,9 +377,10 @@ struct CrewView: View {
             member.currentBAC = p.isSharing ? (p.currentBac ?? 0) : 0
             member.lastDrinkTimestamp = p.isSharing ? p.bacUpdatedAt : nil
             member.isProbationaryDriver = p.isProbationary
+            member.isMutual = p.isMutual ?? true
 
-            // Friend SOS: notify on the rising edge (was off, now on).
-            if p.sosActive, !member.sosActive {
+            // Friend SOS: notify on the rising edge (was off, now on), only if mutual.
+            if p.sosActive, member.isMutual, !member.sosActive {
                 await NotificationService.notifyNow(
                     id: "promille.friend.sos.\(member.id.uuidString)",
                     title: "SOS von \(member.name)",
@@ -927,12 +928,28 @@ private struct CrewMemberRow: View {
             CRAvatar(initial: member.avatarInitial, status: member.bacStatus, size: 40)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(member.name)
-                    .font(.appBody)
-                    .foregroundStyle(member.isHome ? Color.appTextDim : Color.appText)
+                HStack(spacing: 6) {
+                    Text(member.name)
+                        .font(.appBody)
+                        .foregroundStyle(member.isHome ? Color.appTextDim : Color.appText)
+
+                    if !member.isMutual {
+                        Text("Ausstehend")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color.statusOrange)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.statusOrange.opacity(0.15))
+                            .clipShape(Capsule())
+                    }
+                }
 
                 HStack(spacing: 6) {
-                    if member.isSoberBuddy && !member.isHome {
+                    if !member.isMutual {
+                        Text("Noch nicht zurückgeaddet · SOS inaktiv")
+                            .font(.appCaption)
+                            .foregroundStyle(Color.statusOrange)
+                    } else if member.isSoberBuddy && !member.isHome {
                         Text(mayDrive ? "Fahrbereit" : "Darf nicht mehr fahren")
                             .font(.appCaption)
                             .foregroundStyle(mayDrive ? Color.statusGreen : Color.statusRed)

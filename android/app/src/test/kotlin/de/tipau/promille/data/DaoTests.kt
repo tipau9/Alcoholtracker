@@ -423,7 +423,8 @@ class DaoTests {
             lastDrinkTimestamp = 1500L,
             isProbationaryDriver = true,
             sosActive = true,
-            highAlertFired = true
+            highAlertFired = true,
+            isMutual = false
         )
 
         val updatedF1 = dao.getAllOnce().first { it.id == "f1" }
@@ -432,6 +433,7 @@ class DaoTests {
         assertTrue(updatedF1.isProbationaryDriver)
         assertTrue(updatedF1.sosActive)
         assertTrue(updatedF1.highAlertFired)
+        assertFalse(updatedF1.isMutual)
         // Preserved properties
         assertEquals("Bob", updatedF1.name)
         assertEquals("B", updatedF1.avatarInitial)

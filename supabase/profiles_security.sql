@@ -217,7 +217,8 @@ returns table (
     is_sharing boolean,
     achievements jsonb,
     sos_active boolean,
-    is_probationary boolean
+    is_probationary boolean,
+    is_mutual boolean
 )
 language plpgsql
 security definer
@@ -249,7 +250,8 @@ begin
         p.is_sharing,
         case when public.is_mutual_friend(p.id) then p.achievements else '[]'::jsonb end,
         case when public.is_mutual_friend(p.id) then p.sos_active else false end,
-        case when public.is_mutual_friend(p.id) then p.is_probationary else false end
+        case when public.is_mutual_friend(p.id) then p.is_probationary else false end,
+        public.is_mutual_friend(p.id) as is_mutual
     from public.profiles p
     join clean c on upper(p.friend_code) = c.code
     limit 50;
@@ -266,7 +268,8 @@ returns table (
     is_sharing boolean,
     achievements jsonb,
     sos_active boolean,
-    is_probationary boolean
+    is_probationary boolean,
+    is_mutual boolean
 )
 language plpgsql
 security definer
@@ -293,7 +296,8 @@ begin
         p.is_sharing,
         case when public.is_mutual_friend(p.id) then p.achievements else '[]'::jsonb end,
         case when public.is_mutual_friend(p.id) then p.sos_active else false end,
-        case when public.is_mutual_friend(p.id) then p.is_probationary else false end
+        case when public.is_mutual_friend(p.id) then p.is_probationary else false end,
+        public.is_mutual_friend(p.id) as is_mutual
     from public.profiles p
     where p.id = any (p_ids)
     limit 50;
