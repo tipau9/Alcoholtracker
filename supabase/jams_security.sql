@@ -255,6 +255,7 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+#variable_conflict use_column
 declare
     v_recent integer;
 begin
@@ -262,8 +263,8 @@ begin
         return;
     end if;
 
-    delete from public.jam_lookup_events
-    where created_at < now() - interval '7 days';
+    delete from public.jam_lookup_events e
+    where e.created_at < now() - interval '7 days';
 
     select count(*) into v_recent
     from public.jam_lookup_events e

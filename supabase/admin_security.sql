@@ -189,36 +189,40 @@ security definer
 set search_path = public
 stable
 as $$
+#variable_conflict use_column
 begin
     perform public.require_admin('readonly');
 
     return query
-    select
-        'drink'::text,
-        d.id,
-        d.name,
-        coalesce(d.barcode, '') || ' · ' || d.category || ' · ' || round(d.volume::numeric, 0)::text || ' ml · ' || round(d.abv::numeric, 1)::text || '%',
-        d.status,
-        d.confirmed_count,
-        d.created_at,
-        to_jsonb(d)
-    from public.community_drinks d
-    where d.status in ('pending', 'rejected')
+    select q.item_type, q.id, q.title, q.subtitle, q.status, q.confirmed_count, q.created_at, q.payload
+    from (
+        select
+            'drink'::text as item_type,
+            d.id,
+            d.name as title,
+            coalesce(d.barcode, '') || ' · ' || d.category || ' · ' || round(d.volume::numeric, 0)::text || ' ml · ' || round(d.abv::numeric, 1)::text || '%' as subtitle,
+            d.status,
+            d.confirmed_count,
+            d.created_at,
+            to_jsonb(d) as payload
+        from public.community_drinks d
+        where d.status in ('pending', 'rejected')
 
-    union all
+        union all
 
-    select
-        'mix'::text,
-        m.id,
-        m.name,
-        'Mix · ' || round(m.total_volume::numeric, 0)::text || ' ml · ' || round(m.total_abv::numeric, 1)::text || '%',
-        m.status,
-        m.confirmed_count,
-        m.created_at,
-        to_jsonb(m)
-    from public.community_mixes m
-    where m.status in ('pending', 'rejected')
-    order by created_at desc
+        select
+            'mix'::text as item_type,
+            m.id,
+            m.name as title,
+            'Mix · ' || round(m.total_volume::numeric, 0)::text || ' ml · ' || round(m.total_abv::numeric, 1)::text || '%' as subtitle,
+            m.status,
+            m.confirmed_count,
+            m.created_at,
+            to_jsonb(m) as payload
+        from public.community_mixes m
+        where m.status in ('pending', 'rejected')
+    ) q
+    order by q.created_at desc
     limit 200;
 end;
 $$;
@@ -289,6 +293,7 @@ security definer
 set search_path = public
 stable
 as $$
+#variable_conflict use_column
 declare
     v_limit integer := least(greatest(coalesce(p_limit, 200), 1), 500);
     v_offset integer := greatest(coalesce(p_offset, 0), 0);
@@ -300,40 +305,43 @@ begin
     end if;
 
     return query
-    select
-        'drink'::text,
-        d.id,
-        d.name,
-        coalesce(d.barcode, '') || ' · ' || d.category || ' · ' || round(d.volume::numeric, 0)::text || ' ml · ' || round(d.abv::numeric, 1)::text || '%',
-        d.status,
-        d.confirmed_count,
-        d.created_at,
-        to_jsonb(d)
-    from public.community_drinks d
-    where (p_status is null or d.status = p_status)
-      and (trim(coalesce(p_search, '')) = ''
-           or lower(d.name) like v_search
-           or lower(d.id::text) like v_search
-           or lower(d.barcode) like v_search
-           or lower(d.category) like v_search)
+    select q.item_type, q.id, q.title, q.subtitle, q.status, q.confirmed_count, q.created_at, q.payload
+    from (
+        select
+            'drink'::text as item_type,
+            d.id,
+            d.name as title,
+            coalesce(d.barcode, '') || ' · ' || d.category || ' · ' || round(d.volume::numeric, 0)::text || ' ml · ' || round(d.abv::numeric, 1)::text || '%' as subtitle,
+            d.status,
+            d.confirmed_count,
+            d.created_at,
+            to_jsonb(d) as payload
+        from public.community_drinks d
+        where (p_status is null or d.status = p_status)
+          and (trim(coalesce(p_search, '')) = ''
+               or lower(d.name) like v_search
+               or lower(d.id::text) like v_search
+               or lower(d.barcode) like v_search
+               or lower(d.category) like v_search)
 
-    union all
+        union all
 
-    select
-        'mix'::text,
-        m.id,
-        m.name,
-        'Mix · ' || round(m.total_volume::numeric, 0)::text || ' ml · ' || round(m.total_abv::numeric, 1)::text || '%',
-        m.status,
-        m.confirmed_count,
-        m.created_at,
-        to_jsonb(m)
-    from public.community_mixes m
-    where (p_status is null or m.status = p_status)
-      and (trim(coalesce(p_search, '')) = ''
-           or lower(m.name) like v_search
-           or lower(m.id::text) like v_search)
-    order by created_at desc
+        select
+            'mix'::text as item_type,
+            m.id,
+            m.name as title,
+            'Mix · ' || round(m.total_volume::numeric, 0)::text || ' ml · ' || round(m.total_abv::numeric, 1)::text || '%' as subtitle,
+            m.status,
+            m.confirmed_count,
+            m.created_at,
+            to_jsonb(m) as payload
+        from public.community_mixes m
+        where (p_status is null or m.status = p_status)
+          and (trim(coalesce(p_search, '')) = ''
+               or lower(m.name) like v_search
+               or lower(m.id::text) like v_search)
+    ) q
+    order by q.created_at desc
     limit v_limit offset v_offset;
 end;
 $$;
@@ -744,56 +752,60 @@ security definer
 set search_path = public
 stable
 as $$
+#variable_conflict use_column
 begin
     perform public.require_admin('readonly');
 
     return query
-    select
-        'drink'::text,
-        d.id,
-        d.name,
-        coalesce(d.barcode, '') || ' · ' || d.category || ' · ' || round(d.volume::numeric, 0)::text || ' ml · ' || round(d.abv::numeric, 1)::text || '%',
-        d.status,
-        d.confirmed_count,
-        d.created_at,
-        to_jsonb(d) || jsonb_build_object(
-            'moderation_voter', s.voter,
-            'moderation_voter_is_authenticated', coalesce(s.is_authenticated, false)
-        )
-    from public.community_drinks d
-    left join lateral (
-        select s.voter, s.is_authenticated
-        from public.community_drink_submissions s
-        where s.barcode = d.barcode
-        order by s.is_authenticated desc, s.updated_at desc
-        limit 1
-    ) s on true
-    where d.status in ('pending', 'rejected')
+    select q.item_type, q.id, q.title, q.subtitle, q.status, q.confirmed_count, q.created_at, q.payload
+    from (
+        select
+            'drink'::text as item_type,
+            d.id,
+            d.name as title,
+            coalesce(d.barcode, '') || ' · ' || d.category || ' · ' || round(d.volume::numeric, 0)::text || ' ml · ' || round(d.abv::numeric, 1)::text || '%' as subtitle,
+            d.status,
+            d.confirmed_count,
+            d.created_at,
+            to_jsonb(d) || jsonb_build_object(
+                'moderation_voter', s.voter,
+                'moderation_voter_is_authenticated', coalesce(s.is_authenticated, false)
+            ) as payload
+        from public.community_drinks d
+        left join lateral (
+            select s.voter, s.is_authenticated
+            from public.community_drink_submissions s
+            where s.barcode = d.barcode
+            order by s.is_authenticated desc, s.updated_at desc
+            limit 1
+        ) s on true
+        where d.status in ('pending', 'rejected')
 
-    union all
+        union all
 
-    select
-        'mix'::text,
-        m.id,
-        m.name,
-        'Mix · ' || round(m.total_volume::numeric, 0)::text || ' ml · ' || round(m.total_abv::numeric, 1)::text || '%',
-        m.status,
-        m.confirmed_count,
-        m.created_at,
-        to_jsonb(m) || jsonb_build_object(
-            'moderation_voter', v.voter,
-            'moderation_voter_is_authenticated', coalesce(v.is_authenticated, false)
-        )
-    from public.community_mixes m
-    left join lateral (
-        select v.voter, v.is_authenticated
-        from public.community_mix_votes v
-        where v.name_key = m.name_key
-        order by v.is_authenticated desc, v.created_at desc
-        limit 1
-    ) v on true
-    where m.status in ('pending', 'rejected')
-    order by created_at desc
+        select
+            'mix'::text as item_type,
+            m.id,
+            m.name as title,
+            'Mix · ' || round(m.total_volume::numeric, 0)::text || ' ml · ' || round(m.total_abv::numeric, 1)::text || '%' as subtitle,
+            m.status,
+            m.confirmed_count,
+            m.created_at,
+            to_jsonb(m) || jsonb_build_object(
+                'moderation_voter', v.voter,
+                'moderation_voter_is_authenticated', coalesce(v.is_authenticated, false)
+            ) as payload
+        from public.community_mixes m
+        left join lateral (
+            select v.voter, v.is_authenticated
+            from public.community_mix_votes v
+            where v.name_key = m.name_key
+            order by v.is_authenticated desc, v.created_at desc
+            limit 1
+        ) v on true
+        where m.status in ('pending', 'rejected')
+    ) q
+    order by q.created_at desc
     limit 200;
 end;
 $$;
@@ -819,6 +831,7 @@ security definer
 set search_path = public
 stable
 as $$
+#variable_conflict use_column
 declare
     v_limit integer := least(greatest(coalesce(p_limit, 200), 1), 500);
     v_offset integer := greatest(coalesce(p_offset, 0), 0);
@@ -830,60 +843,63 @@ begin
     end if;
 
     return query
-    select
-        'drink'::text,
-        d.id,
-        d.name,
-        coalesce(d.barcode, '') || ' · ' || d.category || ' · ' || round(d.volume::numeric, 0)::text || ' ml · ' || round(d.abv::numeric, 1)::text || '%',
-        d.status,
-        d.confirmed_count,
-        d.created_at,
-        to_jsonb(d) || jsonb_build_object(
-            'moderation_voter', s.voter,
-            'moderation_voter_is_authenticated', coalesce(s.is_authenticated, false)
-        )
-    from public.community_drinks d
-    left join lateral (
-        select s.voter, s.is_authenticated
-        from public.community_drink_submissions s
-        where s.barcode = d.barcode
-        order by s.is_authenticated desc, s.updated_at desc
-        limit 1
-    ) s on true
-    where (p_status is null or d.status = p_status)
-      and (trim(coalesce(p_search, '')) = ''
-           or lower(d.name) like v_search
-           or lower(d.id::text) like v_search
-           or lower(d.barcode) like v_search
-           or lower(d.category) like v_search)
+    select q.item_type, q.id, q.title, q.subtitle, q.status, q.confirmed_count, q.created_at, q.payload
+    from (
+        select
+            'drink'::text as item_type,
+            d.id,
+            d.name as title,
+            coalesce(d.barcode, '') || ' · ' || d.category || ' · ' || round(d.volume::numeric, 0)::text || ' ml · ' || round(d.abv::numeric, 1)::text || '%' as subtitle,
+            d.status,
+            d.confirmed_count,
+            d.created_at,
+            to_jsonb(d) || jsonb_build_object(
+                'moderation_voter', s.voter,
+                'moderation_voter_is_authenticated', coalesce(s.is_authenticated, false)
+            ) as payload
+        from public.community_drinks d
+        left join lateral (
+            select s.voter, s.is_authenticated
+            from public.community_drink_submissions s
+            where s.barcode = d.barcode
+            order by s.is_authenticated desc, s.updated_at desc
+            limit 1
+        ) s on true
+        where (p_status is null or d.status = p_status)
+          and (trim(coalesce(p_search, '')) = ''
+               or lower(d.name) like v_search
+               or lower(d.id::text) like v_search
+               or lower(d.barcode) like v_search
+               or lower(d.category) like v_search)
 
-    union all
+        union all
 
-    select
-        'mix'::text,
-        m.id,
-        m.name,
-        'Mix · ' || round(m.total_volume::numeric, 0)::text || ' ml · ' || round(m.total_abv::numeric, 1)::text || '%',
-        m.status,
-        m.confirmed_count,
-        m.created_at,
-        to_jsonb(m) || jsonb_build_object(
-            'moderation_voter', v.voter,
-            'moderation_voter_is_authenticated', coalesce(v.is_authenticated, false)
-        )
-    from public.community_mixes m
-    left join lateral (
-        select v.voter, v.is_authenticated
-        from public.community_mix_votes v
-        where v.name_key = m.name_key
-        order by v.is_authenticated desc, v.created_at desc
-        limit 1
-    ) v on true
-    where (p_status is null or m.status = p_status)
-      and (trim(coalesce(p_search, '')) = ''
-           or lower(m.name) like v_search
-           or lower(m.id::text) like v_search)
-    order by created_at desc
+        select
+            'mix'::text as item_type,
+            m.id,
+            m.name as title,
+            'Mix · ' || round(m.total_volume::numeric, 0)::text || ' ml · ' || round(m.total_abv::numeric, 1)::text || '%' as subtitle,
+            m.status,
+            m.confirmed_count,
+            m.created_at,
+            to_jsonb(m) || jsonb_build_object(
+                'moderation_voter', v.voter,
+                'moderation_voter_is_authenticated', coalesce(v.is_authenticated, false)
+            ) as payload
+        from public.community_mixes m
+        left join lateral (
+            select v.voter, v.is_authenticated
+            from public.community_mix_votes v
+            where v.name_key = m.name_key
+            order by v.is_authenticated desc, v.created_at desc
+            limit 1
+        ) v on true
+        where (p_status is null or m.status = p_status)
+          and (trim(coalesce(p_search, '')) = ''
+               or lower(m.name) like v_search
+               or lower(m.id::text) like v_search)
+    ) q
+    order by q.created_at desc
     limit v_limit offset v_offset;
 end;
 $$;
