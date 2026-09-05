@@ -61,6 +61,7 @@ final class SupabaseService {
     private(set) var session: AccountSession?
     private(set) var myProfile: FriendProfile?
     private(set) var isAdmin: Bool = false
+    private var friendCodeToHostIDCache: [String: String] = [:]
 
     var isSignedIn: Bool { session != nil }
     var isConfigured: Bool { SupabaseConfig.isReady }
@@ -372,6 +373,12 @@ final class SupabaseService {
         }
         // Returns all friends (including those with BAC sharing off) so their
         // SOS state is reliably updated and active alerts are never frozen or missed.
+        for p in profiles {
+            let code = Self.sanitizeCode(p.friendCode)
+            if !code.isEmpty {
+                friendCodeToHostIDCache[code] = p.id
+            }
+        }
         return profiles
     }
 
@@ -898,15 +905,43 @@ final class SupabaseService {
         guard !cleaned.isEmpty else { return [] }
         try await refreshIfNeeded()
 
-        let profileData = try await restRPC("friend_profiles_by_codes", body: ["p_codes": cleaned])
-        let hostIDs = try Self.decoder.decode([FriendProfile].self, from: profileData)
-            .map(\.id)
-            .filter { UUID(uuidString: $0) != nil }
-        guard !hostIDs.isEmpty else { return [] }
+        var hostIDs: [String] = []
+        var missingCodes: [String] = []
+
+        for code in cleaned {
+            if let cached = friendCodeToHostIDCache[code] {
+                hostIDs.append(cached)
+            } else {
+                missingCodes.append(code)
+            }
+        }
+
+        if !missingCodes.isEmpty {
+            let profileData = try await restRPC("friend_profiles_by_codes", body: ["p_codes": missingCodes])
+            let fetched = try Self.decoder.decode([FriendProfile].self, from: profileData)
+            for p in fetched {
+                let code = Self.sanitizeCode(p.friendCode)
+                if !code.isEmpty {
+                    friendCodeToHostIDCache[code] = p.id
+                }
+                hostIDs.append(p.id)
+            }
+        }
+
+        let validHostIDs = hostIDs.filter { UUID(uuidString: $0) != nil }
+        guard !validHostIDs.isEmpty else { return [] }
 
         // friend_jams already excludes the caller's own jams (shown as currentJam).
-        let data = try await restRPC("friend_jams", body: ["p_host_ids": hostIDs])
+        let data = try await restRPC("friend_jams", body: ["p_host_ids": validHostIDs])
         return try Self.decoder.decode([JamRow].self, from: data).compactMap { $0.toJam() }
+    }
+
+    // Server-side mutual friends intersection (supabase/mutual_friends.sql).
+    func fetchMutualFriends(with otherUserID: String) async throws -> [FriendProfile] {
+        guard isConfigured, session != nil, UUID(uuidString: otherUserID) != nil else { return [] }
+        try await refreshIfNeeded()
+        let data = try await restRPC("mutual_friends_with", body: ["p_other": otherUserID])
+        return try Self.decoder.decode([FriendProfile].self, from: data)
     }
 
     // MARK: Community Drinks

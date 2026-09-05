@@ -49,6 +49,7 @@ import de.tipau.promille.service.NotificationService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -100,6 +101,10 @@ class JamService(
 
     private val _arcadeResults = MutableStateFlow<List<JamArcadeResultPayload>>(emptyList())
     val arcadeResults: StateFlow<List<JamArcadeResultPayload>> = _arcadeResults.asStateFlow()
+
+    private var lastDismissedRouletteID: String? = null
+    private var lastDismissedArcadeRoundID: String? = null
+    private var arcadeFastPollJob: Job? = null
 
     private val _amHost = MutableStateFlow(false)
     val amHost: StateFlow<Boolean> = _amHost.asStateFlow()
@@ -169,7 +174,10 @@ class JamService(
             }
             mp.onControlReceived = { control -> handleIncomingControl(control) }
             mp.onRouletteReceived = { payload ->
-                if (payload.jamID == _currentJam.value?.id && _incomingRoulette.value?.id != payload.id) {
+                if (payload.jamID == _currentJam.value?.id &&
+                    _incomingRoulette.value?.id != payload.id &&
+                    payload.id != lastDismissedRouletteID
+                ) {
                     _incomingRoulette.value = payload
                 }
             }
@@ -187,9 +195,13 @@ class JamService(
                 }
             }
             mp.onArcadeRoundReceived = { round ->
-                if (round.jamID == _currentJam.value?.id && _incomingArcadeRound.value?.id != round.id) {
+                if (round.jamID == _currentJam.value?.id &&
+                    _incomingArcadeRound.value?.id != round.id &&
+                    round.id != lastDismissedArcadeRoundID
+                ) {
                     _incomingArcadeRound.value = round
                     _arcadeResults.value = emptyList()
+                    startFastArcadePolling()
                 }
             }
             mp.onArcadeResultReceived = { result ->
@@ -428,6 +440,9 @@ class JamService(
         _incomingRoulette.value = null
         _incomingArcadeRound.value = null
         _arcadeResults.value = emptyList()
+        lastDismissedRouletteID = null
+        lastDismissedArcadeRoundID = null
+        stopFastArcadePolling()
         _availableJamsFromFriends.value = emptyList()
         _receivedPhotos.value = emptyList()
         tombstones.clear()
@@ -630,7 +645,7 @@ class JamService(
     suspend fun startRoulette() {
         val jam = _currentJam.value ?: return
         val names = jam.participants.map { it.displayName }
-        if (names.isEmpty()) return
+        if (names.size < 2) return
         val payload = JamRoulettePayload(
             id = UUID.randomUUID().toString(),
             jamID = jam.id,
@@ -639,9 +654,12 @@ class JamService(
             starterName = myDisplayName(),
             starterID = myParticipantID
         )
+        if (jam.visibility.usesServer) {
+            val success = runCatching { supabase.setJamRoulette(payload) }.isSuccess
+            if (!success) return
+        }
         _incomingRoulette.value = payload
         if (jam.visibility.usesProximity) multipeer?.broadcastRoulette(payload)
-        if (jam.visibility.usesServer) runCatching { supabase.setJamRoulette(payload) }
     }
 
     fun canRestartArcade(round: JamArcadeRoundPayload): Boolean =
@@ -666,21 +684,28 @@ class JamService(
             },
             durationSeconds = if (game == JamArcadeGame.BALANCE_BATTLE) 10.0 else 5.0
         )
+        if (jam.visibility.usesServer) {
+            val success = runCatching { supabase.setJamArcadeRound(round) }.isSuccess
+            if (!success) return
+        }
         _incomingArcadeRound.value = round
         _arcadeResults.value = emptyList()
+        startFastArcadePolling()
         if (jam.visibility.usesProximity) multipeer?.broadcastArcadeRound(round)
-        if (jam.visibility.usesServer) runCatching { supabase.setJamArcadeRound(round) }
     }
 
     suspend fun submitArcadeResult(value: Double, disqualified: Boolean = false) {
         val jam = _currentJam.value ?: return
         val round = _incomingArcadeRound.value ?: return
+        if (_arcadeResults.value.any { it.participantID == myParticipantID && it.roundID == round.id }) return
+
+        val clampedValue = value.coerceIn(0.0, 600_000.0)
         val result = JamArcadeResultPayload(
             jamID = jam.id,
             roundID = round.id,
             participantID = myParticipantID,
             participantName = myDisplayName(),
-            value = value,
+            value = clampedValue,
             disqualified = disqualified,
             submittedAtEpochSeconds = nowSeconds().toDouble()
         )
@@ -691,11 +716,14 @@ class JamService(
     }
 
     fun closeArcade() {
+        lastDismissedArcadeRoundID = _incomingArcadeRound.value?.id
         _incomingArcadeRound.value = null
         _arcadeResults.value = emptyList()
+        stopFastArcadePolling()
     }
 
     fun dismissRoulette() {
+        lastDismissedRouletteID = _incomingRoulette.value?.id
         _incomingRoulette.value = null
     }
 
@@ -743,6 +771,7 @@ class JamService(
         pollJob = null
         statusJob?.cancel()
         statusJob = null
+        stopFastArcadePolling()
     }
 
     private suspend fun syncParticipants() {
@@ -791,23 +820,62 @@ class JamService(
     private suspend fun syncJamGames() {
         val jam = _currentJam.value ?: return
         runCatching { supabase.fetchJamRoulette(jam.id) }.getOrNull()?.let { draw ->
-            // Only a draw we have not shown yet, so a poll does not respin it.
-            if (_incomingRoulette.value?.id != draw.id) _incomingRoulette.value = draw
+            // Only a draw we have not shown yet or dismissed, so a poll does not respin it.
+            if (_incomingRoulette.value?.id != draw.id && draw.id != lastDismissedRouletteID) {
+                _incomingRoulette.value = draw
+            }
         }
         runCatching { supabase.fetchJamArcadeRound(jam.id) }.getOrNull()?.let { round ->
-            if (_incomingArcadeRound.value?.id != round.id) {
+            if (_incomingArcadeRound.value?.id != round.id && round.id != lastDismissedArcadeRoundID) {
                 _incomingArcadeRound.value = round
                 _arcadeResults.value = emptyList()
+                startFastArcadePolling()
             }
         }
         _incomingArcadeRound.value?.let { round ->
             runCatching { supabase.fetchJamArcadeResults(jam.id, round.id) }.getOrNull()
-                ?.let { _arcadeResults.value = it }
+                ?.let { serverResults ->
+                    val currentMap = _arcadeResults.value.associateBy { it.participantID }.toMutableMap()
+                    for (r in serverResults) {
+                        currentMap[r.participantID] = r
+                    }
+                    _arcadeResults.value = currentMap.values.toList()
+                }
         }
         runCatching { supabase.fetchJamWaterScores(jam.id) }.getOrNull()?.let { server ->
             val hasInFlight = (System.currentTimeMillis() - lastWaterSubmitTime) < 7000L
             _waterScores.value = mergeWaterScores(_waterScores.value, server, myParticipantID, hasInFlightSubmit = hasInFlight)
         }
+    }
+
+    private fun startFastArcadePolling() {
+        if (arcadeFastPollJob?.isActive == true) return
+        val jam = _currentJam.value ?: return
+        if (!jam.visibility.usesServer) return
+
+        arcadeFastPollJob = scope.launch {
+            while (isActive) {
+                val round = _incomingArcadeRound.value
+                if (round == null) break
+                val now = nowSeconds().toDouble()
+                if (now > round.startAtEpochSeconds + round.durationSeconds + 15.0) {
+                    break
+                }
+                runCatching { supabase.fetchJamArcadeResults(jam.id, round.id) }.getOrNull()?.let { serverResults ->
+                    val currentMap = _arcadeResults.value.associateBy { it.participantID }.toMutableMap()
+                    for (r in serverResults) {
+                        currentMap[r.participantID] = r
+                    }
+                    _arcadeResults.value = currentMap.values.toList()
+                }
+                delay(1000L)
+            }
+        }
+    }
+
+    private fun stopFastArcadePolling() {
+        arcadeFastPollJob?.cancel()
+        arcadeFastPollJob = null
     }
 
     // MARK: Self

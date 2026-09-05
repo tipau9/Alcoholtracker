@@ -353,17 +353,39 @@ suspend fun SupabaseService.fetchFriendJams(friendCodes: List<String>): List<Jam
     val cleaned = friendCodes.map(::sanitizeFriendCode).filter { it.isNotEmpty() }
     if (cleaned.isEmpty()) return emptyList()
 
-    // Unfiltered profile lookup: a friend who stopped sharing can still host a jam.
-    val hostIDs = decodeList<FriendProfile>(
-        transport.restRPC("friend_profiles_by_codes", buildJsonObject {
-            put("p_codes", JsonArray(cleaned.map { JsonPrimitive(it) }))
-        })
-    ).map { it.id }.filter { runCatching { java.util.UUID.fromString(it) }.isSuccess }
-    if (hostIDs.isEmpty()) return emptyList()
+    val hostIDs = mutableListOf<String>()
+    val missingCodes = mutableListOf<String>()
+
+    for (code in cleaned) {
+        val cached = friendCodeToHostIDCache[code]
+        if (cached != null) {
+            hostIDs.add(cached)
+        } else {
+            missingCodes.add(code)
+        }
+    }
+
+    if (missingCodes.isNotEmpty()) {
+        val fetched = decodeList<FriendProfile>(
+            transport.restRPC("friend_profiles_by_codes", buildJsonObject {
+                put("p_codes", JsonArray(missingCodes.map { JsonPrimitive(it) }))
+            })
+        )
+        for (p in fetched) {
+            val code = sanitizeFriendCode(p.friendCode)
+            if (code.isNotEmpty()) {
+                friendCodeToHostIDCache[code] = p.id
+            }
+            hostIDs.add(p.id)
+        }
+    }
+
+    val validHostIDs = hostIDs.filter { runCatching { java.util.UUID.fromString(it) }.isSuccess }
+    if (validHostIDs.isEmpty()) return emptyList()
 
     return decodeList<JamRow>(
         transport.restRPC("friend_jams", buildJsonObject {
-            put("p_host_ids", JsonArray(hostIDs.map { JsonPrimitive(it) }))
+            put("p_host_ids", JsonArray(validHostIDs.map { JsonPrimitive(it) }))
         })
     ).map { it.toJam() }
 }
