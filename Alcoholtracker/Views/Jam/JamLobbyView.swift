@@ -359,6 +359,9 @@ struct JamLobbyView: View {
         isJoining = true
         Task {
             do {
+                if !invite.inviterCode.isEmpty && !jamService.friendCodes.contains(invite.inviterCode) {
+                    jamService.friendCodes.append(invite.inviterCode)
+                }
                 try await jamService.joinJamByCode(invite.jamCode)
                 await supabase.markInvitationSeen(invite.id)
                 pendingInvitations.removeAll { $0.id == invite.id }

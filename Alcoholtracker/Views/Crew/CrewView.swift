@@ -423,7 +423,13 @@ struct CrewView: View {
         }
         if supabase.isSignedIn {
             myFriendSOS = willActivate
-            Task { try? await supabase.setSOS(willActivate) }
+            Task {
+                do {
+                    try await supabase.setSOS(willActivate)
+                } catch {
+                    await MainActor.run { myFriendSOS = !willActivate }
+                }
+            }
         }
         if jamService.currentJam != nil {
             jamService.mySOSActive = willActivate
