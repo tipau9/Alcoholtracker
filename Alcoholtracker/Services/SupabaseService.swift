@@ -1071,16 +1071,20 @@ final class SupabaseService {
 
     // Sends a jam invitation to a friend identified by their friend code.
     // Fire-and-forget: silently skips if not configured or not signed in.
-    func sendJamInvitation(inviteeCode: String, jamID: UUID, jamCode: String, hostName: String) async {
-        guard isConfigured, isSignedIn else { return }
+    // Returns the RPC's reason token ("ok" on success) so callers can show a
+    // real failure instead of an optimistic "sent" that never arrived.
+    @discardableResult
+    func sendJamInvitation(inviteeCode: String, jamID: UUID, jamCode: String, hostName: String) async -> String {
+        guard isConfigured, isSignedIn else { return "not_signed_in" }
         let clean = Self.sanitizeCode(inviteeCode)
-        guard !clean.isEmpty else { return }
-        _ = try? await restRPC("send_jam_invitation", body: [
+        guard !clean.isEmpty else { return "no_invitee_code" }
+        guard let data = try? await restRPC("send_jam_invitation", body: [
             "p_invitee_code": clean,
             "p_jam_id":       jamID.uuidString.lowercased(),
             "p_jam_code":     jamCode,
             "p_host_name":    hostName
-        ])
+        ]) else { return "network_error" }
+        return (try? Self.decoder.decode(String.self, from: data)) ?? "network_error"
     }
 
     // Fetches all unseen invitations addressed to the current user.

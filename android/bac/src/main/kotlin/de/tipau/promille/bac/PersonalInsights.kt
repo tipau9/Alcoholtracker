@@ -123,6 +123,44 @@ fun moodInsight(
     )
 }
 
+data class CategoryTrend(val category: String, val count: Int)
+
+/** Port of HistoryViewModel.categoryTrends(drinks:days:) (Swift). */
+fun categoryTrends(
+    drinks: List<Drink>,
+    days: Int = 30,
+    nowEpochSeconds: Long = System.currentTimeMillis() / 1000
+): List<CategoryTrend> {
+    val cutoff = nowEpochSeconds - days * 86400L
+    val recent = drinks.filter { it.timestampEpochSeconds >= cutoff && it.abv > 0.01 }
+    val counts = LinkedHashMap<String, Int>()
+    for (d in recent) counts[d.category.germanName] = (counts[d.category.germanName] ?: 0) + 1
+    return counts.map { CategoryTrend(it.key, it.value) }.sortedByDescending { it.count }
+}
+
+data class WeekBucket(val weekStartEpochSeconds: Long, val count: Int)
+
+/** Port of HistoryViewModel.weeklyDrinkCounts(drinks:weeksBack:) (Swift). Oldest week first. */
+fun weeklyDrinkCounts(
+    drinks: List<Drink>,
+    weeksBack: Int = 4,
+    nowEpochSeconds: Long = System.currentTimeMillis() / 1000,
+    zone: ZoneId = ZoneId.systemDefault()
+): List<WeekBucket> {
+    val currentWeekStart = java.time.Instant.ofEpochSecond(nowEpochSeconds).atZone(zone)
+        .toLocalDate().with(java.time.DayOfWeek.MONDAY).atStartOfDay(zone)
+    val result = (0 until weeksBack).map { i ->
+        val weekStart = currentWeekStart.minusWeeks(i.toLong())
+        val weekEnd = weekStart.plusWeeks(1)
+        val count = drinks.count {
+            it.timestampEpochSeconds >= weekStart.toEpochSecond() &&
+                it.timestampEpochSeconds < weekEnd.toEpochSecond() && it.abv > 0.01
+        }
+        WeekBucket(weekStart.toEpochSecond(), count)
+    }
+    return result.reversed()
+}
+
 data class PersonalInsights(
     val totalDrinks: Int,
     val drinkingDays: Int,

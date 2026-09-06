@@ -118,7 +118,9 @@ fun PromilleNavigation(
                             dayNoteRepository = container.dayNoteRepository,
                             drinkRepository = container.drinkRepository,
                             userProfileRepository = container.userProfileRepository,
-                            supabase = container.supabase
+                            supabase = container.supabase,
+                            sessionEventRepository = container.sessionEventRepository,
+                            waterLog = container.waterLog
                         )
                     }
                     Tab.CREW -> {

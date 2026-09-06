@@ -57,6 +57,13 @@ fun SettingsScreen(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+
+    // Same pattern as RidePickerSheet: the toggle itself shows nothing, it just
+    // has to trigger the OS prompt so the city-trends ping in SessionScreen
+    // stops silently no-op'ing at `pingCity ?: return`.
+    val locationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted -> if (granted) de.tipau.promille.service.LocationService.requestLocation(context) }
     val profile by viewModel.profile.collectAsState()
     val unlockedCount by viewModel.unlockedCount.collectAsState()
 
@@ -887,7 +894,12 @@ fun SettingsScreen(
                             title = "Anonyme Stadtstatistiken beitragen",
                             subtitle = "Getränk, lokale Stunde sowie begrenzte BAC- und Dauerwerte teilen",
                             checked = p.shareAnonymousCityInsights,
-                            onCheckedChange = { viewModel.updateShareAnonymousCityInsights(it) },
+                            onCheckedChange = { enabled ->
+                                viewModel.updateShareAnonymousCityInsights(enabled)
+                                if (enabled && !de.tipau.promille.service.LocationService.hasPermission(context)) {
+                                    locationPermissionLauncher.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                                }
+                            },
                             icon = AppIcons.Building
                         )
                         SettingsDivider()

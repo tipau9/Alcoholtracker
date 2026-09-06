@@ -243,4 +243,34 @@ class DomainTest {
                 HydrationCalculator.dehydrationFraction(deficit, heavy)
         )
     }
+
+    // MARK: session start (Phase 4 - 06:00 reset)
+
+    @Test
+    fun `residual alcohol at 7am extends the session back to before 06 00`() {
+        val drinks = listOf(
+            beer(epoch(2026, 6, 10, 23)), beer(epoch(2026, 6, 10, 23, 30)),
+            beer(epoch(2026, 6, 11, 0)), beer(epoch(2026, 6, 11, 1))
+        )
+        val start = LogicalDay.sessionStart(
+            drinks = drinks, profile = profile, stomachStatus = StomachStatus.LIGHT,
+            conservative = false, vomitEpochSeconds = emptyList(), meals = emptyList(),
+            nowEpochSeconds = epoch(2026, 6, 11, 7), zone = berlin
+        )
+        assertEquals(epoch(2026, 6, 10, 23), start)
+    }
+
+    @Test
+    fun `same drinks but sober by 4pm reset cleanly at 06 00`() {
+        val drinks = listOf(
+            beer(epoch(2026, 6, 10, 23)), beer(epoch(2026, 6, 10, 23, 30)),
+            beer(epoch(2026, 6, 11, 0)), beer(epoch(2026, 6, 11, 1))
+        )
+        val start = LogicalDay.sessionStart(
+            drinks = drinks, profile = profile, stomachStatus = StomachStatus.LIGHT,
+            conservative = false, vomitEpochSeconds = emptyList(), meals = emptyList(),
+            nowEpochSeconds = epoch(2026, 6, 11, 16), zone = berlin
+        )
+        assertEquals(epoch(2026, 6, 11, 6), start)
+    }
 }

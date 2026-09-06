@@ -76,10 +76,6 @@ class SessionViewModel(
 
     val stomachStatus = MutableStateFlow(StomachStatus.LIGHT)
 
-    val drinks: StateFlow<List<Drink>> = rawDrinks.map { entities ->
-        entities.map { DrinkRepository.toDomainDrink(it) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
     // Periodic recalculation ticker
     private val ticker = flow {
         while (true) {
@@ -87,6 +83,48 @@ class SessionViewModel(
             delay(30_000)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), System.currentTimeMillis() / 1000)
+
+    private val allSessionWindowDrinks: StateFlow<List<Drink>> = rawDrinks.map { entities ->
+        entities.map { DrinkRepository.toDomainDrink(it) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private data class SessionInputs(
+        val drinks: List<Drink>,
+        val profile: UserProfileEntity?,
+        val stomach: StomachStatus,
+        val vomits: List<VomitEventEntity>,
+        val meals: List<MealEventEntity>
+    )
+
+    // 06:00 logical-day boundary, extended back over an unbroken pre-06:00
+    // drinking block only while its BAC is still nonzero right now - see
+    // LogicalDay.sessionStart. Was previously not applied at all: "today"
+    // showed the raw 48h window, never resetting at the day boundary.
+    private val sessionStart: StateFlow<Long> = combine(
+        allSessionWindowDrinks, profileEntity, stomachStatus, rawVomits, rawMeals
+    ) { drinks, profile, stomach, vomits, meals ->
+        SessionInputs(drinks, profile, stomach, vomits, meals)
+    }.combine(ticker) { inputs, now ->
+        val profile = inputs.profile ?: return@combine LogicalDay.startOf(now, zone)
+        val bacProfile = UserProfileRepository.toProfile(profile)
+        LogicalDay.sessionStart(
+            drinks = inputs.drinks,
+            profile = bacProfile,
+            stomachStatus = inputs.stomach,
+            conservative = bacProfile.conservativeForApp,
+            vomitEpochSeconds = inputs.vomits.map { it.timestamp },
+            meals = inputs.meals.map { SessionEventRepository.toDomainMealEvent(it) },
+            nowEpochSeconds = now,
+            zone = zone
+        )
+    }.stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5000),
+        LogicalDay.startOf(System.currentTimeMillis() / 1000, zone)
+    )
+
+    val drinks: StateFlow<List<Drink>> = combine(allSessionWindowDrinks, sessionStart) { list, start ->
+        list.filter { it.timestampEpochSeconds >= start }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Weather-driven hydration heat term (extra sweat loss on a warm night).
     // Mirrors iOS HomeView.weatherSweatML: session span capped at 6h, only

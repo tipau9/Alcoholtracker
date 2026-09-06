@@ -49,6 +49,8 @@ fun HistoryScreen(
     drinkRepository: DrinkRepository? = null,
     userProfileRepository: UserProfileRepository? = null,
     supabase: de.tipau.promille.network.SupabaseService? = null,
+    sessionEventRepository: de.tipau.promille.repository.SessionEventRepository? = null,
+    waterLog: de.tipau.promille.bac.WaterLog = de.tipau.promille.bac.WaterLog.disabled(),
     modifier: Modifier = Modifier
 ) {
     val visibleMonth by viewModel.visibleMonth.collectAsState()
@@ -67,6 +69,9 @@ fun HistoryScreen(
     val profile = remember(profileEntity) {
         profileEntity?.let { UserProfileRepository.toProfile(it) }
     }
+    val breathalyzerReadings by (sessionEventRepository?.getBreathalyzerReadingsSince(0L)
+        ?: kotlinx.coroutines.flow.flowOf(emptyList()))
+        .collectAsState(initial = emptyList())
 
     val currentMonth = remember { YearMonth.now() }
     val isCurrentMonth = visibleMonth >= currentMonth
@@ -87,6 +92,14 @@ fun HistoryScreen(
             },
             profile = profile,
             supabase = supabase,
+            breathalyzerReadings = breathalyzerReadings.map {
+                de.tipau.promille.bac.BreathalyzerReading(
+                    timestampEpochSeconds = it.timestamp,
+                    measuredBAC = it.measuredBAC,
+                    estimatedBAC = it.estimatedBAC
+                )
+            },
+            waterLog = waterLog,
             onDismiss = { showTrends = false }
         )
     }

@@ -329,6 +329,8 @@ fun InviteFriendsSheet(
     friends: List<InviteCandidate>,
     jamCode: String,
     invited: Set<String>,
+    sending: Set<String> = emptySet(),
+    failed: Set<String> = emptySet(),
     onDismiss: () -> Unit,
     onInvite: (InviteCandidate) -> Unit
 ) {
@@ -398,6 +400,8 @@ fun InviteFriendsSheet(
             }
             friends.forEach { friend ->
                 val sent = friend.id in invited
+                val isSending = friend.id in sending
+                val hasFailed = friend.id in failed
                 PromilleCard(Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
@@ -418,25 +422,38 @@ fun InviteFriendsSheet(
                         Spacer(Modifier.width(12.dp))
                         Text(friend.name, color = AppColors.text, style = de.tipau.promille.AppText.body, modifier = Modifier.weight(1f))
                         if (friend.friendCode != null) {
-                            val tint = if (sent) AppColors.statusGreen else AppColors.accent
+                            val tint = when {
+                                sent -> AppColors.statusGreen
+                                hasFailed -> AppColors.statusRed
+                                else -> AppColors.accent
+                            }
                             Row(
                                 modifier = Modifier
                                     .clip(CircleShape)
                                     .background(tint.copy(alpha = 0.12f))
                                     .border(0.5.dp, tint.copy(alpha = 0.3f), CircleShape)
-                                    .clickable(enabled = !sent) { onInvite(friend) }
+                                    .clickable(enabled = !sent && !isSending) { onInvite(friend) }
                                     .padding(horizontal = 12.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    if (sent) AppIcons.Check else AppIcons.Bell,
+                                    when {
+                                        sent -> AppIcons.Check
+                                        hasFailed -> AppIcons.XCircle
+                                        else -> AppIcons.Bell
+                                    },
                                     contentDescription = null,
                                     tint = tint,
                                     modifier = Modifier.size(12.dp)
                                 )
                                 Spacer(Modifier.width(4.dp))
                                 Text(
-                                    if (sent) "Eingeladen" else "Benachrichtigen",
+                                    when {
+                                        sent -> "Eingeladen"
+                                        isSending -> "Sendet..."
+                                        hasFailed -> "Fehlgeschlagen"
+                                        else -> "Benachrichtigen"
+                                    },
                                     color = tint,
                                     style = de.tipau.promille.AppText.captionBold
                                 )

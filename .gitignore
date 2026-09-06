@@ -48,3 +48,17 @@ komplettes_getraenkesortiment_exakt.csv
 
 # Stray duplicate (superseded by Alcoholtracker/Services/CalendarLogicalDay.swift)
 Calendar+LogicalDay.swift
+
+# Android artifacts & credentials
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Test artifacts
+test_*.png
+
+# Agent metadata
+.agents/
+.serena/
+

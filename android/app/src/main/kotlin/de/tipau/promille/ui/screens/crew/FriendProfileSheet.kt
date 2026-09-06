@@ -40,9 +40,7 @@ import de.tipau.promille.network.fetchFriendIDs
 import de.tipau.promille.network.fetchMutualFriends
 import de.tipau.promille.network.fetchProfiles
 import de.tipau.promille.network.lookupFriend
-import de.tipau.promille.ui.components.PrimaryButton
 import de.tipau.promille.ui.components.StatusPill
-import de.tipau.promille.ui.components.PromilleCard
 import de.tipau.promille.ui.components.SectionLabel
 import de.tipau.promille.ui.components.SettingsDestructiveRow
 import de.tipau.promille.ui.components.SettingsToggleRow
@@ -51,6 +49,9 @@ import java.util.Locale
 
 /** What the server part of the sheet has to show. FriendProfileSheet.swift:20. */
 private enum class FriendLoadState { LOADING, LOADED, OFFLINE, FAILED }
+
+// FriendProfileSheet.swift:56-59.
+private val sinceFormatter = java.text.SimpleDateFormat("d. MMMM yyyy", Locale.GERMANY)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -64,8 +65,13 @@ fun FriendProfileSheet(
     var isHome by remember { mutableStateOf(member.isHome) }
     var isSoberBuddy by remember { mutableStateOf(member.isSoberBuddy) }
     var sosActive by remember { mutableStateOf(member.sosActive) }
-    var currentBAC by remember { mutableStateOf(member.currentBAC) }
     var alertWhenHigh by remember { mutableStateOf(member.alertWhenHigh) }
+
+    // Instant write like iOS's @Bindable member (context.save() per toggle):
+    // no batched local copy, no separate save button.
+    fun pushUpdate() = onUpdate(
+        member.copy(isHome = isHome, isSoberBuddy = isSoberBuddy, sosActive = sosActive, alertWhenHigh = alertWhenHigh)
+    )
 
     // The alert is a notification, so switching it on has to ask for the
     // permission there and then. Denied, the switch goes back off rather than
@@ -73,7 +79,7 @@ fun FriendProfileSheet(
     val context = androidx.compose.ui.platform.LocalContext.current
     val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
-    ) { granted -> alertWhenHigh = granted }
+    ) { granted -> alertWhenHigh = granted; pushUpdate() }
 
     // Server half of the sheet (FriendProfileSheet.swift:484-513). Everything
     // below stays usable without it: a local friend with no code never leaves
@@ -145,14 +151,14 @@ fun FriendProfileSheet(
         scrimColor = Color.Black.copy(alpha = 0.65f),
         dragHandle = null
     ) {
+        // Full height like iOS's .presentationDetents([.large]), not an
+        // inset card - matches the other big sheets (QuickAddSheet etc).
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 24.dp, top = 16.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .fillMaxHeight(0.92f)
+                .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
                 .background(AppColors.background)
-                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
         ) {
             Column(
                 modifier = Modifier
@@ -161,7 +167,8 @@ fun FriendProfileSheet(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Header with Avatar
+                // Header with Avatar, tinted by BAC status (FriendProfileSheet.swift:117-141)
+                val avatarStatus = BacStatus.of(CrewMath.estimatedBac(member.currentBAC, member.lastDrinkTimestamp, nowSeconds))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -170,29 +177,43 @@ fun FriendProfileSheet(
                     modifier = Modifier
                         .size(54.dp)
                         .clip(CircleShape)
-                        .background(AppColors.accent.copy(alpha = 0.2f))
-                        .border(1.5.dp, AppColors.accent, CircleShape),
+                        .background(avatarStatus.color.copy(alpha = 0.2f))
+                        .border(1.5.dp, avatarStatus.color, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(member.avatarInitial, color = AppColors.accent, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                    Text(member.avatarInitial, color = avatarStatus.color, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Spacer(Modifier.width(14.dp))
-                Column(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     // iOS: .appHeadline (FriendProfileSheet.swift:129).
                     Text(member.name, color = AppColors.text, style = de.tipau.promille.AppText.headline)
-                    // iOS: .appCaption (FriendProfileSheet.swift:184).
-                    Text(
-                        text = "${String.format(Locale.GERMANY, "%.2f ‰", currentBAC)} Promille",
-                        color = if (currentBAC > 0.8) AppColors.statusRed else AppColors.textDim,
-                        style = de.tipau.promille.AppText.caption
-                    )
+                    // Server profile name, only when it differs from the local one.
+                    profile?.displayName?.takeIf { it.isNotBlank() && it != member.name }?.let {
+                        Text("Profilname: $it", color = AppColors.textMuted, style = de.tipau.promille.AppText.micro)
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        member.friendCode?.let {
+                            Text(
+                                it,
+                                color = AppColors.textDim,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                style = de.tipau.promille.TabularFigures
+                            )
+                        }
+                        Text(
+                            "Freund seit ${sinceFormatter.format(java.util.Date(member.joinedAt * 1000))}",
+                            color = AppColors.textMuted,
+                            style = de.tipau.promille.AppText.micro
+                        )
+                    }
                 }
                 de.tipau.promille.ui.components.AppIconCloseButton(onDismiss = onDismiss)
             }
 
             // LIVE-STATUS (FriendProfileSheet.swift:169-215)
             SectionLabel("LIVE-STATUS")
-            PromilleCard {
+            FPCard {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -267,7 +288,7 @@ fun FriendProfileSheet(
             // Friendship direction (FriendProfileSheet.swift:219-253)
             if (loadState == FriendLoadState.LOADED) {
                 val tint = if (followsMe) AppColors.statusGreen else AppColors.statusOrange
-                PromilleCard {
+                FPCard {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -377,7 +398,7 @@ fun FriendProfileSheet(
 
             // Offline hint (FriendProfileSheet.swift:346-361)
             if (loadState == FriendLoadState.OFFLINE) {
-                PromilleCard {
+                FPCard {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -401,37 +422,39 @@ fun FriendProfileSheet(
                 }
             }
 
-            // Status Toggles
+            // Status toggles, each writing instantly (FriendProfileSheet.swift:370-480).
             SectionLabel("Status")
-            PromilleCard {
+            FPCard {
                 Column {
                     SettingsToggleRow(
                         title = "Sicher zu Hause",
                         subtitle = "Markiert den Freund als wohlbehalten daheim",
                         checked = isHome,
-                        onCheckedChange = { isHome = it }
+                        onCheckedChange = { isHome = it; pushUpdate() }
                     )
                     SettingsToggleRow(
-                        title = "Sober Buddy",
+                        title = "Als Fahrer markiert",
                         subtitle = "Bleibt nüchtern / fährt die Gruppe",
                         checked = isSoberBuddy,
-                        onCheckedChange = { isSoberBuddy = it }
+                        onCheckedChange = { isSoberBuddy = it; pushUpdate() }
                     )
                     SettingsToggleRow(
                         title = "SOS Status",
                         subtitle = "Braucht dringend Hilfe / Aufmerksamkeit",
                         checked = sosActive,
-                        onCheckedChange = { sosActive = it }
+                        onCheckedChange = { sosActive = it; pushUpdate() }
                     )
                     SettingsToggleRow(
-                        title = "Warnen bei hohem Wert",
+                        title = "Warnen wenn zu viel",
                         subtitle = "Meldung, wenn dieser Freund deine Gefahrenschwelle erreicht",
                         checked = alertWhenHigh,
                         onCheckedChange = { on ->
                             if (!on) {
                                 alertWhenHigh = false
+                                pushUpdate()
                             } else if (NotificationService.isAuthorized(context)) {
                                 alertWhenHigh = true
+                                pushUpdate()
                             } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                                 permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
                             }
@@ -439,54 +462,6 @@ fun FriendProfileSheet(
                     )
                 }
             }
-
-            // Promillewert anpassen
-            SectionLabel("Promillewert anpassen")
-            PromilleCard {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = String.format(Locale.GERMANY, "%.2f ‰", currentBAC),
-                        color = AppColors.text,
-                        style = de.tipau.promille.AppText.headline.merge(de.tipau.promille.TabularFigures)
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = { currentBAC = (currentBAC - 0.1).coerceAtLeast(0.0) },
-                            colors = ButtonDefaults.buttonColors(containerColor = AppColors.card, contentColor = AppColors.text),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("- 0,1", style = de.tipau.promille.AppText.bodyBold)
-                        }
-                        Button(
-                            onClick = { currentBAC = currentBAC + 0.1 },
-                            colors = ButtonDefaults.buttonColors(containerColor = AppColors.accent, contentColor = AppColors.background),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("+ 0,1", style = de.tipau.promille.AppText.bodyBold)
-                        }
-                    }
-                }
-            }
-
-            // Save Button
-            PrimaryButton(
-                text = "Änderungen speichern",
-                onClick = {
-                    val updated = member.copy(
-                        isHome = isHome,
-                        isSoberBuddy = isSoberBuddy,
-                        sosActive = sosActive,
-                        currentBAC = currentBAC,
-                        alertWhenHigh = alertWhenHigh
-                    )
-                    onUpdate(updated)
-                    onDismiss()
-                }
-            )
 
             // Delete Friend
             SettingsDestructiveRow(
@@ -512,8 +487,48 @@ private fun accentColor(accent: AchievementAccent): Color = when (accent) {
     AchievementAccent.ORANGE -> AppColors.statusOrange
 }
 
-/** One earned badge on a friend's profile. iOS shows the SF Symbol; Android has
- *  no glyph for it and uses the same check mark as AchievementsScreen. */
+// iOS shows the real SF Symbol per achievement.icon; Android has no glyph
+// library for those exact names (material-icons-extended isn't a dependency
+// here), so this maps the recurring prefixes onto the closest icon already
+// drawn in AppIcons. Unmapped icons fall back to the trophy.
+@Composable
+private fun achievementIcon(icon: String): androidx.compose.ui.graphics.painter.Painter = when {
+    icon.startsWith("mug") || icon.startsWith("cup") || icon.startsWith("cylinder") -> de.tipau.promille.ui.components.AppIcons.Mug
+    icon.startsWith("wineglass") -> de.tipau.promille.ui.components.AppIcons.Wine
+    icon.startsWith("drop") -> de.tipau.promille.ui.components.AppIcons.Drop
+    icon.startsWith("chart.bar") -> de.tipau.promille.ui.components.AppIcons.Chart
+    icon.startsWith("gauge") -> de.tipau.promille.ui.components.AppIcons.Gauge
+    icon.startsWith("arrow.2") -> de.tipau.promille.ui.components.AppIcons.History
+    icon.startsWith("person") -> de.tipau.promille.ui.components.AppIcons.Group
+    icon.startsWith("camera") -> de.tipau.promille.ui.components.AppIcons.Camera
+    icon.startsWith("flame") -> de.tipau.promille.ui.components.AppIcons.Fire
+    icon.startsWith("checkmark.seal") -> de.tipau.promille.ui.components.AppIcons.Check
+    icon.startsWith("calendar") -> de.tipau.promille.ui.components.AppIcons.Calendar
+    icon.startsWith("photo") -> de.tipau.promille.ui.components.AppIcons.Photo
+    icon.startsWith("pencil") -> de.tipau.promille.ui.components.AppIcons.Pencil
+    icon.startsWith("waveform") -> de.tipau.promille.ui.components.AppIcons.Waveform
+    icon.startsWith("shuffle") -> de.tipau.promille.ui.components.AppIcons.Dice
+    icon.startsWith("sunrise") -> de.tipau.promille.ui.components.AppIcons.Sun
+    icon.startsWith("moon") -> de.tipau.promille.ui.components.AppIcons.Moon
+    // star/map/exclamationmark/leaf/fireworks/N.circle/trophy have no close
+    // asset in AppIcons - the trophy fallback is genuinely the closest fit.
+    else -> de.tipau.promille.ui.components.AppIcons.EmojiEvents
+}
+
+// FriendProfileSheet.swift's cards use 14dp, not PromilleCard's 20dp.
+@Composable
+private fun FPCard(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AppColors.card, RoundedCornerShape(14.dp))
+            .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+            .padding(16.dp),
+        content = content
+    )
+}
+
+/** One earned badge on a friend's profile, with the real achievement icon. */
 @Composable
 private fun AchievementChip(achievement: Achievement, onClick: () -> Unit) {
     val color = accentColor(achievement.accent)
@@ -534,8 +549,7 @@ private fun AchievementChip(achievement: Achievement, onClick: () -> Unit) {
                 .background(color.copy(alpha = 0.13f)),
             contentAlignment = Alignment.Center
         ) {
-            // iOS: .system(size: 12, weight: .semibold) (swift:282).
-            Text("\u2713", color = color, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Icon(achievementIcon(achievement.icon), contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
         }
         // iOS: .appMicro (FriendProfileSheet.swift:288).
         Text(achievement.title, color = AppColors.text, style = de.tipau.promille.AppText.micro, maxLines = 1)
@@ -578,50 +592,51 @@ private fun MutualFriendChip(friend: FriendProfile) {
     }
 }
 
-/** AchievementDetailSheet.swift:552-620 as a dialog: a sheet on top of a sheet
- *  is what Compose handles worst, and the content is three lines. */
+/** AchievementDetailSheet.swift:552-620: a medium sheet, not a dialog. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AchievementDetailDialog(achievement: Achievement, onDismiss: () -> Unit) {
     val color = accentColor(achievement.accent)
-    de.tipau.promille.ui.components.AppAlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = achievement.title,
-        dismissText = null,
-        confirmText = "Schließen",
-        onConfirm = onDismiss,
-        content = {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
+        containerColor = AppColors.background,
+        scrimColor = Color.Black.copy(alpha = 0.65f)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Text(achievement.title, color = AppColors.text, style = de.tipau.promille.AppText.headline)
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(color.copy(alpha = 0.13f)),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(color.copy(alpha = 0.13f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("\u2713", color = color, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                }
-                Text(achievement.subtitle, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
-                Row(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(AppColors.statusGreen.copy(alpha = 0.12f))
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(
-                        Icons.Filled.CheckCircle,
-                        contentDescription = null,
-                        tint = AppColors.statusGreen,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text("Freigeschaltet", color = AppColors.statusGreen, style = de.tipau.promille.AppText.captionBold)
-                }
+                Icon(achievementIcon(achievement.icon), contentDescription = null, tint = color, modifier = Modifier.size(28.dp))
+            }
+            Text(achievement.subtitle, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
+            Row(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(AppColors.statusGreen.copy(alpha = 0.12f))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = AppColors.statusGreen,
+                    modifier = Modifier.size(14.dp)
+                )
+                Text("Freigeschaltet", color = AppColors.statusGreen, style = de.tipau.promille.AppText.captionBold)
             }
         }
-    )
+    }
 }

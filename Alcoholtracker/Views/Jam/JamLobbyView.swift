@@ -18,7 +18,7 @@ struct JamLobbyView: View {
     @State private var joinError: String?
     @State private var isJoining  = false
     @State private var listJoinError: String?
-    @State private var pendingInvitations: [PendingJamInvite] = []
+    private var pendingInvitations: [PendingJamInvite] { jamService.invitations }
 
     private var hasContent: Bool {
         !jamService.availableJamsNearby.isEmpty || !jamService.availableJamsFromFriends.isEmpty
@@ -58,7 +58,6 @@ struct JamLobbyView: View {
             // friends-only access check when joining per code.
             jamService.friendCodes = crewMembers.compactMap(\.friendCode)
             jamService.startBrowsing()
-            Task { pendingInvitations = (try? await supabase.fetchMyJamInvitations()) ?? [] }
         }
         .onDisappear {
             // Joining replaces the lobby with ActiveJamView; the browser that
@@ -364,7 +363,7 @@ struct JamLobbyView: View {
                 }
                 try await jamService.joinJamByCode(invite.jamCode)
                 await supabase.markInvitationSeen(invite.id)
-                pendingInvitations.removeAll { $0.id == invite.id }
+                jamService.invitations.removeAll { $0.id == invite.id }
             } catch {
                 listJoinError = error.localizedDescription
             }

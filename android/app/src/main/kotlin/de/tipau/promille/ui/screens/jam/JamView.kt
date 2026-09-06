@@ -352,15 +352,17 @@ private fun JamLobby(
             ) {
                 de.tipau.promille.ui.components.AppTextField(
                     value = codeInput,
-                    onValueChange = { codeInput = it.uppercase() },
-                    placeholder = "Code",
+                    onValueChange = { input ->
+                        codeInput = de.tipau.promille.service.JamCodeGenerator.sanitize(input)
+                    },
+                    placeholder = "6-stelliger Code",
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
                     modifier = Modifier.weight(1f)
                 )
                 Button(
                     onClick = { run { jamService.joinJamByCode(codeInput) } },
-                    enabled = isSignedIn && codeInput.isNotBlank() && !busy,
+                    enabled = isSignedIn && codeInput.length == de.tipau.promille.service.JamCodeGenerator.CODE_LENGTH && !busy,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = AppColors.accent,
                         contentColor = AppColors.background
@@ -545,10 +547,17 @@ private fun ActiveJam(
     // LazyColumn item near the top, so a chip-local remember would be thrown
     // away the moment it scrolls off and every friend would look uninvited again.
     val invitedIds = remember { mutableStateListOf<String>() }
+    val sendingIds = remember { mutableStateListOf<String>() }
+    val failedIds = remember { mutableStateListOf<String>() }
     val invite: (InviteCandidate) -> Unit = { friend ->
         friend.friendCode?.let { code ->
-            invitedIds += friend.id
-            scope.launch { runCatching { jamService.inviteFriend(code) } }
+            failedIds -= friend.id
+            sendingIds += friend.id
+            scope.launch {
+                val result = runCatching { jamService.inviteFriend(code) }.getOrDefault("network_error")
+                sendingIds -= friend.id
+                if (result == "ok") invitedIds += friend.id else failedIds += friend.id
+            }
         }
     }
 
@@ -649,6 +658,8 @@ private fun ActiveJam(
             friends = uninvitedFriends,
             jamCode = jam.code,
             invited = invitedIds.toSet(),
+            sending = sendingIds.toSet(),
+            failed = failedIds.toSet(),
             onDismiss = { showInvite = false },
             onInvite = invite
         )
@@ -806,7 +817,9 @@ private fun ActiveJam(
                         style = de.tipau.promille.AppText.caption
                     )
                     Spacer(Modifier.width(10.dp))
-                    val canInvite = uninvitedFriends.isNotEmpty()
+                    // Invitations need a jam_id the server can look up; proximity-only
+                    // jams don't have one, so send_jam_invitation would just fail.
+                    val canInvite = jam.visibility.usesServer && uninvitedFriends.isNotEmpty()
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -818,7 +831,7 @@ private fun ActiveJam(
                                 if (canInvite) AppColors.accent.copy(alpha = 0.3f) else AppColors.border,
                                 CircleShape
                             )
-                            .clickable { showInvite = true }
+                            .clickable(enabled = jam.visibility.usesServer) { showInvite = true }
                     ) {
                         Icon(
                             painter = de.tipau.promille.ui.components.AppIcons.PersonPlus,
@@ -850,7 +863,9 @@ private fun ActiveJam(
             // uninvitedFriendsStrip. iOS bleeds the orange tint edge to edge above the
             // divider; this list is inset by 20.dp for every item, so it becomes a
             // tinted card instead of restructuring the padding for one row.
-            if (uninvitedFriends.isNotEmpty()) {
+            // Proximity-only jams have no server-known jam_id, so an invite here
+            // would just fail its membership check.
+            if (jam.visibility.usesServer && uninvitedFriends.isNotEmpty()) {
                 item {
                     Column(
                         modifier = Modifier
@@ -1208,8 +1223,9 @@ private fun ActiveJam(
                         )
                     }
 
-                    // Freunde einladen
-                    Row(
+                    // Freunde einladen. Invitations need a jam_id the server can look
+                    // up; proximity-only jams don't have one.
+                    if (jam.visibility.usesServer) Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))

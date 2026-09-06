@@ -20,6 +20,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @Environment(SupabaseService.self) private var supabase
     @Environment(AchievementService.self) private var achievements
+    @Environment(LocationService.self) private var locationService
     @State private var showAuth = false
     @State private var showAchievements = false
     @State private var notifyEnabled = NotificationService.isEnabled
@@ -77,6 +78,9 @@ struct SettingsView: View {
             saveDebouncer.flush(context: context) {
                 AppTheme.shared.sync(from: profile)
             }
+        }
+        .onChange(of: shareAnonymousCityInsights) { _, enabled in
+            if enabled { locationService.requestLocation() }
         }
     }
 

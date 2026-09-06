@@ -12,6 +12,7 @@ import de.tipau.promille.bac.JamVisibility
 import de.tipau.promille.bac.WaterScore
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -402,24 +403,26 @@ data class PendingJamInvite(
     @SerialName("created_at") val createdAtRaw: String? = null
 )
 
-/** Fire and forget: a failed invite must not break hosting the jam. */
+/** Returns the RPC's reason token ("ok" on success) so callers can show a
+ *  real failure instead of an optimistic "sent" that never arrived. */
 suspend fun SupabaseService.sendJamInvitation(
     inviteeCode: String,
     jamID: String,
     jamCode: String,
     hostName: String
-) {
-    if (!isConfigured || userId == null) return
+): String {
+    if (!isConfigured || userId == null) return "not_signed_in"
     val clean = sanitizeFriendCode(inviteeCode)
-    if (clean.isEmpty()) return
-    runCatching {
-        transport.restRPC("send_jam_invitation", buildJsonObject {
+    if (clean.isEmpty()) return "no_invitee_code"
+    return runCatching {
+        val raw = transport.restRPC("send_jam_invitation", buildJsonObject {
             put("p_invitee_code", clean)
             put("p_jam_id", jamID.lowercase())
             put("p_jam_code", jamCode)
             put("p_host_name", hostName)
         })
-    }
+        supabaseJson.decodeFromString<String>(raw)
+    }.getOrDefault("network_error")
 }
 
 suspend fun SupabaseService.fetchMyJamInvitations(): List<PendingJamInvite> {

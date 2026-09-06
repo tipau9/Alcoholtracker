@@ -30,12 +30,18 @@ create index if not exists jam_invitation_events_inviter_idx
 alter table public.jam_invitations enable row level security;
 alter table public.jam_invitation_events enable row level security;
 
+-- Returns 'ok' on success, or a reason token the client can act on instead
+-- of silently swallowing the failure: 'not_signed_in', 'not_member',
+-- 'no_inviter_code', 'self_invite', 'no_invitee_code'.
+-- Return type changed void -> text; drop first, Postgres refuses that
+-- change under create or replace.
+drop function if exists public.send_jam_invitation(text, uuid, text, text);
 create or replace function public.send_jam_invitation(
     p_invitee_code text,
     p_jam_id       uuid,
     p_jam_code     text,
     p_host_name    text default ''
-) returns void
+) returns text
 language plpgsql
 security definer
 set search_path = public
@@ -47,7 +53,7 @@ declare
     v_real_host text;
 begin
     if auth.uid() is null then
-        return;
+        return 'not_signed_in';
     end if;
 
     -- Security check: Caller MUST belong to p_jam_id (as participant or host)
@@ -58,7 +64,7 @@ begin
         select 1 from public.jams
         where id = p_jam_id and host_user_id = auth.uid()::text
     ) then
-        return;
+        return 'not_member';
     end if;
 
     -- Pull verified jam_code and host_name from public.jams if present
@@ -83,10 +89,13 @@ begin
     where id = auth.uid();
 
     if v_my_code is null or v_my_code = '' then
-        return;
+        return 'no_inviter_code';
+    end if;
+    if p_invitee_code is null or trim(p_invitee_code) = '' then
+        return 'no_invitee_code';
     end if;
     if upper(trim(p_invitee_code)) = upper(trim(v_my_code)) then
-        return;
+        return 'self_invite';
     end if;
 
     insert into public.jam_invitation_events(inviter_id)
@@ -107,6 +116,8 @@ begin
 
     delete from public.jam_invitations
     where created_at < now() - interval '48 hours';
+
+    return 'ok';
 end;
 $$;
 
@@ -139,7 +150,7 @@ begin
     from public.jam_invitations ji
     where ji.invitee_code = upper(trim(v_my_code))
       and ji.seen_at is null
-      and ji.created_at > now() - interval '24 hours'
+      and ji.created_at > now() - interval '48 hours'
     order by ji.created_at desc;
 end;
 $$;

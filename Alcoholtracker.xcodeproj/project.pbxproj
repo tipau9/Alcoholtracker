@@ -577,7 +577,7 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "Kamera wird zum Scannen von Barcodes und fur Erinnerungsfotos verwendet.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "promille. speichert Getranke in Apple Health.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Wird fur den Jam-Modus benotigt.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Wird fur die Heimfahrt-Funktion benotigt.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Wird fur die Heimfahrt-Funktion und fuer anonyme Stadtstatistiken benotigt.";
 				INFOPLIST_KEY_NSNearbyInteractionAllowOnceUsageDescription = "Promille nutzt Naehe-Erkennung, um Freunde im Jam-Modus zu finden.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Fotos werden fur Erinnerungen gespeichert.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
@@ -622,7 +622,7 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "Kamera wird zum Scannen von Barcodes und fur Erinnerungsfotos verwendet.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "promille. speichert Getranke in Apple Health.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Wird fur den Jam-Modus benotigt.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Wird fur die Heimfahrt-Funktion benotigt.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Wird fur die Heimfahrt-Funktion und fuer anonyme Stadtstatistiken benotigt.";
 				INFOPLIST_KEY_NSNearbyInteractionAllowOnceUsageDescription = "Promille nutzt Naehe-Erkennung, um Freunde im Jam-Modus zu finden.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Fotos werden fur Erinnerungen gespeichert.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;

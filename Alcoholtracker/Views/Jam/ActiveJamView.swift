@@ -53,7 +53,10 @@ struct ActiveJamView: View {
             Color.appBackground.ignoresSafeArea()
             VStack(spacing: 0) {
                 activeHeader
-                if !uninvitedFriends.isEmpty {
+                // Invitations are server-only: a proximity-only jam has no jam_id
+                // the recipient's device can look up, so send_jam_invitation would
+                // just fail its membership check.
+                if jam.visibility.usesServer && !uninvitedFriends.isEmpty {
                     uninvitedFriendsStrip
                 }
                 if !sosParticipants.isEmpty {
@@ -255,6 +258,8 @@ struct ActiveJamView: View {
                         lineWidth: 0.5
                     ))
             }
+            .disabled(!jam.visibility.usesServer)
+            .opacity(jam.visibility.usesServer ? 1 : 0.3)
             .buttonStyle(.plain)
             Button { showPrivacySettings = true } label: {
                 Image(systemName: "slider.horizontal.3")
@@ -389,8 +394,12 @@ struct ActiveJamView: View {
         ActionChip(icon: "gamecontroller.fill", label: "Jam Arcade") {
             showArcadePicker = true
         }
-        ActionChip(icon: "person.badge.plus", label: "Freunde einladen") {
-            showInviteSheet = true
+        // Invitations need a jam_id the server can look up; proximity-only jams
+        // don't have one, so send_jam_invitation would just fail silently.
+        if jam.visibility.usesServer {
+            ActionChip(icon: "person.badge.plus", label: "Freunde einladen") {
+                showInviteSheet = true
+            }
         }
       }
     }
@@ -663,6 +672,8 @@ private struct InviteFriendsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(SupabaseService.self) private var supabase
     @State private var sentIDs: Set<UUID> = []
+    @State private var sendingIDs: Set<UUID> = []
+    @State private var failedIDs: Set<UUID> = []
 
     var body: some View {
         ZStack {
@@ -723,34 +734,41 @@ private struct InviteFriendsSheet: View {
                                         // In-app notification via Supabase (shown when friend has a code)
                                         if let code = friend.friendCode {
                                             Button {
-                                                sentIDs.insert(friend.id)
+                                                failedIDs.remove(friend.id)
+                                                sendingIDs.insert(friend.id)
                                                 Task {
-                                                    await supabase.sendJamInvitation(
+                                                    let result = await supabase.sendJamInvitation(
                                                         inviteeCode: code,
                                                         jamID: jam.id,
                                                         jamCode: jam.code,
                                                         hostName: jam.hostName
                                                     )
+                                                    sendingIDs.remove(friend.id)
+                                                    if result == "ok" {
+                                                        sentIDs.insert(friend.id)
+                                                    } else {
+                                                        failedIDs.insert(friend.id)
+                                                    }
                                                 }
                                             } label: {
                                                 HStack(spacing: 4) {
-                                                    Image(systemName: sentIDs.contains(friend.id) ? "checkmark" : "bell.badge")
+                                                    Image(systemName: sentIDs.contains(friend.id) ? "checkmark" : (failedIDs.contains(friend.id) ? "exclamationmark.triangle" : "bell.badge"))
                                                         .font(.system(size: 11, weight: .semibold))
-                                                    Text(sentIDs.contains(friend.id) ? "Eingeladen" : "Benachrichtigen")
+                                                    Text(sentIDs.contains(friend.id) ? "Eingeladen" : (failedIDs.contains(friend.id) ? "Fehlgeschlagen" : "Benachrichtigen"))
                                                         .font(.appCaptionBold)
                                                 }
-                                                .foregroundStyle(sentIDs.contains(friend.id) ? Color.statusGreen : Color.appAccent)
+                                                .foregroundStyle(sentIDs.contains(friend.id) ? Color.statusGreen : (failedIDs.contains(friend.id) ? Color.statusRed : Color.appAccent))
                                                 .padding(.horizontal, 12)
                                                 .padding(.vertical, 8)
-                                                .background((sentIDs.contains(friend.id) ? Color.statusGreen : Color.appAccent).opacity(0.12))
+                                                .background((sentIDs.contains(friend.id) ? Color.statusGreen : (failedIDs.contains(friend.id) ? Color.statusRed : Color.appAccent)).opacity(0.12))
                                                 .clipShape(Capsule())
                                                 .overlay(Capsule().strokeBorder(
-                                                    (sentIDs.contains(friend.id) ? Color.statusGreen : Color.appAccent).opacity(0.3),
+                                                    (sentIDs.contains(friend.id) ? Color.statusGreen : (failedIDs.contains(friend.id) ? Color.statusRed : Color.appAccent)).opacity(0.3),
                                                     lineWidth: 0.5
                                                 ))
                                             }
                                             .buttonStyle(.plain)
-                                            .disabled(sentIDs.contains(friend.id))
+                                            .disabled(sentIDs.contains(friend.id) || sendingIDs.contains(friend.id))
                                             .animation(.appSnappy, value: sentIDs.contains(friend.id))
                                         }
                                         // OS share sheet as fallback
@@ -791,18 +809,21 @@ private struct FriendInviteChip: View {
     let jam: Jam
     @Environment(SupabaseService.self) private var supabase
     @State private var invited = false
+    @State private var sending = false
 
     var body: some View {
         Button {
-            guard !invited, let code = friend.friendCode else { return }
-            invited = true
+            guard !invited, !sending, let code = friend.friendCode else { return }
+            sending = true
             Task {
-                await supabase.sendJamInvitation(
+                let result = await supabase.sendJamInvitation(
                     inviteeCode: code,
                     jamID: jam.id,
                     jamCode: jam.code,
                     hostName: jam.hostName
                 )
+                sending = false
+                invited = (result == "ok")
             }
         } label: {
             VStack(spacing: 5) {

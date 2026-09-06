@@ -17,6 +17,7 @@ struct HomeView: View {
     @Query private var allPhotos: [PhotoMemory]
     @Query private var allNotes: [DayNote]
     @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         let cutoff = Calendar.current.date(byAdding: .day, value: -3, to: Date()) ?? .distantPast
@@ -284,6 +285,12 @@ struct HomeView: View {
                 },
                 onDelete: { session.removeDrink(drink, recordUndo: true) }
             )
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            // A .task(id:) only refires when recentDrinks changes; an app left
+            // open overnight never crosses that trigger, so the 06:00 logical-
+            // day cut never re-runs on its own. Force it on foreground return.
+            if newPhase == .active { session.loadTodaysDrinks(force: true) }
         }
         .onChange(of: session.currentBAC) { _, bac in
             jamService.myCurrentBAC = bac
@@ -2930,7 +2937,9 @@ private struct DayStatsCard: View {
     @State private var maxToday: Double = 0
 
     private var todayDrinks: [Drink] {
-        session.drinks.filter { Calendar.current.isDateInToday($0.timestamp) }
+        let cal = Calendar.current
+        let today = cal.logicalDay(for: Date())
+        return session.drinks.filter { cal.logicalDay(for: $0.timestamp) == today }
     }
 
     var body: some View {

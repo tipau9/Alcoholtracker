@@ -325,11 +325,14 @@ class JamService(
             settings = settings,
             participants = listOf(makeMyParticipant())
         )
-        if (visibility.usesServer) supabase.publishJam(jam)
+        if (visibility.usesServer) {
+            supabase.publishJam(jam)
+            syncMyParticipantID(jam.id)
+        }
         if (visibility.usesProximity) multipeer?.startAdvertisingJam(jam)
 
         _amHost.value = true
-        _currentJam.value = jam
+        _currentJam.value = jam.copy(participants = listOf(makeMyParticipant()))
         startTimers()
         return jam
     }
@@ -377,6 +380,7 @@ class JamService(
                 )
             }
             if (type == JamConnectionType.PROXIMITY) runCatching { register() } else register()
+            syncMyParticipantID(jam.id)
         }
         // Connects at once if the host was already discovered; otherwise this
         // just sets activeJamID so a discovery arriving later auto-connects.
@@ -522,9 +526,11 @@ class JamService(
 
     var friendCodes: List<String> = emptyList()
 
-    suspend fun inviteFriend(friendCode: String) {
-        val jam = _currentJam.value ?: return
-        supabase.sendJamInvitation(friendCode, jam.id, jam.code, jam.hostName)
+    /** Returns the RPC's reason token ("ok" on success) so callers can show a
+     *  real failure instead of an optimistic "sent" that never arrived. */
+    suspend fun inviteFriend(friendCode: String): String {
+        val jam = _currentJam.value ?: return "not_in_jam"
+        return supabase.sendJamInvitation(friendCode, jam.id, jam.code, jam.hostName)
     }
 
     private fun startInvitationPolling() {
@@ -658,11 +664,12 @@ class JamService(
             starterName = myDisplayName(),
             starterID = myParticipantID
         )
-        if (jam.visibility.usesServer) {
-            val success = runCatching { supabase.setJamRoulette(payload) }.isSuccess
-            if (!success) return
-        }
+        // Local-first like iOS: the picker must open even if the server write
+        // fails or lags (e.g. a stale myParticipantID rejected by the RPC).
         _incomingRoulette.value = payload
+        if (jam.visibility.usesServer) {
+            scope.launch { runCatching { supabase.setJamRoulette(payload) } }
+        }
         if (jam.visibility.usesProximity) multipeer?.broadcastRoulette(payload)
     }
 
@@ -688,13 +695,13 @@ class JamService(
             },
             durationSeconds = if (game == JamArcadeGame.BALANCE_BATTLE) 10.0 else 5.0
         )
-        if (jam.visibility.usesServer) {
-            val success = runCatching { supabase.setJamArcadeRound(round) }.isSuccess
-            if (!success) return
-        }
+        // Local-first like iOS: open the sheet regardless of the server write.
         _incomingArcadeRound.value = round
         _arcadeResults.value = emptyList()
         startFastArcadePolling()
+        if (jam.visibility.usesServer) {
+            scope.launch { runCatching { supabase.setJamArcadeRound(round) } }
+        }
         if (jam.visibility.usesProximity) multipeer?.broadcastArcadeRound(round)
     }
 
@@ -883,6 +890,18 @@ class JamService(
     }
 
     // MARK: Self
+
+    // publishJam/joinJam use `on_conflict ... ignoreDuplicates`: on a rejoin
+    // whose jam_participants row survived the last leaveJam, the server keeps
+    // the OLD id and drops ours. Read it back so myParticipantID matches what
+    // the server (and other clients) actually have, or RPCs keyed on it -
+    // arcade round start, roulette - reject us as "not a participant".
+    private suspend fun syncMyParticipantID(jamID: String) {
+        val me = supabase.userId ?: return
+        val mine = runCatching { supabase.fetchJamParticipants(jamID) }.getOrNull()
+            ?.firstOrNull { it.userID == me } ?: return
+        myParticipantID = mine.id
+    }
 
     private fun myDisplayName(): String =
         supabase.myProfile.value?.displayName?.takeIf { it.isNotEmpty() } ?: "Ich"

@@ -581,10 +581,23 @@ final class SessionViewModel {
             vomitTimes: vomitTimesBefore6AM,
             mealEvents: mealsBefore6AM
         ).currentBAC(at: logicalStart)
-        
+
+        // bacAt6AM alone is a one-time snapshot at 06:00 that stays true all
+        // day; a sober user at 14:00 would still see last night's whole list.
+        // Gate on residual alcohol NOW too, so the extension expires once it
+        // actually would have.
+        let residualNow = BACProjectionInput(
+            drinks: drinksBefore6AM,
+            profile: p,
+            stomachStatus: p.defaultStomachStatus,
+            conservative: p.conservativeForApp,
+            vomitTimes: vomitTimesBefore6AM,
+            mealEvents: mealsBefore6AM
+        ).currentBAC(at: now)
+
         var sessionStart = logicalStart
-        
-        if bacAt6AM > 0.001 {
+
+        if bacAt6AM > 0.001 && residualNow > 0.001 {
             var blockStart = logicalStart
             for i in (0..<drinksBefore6AM.count).reversed() {
                 let d = drinksBefore6AM[i]

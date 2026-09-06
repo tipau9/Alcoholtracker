@@ -24,16 +24,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
+import de.tipau.promille.bac.BreathalyzerReading
 import de.tipau.promille.bac.DayMood
 import de.tipau.promille.bac.DayNote
 import de.tipau.promille.bac.Drink
 import de.tipau.promille.bac.DrinkCategory
 import de.tipau.promille.bac.PersonalInsights
 import de.tipau.promille.bac.Profile
+import de.tipau.promille.bac.WaterLog
+import de.tipau.promille.bac.categoryTrends
 import de.tipau.promille.bac.germanName
 import de.tipau.promille.bac.getMoodCorrelations
 import de.tipau.promille.bac.moodInsight
 import de.tipau.promille.bac.permilleString
+import de.tipau.promille.bac.weeklyDrinkCounts
 import de.tipau.promille.network.CityDrinkInsights
 import de.tipau.promille.network.CityDrinkTrend
 import de.tipau.promille.network.CityRankedDrink
@@ -42,13 +46,19 @@ import de.tipau.promille.network.fetchCityInsights
 import de.tipau.promille.network.fetchCityTrends
 import de.tipau.promille.service.LocationService
 import de.tipau.promille.ui.components.AppIcons
+import de.tipau.promille.ui.components.AppSegmentedControl
+import de.tipau.promille.ui.components.InsightsBarChart
+import de.tipau.promille.ui.components.InsightsSectionHeader
 import de.tipau.promille.ui.components.PromilleCard
 import de.tipau.promille.ui.components.SectionLabel
 import java.util.Locale
 import kotlin.math.roundToInt
 import de.tipau.promille.AppSerif
 
+private val WEEKDAY_LABELS = listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
+
 enum class InsightsPeriod(val label: String, val days: Int?) {
+    DAYS_7("7 Tage", 7),
     DAYS_30("30 Tage", 30),
     DAYS_90("90 Tage", 90),
     ALL("Gesamt", null)
@@ -65,6 +75,8 @@ fun TrendsView(
     profile: Profile?,
     notes: List<DayNote> = emptyList(),
     supabase: SupabaseService? = null,
+    breathalyzerReadings: List<BreathalyzerReading> = emptyList(),
+    waterLog: WaterLog = WaterLog.disabled(),
     onDismiss: () -> Unit
 ) {
     var selectedPeriod by remember { mutableStateOf(InsightsPeriod.DAYS_30) }
@@ -86,7 +98,10 @@ fun TrendsView(
             drinks = filteredDrinks,
             profile = profile,
             cutoffEpochSeconds = cutoff,
-            nowEpochSeconds = now
+            nowEpochSeconds = now,
+            notes = notes,
+            breathalyzerReadings = breathalyzerReadings,
+            waterLog = waterLog
         )
     }
 
@@ -190,35 +205,12 @@ fun TrendsView(
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionLabel("ZEITRAUM")
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(AppColors.card)
-                            .border(0.5.dp, AppColors.border, RoundedCornerShape(12.dp))
-                            .padding(3.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        InsightsPeriod.entries.forEach { period ->
-                            val isSelected = period == selectedPeriod
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(9.dp))
-                                    .background(if (isSelected) AppColors.accent else Color.Transparent)
-                                    .clickable { selectedPeriod = period }
-                                    .padding(vertical = 8.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                // iOS: .appCaptionBold (TrendsView.swift:130, 135).
-                                Text(
-                                    text = period.label,
-                                    color = if (isSelected) AppColors.background else AppColors.textDim,
-                                    style = de.tipau.promille.AppText.captionBold
-                                )
-                            }
-                        }
-                    }
+                    AppSegmentedControl(
+                        items = InsightsPeriod.entries,
+                        selectedItem = selectedPeriod,
+                        onItemSelected = { selectedPeriod = it },
+                        labelProvider = { it.label }
+                    )
                 }
             }
 
@@ -238,13 +230,13 @@ fun TrendsView(
                 // Overview Metric Tiles (2x2 Grid)
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        SectionLabel("ÜBERSICHT")
+                        InsightsSectionHeader(AppIcons.Person, "Deine Übersicht", selectedPeriod.label)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             MetricTile(
-                                value = "${filteredDrinks.size}",
+                                value = "${insights.totalDrinks}",
                                 label = "Drinks getrunken",
                                 icon = AppIcons.Drink,
                                 iconColor = AppColors.accent,
@@ -277,13 +269,32 @@ fun TrendsView(
                                 modifier = Modifier.weight(1f)
                             )
                         }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            MetricTile(
+                                value = String.format(Locale.GERMANY, "%.0f g", insights.totalAlcoholGrams),
+                                label = "Reinalkohol",
+                                icon = AppIcons.Drink,
+                                iconColor = AppColors.statusRed,
+                                modifier = Modifier.weight(1f)
+                            )
+                            MetricTile(
+                                value = "${insights.totalCalories} kcal",
+                                label = "Kalorien",
+                                icon = AppIcons.Chart,
+                                iconColor = AppColors.textDim,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
 
                 // Peaks & Totals
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        SectionLabel("PROFIL & PEAKS")
+                        InsightsSectionHeader(AppIcons.Waveform, "Dein Konsumprofil", "Durchschnittswerte aus deinen Sitzungen")
                         PromilleCard {
                             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                                 DetailRow(
@@ -303,56 +314,106 @@ fun TrendsView(
                                     value = String.format(Locale.GERMANY, "%.0f g", insights.totalAlcoholGrams),
                                     valueColor = AppColors.text
                                 )
-                            }
-                        }
-                    }
-                }
-
-                // Top Drinks Ranking
-                if (insights.topDrinks.isNotEmpty()) {
-                    item {
-                        SectionLabel("BELIEBTESTE GETRÄNKE")
-                    }
-                    items(insights.topDrinks.take(5)) { item ->
-                        PromilleCard {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    // iOS: .appCaptionBold (TrendsView.swift:606).
-                                    Text(item.name, color = AppColors.text, style = de.tipau.promille.AppText.captionBold)
-                                    // iOS: .appMicro (TrendsView.swift:607).
-                                    Text(item.subtitle, color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
+                                insights.typicalStartMinutesAfterMidnight?.let { minutes ->
+                                    HorizontalDivider(color = AppColors.border, thickness = 0.5.dp)
+                                    DetailRow(
+                                        label = "Typischer Start",
+                                        value = String.format(Locale.GERMANY, "%02d:%02d", minutes / 60, minutes % 60),
+                                        valueColor = AppColors.text
+                                    )
                                 }
-                                // iOS: .appCaptionBold (TrendsView.swift:619).
-                                Text(
-                                    text = "${item.count}×",
-                                    color = AppColors.accent,
-                                    style = de.tipau.promille.AppText.captionBold.merge(de.tipau.promille.TabularFigures)
+                                HorizontalDivider(color = AppColors.border, thickness = 0.5.dp)
+                                DetailRow(
+                                    label = "Ø Sitzungsdauer",
+                                    value = formatMinutes(insights.averageSessionMinutes),
+                                    valueColor = AppColors.text
+                                )
+                                HorizontalDivider(color = AppColors.border, thickness = 0.5.dp)
+                                DetailRow(
+                                    label = "Ø Dauer pro Drink",
+                                    value = formatMinutes(insights.averageDrinkMinutes),
+                                    valueColor = AppColors.text
+                                )
+                                HorizontalDivider(color = AppColors.border, thickness = 0.5.dp)
+                                DetailRow(
+                                    label = "Ø Trinktempo",
+                                    value = String.format(Locale.GERMANY, "%.1f/h", insights.averageDrinksPerHour),
+                                    valueColor = AppColors.text
                                 )
                             }
                         }
                     }
                 }
 
-                // Top Categories
-                if (insights.topCategories.isNotEmpty()) {
+                // Top Drinks Ranking (rank circle + bar, matches InsightsRankingRow).
+                if (insights.topDrinks.isNotEmpty()) {
                     item {
-                        SectionLabel("KATEGORIEN")
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            InsightsSectionHeader(AppIcons.EmojiEvents, "Deine Top 5", "Konkrete Getränke")
+                            PromilleCard {
+                                LocalTrendsRanking(
+                                    "",
+                                    insights.topDrinks.take(5).map { Triple(it.name, it.subtitle, it.count) }
+                                )
+                            }
+                        }
                     }
-                    items(insights.topCategories) { cat ->
+                }
+
+                // Zeitliche Muster: Uhrzeiten- und Wochentage-Charts.
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        InsightsSectionHeader(AppIcons.Chart, "Uhrzeiten", "Wann wird getrunken")
                         PromilleCard {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // iOS: .appCaption (TrendsView.swift:433).
-                                Text(cat.name, color = AppColors.text, style = de.tipau.promille.AppText.caption)
-                                // iOS: .appMicro (TrendsView.swift:438).
-                                Text("${cat.count} Drinks (${cat.subtitle})", color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
+                            InsightsBarChart(
+                                data = insights.hourly.map { "${it.value}" to it.count },
+                                barColor = AppColors.accent,
+                                labelEvery = 4
+                            )
+                        }
+                    }
+                }
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        InsightsSectionHeader(AppIcons.Chart, "Wochentage", "Verteilung über die Woche")
+                        PromilleCard {
+                            InsightsBarChart(
+                                data = insights.weekdays.map { WEEKDAY_LABELS[it.value] to it.count },
+                                barColor = AppColors.statusOrange
+                            )
+                        }
+                    }
+                }
+                item {
+                    val weeks = remember(drinks) {
+                        weeklyDrinkCounts(drinks, weeksBack = 8, nowEpochSeconds = System.currentTimeMillis() / 1000)
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        InsightsSectionHeader(AppIcons.Chart, "Wochenverlauf", "Letzte 8 Wochen")
+                        PromilleCard {
+                            InsightsBarChart(
+                                data = weeks.map { w -> weekLabel(w.weekStartEpochSeconds) to w.count },
+                                barColor = AppColors.statusGreen,
+                                labelEvery = 2
+                            )
+                        }
+                    }
+                }
+
+                // Top Categories (horizontal bar chart, matches TrendsView.swift's categoryChart).
+                // Plain call, not remember() - this runs in LazyListScope, not a @Composable
+                // context, and categoryTrends() is cheap and pure.
+                val catTrends = categoryTrends(filteredDrinks, days = selectedPeriod.days ?: 36500)
+                if (catTrends.isNotEmpty()) {
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            SectionLabel("KATEGORIEN")
+                            PromilleCard {
+                                InsightsBarChart(
+                                    data = catTrends.map { it.category to it.count },
+                                    barColor = AppColors.accent,
+                                    horizontal = true
+                                )
                             }
                         }
                     }
@@ -361,7 +422,7 @@ fun TrendsView(
                 // Discoveries / Entdeckungen
                 if (insights.discoveries.isNotEmpty()) {
                     item {
-                        SectionLabel("ERKENNTNISSE")
+                        InsightsSectionHeader(AppIcons.Info, "Persönliche Entdeckungen", "Nur aus ausreichend vielen vergleichbaren Daten")
                     }
                     items(insights.discoveries) { discovery ->
                         PromilleCard {
@@ -386,6 +447,10 @@ fun TrendsView(
                                     Text(discovery.title, color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
                                     // iOS: .appCaption (TrendsView.swift:225).
                                     Text(discovery.detail, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
+                                    // iOS: .appMicro (TrendsView.swift:228).
+                                    if (discovery.evidence.isNotEmpty()) {
+                                        Text(discovery.evidence, color = AppColors.textMuted, style = de.tipau.promille.AppText.micro)
+                                    }
                                 }
                             }
                         }
@@ -550,12 +615,15 @@ fun TrendsView(
                                             })
                                         }
                                         if (cityIns.hourly.isNotEmpty()) {
-                                            LocalTrendsRanking(
-                                                "BELIEBTE UHRZEITEN",
-                                                cityIns.hourly.sortedByDescending { it.pingCount }.take(6).map {
-                                                    Triple("${it.hour}h", "", it.pingCount)
-                                                }
-                                            )
+                                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                // iOS: .appCaptionBold (TrendsView.swift:388).
+                                                Text("BELIEBTE UHRZEITEN", color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
+                                                InsightsBarChart(
+                                                    data = cityIns.hourly.sortedBy { it.hour }.map { "${it.hour}" to it.pingCount },
+                                                    barColor = AppColors.accent,
+                                                    labelEvery = 4
+                                                )
+                                            }
                                         }
                                         if (cityIns.categories.isNotEmpty()) {
                                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -609,6 +677,12 @@ fun TrendsView(
 private fun categoryName(raw: String): String =
     DrinkCategory.entries.firstOrNull { it.raw == raw }?.germanName ?: raw
 
+// iOS: .dateTime.day().month() (TrendsView.swift:293).
+private fun weekLabel(epochSeconds: Long): String {
+    val date = java.time.Instant.ofEpochSecond(epochSeconds).atZone(java.time.ZoneId.systemDefault())
+    return String.format(Locale.GERMANY, "%d.%d.", date.dayOfMonth, date.monthValue)
+}
+
 private fun formatMinutes(value: Double): String {
     if (value <= 0) return "–"
     val total = value.roundToInt()
@@ -637,8 +711,10 @@ private fun LocalTrendsEmpty(text: String) {
 @Composable
 private fun LocalTrendsRanking(title: String, items: List<Triple<String, String, Int>>) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // iOS: .appCaptionBold (TrendsView.swift:388).
-        Text(title, color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
+        if (title.isNotEmpty()) {
+            // iOS: .appCaptionBold (TrendsView.swift:388).
+            Text(title, color = AppColors.textDim, style = de.tipau.promille.AppText.captionBold)
+        }
         val maximum = (items.maxOfOrNull { it.third } ?: 1).coerceAtLeast(1)
         items.forEachIndexed { index, (name, subtitle, count) ->
             Row(

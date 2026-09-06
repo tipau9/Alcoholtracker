@@ -72,6 +72,11 @@ final class JamService {
     var incomingArcadeRound: JamArcadeRoundPayload?
     var arcadeResults: [JamArcadeResultPayload] = []
 
+    // Jam invites addressed to the current user, polled app-wide (not just
+    // while the lobby is on screen) so an invite arrives even if the invitee
+    // is elsewhere in the app. Mirrors Android's JamService invitation poll.
+    var invitations: [PendingJamInvite] = []
+
     // Water-chug leaderboard for the current jam (best time per participant).
     var waterScores: [WaterScore] = []
 
@@ -133,6 +138,8 @@ final class JamService {
     private var statusTimer: Timer?
     private var pollTimer: Timer?
     private var arcadePollTimer: Timer?
+    private var invitationPollTimer: Timer?
+    private var notifiedInvitationIDs: Set<UUID> = []
     private var lastBroadcastTime: Date = .distantPast
     private var myJoinedAt: Date?
     // Draw id of the roulette already presented, so the same draw arriving over
@@ -161,6 +168,7 @@ final class JamService {
     init(supabase: SupabaseService) {
         self.supabase = supabase
         setupMultipeerCallbacks()
+        startInvitationPolling()
     }
 
     // MARK: Setup
@@ -917,6 +925,41 @@ final class JamService {
         pollTimer?.invalidate()
         pollTimer = nil
         stopArcadePolling()
+    }
+
+    // MARK: Invitation polling
+    //
+    // Runs for the lifetime of the app (not gated to jam membership like
+    // statusTimer/pollTimer), because an invite can arrive while the user is
+    // not in a jam and not looking at the lobby. Previously invitations were
+    // only fetched in JamLobbyView's .onAppear, so an invitee who didn't open
+    // the lobby within the 24h (now 48h) window never saw it.
+
+    private func startInvitationPolling() {
+        invitationPollTimer?.invalidate()
+        invitationPollTimer = Timer.scheduledTimer(withTimeInterval: 20, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.refreshInvitations()
+            }
+        }
+        Task { await refreshInvitations() }
+    }
+
+    private func refreshInvitations() async {
+        guard supabase.isSignedIn, currentJam == nil else { return }
+        let fresh = (try? await supabase.fetchMyJamInvitations()) ?? []
+        invitations = fresh
+        for invite in fresh where !notifiedInvitationIDs.contains(invite.id) {
+            notifiedInvitationIDs.insert(invite.id)
+            let host = invite.hostName.isEmpty ? "Jemand" : invite.hostName
+            await NotificationService.notifyNow(
+                id: "promille.jam.invite.\(invite.id.uuidString)",
+                title: "\(host) laedt dich ein",
+                body: "\(host) laedt dich zum Jam ein (Code: \(invite.jamCode)). Tippe zum Beitreten."
+            )
+        }
+        let freshIDs = Set(fresh.map(\.id))
+        notifiedInvitationIDs.formIntersection(freshIDs)
     }
 
     // MARK: Local Participant Update
