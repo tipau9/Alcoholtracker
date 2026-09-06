@@ -42,10 +42,6 @@ import de.tipau.promille.network.fetchProfiles
 import de.tipau.promille.network.lookupFriend
 import de.tipau.promille.ui.components.StatusPill
 import de.tipau.promille.ui.components.SectionLabel
-import de.tipau.promille.ui.components.SettingsDestructiveRow
-import de.tipau.promille.ui.components.PrimaryButton
-import de.tipau.promille.ui.components.PromilleCard
-import de.tipau.promille.ui.components.SettingsToggleRow
 import de.tipau.promille.service.NotificationService
 import java.util.Locale
 
@@ -69,7 +65,6 @@ fun FriendProfileSheet(
     var isSoberBuddy by remember { mutableStateOf(member.isSoberBuddy) }
     var sosActive by remember { mutableStateOf(member.sosActive) }
     var alertWhenHigh by remember { mutableStateOf(member.alertWhenHigh) }
-    var currentBAC by remember { mutableStateOf(member.currentBAC) }
 
     // Instant write like iOS's @Bindable member (context.save() per toggle):
     // no batched local copy, no separate save button.
@@ -427,31 +422,44 @@ fun FriendProfileSheet(
                 }
             }
 
-            // Status toggles, each writing instantly (FriendProfileSheet.swift:370-480).
-            SectionLabel("Status")
+            // Actions: instant-write toggles + delete, one card, matching
+            // FriendProfileSheet.swift:370-480 (no section header there either).
+            // iOS has no Promille stepper / save button - @Bindable writes
+            // per toggle, so neither exists here either.
             FPCard {
                 Column {
-                    SettingsToggleRow(
-                        title = "Sicher zu Hause",
-                        subtitle = "Markiert den Freund als wohlbehalten daheim",
-                        checked = isHome,
-                        onCheckedChange = { isHome = it; pushUpdate() }
-                    )
-                    SettingsToggleRow(
+                    FPToggleRow(
+                        icon = { tint -> Icon(de.tipau.promille.ui.components.AppIcons.Car, contentDescription = null, tint = tint, modifier = Modifier.size(13.dp)) },
+                        tint = AppColors.statusGreen,
                         title = "Als Fahrer markiert",
-                        subtitle = "Bleibt nüchtern / fährt die Gruppe",
                         checked = isSoberBuddy,
                         onCheckedChange = { isSoberBuddy = it; pushUpdate() }
                     )
-                    SettingsToggleRow(
+                    FPDivider()
+                    FPToggleRow(
+                        icon = { tint -> Icon(de.tipau.promille.ui.components.AppIcons.House, contentDescription = null, tint = tint, modifier = Modifier.size(13.dp)) },
+                        tint = AppColors.accent,
+                        title = "Sicher zu Hause",
+                        checked = isHome,
+                        onCheckedChange = { isHome = it; pushUpdate() }
+                    )
+                    FPDivider()
+                    // Android-only field, no iOS equivalent (plan Phase 6.4): kept,
+                    // styled to match the other three rows.
+                    FPToggleRow(
+                        icon = { tint -> de.tipau.promille.ui.components.SOSGlyph(tint = tint, size = 13.dp) },
+                        tint = AppColors.statusRed,
                         title = "SOS Status",
                         subtitle = "Braucht dringend Hilfe / Aufmerksamkeit",
                         checked = sosActive,
                         onCheckedChange = { sosActive = it; pushUpdate() }
                     )
-                    SettingsToggleRow(
+                    FPDivider()
+                    FPToggleRow(
+                        icon = { tint -> Icon(de.tipau.promille.ui.components.AppIcons.Bell, contentDescription = null, tint = tint, modifier = Modifier.size(13.dp)) },
+                        tint = AppColors.statusOrange,
                         title = "Warnen wenn zu viel",
-                        subtitle = "Meldung, wenn dieser Freund deine Gefahrenschwelle erreicht",
+                        subtitle = "Benachrichtigung bei hohem Promillewert",
                         checked = alertWhenHigh,
                         onCheckedChange = { on ->
                             if (!on) {
@@ -465,71 +473,37 @@ fun FriendProfileSheet(
                             }
                         }
                     )
-                }
-            }
-
-            // Promillewert anpassen
-            SectionLabel("Promillewert anpassen")
-            PromilleCard {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = String.format(Locale.GERMANY, "%.2f ‰", currentBAC),
-                        color = AppColors.text,
-                        style = de.tipau.promille.AppText.headline.merge(de.tipau.promille.TabularFigures)
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = {
-                                haptics.light()
-                                currentBAC = (currentBAC - 0.1).coerceAtLeast(0.0)
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = AppColors.card, contentColor = AppColors.text),
-                            shape = RoundedCornerShape(8.dp)
+                    FPDivider()
+                    // Delete Friend, inside the same card (FriendProfileSheet.swift:453-477).
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                haptics.warning()
+                                showDeleteConfirmation = true
+                            }
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(AppColors.statusRed.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text("- 0,1", style = de.tipau.promille.AppText.bodyBold)
+                            Icon(
+                                de.tipau.promille.ui.components.AppIcons.Trash,
+                                contentDescription = null,
+                                tint = AppColors.statusRed,
+                                modifier = Modifier.size(13.dp)
+                            )
                         }
-                        Button(
-                            onClick = {
-                                haptics.light()
-                                currentBAC = currentBAC + 0.1
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = AppColors.accent, contentColor = AppColors.background),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("+ 0,1", style = de.tipau.promille.AppText.bodyBold)
-                        }
+                        Text("Freund entfernen", color = AppColors.statusRed, style = de.tipau.promille.AppText.body)
                     }
                 }
             }
-
-            // Save Button
-            PrimaryButton(
-                text = "Änderungen speichern",
-                onClick = {
-                    val updated = member.copy(
-                        isHome = isHome,
-                        isSoberBuddy = isSoberBuddy,
-                        sosActive = sosActive,
-                        currentBAC = currentBAC,
-                        alertWhenHigh = alertWhenHigh
-                    )
-                    onUpdate(updated)
-                    onDismiss()
-                }
-            )
-
-            // Delete Friend (matches iOS FriendProfileSheet.swift:458-480)
-            SettingsDestructiveRow(
-                label = "Freund aus Crew entfernen",
-                onClick = {
-                    haptics.warning()
-                    showDeleteConfirmation = true
-                }
-            )
         }
     }
 }
@@ -601,6 +575,55 @@ private fun FPCard(content: @Composable ColumnScope.() -> Unit) {
             .padding(16.dp),
         content = content
     )
+}
+
+@Composable
+private fun FPDivider() {
+    androidx.compose.material3.Divider(
+        color = AppColors.border,
+        modifier = Modifier.padding(start = 38.dp)
+    )
+}
+
+/** One instant-write toggle row with a 28dp tinted icon square, matching
+ * FriendProfileSheet.swift's actionsCard rows exactly. */
+@Composable
+private fun FPToggleRow(
+    icon: @Composable (Color) -> Unit,
+    tint: Color,
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    subtitle: String? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(tint.copy(alpha = 0.13f)),
+            contentAlignment = Alignment.Center
+        ) {
+            icon(tint)
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Text(title, color = AppColors.text, style = de.tipau.promille.AppText.body)
+            if (subtitle != null) {
+                Text(subtitle, color = AppColors.textDim, style = de.tipau.promille.AppText.micro)
+            }
+        }
+        de.tipau.promille.ui.components.AppSwitch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            activeColor = tint
+        )
+    }
 }
 
 /** One earned badge on a friend's profile, with the real achievement icon. */
