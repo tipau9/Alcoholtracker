@@ -31,16 +31,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import de.tipau.promille.AppColors
 import de.tipau.promille.bac.DrinkCategory
 import de.tipau.promille.bac.Mixer
 import de.tipau.promille.bac.MixerCategory
 import de.tipau.promille.bac.MixerDatabase
+import de.tipau.promille.data.CustomMixDao
+import de.tipau.promille.data.CustomMixEntity
 import de.tipau.promille.data.DrinkEntity
 import de.tipau.promille.data.DrinkTemplateEntity
+import de.tipau.promille.data.MixIngredient
+import de.tipau.promille.network.SupabaseService
+import de.tipau.promille.network.blobJson
+import de.tipau.promille.network.contributeMix
+import de.tipau.promille.repository.DrinkTemplateRepository
 import de.tipau.promille.ui.components.MixRatioSlider
 import de.tipau.promille.ui.components.PrimaryButton
 import de.tipau.promille.ui.components.SectionLabel
+import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
 import java.util.Locale
 import java.util.UUID
 
@@ -55,14 +65,23 @@ import java.util.UUID
 fun QuickMixSheet(
     templates: List<DrinkTemplateEntity>,
     onAdd: (DrinkEntity) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    supabase: SupabaseService? = null,
+    customMixDao: CustomMixDao? = null,
+    templateRepository: DrinkTemplateRepository? = null
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var showShareConfirmation by remember { mutableStateOf(false) }
+    var showShareSuccess by remember { mutableStateOf(false) }
+
     var selectedSpirit by remember { mutableStateOf<DrinkTemplateEntity?>(null) }
     var selectedMixer by remember { mutableStateOf<Mixer?>(null) }
     var spiritFraction by remember { mutableStateOf(0.25) }
     var totalVolumeMl by remember { mutableStateOf(200.0) }
     var mixerCategory by remember { mutableStateOf<MixerCategory?>(null) }
     var spiritSearch by remember { mutableStateOf("") }
+    var mixerSearch by remember { mutableStateOf("") }
 
     val volumePresets = listOf(100.0, 150.0, 200.0, 250.0, 300.0, 400.0, 500.0)
 
@@ -81,9 +100,14 @@ fun QuickMixSheet(
         }
     }
 
-    val visibleMixers = remember(mixerCategory) {
-        if (mixerCategory != null) MixerDatabase.entries(mixerCategory!!)
+    val visibleMixers = remember(mixerCategory, mixerSearch) {
+        val base = if (mixerCategory != null) MixerDatabase.entries(mixerCategory!!)
         else MixerDatabase.ALL
+        if (mixerSearch.trim().isEmpty()) base
+        else {
+            val q = mixerSearch.trim().lowercase(Locale.GERMAN)
+            base.filter { it.name.lowercase(Locale.GERMAN).contains(q) }
+        }
     }
 
     val effectiveABV = selectedSpirit?.let { it.abv * spiritFraction } ?: 0.0
@@ -100,10 +124,65 @@ fun QuickMixSheet(
     }
 
     val canAdd = selectedSpirit != null && selectedMixer != null
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // Floating card, same framing as QuickAddSheet and the other sheets it opens
-    // from, instead of an edge-to-edge sheet.
+    fun shareMix() {
+        val spirit = selectedSpirit ?: return
+        val mixer = selectedMixer ?: return
+        val name = "${spirit.name} + ${mixer.name}"
+        val ings = listOf(
+            MixIngredient(name = spirit.name, abv = spirit.abv, volume = spiritVol),
+            MixIngredient(name = mixer.name, abv = 0.0, volume = mixerVol)
+        )
+        coroutineScope.launch {
+            val id = UUID.randomUUID().toString()
+            if (customMixDao != null) {
+                try {
+                    customMixDao.insert(
+                        CustomMixEntity(
+                            id = id,
+                            name = name,
+                            ingredientsJson = blobJson.encodeToString(ings),
+                            createdAt = System.currentTimeMillis() / 1000
+                        )
+                    )
+                } catch (_: Exception) {}
+            }
+            if (templateRepository != null) {
+                try {
+                    templateRepository.insertLocalTemplate(
+                        DrinkTemplateEntity(
+                            id = id,
+                            name = name,
+                            categoryRaw = "cocktail",
+                            volume = totalVolumeMl,
+                            abv = effectiveABV,
+                            calories = totalCalories,
+                            iconName = spirit.iconName.ifBlank { "wineglass" },
+                            isCustom = true
+                        )
+                    )
+                } catch (_: Exception) {}
+            }
+            if (supabase != null) {
+                try {
+                    supabase.contributeMix(
+                        context = context,
+                        name = name,
+                        ingredients = ings,
+                        totalVolume = totalVolumeMl,
+                        totalAbv = effectiveABV,
+                        calories = totalCalories
+                    )
+                } catch (_: Exception) {}
+            }
+            showShareSuccess = true
+        }
+    }
+
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -120,19 +199,19 @@ fun QuickMixSheet(
                 .background(AppColors.background)
                 .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
         ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.92f)
-        ) {
-            // Header
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxHeight(0.92f)
             ) {
+                // Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                 // iOS: .appHeadline (QuickMixSheet.swift:90).
                 Text(
                     text = "Quick Mix",
@@ -223,7 +302,7 @@ fun QuickMixSheet(
                         BasicTextField(
                             value = spiritSearch,
                             onValueChange = { spiritSearch = it },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.weight(1f),
                             textStyle = de.tipau.promille.AppText.body.copy(color = AppColors.text),
                             cursorBrush = SolidColor(AppColors.accent),
                             decorationBox = { innerTextField ->
@@ -233,6 +312,21 @@ fun QuickMixSheet(
                                 innerTextField()
                             }
                         )
+                        if (spiritSearch.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clickable { spiritSearch = "" },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "Löschen",
+                                    tint = AppColors.textDim,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                     }
 
                     // Spirit Cards Carousel
@@ -261,13 +355,10 @@ fun QuickMixSheet(
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    // iOS: DrinkIconView(iconName:) (QuickMixSheet.swift:385).
-                                    // The template carries an SF Symbol name, so
-                                    // printing it as text showed "flame.fill".
                                     de.tipau.promille.ui.components.DrinkIconView(
                                         template = template,
-                                        tint = if (isSelected) AppColors.background else AppColors.accent,
-                                        size = 22.dp
+                                        size = 22.dp,
+                                        tint = if (isSelected) AppColors.background else AppColors.accent
                                     )
                                 }
 
@@ -352,6 +443,48 @@ fun QuickMixSheet(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SectionLabel(text = "Mixer")
 
+                    // Mixer search field
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(AppColors.card)
+                            .border(0.5.dp, AppColors.border, RoundedCornerShape(12.dp))
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.Search, null, tint = AppColors.textDim, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        BasicTextField(
+                            value = mixerSearch,
+                            onValueChange = { mixerSearch = it },
+                            modifier = Modifier.weight(1f),
+                            textStyle = de.tipau.promille.AppText.body.copy(color = AppColors.text),
+                            cursorBrush = SolidColor(AppColors.accent),
+                            decorationBox = { innerTextField ->
+                                if (mixerSearch.isEmpty()) {
+                                    Text("Mixer suchen...", color = AppColors.textDim, style = de.tipau.promille.AppText.body)
+                                }
+                                innerTextField()
+                            }
+                        )
+                        if (mixerSearch.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clickable { mixerSearch = "" },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "Löschen",
+                                    tint = AppColors.textDim,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+
                     // Category chips
                     Row(
                         modifier = Modifier
@@ -407,9 +540,9 @@ fun QuickMixSheet(
                                     de.tipau.promille.ui.components.DrinkIconView(
                                         iconName = mixer.icon,
                                         name = mixer.name,
-                                        categoryRaw = mixerIconCategory(mixer.category),
-                                        tint = if (isSelected) AppColors.accent else AppColors.textDim,
-                                        size = 18.dp
+                                        categoryRaw = mixer.category.raw,
+                                        size = 20.dp,
+                                        tint = if (isSelected) AppColors.background else AppColors.accent
                                     )
                                 }
 
@@ -435,11 +568,26 @@ fun QuickMixSheet(
                                 }
                             }
                         }
+
+                        if (visibleMixers.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Keine Mixer gefunden",
+                                    color = AppColors.textDim,
+                                    style = de.tipau.promille.AppText.body
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            // Sticky Bottom Add Button
+            // Sticky Bottom Bar with Share & Add Button
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -447,48 +595,94 @@ fun QuickMixSheet(
                     .border(0.5.dp, AppColors.border)
                     .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
-                PrimaryButton(
-                    text = "Hinzufügen",
-                    enabled = canAdd,
-                    onClick = {
-                        if (selectedSpirit != null && selectedMixer != null) {
-                            val spirit = selectedSpirit!!
-                            val mixer = selectedMixer!!
-                            val blendedABV = spirit.abv * spiritFraction
-                            val spiritCals = if (spirit.volume > 0) {
-                                (spiritVol * spirit.calories.toDouble() / spirit.volume).toInt()
-                            } else 0
-                            val mixerCals = (mixerVol / 100.0 * mixer.caloriesPer100ml.toDouble()).toInt()
-
-                            val drink = DrinkEntity(
-                                id = UUID.randomUUID().toString(),
-                                templateID = spirit.id,
-                                name = "${spirit.name} + ${mixer.name}",
-                                volume = totalVolumeMl,
-                                abv = blendedABV,
-                                calories = spiritCals + mixerCals,
-                                iconName = spirit.iconName,
-                                timestampEpochSeconds = System.currentTimeMillis() / 1000,
-                                categoryRaw = DrinkCategory.MIXED.raw,
-                                mixerVolume = mixerVol,
-                                mixerWaterContent = mixer.waterContentPercent
-                            )
-                            onAdd(drink)
-                            onDismiss()
-                        }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Share Button (iOS parity: square.and.arrow.up, QuickMixSheet.swift:123)
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(AppColors.card)
+                            .border(0.5.dp, AppColors.border, RoundedCornerShape(16.dp))
+                            .then(
+                                if (canAdd) Modifier.clickable { showShareConfirmation = true }
+                                else Modifier
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Share,
+                            contentDescription = "Mix teilen",
+                            tint = if (canAdd) AppColors.accent else AppColors.textMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
-                )
+
+                    Box(modifier = Modifier.weight(1f)) {
+                        PrimaryButton(
+                            text = "Hinzufügen",
+                            enabled = canAdd,
+                            onClick = {
+                                if (selectedSpirit != null && selectedMixer != null) {
+                                    val spirit = selectedSpirit!!
+                                    val mixer = selectedMixer!!
+                                    val blendedABV = spirit.abv * spiritFraction
+                                    val spiritCals = if (spirit.volume > 0) {
+                                        (spiritVol * spirit.calories.toDouble() / spirit.volume).toInt()
+                                    } else 0
+                                    val mixerCals = (mixerVol / 100.0 * mixer.caloriesPer100ml.toDouble()).toInt()
+
+                                    val drink = DrinkEntity(
+                                        id = UUID.randomUUID().toString(),
+                                        templateID = spirit.id,
+                                        name = "${spirit.name} + ${mixer.name}",
+                                        volume = totalVolumeMl,
+                                        abv = blendedABV,
+                                        calories = spiritCals + mixerCals,
+                                        iconName = spirit.iconName,
+                                        timestampEpochSeconds = System.currentTimeMillis() / 1000,
+                                        categoryRaw = DrinkCategory.MIXED.raw,
+                                        mixerVolume = mixerVol,
+                                        mixerWaterContent = mixer.waterContentPercent
+                                    )
+                                    onAdd(drink)
+                                    onDismiss()
+                                }
+                            }
+                        )
+                    }
+                }
             }
         }
-        }
+    }
+
+    if (showShareConfirmation) {
+        de.tipau.promille.ui.components.AppAlertDialog(
+            onDismissRequest = { showShareConfirmation = false },
+            title = "Mix wirklich teilen?",
+            text = "Der Mix wird an die Community-Datenbank gesendet und kann nach Bestätigung für andere sichtbar werden.",
+            confirmText = "Teilen",
+            onConfirm = {
+                showShareConfirmation = false
+                shareMix()
+            },
+            dismissText = "Abbrechen",
+            onDismiss = { showShareConfirmation = false }
+        )
+    }
+
+    if (showShareSuccess) {
+        de.tipau.promille.ui.components.AppAlertDialog(
+            onDismissRequest = { showShareSuccess = false },
+            title = "Mix geteilt",
+            text = "Danke! Dein Mix wird für andere sichtbar, sobald genug Leute ihn teilen oder er freigegeben wird.",
+            confirmText = "OK",
+            onConfirm = { showShareSuccess = false },
+            dismissText = null
+        )
     }
 }
-
-// Mixer symbols are SF names DrinkIcons has no direct entry for, so hand it a
-// category it does know and let the keyword scan pick the glyph.
-private fun mixerIconCategory(category: MixerCategory): String = when (category) {
-    MixerCategory.JUICE -> "juice"
-    MixerCategory.WATER -> "water"
-    MixerCategory.TEA -> "coffee_tea"
-    else -> "soft_drink"
 }

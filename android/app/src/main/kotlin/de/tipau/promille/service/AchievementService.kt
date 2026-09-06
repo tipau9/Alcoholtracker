@@ -17,8 +17,20 @@ class AchievementService(
     private val drinkRepository: DrinkRepository,
     private val userProfileRepository: UserProfileRepository,
     private val crewRepository: CrewRepository,
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
+    private val context: android.content.Context? = null
 ) {
+    private val prefs = context?.getSharedPreferences("com.tipau.achievements.v1", android.content.Context.MODE_PRIVATE)
+    private val deletedIds = MutableStateFlow<Set<String>>(
+        prefs?.getStringSet("deleted_achievements", emptySet()) ?: emptySet()
+    )
+
+    fun delete(id: String) {
+        val next = deletedIds.value + id
+        deletedIds.value = next
+        prefs?.edit()?.putStringSet("deleted_achievements", next)?.apply()
+    }
+
     private val installTimeEpochSeconds = System.currentTimeMillis() / 1000
 
     private val allDrinks: StateFlow<List<DrinkEntity>> =
@@ -34,8 +46,8 @@ class AchievementService(
             .stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     val unlockedIds: StateFlow<Set<String>> = combine(
-        allDrinks, profile, crew
-    ) { rawDrinks, prof, members ->
+        allDrinks, profile, crew, deletedIds
+    ) { rawDrinks, prof, members, deleted ->
         val domainDrinks = rawDrinks.map { DrinkRepository.toDomainDrink(it) }
         val bacProfile = prof?.let { UserProfileRepository.toProfile(it) }
         val now = System.currentTimeMillis() / 1000
@@ -50,7 +62,7 @@ class AchievementService(
 
         val nonSelfCrew = members.count { !it.isSelf }
 
-        AchievementCatalog.ALL.filter { achievement ->
+        val earned = AchievementCatalog.ALL.filter { achievement ->
             AchievementCatalog.isEarned(
                 id = achievement.id,
                 drinks = domainDrinks,
@@ -61,6 +73,8 @@ class AchievementService(
                 cache = context
             )
         }.map { it.id }.toSet()
+
+        earned - deleted
     }.stateIn(scope, SharingStarted.Eagerly, emptySet())
 
     val unlockedCount: StateFlow<Int> = unlockedIds.map { it.size }

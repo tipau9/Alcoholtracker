@@ -31,6 +31,8 @@ fun UndoSnackbar(
     onUndo: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptics = rememberHapticManager()
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -65,9 +67,12 @@ fun UndoSnackbar(
 
             Box(
                 modifier = Modifier
-                    .clip(CircleShape)
+                    .clip(RoundedCornerShape(100.dp))
                     .background(AppColors.accent.copy(alpha = 0.14f))
-                    .clickable(onClick = onUndo)
+                    .clickable {
+                        haptics.light()
+                        onUndo()
+                    }
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {

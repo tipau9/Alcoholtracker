@@ -238,7 +238,10 @@ fun WaterContestSheet(
                         text = "Zurücksetzen",
                         color = AppColors.textDim,
                         style = de.tipau.promille.AppText.caption,
-                        modifier = Modifier.clickable(onClick = onReset)
+                        modifier = Modifier.clickable {
+                            haptics.medium()
+                            onReset()
+                        }
                     )
                 }
             }

@@ -47,12 +47,12 @@ object DrinkIcons {
             "cocktail" -> R.drawable.ic_drink_cocktail
             "vodka" -> R.drawable.ic_drink_vodka
             "vodkashot", "vodka_shot", "shot", "flame.fill", "flame" -> R.drawable.ic_drink_vodkashot
-            "bottleofwater", "water", "drop.fill", "drop" -> R.drawable.ic_drink_bottleofwater
+            "bottleofwater", "water", "drop.fill", "drop", "drop.circle.fill" -> R.drawable.ic_drink_bottleofwater
             "sportbottle", "sport_bottle" -> R.drawable.ic_drink_sportbottle
-            "cola" -> R.drawable.ic_drink_cola
-            "soda", "cylinder.fill", "can" -> R.drawable.ic_drink_soda
-            "energydrink", "energy_drink", "energy" -> R.drawable.ic_drink_energydrink
-            "orangejuice", "orange_juice", "juice", "saft" -> R.drawable.ic_drink_orangejuice
+            "cola", "cup.and.saucer.fill", "cup.and.saucer" -> R.drawable.ic_drink_cola
+            "soda", "cylinder.fill", "can", "bitter", "star.fill" -> R.drawable.ic_drink_soda
+            "energydrink", "energy_drink", "energy", "bolt.fill", "bolt" -> R.drawable.ic_drink_energydrink
+            "orangejuice", "orange_juice", "juice", "saft", "leaf.fill", "leaf" -> R.drawable.ic_drink_orangejuice
             "coffee" -> R.drawable.ic_drink_coffee
             "coffeecup", "coffee_cup", "cup" -> R.drawable.ic_drink_coffeecup
             "coffeetogo", "coffee_togo" -> R.drawable.ic_drink_coffeetogo

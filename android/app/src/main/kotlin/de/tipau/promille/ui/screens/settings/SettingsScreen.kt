@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
+import de.tipau.promille.bac.AchievementCatalog
 import de.tipau.promille.bac.BacStatus
 import de.tipau.promille.bac.Gender
 import de.tipau.promille.bac.StatusSkin
@@ -57,13 +58,10 @@ fun SettingsScreen(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-
-    // Same pattern as RidePickerSheet: the toggle itself shows nothing, it just
-    // has to trigger the OS prompt so the city-trends ping in SessionScreen
-    // stops silently no-op'ing at `pingCity ?: return`.
     val locationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
     ) { granted -> if (granted) de.tipau.promille.service.LocationService.requestLocation(context) }
+    val haptics = rememberHapticManager()
     val profile by viewModel.profile.collectAsState()
     val unlockedCount by viewModel.unlockedCount.collectAsState()
 
@@ -97,6 +95,7 @@ fun SettingsScreen(
             confirmText = "Löschen",
             isDestructive = true,
             onConfirm = {
+                haptics.warning()
                 showDeleteAccountConfirm = false
                 coroutineScope.launch { runCatching { supabase.deleteAccount() } }
             },
@@ -112,6 +111,7 @@ fun SettingsScreen(
             confirmText = "Löschen",
             isDestructive = true,
             onConfirm = {
+                haptics.warning()
                 showDeletePhotosConfirm = false
             },
             dismissText = "Abbrechen"
@@ -318,7 +318,10 @@ fun SettingsScreen(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { if (!isSignedIn) showAuth = true }
             ) {
                 Box(
                     modifier = Modifier
@@ -343,14 +346,12 @@ fun SettingsScreen(
                             color = AppColors.text,
                             style = de.tipau.promille.AppText.title
                         )
-                        // Fixed literal on iOS too (.caption, monospaced,
-                        // bold, tracking 2) - no monospace font resource
-                        // exists on Android, so size/weight stay as-is.
+                        // Fixed literal on iOS (.caption, monospaced, bold, tracking 2)
+                        // using AppSans + TabularFigures to match San Francisco monospaced digits.
                         Text(
                             text = myProfile?.friendCode ?: "",
                             color = AppColors.accent,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
+                            style = de.tipau.promille.AppText.captionBold.merge(de.tipau.promille.TabularFigures),
                             letterSpacing = 2.sp
                         )
                     } else {
@@ -386,7 +387,7 @@ fun SettingsScreen(
                 )
                 Text(
                     // iOS: .appCaptionBold (SemiBold, not Bold) - was 12sp Bold.
-                    text = "$unlockedCount/49",
+                    text = "$unlockedCount/${AchievementCatalog.ALL.size}",
                     color = AppColors.accent,
                     style = de.tipau.promille.AppText.captionBold
                 )
@@ -714,7 +715,13 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     SectionLabel(text = "STATUS-SCHWELLEN")
-                    TextButton(onClick = { viewModel.resetThresholds() }, contentPadding = PaddingValues(0.dp)) {
+                    TextButton(
+                        onClick = {
+                            haptics.light()
+                            viewModel.resetThresholds()
+                        },
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
                         // iOS: .appCaption - was 12sp.
                         Text(text = "Zurücksetzen", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                     }
@@ -734,7 +741,8 @@ fun SettingsScreen(
                             onValueChange = { viewModel.updateTipsyThreshold(it.toDouble()) },
                             valueRange = 0.01f..(p.drunkThreshold.toFloat() - 0.05f).coerceAtLeast(0.01f),
                             valueDisplay = formatPromille(p.tipsyThreshold),
-                            statusDotColor = AppColors.statusYellow
+                            statusDotColor = AppColors.statusYellow,
+                            onValueChangeFinished = { haptics.selection() }
                         )
                         SettingsDivider()
                         SettingsSliderRow(
@@ -743,7 +751,8 @@ fun SettingsScreen(
                             onValueChange = { viewModel.updateDrunkThreshold(it.toDouble()) },
                             valueRange = (p.tipsyThreshold.toFloat() + 0.05f).coerceAtMost(2.5f)..(p.carefulThreshold.toFloat() - 0.05f).coerceAtLeast(0.01f),
                             valueDisplay = formatPromille(p.drunkThreshold),
-                            statusDotColor = AppColors.statusOrange
+                            statusDotColor = AppColors.statusOrange,
+                            onValueChangeFinished = { haptics.selection() }
                         )
                         SettingsDivider()
                         SettingsSliderRow(
@@ -752,7 +761,8 @@ fun SettingsScreen(
                             onValueChange = { viewModel.updateCarefulThreshold(it.toDouble()) },
                             valueRange = (p.drunkThreshold.toFloat() + 0.05f).coerceAtMost(2.5f)..(p.dangerThreshold.toFloat() - 0.05f).coerceAtLeast(0.01f),
                             valueDisplay = formatPromille(p.carefulThreshold),
-                            statusDotColor = AppColors.statusRed
+                            statusDotColor = AppColors.statusRed,
+                            onValueChangeFinished = { haptics.selection() }
                         )
                         SettingsDivider()
                         SettingsSliderRow(
@@ -761,7 +771,8 @@ fun SettingsScreen(
                             onValueChange = { viewModel.updateDangerThreshold(it.toDouble()) },
                             valueRange = (p.carefulThreshold.toFloat() + 0.05f).coerceAtMost(2.5f)..2.50f,
                             valueDisplay = formatPromille(p.dangerThreshold),
-                            statusDotColor = AppColors.statusDarkRed
+                            statusDotColor = AppColors.statusDarkRed,
+                            onValueChangeFinished = { haptics.selection() }
                         )
                     }
                 }
@@ -805,7 +816,7 @@ fun SettingsScreen(
                 PromilleCard {
                     SettingsNavigationRow(
                         title = "Achievements",
-                        subtitle = "$unlockedCount von 49 freigeschaltet",
+                        subtitle = "$unlockedCount von ${AchievementCatalog.ALL.size} freigeschaltet",
                         onClick = onNavigateToAchievements,
                         icon = AppIcons.EmojiEvents
                     )

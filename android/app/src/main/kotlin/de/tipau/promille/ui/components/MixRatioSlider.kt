@@ -42,6 +42,7 @@ fun MixRatioSlider(
     onSpiritFractionChange: (Double) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptics = rememberHapticManager()
     val minFraction = 0.10
     val maxFraction = 0.75
 
@@ -90,7 +91,9 @@ fun MixRatioSlider(
                         detectTapGestures { offset ->
                             if (totalWidthPx > 0) {
                                 val raw = (offset.x / totalWidthPx).toDouble()
-                                onSpiritFractionChange(raw.coerceIn(minFraction, maxFraction))
+                                val clamped = raw.coerceIn(minFraction, maxFraction)
+                                haptics.selection()
+                                onSpiritFractionChange(clamped)
                             }
                         }
                     }
@@ -99,7 +102,16 @@ fun MixRatioSlider(
                             change.consume()
                             if (totalWidthPx > 0) {
                                 val raw = (change.position.x / totalWidthPx).toDouble()
-                                onSpiritFractionChange(raw.coerceIn(minFraction, maxFraction))
+                                val clamped = raw.coerceIn(minFraction, maxFraction)
+                                val oldPct = (spiritFraction * 100).toInt()
+                                val newPct = (clamped * 100).toInt()
+                                if (oldPct != newPct) {
+                                    val isSnap = ratioPresets.any { abs(clamped - it.second) < 0.015 }
+                                    if (isSnap || abs(oldPct - newPct) >= 2 || newPct % 5 == 0) {
+                                        haptics.selection()
+                                    }
+                                }
+                                onSpiritFractionChange(clamped)
                             }
                         }
                     }
@@ -210,7 +222,10 @@ fun MixRatioSlider(
                         .clip(CircleShape)
                         .background(presetBgColor)
                         .border(presetBorderWidth, presetBorderColor, CircleShape)
-                        .clickable { onSpiritFractionChange(preset.second) }
+                        .clickable {
+                            haptics.selection()
+                            onSpiritFractionChange(preset.second)
+                        }
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {

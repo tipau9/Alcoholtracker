@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
 import de.tipau.promille.bac.BacStatus
+import de.tipau.promille.bac.DayMood
 import de.tipau.promille.color
 import de.tipau.promille.repository.DayNoteRepository
 import de.tipau.promille.repository.DrinkRepository
@@ -55,6 +56,7 @@ fun HistoryScreen(
 ) {
     val visibleMonth by viewModel.visibleMonth.collectAsState()
     val monthStats by viewModel.monthStats.collectAsState()
+    val monthTrend by viewModel.monthTrend.collectAsState()
     val statusSkin by viewModel.statusSkin.collectAsState()
 
     var selectedDayStats by remember { mutableStateOf<DayStats?>(null) }
@@ -64,6 +66,7 @@ fun HistoryScreen(
         .collectAsState(initial = emptyList())
     val allNotes by dayNoteRepository.getNotesBetween("0000-01-01", "9999-12-31")
         .collectAsState(initial = emptyList())
+    val notesByDay = remember(allNotes) { allNotes.associateBy { it.day } }
     val profileEntity by (userProfileRepository?.profile ?: kotlinx.coroutines.flow.flowOf(null))
         .collectAsState(initial = null)
     val profile = remember(profileEntity) {
@@ -104,13 +107,26 @@ fun HistoryScreen(
         )
     }
 
+    val selectedDayMeals by remember(selectedDayStats) {
+        selectedDayStats?.let { viewModel.getMealEventsForDay(it.date) } ?: kotlinx.coroutines.flow.flowOf(emptyList())
+    }.collectAsState(initial = emptyList())
+
+    val selectedDayBreathReadings by remember(selectedDayStats) {
+        selectedDayStats?.let { viewModel.getBreathalyzerReadingsForDay(it.date) } ?: kotlinx.coroutines.flow.flowOf(emptyList())
+    }.collectAsState(initial = emptyList())
+
     if (selectedDayStats != null) {
         DayDetailSheet(
             dayStats = selectedDayStats!!,
             dayNoteRepository = dayNoteRepository,
             profile = profile,
             statusSkin = statusSkin,
+            mealEvents = selectedDayMeals,
+            breathReadings = selectedDayBreathReadings,
+            onUpdateDrink = { drink, volume, ts, dur -> viewModel.updateDrink(drink, volume, ts, dur) },
             onDeleteDrink = { viewModel.deleteDrink(it) },
+            onDeleteMeal = { viewModel.deleteMealEvent(it) },
+            onDeleteBreathReading = { viewModel.deleteBreathalyzerReading(it) },
             onDismiss = { selectedDayStats = null }
         )
     }
@@ -188,7 +204,12 @@ fun HistoryScreen(
                         .clickable { viewModel.previousMonth() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("‹", color = AppColors.textDim, fontSize = 18.sp)
+                    Icon(
+                        painter = AppIcons.ChevronLeft,
+                        contentDescription = "Vorheriger Monat",
+                        tint = AppColors.textDim,
+                        modifier = Modifier.size(13.dp)
+                    )
                 }
 
                 // iOS: .appCaptionBold (HistoryView.swift:189).
@@ -211,10 +232,11 @@ fun HistoryScreen(
                         .clickable(enabled = !isCurrentMonth) { viewModel.nextMonth() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        "›",
-                        color = if (!isCurrentMonth) AppColors.textDim else AppColors.border,
-                        fontSize = 18.sp
+                    Icon(
+                        painter = AppIcons.ChevronRight,
+                        contentDescription = "Nächster Monat",
+                        tint = if (!isCurrentMonth) AppColors.textDim else AppColors.border,
+                        modifier = Modifier.size(13.dp)
                     )
                 }
             }
@@ -309,7 +331,19 @@ fun HistoryScreen(
                                                 fontSize = 13.sp,
                                                 fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
                                             )
-                                            if (hadAlcohol && !isFuture) {
+                                            val note = notesByDay[date.toString()]
+                                            val mood = note?.let { DayMood.from(it.moodRaw) }
+                                            val hasMood = mood != null && mood != DayMood.NEUTRAL
+
+                                            // Mood wins over the generic dot: the cell background already
+                                            // signals alcohol, so the emoji adds information instead of hiding it (HistoryView.swift:286).
+                                            if (hasMood && !isFuture) {
+                                                Text(
+                                                    text = mood!!.emoji,
+                                                    fontSize = 8.sp,
+                                                    lineHeight = 8.sp
+                                                )
+                                            } else if (hadAlcohol && !isFuture) {
                                                 Box(
                                                     modifier = Modifier
                                                         .size(4.dp)
@@ -431,6 +465,62 @@ fun HistoryScreen(
                                     color = AppColors.textDim,
                                     style = de.tipau.promille.AppText.micro
                                 )
+                            }
+                        }
+                    }
+
+                    // Vormonats-Trend (matches iOS HistoryView.swift:344-389 trendRow)
+                    monthTrend?.let { trend ->
+                        val prev = trend.previousTotalDrinks
+                        val diff = monthStats.totalDrinks - prev
+                        val pct = if (prev > 0) {
+                            kotlin.math.round((kotlin.math.abs(diff).toDouble() / prev.toDouble()) * 100).toInt()
+                        } else 0
+
+                        val (iconVector, iconColor, trendText) = when {
+                            diff < 0 -> Triple(
+                                AppIcons.ArrowDownRight,
+                                AppColors.statusGreen,
+                                "$pct% weniger Drinks als im Vormonat"
+                            )
+                            diff > 0 -> Triple(
+                                AppIcons.ArrowUpRight,
+                                AppColors.statusOrange,
+                                "$pct% mehr Drinks als im Vormonat"
+                            )
+                            else -> Triple(
+                                AppIcons.Equal,
+                                AppColors.textDim,
+                                "Gleich viele Drinks wie im Vormonat"
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp)
+                        ) {
+                            Icon(
+                                painter = iconVector,
+                                contentDescription = null,
+                                tint = iconColor,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                                Text(
+                                    text = trendText,
+                                    color = AppColors.textDim,
+                                    style = de.tipau.promille.AppText.micro
+                                )
+                                if (trend.limitedToDays != null) {
+                                    Text(
+                                        text = "Vergleich: jeweils die ersten ${trend.limitedToDays} Tage",
+                                        color = AppColors.textMuted,
+                                        fontSize = 9.sp
+                                    )
+                                }
                             }
                         }
                     }
@@ -586,7 +676,12 @@ fun HistoryScreen(
                                     style = de.tipau.promille.AppText.caption
                                 )
                             }
-                            Text("›", color = AppColors.textMuted, fontSize = 22.sp)
+                            Icon(
+                                painter = AppIcons.ChevronRight,
+                                contentDescription = null,
+                                tint = AppColors.textMuted,
+                                modifier = Modifier.size(13.dp)
+                            )
                         }
                     }
                 }

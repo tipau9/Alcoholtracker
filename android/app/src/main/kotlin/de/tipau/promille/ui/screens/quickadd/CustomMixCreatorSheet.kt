@@ -126,7 +126,6 @@ fun CustomMixCreatorSheet(
             )
         )
     }
-
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(

@@ -167,24 +167,6 @@ class SessionViewModel(
         combine(projectionData, ticker) { proj, _ -> proj }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    // Mirrors iOS SessionViewModel.hangoverForecast: gated on the session peak,
-    // not the live BAC, so the forecast does not fall back to "kein Kater" while
-    // you sober up after a heavy night.
-    val hangoverForecast: StateFlow<HangoverLevel> = projectionData.map { proj ->
-        if (proj == null || proj.peakBac() <= 0.3) HangoverLevel.NONE
-        else HangoverPredictor.predict(
-            drinks = proj.drinks,
-            profile = proj.profile,
-            // Logged glasses, not the recommendation: null falls back to the
-            // predictor's own heuristic, same as iOS.
-            waterGlasses = waterLog?.loggedGlasses(System.currentTimeMillis() / 1000, zone)?.toDouble(),
-            stomachStatus = proj.stomachStatus,
-            conservative = proj.conservative,
-            vomitEpochSeconds = proj.vomitEpochSeconds,
-            meals = proj.meals,
-            pace = pace
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HangoverLevel.NONE)
 
     val currentBAC: StateFlow<Double> = projection.map { proj ->
         proj?.currentBac(System.currentTimeMillis() / 1000) ?: 0.0
@@ -213,6 +195,33 @@ class SessionViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    val hangoverForecast: StateFlow<HangoverLevel> = combine(projection, drinks, ticker) { proj, drinkList, nowSeconds ->
+        if (proj == null || drinkList.isEmpty()) return@combine HangoverLevel.NONE
+        // Gate on session peak, not live BAC: the forecast would otherwise
+        // vanish while sobering down, exactly when it matters.
+        // (Mirrors iOS SessionViewModel.swift:758-759)
+        val peak = proj.peakBac()
+        if (peak <= 0.3) return@combine HangoverLevel.NONE
+
+        val waterGlasses = (waterLog?.glassesToday(nowSeconds)
+            ?: applicationContext?.let { ctx ->
+                val prefs = ctx.getSharedPreferences("com.tipau.waterlog.v1", Context.MODE_PRIVATE)
+                val store = WaterLogStore(ctx)
+                WaterLog(store).glassesToday(nowSeconds)
+            })?.toDouble()
+
+        HangoverPredictor.predict(
+            drinks = drinkList,
+            profile = proj.profile,
+            waterGlasses = waterGlasses,
+            stomachStatus = proj.stomachStatus,
+            conservative = proj.conservative,
+            vomitEpochSeconds = proj.vomitEpochSeconds,
+            meals = proj.meals,
+            pace = pace
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HangoverLevel.NONE)
+
     val totalCalories: StateFlow<Int> = drinks.map { list ->
         list.sumOf { it.calories }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
@@ -230,13 +239,26 @@ class SessionViewModel(
         HydrationCalculator.recommendedGlasses(list)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    private fun zeroBaselineCurve(fromEpochSeconds: Long, hours: Double, intervalMinutes: Double): List<CurvePoint> {
+        val stepSeconds = (intervalMinutes * 60).toLong().coerceAtLeast(60L)
+        val totalSeconds = (hours * 3600).toLong()
+        val points = mutableListOf<CurvePoint>()
+        var t = fromEpochSeconds
+        val end = fromEpochSeconds + totalSeconds
+        while (t <= end) {
+            points.add(CurvePoint(t, 0.0))
+            t += stepSeconds
+        }
+        return points
+    }
+
     // Curve projections for 8h and 24h
     val bacCurve: StateFlow<List<CurvePoint>> = combine(projection, ticker) { proj, now ->
-        proj?.curve(now - 3600, 8.0, 5.0) ?: emptyList()
+        proj?.curve(now - 3600, 8.0, 5.0) ?: zeroBaselineCurve(now - 3600, 8.0, 5.0)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val bacCurve24h: StateFlow<List<CurvePoint>> = combine(projection, ticker) { proj, now ->
-        proj?.curve(now - 3600 * 3, 24.0, 10.0) ?: emptyList()
+        proj?.curve(now - 3600 * 3, 24.0, 10.0) ?: zeroBaselineCurve(now - 3600 * 3, 24.0, 10.0)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Trend calculation (comparing with 5 minutes ago)

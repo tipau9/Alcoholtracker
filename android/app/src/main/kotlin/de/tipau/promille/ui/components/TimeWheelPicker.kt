@@ -5,6 +5,7 @@ import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -55,45 +56,37 @@ fun TimeWheelPicker(
 
     val coroutineScope = rememberCoroutineScope()
 
-    // Sync state to callbacks when scrolling settles
-    LaunchedEffect(hourState) {
-        snapshotFlow { hourState.firstVisibleItemIndex }
-            .distinctUntilChanged()
-            .collect { index ->
-                if (!hourState.isScrollInProgress) {
-                    val h = index.coerceIn(0, 23)
-                    if (h != selectedHour) {
-                        onTimeChanged(h, selectedMinute)
-                    }
-                }
-            }
-    }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val itemHeightPx = remember(density, itemHeight) { with(density) { itemHeight.toPx() } }
+    val haptics = rememberHapticManager()
 
-    LaunchedEffect(minuteState) {
-        snapshotFlow { minuteState.firstVisibleItemIndex }
-            .distinctUntilChanged()
-            .collect { index ->
-                if (!minuteState.isScrollInProgress) {
-                    val m = index.coerceIn(0, 59)
-                    if (m != selectedMinute) {
-                        onTimeChanged(selectedHour, m)
-                    }
-                }
-            }
-    }
-
-    // React to scroll completion
-    LaunchedEffect(hourState.isScrollInProgress) {
-        if (!hourState.isScrollInProgress) {
-            val h = hourState.firstVisibleItemIndex.coerceIn(0, 23)
-            onTimeChanged(h, selectedMinute)
+    val activeHour by remember {
+        derivedStateOf {
+            val offset = hourState.firstVisibleItemScrollOffset
+            val extra = if (itemHeightPx > 0) ((offset + itemHeightPx / 2) / itemHeightPx).toInt() else 0
+            (hourState.firstVisibleItemIndex + extra).coerceIn(0, 23)
         }
     }
 
-    LaunchedEffect(minuteState.isScrollInProgress) {
-        if (!minuteState.isScrollInProgress) {
-            val m = minuteState.firstVisibleItemIndex.coerceIn(0, 59)
-            onTimeChanged(selectedHour, m)
+    val activeMinute by remember {
+        derivedStateOf {
+            val offset = minuteState.firstVisibleItemScrollOffset
+            val extra = if (itemHeightPx > 0) ((offset + itemHeightPx / 2) / itemHeightPx).toInt() else 0
+            (minuteState.firstVisibleItemIndex + extra).coerceIn(0, 59)
+        }
+    }
+
+    LaunchedEffect(activeHour) {
+        if (activeHour != selectedHour) {
+            haptics.selection()
+            onTimeChanged(activeHour, selectedMinute)
+        }
+    }
+
+    LaunchedEffect(activeMinute) {
+        if (activeMinute != selectedMinute) {
+            haptics.selection()
+            onTimeChanged(selectedHour, activeMinute)
         }
     }
 
@@ -137,11 +130,16 @@ fun TimeWheelPicker(
                 ) {
                     items(hours.size) { index ->
                         val h = hours[index]
-                        val isSelected = hourState.firstVisibleItemIndex == index
+                        val isSelected = activeHour == index
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(itemHeight),
+                                .height(itemHeight)
+                                .clickable {
+                                    coroutineScope.launch {
+                                        hourState.animateScrollToItem(index)
+                                    }
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -182,11 +180,16 @@ fun TimeWheelPicker(
                 ) {
                     items(minutes.size) { index ->
                         val m = minutes[index]
-                        val isSelected = minuteState.firstVisibleItemIndex == index
+                        val isSelected = activeMinute == index
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(itemHeight),
+                                .height(itemHeight)
+                                .clickable {
+                                    coroutineScope.launch {
+                                        minuteState.animateScrollToItem(index)
+                                    }
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(

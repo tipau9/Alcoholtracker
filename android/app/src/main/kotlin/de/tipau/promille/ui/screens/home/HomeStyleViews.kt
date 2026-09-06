@@ -105,6 +105,7 @@ fun MinimalHomeView(
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(
@@ -123,7 +124,10 @@ fun MinimalHomeView(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         modifier = Modifier.combinedClickable(
                             onClick = {},
-                            onLongClick = { showMenu = true }
+                            onLongClick = {
+                                haptics.medium()
+                                showMenu = true
+                            }
                         )
                     ) {
                         Text(
@@ -150,20 +154,22 @@ fun MinimalHomeView(
                         DropdownMenuItem(
                             text = { Text("Detaillierter Modus", color = AppColors.text) },
                             leadingIcon = {
-                                Icon(AppIcons.Settings, null, tint = AppColors.textDim, modifier = Modifier.size(16.dp))
+                                Icon(AppIcons.Sliders, null, tint = AppColors.textDim, modifier = Modifier.size(16.dp))
                             },
                             onClick = {
                                 showMenu = false
+                                haptics.selection()
                                 onExitToDetailed()
                             }
                         )
                         DropdownMenuItem(
                             text = { Text("Drink hinzufügen", color = AppColors.text) },
                             leadingIcon = {
-                                Icon(Icons.Filled.Add, null, tint = AppColors.textDim, modifier = Modifier.size(16.dp))
+                                Icon(AppIcons.Plus, null, tint = AppColors.textDim, modifier = Modifier.size(16.dp))
                             },
                             onClick = {
                                 showMenu = false
+                                haptics.light()
                                 onAddDrink()
                             }
                         )
@@ -178,7 +184,10 @@ fun MinimalHomeView(
             PrimaryButton(
                 text = "Drink hinzufügen",
                 icon = AppIcons.Plus,
-                onClick = onAddDrink,
+                onClick = {
+                    haptics.light()
+                    onAddDrink()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 32.dp)
@@ -195,7 +204,10 @@ fun MinimalHomeView(
                 .clip(CircleShape)
                 .background(AppColors.card)
                 .border(0.5.dp, AppColors.border, CircleShape)
-                .clickable { onExitToDetailed() },
+                .clickable {
+                    haptics.selection()
+                    onExitToDetailed()
+                },
             contentAlignment = Alignment.Center
         ) {
             Icon(

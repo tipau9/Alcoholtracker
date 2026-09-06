@@ -722,12 +722,48 @@ internal object AppVectors {
         curveToRelative(0f, 5.52f, -4.48f, 10f, -10f, 10f)
         curveToRelative(-3.04f, 0f, -5.79f, -1.36f, -7.66f, -3.51f)
         lineToRelative(4.91f, -4.91f)
-        curveToRelative(0.57f, -0.57f, 1.34f, -0.89f, 2.15f, -0.89f)
         horizontalLineToRelative(1.51f)
         verticalLineTo(5f)
         close()
     }
 
+    val ChevronLeft: ImageVector = buildIcon("ChevronLeft") {
+        moveTo(15.41f, 7.41f)
+        lineTo(14f, 6f)
+        lineToRelative(-6f, 6f)
+        lineToRelative(6f, 6f)
+        lineToRelative(1.41f, -1.41f)
+        lineTo(10.83f, 12f)
+        close()
+    }
+
+    val ArrowUpRight: ImageVector = buildIcon("ArrowUpRight") {
+        moveTo(9f, 5f)
+        verticalLineToRelative(2f)
+        horizontalLineToRelative(6.59f)
+        lineTo(4.29f, 18.29f)
+        lineToRelative(1.41f, 1.41f)
+        lineTo(17f, 8.41f)
+        verticalLineTo(15f)
+        horizontalLineToRelative(2f)
+        verticalLineTo(5f)
+        horizontalLineTo(9f)
+        close()
+    }
+
+    val ArrowDownRight: ImageVector = buildIcon("ArrowDownRight") {
+        moveTo(9f, 19f)
+        verticalLineToRelative(-2f)
+        horizontalLineToRelative(6.59f)
+        lineTo(4.29f, 5.71f)
+        lineToRelative(1.41f, -1.41f)
+        lineTo(17f, 15.59f)
+        verticalLineTo(9f)
+        horizontalLineToRelative(2f)
+        verticalLineToRelative(10f)
+        horizontalLineTo(9f)
+        close()
+    }
 }
 
 // iOS draws every one of these as an SF Symbol. 54 of them use the real artwork
@@ -773,6 +809,7 @@ object AppIcons {
     val ExitToApp: Painter @Composable get() = painterResource(R.drawable.sf_arrow_right_square)
     val Undo: Painter @Composable get() = painterResource(R.drawable.sf_arrow_uturn_left_circle_fill)
     val ChevronRight: Painter @Composable get() = painterResource(R.drawable.sf_chevron_right)
+    val ChevronLeft: Painter @Composable get() = rememberVectorPainter(AppVectors.ChevronLeft)
     val ChevronDown: Painter @Composable get() = painterResource(R.drawable.sf_chevron_down)
     val ChevronUp: Painter @Composable get() = painterResource(R.drawable.sf_chevron_up)
     val TextFormat: Painter @Composable get() = painterResource(R.drawable.sf_textformat)
@@ -811,6 +848,8 @@ object AppIcons {
     val Wind: Painter @Composable get() = painterResource(R.drawable.sf_wind)
     val Heart: Painter @Composable get() = painterResource(R.drawable.sf_heart_fill)
     val ArrowDown: Painter @Composable get() = painterResource(R.drawable.sf_arrow_down)
+    val ArrowUpRight: Painter @Composable get() = rememberVectorPainter(AppVectors.ArrowUpRight)
+    val ArrowDownRight: Painter @Composable get() = rememberVectorPainter(AppVectors.ArrowDownRight)
     val Equal: Painter @Composable get() = painterResource(R.drawable.sf_equal)
     val ArrowClockwise: Painter @Composable get() = rememberVectorPainter(AppVectors.ArrowClockwise)
     val Hourglass: Painter @Composable get() = rememberVectorPainter(AppVectors.Hourglass)

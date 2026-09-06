@@ -43,6 +43,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import de.tipau.promille.ui.components.pressable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.painterResource
@@ -116,58 +117,56 @@ fun OnboardingScreen(
             }
         }
 
-        // Header: Back Button + Progress Indicator Capsules
-        if (page > 0) {
+        // Header: Back Button + Progress Indicator Capsules matching iOS OnboardingView.swift:78-110
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(top = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Back Button (opacity 0 when page == 0 matching iOS .opacity(page == 0 ? 0 : 1))
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .alpha(if (page > 0) 1f else 0f)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(AppColors.card)
+                    .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+                    .clickable(enabled = page > 0) { viewModel.goBack() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = AppIcons.ChevronLeft,
+                    contentDescription = "Zurück",
+                    tint = AppColors.textDim,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+
+            // Progress Capsules centered
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(top = 16.dp),
+                    .weight(1f)
+                    .padding(end = 40.dp),
+                horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back Button
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(AppColors.card)
-                        .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
-                        .clickable { viewModel.goBack() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "‹",
-                        color = AppColors.textDim,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 2.dp)
+                for (i in 0..4) {
+                    val isCurrent = page == i
+                    val width by animateDpAsState(
+                        targetValue = if (isCurrent) 22.dp else 7.dp,
+                        animationSpec = AppMotion.snappy(),
+                        label = "dot_width"
                     )
-                }
-
-                // Progress Capsules centered
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 40.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    for (i in 0..4) {
-                        val isCurrent = page == i
-                        val width by animateDpAsState(
-                            targetValue = if (isCurrent) 22.dp else 7.dp,
-                            animationSpec = AppMotion.snappy(),
-                            label = "dot_width"
-                        )
-                        Box(
-                            modifier = Modifier
-                                .padding(horizontal = 4.dp)
-                                .height(7.dp)
-                                .width(width)
-                                .clip(CircleShape)
-                                .background(if (isCurrent) AppColors.accent else AppColors.border)
-                        )
-                    }
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 4.dp)
+                            .height(7.dp)
+                            .width(width)
+                            .clip(CircleShape)
+                            .background(if (isCurrent) AppColors.accent else AppColors.border)
+                    )
                 }
             }
         }
@@ -378,6 +377,8 @@ private fun ONRulerPicker(
         }
     }
 
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+
     // Continuously report current centered value
     LaunchedEffect(listState) {
         snapshotFlow {
@@ -388,6 +389,7 @@ private fun ONRulerPicker(
         }.collect { centerIdx ->
             val centerValue = items.getOrNull(centerIdx)
             if (centerValue != null && centerValue != value) {
+                haptics.selection()
                 onValueChange(centerValue)
             }
         }
@@ -514,6 +516,8 @@ private fun ONGenderPage(
 
         Spacer(Modifier.height(16.dp))
 
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -524,14 +528,20 @@ private fun ONGenderPage(
                 label = "Männlich",
                 iconRes = R.drawable.ic_gender_male,
                 isSelected = selectedGender == Gender.MALE,
-                onTap = { viewModel.setGender(Gender.MALE) },
+                onTap = {
+                    haptics.selection()
+                    viewModel.setGender(Gender.MALE)
+                },
                 modifier = Modifier.weight(1f)
             )
             ONGenderCard(
                 label = "Weiblich",
                 iconRes = R.drawable.ic_gender_female,
                 isSelected = selectedGender == Gender.FEMALE,
-                onTap = { viewModel.setGender(Gender.FEMALE) },
+                onTap = {
+                    haptics.selection()
+                    viewModel.setGender(Gender.FEMALE)
+                },
                 modifier = Modifier.weight(1f)
             )
         }
@@ -909,10 +919,13 @@ private fun <T> IOSWheelPicker(
         }
     }
 
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+
     // Immediately notify when active item changes
     LaunchedEffect(activeIndex) {
         val item = items.getOrNull(activeIndex)
         if (item != null && item != selectedItem) {
+            haptics.selection()
             onItemSelected(item)
         }
     }
@@ -1073,6 +1086,8 @@ private fun ONFavoritesPage(
             }
         }
 
+        val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+
         // Category Filter Chips
         Row(
             modifier = Modifier
@@ -1087,7 +1102,10 @@ private fun ONFavoritesPage(
                 de.tipau.promille.ui.components.AppChip(
                     label = catLabel,
                     isSelected = isOn,
-                    onClick = { selectedCategory = if (isOn && catKey != null) null else catKey }
+                    onClick = {
+                        haptics.selection()
+                        selectedCategory = if (isOn && catKey != null) null else catKey
+                    }
                 )
             }
         }
@@ -1108,7 +1126,10 @@ private fun ONFavoritesPage(
                         isSelected = true,
                         selectedColor = AppColors.accent.copy(alpha = 0.12f),
                         selectedTextColor = AppColors.text,
-                        onClick = { viewModel.removeFavorite(t.id) },
+                        onClick = {
+                            haptics.selection()
+                            viewModel.removeFavorite(t.id)
+                        },
                         icon = androidx.compose.ui.graphics.vector.rememberVectorPainter(Icons.Filled.Close)
                     )
                 }
@@ -1143,7 +1164,10 @@ private fun ONFavoritesPage(
                                 if (isSelected) AppColors.accent else AppColors.border,
                                 RoundedCornerShape(16.dp)
                             )
-                            .clickable { viewModel.toggleFavorite(template.id) }
+                            .clickable {
+                                haptics.selection()
+                                viewModel.toggleFavorite(template.id)
+                            }
                             .padding(12.dp)
                     ) {
                         Column(

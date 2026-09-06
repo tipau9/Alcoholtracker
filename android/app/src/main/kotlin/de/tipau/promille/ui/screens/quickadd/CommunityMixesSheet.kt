@@ -37,6 +37,7 @@ fun CommunityMixesSheet(
     onDismiss: () -> Unit,
     onImport: (CommunityMixRow) -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var rows by remember { mutableStateOf<List<CommunityMixRow>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     val importedIDs = remember { mutableStateListOf<String>() }
@@ -136,6 +137,7 @@ fun CommunityMixesSheet(
                                                 .background(AppColors.accent.copy(alpha = 0.12f))
                                                 .border(0.5.dp, AppColors.accent.copy(alpha = 0.3f), RoundedCornerShape(50))
                                                 .clickable {
+                                                    de.tipau.promille.ui.components.HapticManager.from(context).success()
                                                     onImport(row)
                                                     importedIDs.add(row.id)
                                                 }

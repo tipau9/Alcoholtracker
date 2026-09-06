@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.*
 
 
 
+import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,6 +50,8 @@ import de.tipau.promille.AppSans
 import de.tipau.promille.AppSerif
 import de.tipau.promille.TabularFigures
 import de.tipau.promille.color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun CrewView(
@@ -126,6 +129,7 @@ fun CrewView(
     val memories by container.photoMemoryRepository.memories.collectAsState(initial = emptyList())
     var selectedMemory by remember { mutableStateOf<PhotoMemoryEntity?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
 
     // CrewView.swift:174-176 opens PhotoCaptureView rather than a bare picker,
     // so the camera, the preview and the caption field all sit behind this.
@@ -136,10 +140,25 @@ fun CrewView(
             onDismiss = { showCapture = false },
             onSave = { filename, caption ->
                 coroutineScope.launch {
+                    val bac = container.jamService.myCurrentBAC.value.takeIf { it > 0.0 }
+                        ?: run {
+                            val prof = profile?.let { de.tipau.promille.repository.UserProfileRepository.toProfile(it) }
+                            val recentDrinks = container.drinkRepository.getAllDrinksSortedOnce()
+                                .map { de.tipau.promille.repository.DrinkRepository.toDomainDrink(it) }
+                            if (prof != null && recentDrinks.isNotEmpty()) {
+                                val input = de.tipau.promille.bac.BacProjectionInput(
+                                    drinks = recentDrinks,
+                                    profile = prof,
+                                    stomachStatus = prof.defaultStomachStatus,
+                                    conservative = prof.conservativeForApp
+                                )
+                                input.currentBac(System.currentTimeMillis() / 1000).takeIf { it > 0.0 }
+                            } else null
+                        }
                     container.photoMemoryRepository.addMemory(
                         filename = filename,
                         // Same source JamView uses: SessionViewModel keeps this fed.
-                        bacAtTime = container.jamService.myCurrentBAC.value.takeIf { it > 0 },
+                        bacAtTime = container.jamService.myCurrentBAC.value.takeIf { it > 0 } ?: bac,
                         caption = caption
                     )
                 }
@@ -198,12 +217,13 @@ fun CrewView(
             onDismiss = { selectedMember = null },
             onUpdate = { updated ->
                 coroutineScope.launch {
-                    crewRepository.update(updated)
+                    runCatching { crewRepository.update(updated) }
                 }
             },
             onDelete = {
+                selectedMember = null
                 coroutineScope.launch {
-                    crewRepository.delete(member)
+                    runCatching { crewRepository.delete(member) }
                 }
             },
             supabase = supabase
@@ -219,8 +239,10 @@ fun CrewView(
             confirmText = "Entfernen",
             isDestructive = true,
             onConfirm = {
-                coroutineScope.launch { crewRepository.delete(target) }
                 memberToDelete = null
+                coroutineScope.launch {
+                    runCatching { crewRepository.delete(target) }
+                }
             },
             dismissText = "Abbrechen"
         )
@@ -261,12 +283,17 @@ fun CrewView(
         )
     }
 
-    Column(
+    val sosOn = myProfile?.sosActive == true || jamSOSActive
+
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(AppColors.background)
     ) {
-        // CRTopBar (matches iOS CrewView.swift 1:1)
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // CRTopBar (matches iOS CrewView.swift 1:1)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -346,7 +373,7 @@ fun CrewView(
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 20.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 40.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // CRAuthBanner (matches iOS CrewView.swift 1:1)
@@ -443,7 +470,8 @@ fun CrewView(
             }
 
             // MyCodeCard (matches iOS CrewView.swift 1:1)
-            val code = myProfile?.friendCode?.takeIf { it.isNotEmpty() } ?: "Q6SG34"
+            val rawCode = myProfile?.friendCode.orEmpty()
+            val code = rawCode.ifEmpty { "······" }
             item {
                 Box(
                     modifier = Modifier
@@ -472,7 +500,17 @@ fun CrewView(
                             )
                         }
                         Spacer(Modifier.width(16.dp))
-                        Column(Modifier.weight(1f)) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable(enabled = rawCode.isNotEmpty()) {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                                    val clip = android.content.ClipData.newPlainText("Freundescode", rawCode)
+                                    clipboard?.setPrimaryClip(clip)
+                                    haptics.success()
+                                    android.widget.Toast.makeText(context, "Freundescode kopiert", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                        ) {
                             Text(
                                 // iOS: .appCaption (CrewView.swift:550).
                                 text = "Mein Code",
@@ -503,27 +541,28 @@ fun CrewView(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(AppColors.accent.copy(alpha = 0.12f))
-                                .border(0.5.dp, AppColors.accent.copy(alpha = 0.3f), CircleShape)
-                            .clickable {
-                                val sendIntent = android.content.Intent().apply {
-                                    action = android.content.Intent.ACTION_SEND
-                                    putExtra(
-                                        android.content.Intent.EXTRA_TEXT,
-                                        "Mein Freundes-Code für promille.: $code"
+                                .background(AppColors.accent.copy(alpha = if (rawCode.isNotEmpty()) 0.12f else 0.05f))
+                                .border(0.5.dp, AppColors.accent.copy(alpha = if (rawCode.isNotEmpty()) 0.3f else 0.1f), CircleShape)
+                                .clickable(enabled = rawCode.isNotEmpty()) {
+                                    haptics.light()
+                                    val sendIntent = android.content.Intent().apply {
+                                        action = android.content.Intent.ACTION_SEND
+                                        putExtra(
+                                            android.content.Intent.EXTRA_TEXT,
+                                            "Mein Freundes-Code für promille.: $rawCode"
+                                        )
+                                        type = "text/plain"
+                                    }
+                                    context.startActivity(
+                                        android.content.Intent.createChooser(sendIntent, "Freundescode teilen")
                                     )
-                                    type = "text/plain"
-                                }
-                                context.startActivity(
-                                    android.content.Intent.createChooser(sendIntent, "Freundescode teilen")
-                                )
-                            },
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 painter = de.tipau.promille.ui.components.AppIcons.Share,
                                 contentDescription = "Teilen",
-                                tint = AppColors.accent,
+                                tint = if (rawCode.isNotEmpty()) AppColors.accent else AppColors.textMuted,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -688,19 +727,21 @@ fun CrewView(
             }
         }
 
+        }
+
         // Pinned, like iOS' .safeAreaInset(edge: .bottom): an SOS you have to
         // scroll to find is not an SOS.
-        CrewSOSBar(
+        SOSBar(
             isActive = myFriendSOS || jamSOSActive,
-            onToggle = {
-                // CrewView.toggleSOS.
+            onSOS = {
                 if (!isSignedIn && currentJam == null) {
                     showSOSInfo = true
                 } else {
                     val willActivate = !(myFriendSOS || jamSOSActive)
+                    if (willActivate) {
+                        de.tipau.promille.ui.components.HapticManager.from(context).warning()
+                    }
                     if (isSignedIn) {
-                        // Only mirror what was actually sent: a bar claiming
-                        // "SOS aktiv" over a failed write is worse than a slow one.
                         myFriendSOS = willActivate
                         coroutineScope.launch {
                             if (runCatching { supabase.setSOS(willActivate) }.isFailure) {
@@ -712,65 +753,9 @@ fun CrewView(
                         container.jamService.mySOSActive.value = willActivate
                     }
                 }
-            }
+            },
+            modifier = Modifier.align(Alignment.BottomCenter)
         )
-    }
-}
-
-// iOS SOSBar (CrewView.swift:1006-1052).
-@Composable
-private fun CrewSOSBar(isActive: Boolean, onToggle: () -> Unit) {
-    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
-    Column(modifier = Modifier.fillMaxWidth().background(AppColors.background)) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(24.dp)
-                .background(
-                    androidx.compose.ui.graphics.Brush.verticalGradient(
-                        listOf(AppColors.background.copy(alpha = 0f), AppColors.background)
-                    )
-                )
-        )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 16.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(
-                    if (isActive) AppColors.statusGreen.copy(alpha = 0.15f) else AppColors.statusRed
-                )
-                .then(
-                    if (isActive) Modifier.border(1.5.dp, AppColors.statusGreen, RoundedCornerShape(18.dp))
-                    else Modifier
-                )
-                .clickable {
-                    // Only activating warns: ending an SOS is a relief, not an alarm.
-                    if (!isActive) haptics.warning()
-                    onToggle()
-                }
-                .padding(vertical = 16.dp),
-        ) {
-            if (isActive) {
-                Icon(
-                    painter = de.tipau.promille.ui.components.AppIcons.Check,
-                    contentDescription = null,
-                    tint = AppColors.statusGreen,
-                    modifier = Modifier.size(16.dp)
-                )
-            } else {
-                de.tipau.promille.ui.components.SOSGlyph(tint = AppColors.background, size = 16.dp)
-            }
-            Text(
-                // iOS: .appBodyBold (CrewView.swift:1030).
-                text = if (isActive) "SOS aktiv. Tippen zum Beenden" else "SOS senden",
-                color = if (isActive) AppColors.statusGreen else AppColors.background,
-                style = de.tipau.promille.AppText.bodyBold
-            )
-        }
     }
 }
 
@@ -1300,7 +1285,90 @@ private fun MemberCard(
                 )
             }
 
-            Text("›", color = AppColors.textMuted, fontSize = 22.sp)
+            Icon(
+                painter = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                contentDescription = null,
+                tint = AppColors.textMuted,
+                modifier = Modifier.size(13.dp)
+            )
         }
     }
 }
+
+/**
+ * Pinned bottom SOS Bar matching iOS CrewView.swift:1008-1055
+ */
+@Composable
+private fun SOSBar(
+    isActive: Boolean,
+    onSOS: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(AppColors.background)
+    ) {
+        // Gradient fade at top: 24dp from transparent to background
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(24.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, AppColors.background)
+                    )
+                )
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(
+                        if (isActive) AppColors.statusGreen.copy(alpha = 0.15f)
+                        else AppColors.statusRed
+                    )
+                    .border(
+                        width = 1.5.dp,
+                        color = if (isActive) AppColors.statusGreen else Color.Transparent,
+                        shape = RoundedCornerShape(18.dp)
+                    )
+                    .clickable(onClick = onSOS)
+                    .padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (isActive) {
+                        Icon(
+                            painter = de.tipau.promille.ui.components.AppIcons.Check,
+                            contentDescription = null,
+                            tint = AppColors.statusGreen,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    } else {
+                        de.tipau.promille.ui.components.SOSGlyph(
+                            tint = AppColors.background,
+                            size = 18.dp
+                        )
+                    }
+                    Text(
+                        text = if (isActive) "SOS aktiv. Tippen zum Beenden" else "SOS senden",
+                        color = if (isActive) AppColors.statusGreen else AppColors.background,
+                        style = de.tipau.promille.AppText.bodyBold
+                    )
+                }
+            }
+        }
+    }
+}
+

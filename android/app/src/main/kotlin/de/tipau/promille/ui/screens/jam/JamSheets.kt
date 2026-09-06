@@ -72,8 +72,8 @@ fun CreateJamSheet(
         sheetState = sheetState,
         containerColor = AppColors.background,
         scrimColor = Color.Black.copy(alpha = 0.65f),
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
+        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
+        dragHandle = null
     ) {
         Column(
             modifier = Modifier
@@ -226,8 +226,8 @@ fun JamPrivacySheet(
         sheetState = sheetState,
         containerColor = AppColors.background,
         scrimColor = Color.Black.copy(alpha = 0.65f),
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
+        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
+        dragHandle = null
     ) {
         Column(
             modifier = Modifier
@@ -342,8 +342,8 @@ fun InviteFriendsSheet(
         sheetState = sheetState,
         containerColor = AppColors.background,
         scrimColor = Color.Black.copy(alpha = 0.65f),
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
+        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
+        dragHandle = null
     ) {
         Column(
             modifier = Modifier
@@ -668,8 +668,8 @@ fun JamSheet(container: de.tipau.promille.di.AppContainer, onDismiss: () -> Unit
         sheetState = sheetState,
         containerColor = AppColors.background,
         scrimColor = Color.Black.copy(alpha = 0.65f),
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AppColors.border) }
+        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
+        dragHandle = null
     ) {
         JamView(container = container, modifier = Modifier.fillMaxHeight(0.92f))
     }
@@ -745,7 +745,12 @@ fun ArcadePickerSheet(onDismiss: () -> Unit, onPick: (JamArcadeGame) -> Unit) {
                         Text(game.title, color = AppColors.text, style = de.tipau.promille.AppText.bodyBold)
                         Text(game.subtitle, color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
                     }
-                    Text("›", color = AppColors.textMuted, fontSize = 20.sp)
+                    Icon(
+                        painter = de.tipau.promille.ui.components.AppIcons.ChevronRight,
+                        contentDescription = null,
+                        tint = AppColors.textMuted,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
         }

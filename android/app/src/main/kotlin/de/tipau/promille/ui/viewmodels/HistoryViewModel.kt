@@ -81,11 +81,11 @@ internal fun previousMonthTrend(
         .values.sumOf { it.size }
     return if (total > 0) MonthTrend(total, limit) else null
 }
-
 @OptIn(ExperimentalCoroutinesApi::class)
 class HistoryViewModel(
     private val drinkRepository: DrinkRepository,
-    private val userProfileRepository: UserProfileRepository? = null
+    private val userProfileRepository: UserProfileRepository? = null,
+    private val sessionEventRepository: de.tipau.promille.repository.SessionEventRepository? = null
 ) : ViewModel() {
 
     private val zone = ZoneId.systemDefault()
@@ -129,6 +129,37 @@ class HistoryViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MonthStats(0, 0, 0, emptyMap()))
 
+    val monthTrend: StateFlow<MonthTrend?> = visibleMonth.flatMapLatest { month ->
+        val prevMonth = month.minusMonths(1)
+        val windowStart = prevMonth.atDay(1)
+            .atStartOfDay(zone).toEpochSecond()
+        val windowEnd = month.plusMonths(1).atDay(1)
+            .atStartOfDay(zone).toEpochSecond()
+
+        drinkRepository.getDrinksForHistory(windowStart, windowEnd).map { entities ->
+            val drinks = entities.map { DrinkRepository.toDomainDrink(it) }
+
+            // Running month: compare only the elapsed day range (matches iOS HistoryViewModel.swift:120)
+            val isCurrentMonth = month == YearMonth.now()
+            val limit: Int? = if (isCurrentMonth) LocalDate.now().dayOfMonth else null
+
+            // Compute previous month's drinks, optionally limited to the same elapsed days
+            val prevGrouped = drinks.groupBy { LogicalDay.dateOf(it.timestampEpochSeconds, zone) }
+                .filter { (date, _) -> YearMonth.from(date) == prevMonth }
+
+            val prevDrinks = if (limit != null) {
+                prevGrouped.filter { (date, _) -> date.dayOfMonth <= limit }
+                    .values.sumOf { dayDrinks -> dayDrinks.count { it.abv > 0 } }
+            } else {
+                prevGrouped.values.sumOf { dayDrinks -> dayDrinks.count { it.abv > 0 } }
+            }
+
+            // Only show trend if previous month had drinks (matches iOS: guard prev.totalDrinks > 0 else return nil)
+            if (prevDrinks <= 0) null
+            else MonthTrend(previousTotalDrinks = prevDrinks, limitedToDays = limit)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     fun previousMonth() {
         visibleMonth.value = visibleMonth.value.minusMonths(1)
     }
@@ -139,6 +170,29 @@ class HistoryViewModel(
 
     fun goToCurrentMonth() {
         visibleMonth.value = YearMonth.now()
+    }
+
+    fun updateDrink(drink: de.tipau.promille.bac.Drink, volumeML: Double, timestampSeconds: Long, durationMinutes: Double) {
+        if (volumeML <= 0 || drink.volumeML <= 0) return
+        val newCalories = kotlin.math.round((drink.calories.toDouble() / drink.volumeML) * volumeML).toInt()
+        viewModelScope.launch {
+            drinkRepository.updateDrink(
+                de.tipau.promille.data.DrinkEntity(
+                    id = drink.id,
+                    name = drink.name,
+                    volume = volumeML,
+                    abv = drink.abv,
+                    calories = newCalories,
+                    iconName = drink.iconName,
+                    categoryRaw = drink.category.name.lowercase(),
+                    timestampEpochSeconds = timestampSeconds,
+                    templateID = drink.templateId,
+                    mixerVolume = drink.mixerVolumeML,
+                    mixerWaterContent = drink.mixerWaterContentPercent,
+                    drinkDurationMinutes = durationMinutes
+                )
+            )
+        }
     }
 
     fun deleteDrink(drink: de.tipau.promille.bac.Drink) {
@@ -158,6 +212,30 @@ class HistoryViewModel(
                     mixerWaterContent = drink.mixerWaterContentPercent
                 )
             )
+        }
+    }
+
+    fun getMealEventsForDay(date: LocalDate): Flow<List<de.tipau.promille.data.MealEventEntity>> {
+        val start = LogicalDay.startOf(date, zone)
+        val end = LogicalDay.endOf(date, zone)
+        return sessionEventRepository?.getMealEventsBetween(start, end) ?: flowOf(emptyList())
+    }
+
+    fun getBreathalyzerReadingsForDay(date: LocalDate): Flow<List<de.tipau.promille.data.BreathalyzerReadingEntity>> {
+        val start = LogicalDay.startOf(date, zone)
+        val end = LogicalDay.endOf(date, zone)
+        return sessionEventRepository?.getBreathalyzerReadingsBetween(start, end) ?: flowOf(emptyList())
+    }
+
+    fun deleteMealEvent(event: de.tipau.promille.data.MealEventEntity) {
+        viewModelScope.launch {
+            sessionEventRepository?.deleteMealEvent(event)
+        }
+    }
+
+    fun deleteBreathalyzerReading(reading: de.tipau.promille.data.BreathalyzerReadingEntity) {
+        viewModelScope.launch {
+            sessionEventRepository?.deleteBreathalyzerReading(reading)
         }
     }
 }

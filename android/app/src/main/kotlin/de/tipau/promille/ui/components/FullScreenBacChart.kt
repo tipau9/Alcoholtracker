@@ -50,8 +50,23 @@ fun FullScreenBacChart(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptics = rememberHapticManager()
     var selectedPoint by remember { mutableStateOf<CurvePoint?>(null) }
     val textMeasurer = rememberTextMeasurer()
+
+    val effectivePoints = remember(points) {
+        if (points.isNotEmpty()) {
+            points
+        } else {
+            val now = System.currentTimeMillis() / 1000
+            val durationHours = 24L
+            val startOffset = 3L * 3600L
+            val start = now - startOffset
+            val step = 600L
+            val count = (durationHours * 3600L / step).toInt()
+            List(count + 1) { i -> CurvePoint(start + i * step, 0.0) }
+        }
+    }
 
     val timeFormatter = remember {
         DateTimeFormatter.ofPattern("HH:mm", Locale.GERMAN).withZone(ZoneId.systemDefault())
@@ -99,7 +114,7 @@ fun FullScreenBacChart(
             }
 
             // Selected Point Overlay (Scrubbing HUD)
-            val activePt = selectedPoint ?: points.lastOrNull()
+            val activePt = selectedPoint ?: effectivePoints.lastOrNull()
             if (activePt != null) {
                 Row(
                     modifier = Modifier
@@ -140,45 +155,56 @@ fun FullScreenBacChart(
                 }
             }
 
-            // Interactive Chart Canvas
-            if (points.isNotEmpty()) {
-                val startTime = points.first().epochSeconds
-                val endTime = points.last().epochSeconds
-                val maxBacFromPoints = points.maxOfOrNull { it.bac } ?: 0.0
-                val maxBac = max(maxBacFromPoints * 1.2, max(drivingLimit * 1.3, 0.8))
+            // Interactive Chart Canvas (always rendered via effectivePoints)
+            val startTime = effectivePoints.first().epochSeconds
+            val endTime = effectivePoints.last().epochSeconds
+            val maxBacFromPoints = effectivePoints.maxOfOrNull { it.bac } ?: 0.0
+            val maxBac = max(maxBacFromPoints * 1.2, max(drivingLimit * 1.3, 0.8))
 
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(horizontal = 16.dp, vertical = if (selectedPoint == null) 12.dp else 4.dp)
-                        .pointerInput(points) {
-                            detectTapGestures(
-                                onPress = { offset ->
-                                    val fraction = (offset.x / size.width).coerceIn(0f, 1f)
-                                    val targetEpoch = startTime + ((endTime - startTime) * fraction).toLong()
-                                    selectedPoint = points.minByOrNull { abs(it.epochSeconds - targetEpoch) }
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 16.dp, vertical = if (selectedPoint == null) 12.dp else 4.dp)
+                    .pointerInput(effectivePoints) {
+                        detectTapGestures(
+                            onPress = { offset ->
+                                val fraction = (offset.x / size.width).coerceIn(0f, 1f)
+                                val targetEpoch = startTime + ((endTime - startTime) * fraction).toLong()
+                                val closest = effectivePoints.minByOrNull { abs(it.epochSeconds - targetEpoch) }
+                                if (closest != null && closest.epochSeconds != selectedPoint?.epochSeconds) {
+                                    haptics.selection()
+                                    selectedPoint = closest
                                 }
-                            )
-                        }
-                        .pointerInput(points) {
-                            detectDragGestures(
-                                onDragStart = { offset ->
-                                    val fraction = (offset.x / size.width).coerceIn(0f, 1f)
-                                    val targetEpoch = startTime + ((endTime - startTime) * fraction).toLong()
-                                    selectedPoint = points.minByOrNull { abs(it.epochSeconds - targetEpoch) }
-                                },
-                                onDragEnd = { /* keep point visible after drag for inspection */ },
-                                onDragCancel = { /* keep point visible */ },
-                                onDrag = { change, _ ->
-                                    change.consume()
-                                    val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
-                                    val targetEpoch = startTime + ((endTime - startTime) * fraction).toLong()
-                                    selectedPoint = points.minByOrNull { abs(it.epochSeconds - targetEpoch) }
+                            }
+                        )
+                    }
+                    .pointerInput(effectivePoints) {
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                val fraction = (offset.x / size.width).coerceIn(0f, 1f)
+                                val targetEpoch = startTime + ((endTime - startTime) * fraction).toLong()
+                                val closest = effectivePoints.minByOrNull { abs(it.epochSeconds - targetEpoch) }
+                                if (closest != null && closest.epochSeconds != selectedPoint?.epochSeconds) {
+                                    haptics.selection()
+                                    selectedPoint = closest
                                 }
-                            )
-                        }
-                ) {
+                            },
+                            onDragEnd = { /* keep point visible after drag for inspection */ },
+                            onDragCancel = { /* keep point visible */ },
+                            onDrag = { change, _ ->
+                                change.consume()
+                                val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
+                                val targetEpoch = startTime + ((endTime - startTime) * fraction).toLong()
+                                val closest = effectivePoints.minByOrNull { abs(it.epochSeconds - targetEpoch) }
+                                if (closest != null && closest.epochSeconds != selectedPoint?.epochSeconds) {
+                                    haptics.selection()
+                                    selectedPoint = closest
+                                }
+                            }
+                        )
+                    }
+            ) {
                     val w = size.width
                     val bottomPadding = 24.dp.toPx()
                     val h = size.height - bottomPadding
@@ -237,7 +263,7 @@ fun FullScreenBacChart(
                     val curvePath = Path()
                     val areaPath = Path()
 
-                    points.forEachIndexed { index, pt ->
+                    effectivePoints.forEachIndexed { index, pt ->
                         val x = if (endTime > startTime) {
                             ((pt.epochSeconds - startTime).toFloat() / (endTime - startTime)) * w
                         } else 0f
@@ -317,18 +343,6 @@ fun FullScreenBacChart(
                         tick += stepSeconds
                     }
                 }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // No iOS counterpart found for this empty state; AppText.body
-                    // matches the full-screen (not preview-widget) context here.
-                    Text("Keine Verlaufsdaten vorhanden", color = AppColors.textDim, style = de.tipau.promille.AppText.body)
-                }
-            }
 
             // Legend
             Row(

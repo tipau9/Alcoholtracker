@@ -71,7 +71,10 @@ fun SafetyScreen(
     val contactPhone by viewModel.emergencyContactPhone.collectAsState()
     val isProbationary by viewModel.isProbationaryDriver.collectAsState()
     val drinks by viewModel.domainDrinks.collectAsState()
+    val vomits by viewModel.vomitEpochSeconds.collectAsState()
+    val meals by viewModel.mealEvents.collectAsState()
     val profile by viewModel.bacProfile.collectAsState()
+    val haptic = de.tipau.promille.ui.components.rememberHapticManager()
 
     var showRidePicker by remember { mutableStateOf(false) }
 
@@ -86,7 +89,7 @@ fun SafetyScreen(
         modifier = modifier
             .fillMaxSize()
             .background(AppColors.background)
-    ) {        // SFTopBar matching iOS
+    ) {        // SFTopBar matching iOS
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -117,7 +120,7 @@ fun SafetyScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
                     .background(status.color.copy(alpha = 0.08f))
-                    .border(1.dp, status.color.copy(alpha = 0.40f), RoundedCornerShape(16.dp))
+                    .border(0.5.dp, status.color.copy(alpha = 0.40f), RoundedCornerShape(16.dp))
             ) {
                 Column {
                     Row(
@@ -300,7 +303,12 @@ fun SafetyScreen(
                                 color = if (!isProbationary) AppColors.accent else AppColors.border,
                                 shape = RoundedCornerShape(14.dp)
                             )
-                            .clickable { viewModel.setProbationaryDriver(false) }
+                            .clickable {
+                                if (isProbationary) {
+                                    haptic.selection()
+                                    viewModel.setProbationaryDriver(false)
+                                }
+                            }
                             .padding(vertical = 12.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -334,7 +342,12 @@ fun SafetyScreen(
                                 color = if (isProbationary) AppColors.accent else AppColors.border,
                                 shape = RoundedCornerShape(14.dp)
                             )
-                            .clickable { viewModel.setProbationaryDriver(true) }
+                            .clickable {
+                                if (!isProbationary) {
+                                    haptic.selection()
+                                    viewModel.setProbationaryDriver(true)
+                                }
+                            }
                             .padding(vertical = 12.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -370,7 +383,9 @@ fun SafetyScreen(
             if (profile != null) {
                 ForecastView(
                     drinks = drinks,
-                    profile = profile!!
+                    profile = profile!!,
+                    vomitEpochSeconds = vomits,
+                    mealEvents = meals
                 )
             }
 
@@ -423,10 +438,11 @@ fun SafetyScreen(
                                 )
                             }
 
-                            Text(
-                                text = "›",
-                                color = AppColors.textMuted,
-                                fontSize = 20.sp
+                            Icon(
+                                painter = AppIcons.ChevronRight,
+                                contentDescription = null,
+                                tint = AppColors.textMuted,
+                                modifier = Modifier.size(13.dp)
                             )
                         }
                     }
@@ -477,10 +493,11 @@ fun SafetyScreen(
                                     )
                                 }
 
-                                Text(
-                                    text = "›",
-                                    color = AppColors.textMuted,
-                                    fontSize = 20.sp
+                                Icon(
+                                    painter = AppIcons.ChevronRight,
+                                    contentDescription = null,
+                                    tint = AppColors.textMuted,
+                                    modifier = Modifier.size(13.dp)
                                 )
                             }
                         }

@@ -43,6 +43,8 @@ import de.tipau.promille.network.lookupFriend
 import de.tipau.promille.ui.components.StatusPill
 import de.tipau.promille.ui.components.SectionLabel
 import de.tipau.promille.ui.components.SettingsDestructiveRow
+import de.tipau.promille.ui.components.PrimaryButton
+import de.tipau.promille.ui.components.PromilleCard
 import de.tipau.promille.ui.components.SettingsToggleRow
 import de.tipau.promille.service.NotificationService
 import java.util.Locale
@@ -62,10 +64,12 @@ fun FriendProfileSheet(
     onDelete: () -> Unit,
     supabase: SupabaseService? = null
 ) {
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
     var isHome by remember { mutableStateOf(member.isHome) }
     var isSoberBuddy by remember { mutableStateOf(member.isSoberBuddy) }
     var sosActive by remember { mutableStateOf(member.sosActive) }
     var alertWhenHigh by remember { mutableStateOf(member.alertWhenHigh) }
+    var currentBAC by remember { mutableStateOf(member.currentBAC) }
 
     // Instant write like iOS's @Bindable member (context.save() per toggle):
     // no batched local copy, no separate save button.
@@ -89,6 +93,7 @@ fun FriendProfileSheet(
     var followsMe by remember { mutableStateOf(false) }
     var mutualFriends by remember { mutableStateOf<List<FriendProfile>>(emptyList()) }
     var selectedAchievement by remember { mutableStateOf<Achievement?>(null) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
     val myProfile by (supabase?.myProfile
         ?: kotlinx.coroutines.flow.MutableStateFlow<FriendProfile?>(null)).collectAsState()
     val isSignedIn by (supabase?.isSignedIn
@@ -463,17 +468,87 @@ fun FriendProfileSheet(
                 }
             }
 
-            // Delete Friend
+            // Promillewert anpassen
+            SectionLabel("Promillewert anpassen")
+            PromilleCard {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = String.format(Locale.GERMANY, "%.2f ‰", currentBAC),
+                        color = AppColors.text,
+                        style = de.tipau.promille.AppText.headline.merge(de.tipau.promille.TabularFigures)
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                haptics.light()
+                                currentBAC = (currentBAC - 0.1).coerceAtLeast(0.0)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = AppColors.card, contentColor = AppColors.text),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("- 0,1", style = de.tipau.promille.AppText.bodyBold)
+                        }
+                        Button(
+                            onClick = {
+                                haptics.light()
+                                currentBAC = currentBAC + 0.1
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = AppColors.accent, contentColor = AppColors.background),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("+ 0,1", style = de.tipau.promille.AppText.bodyBold)
+                        }
+                    }
+                }
+            }
+
+            // Save Button
+            PrimaryButton(
+                text = "Änderungen speichern",
+                onClick = {
+                    val updated = member.copy(
+                        isHome = isHome,
+                        isSoberBuddy = isSoberBuddy,
+                        sosActive = sosActive,
+                        currentBAC = currentBAC,
+                        alertWhenHigh = alertWhenHigh
+                    )
+                    onUpdate(updated)
+                    onDismiss()
+                }
+            )
+
+            // Delete Friend (matches iOS FriendProfileSheet.swift:458-480)
             SettingsDestructiveRow(
                 label = "Freund aus Crew entfernen",
                 onClick = {
-                    onDelete()
-                    onDismiss()
+                    haptics.warning()
+                    showDeleteConfirmation = true
                 }
             )
         }
     }
 }
+
+    if (showDeleteConfirmation) {
+        de.tipau.promille.ui.components.AppAlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = "Freund entfernen?",
+            text = "${member.name} wird aus deiner Liste entfernt.",
+            confirmText = "Entfernen",
+            isDestructive = true,
+            onConfirm = {
+                showDeleteConfirmation = false
+                onDelete()
+                onDismiss()
+            },
+            dismissText = "Abbrechen"
+        )
+    }
 
     selectedAchievement?.let { achievement ->
         AchievementDetailDialog(achievement) { selectedAchievement = null }

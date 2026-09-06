@@ -17,8 +17,14 @@ class SessionEventRepository(private val dao: SessionEventDao) {
     fun getMealEventsSince(sinceEpochSeconds: Long): Flow<List<MealEventEntity>> =
         dao.getMealEventsSince(sinceEpochSeconds)
 
+    fun getMealEventsBetween(startEpochSeconds: Long, endEpochSeconds: Long): Flow<List<MealEventEntity>> =
+        dao.getMealEventsBetween(startEpochSeconds, endEpochSeconds)
+
     fun getBreathalyzerReadingsSince(sinceEpochSeconds: Long): Flow<List<BreathalyzerReadingEntity>> =
         dao.getBreathalyzerReadingsSince(sinceEpochSeconds)
+
+    fun getBreathalyzerReadingsBetween(startEpochSeconds: Long, endEpochSeconds: Long): Flow<List<BreathalyzerReadingEntity>> =
+        dao.getBreathalyzerReadingsBetween(startEpochSeconds, endEpochSeconds)
 
     suspend fun logVomit() {
         val now = System.currentTimeMillis() / 1000

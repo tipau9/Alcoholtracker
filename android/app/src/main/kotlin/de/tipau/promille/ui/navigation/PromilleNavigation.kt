@@ -74,7 +74,8 @@ fun PromilleNavigation(
     val historyViewModel = remember {
         de.tipau.promille.ui.viewmodels.HistoryViewModel(
             drinkRepository = container.drinkRepository,
-            userProfileRepository = container.userProfileRepository
+            userProfileRepository = container.userProfileRepository,
+            sessionEventRepository = container.sessionEventRepository
         )
     }
     val safetyViewModel = remember {
@@ -155,6 +156,7 @@ fun PromilleNavigation(
             // matches UIKit's standard tab bar metrics: 49pt content height, 25pt
             // glyph, 10pt label. Keep the height fixed so a taller icon or a scaled
             // label can't grow the bar past the system one.
+            val haptics = de.tipau.promille.ui.components.rememberHapticManager()
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -168,13 +170,17 @@ fun PromilleNavigation(
                     val isSelected = selectedTab == tab
                     Column(
                         modifier = Modifier
+                            .weight(1f)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
-                                selectedTab = tab
+                                if (selectedTab != tab) {
+                                    haptics.selection()
+                                    selectedTab = tab
+                                }
                             }
-                            .padding(horizontal = 12.dp),
+                            .padding(vertical = 2.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
@@ -192,7 +198,10 @@ fun PromilleNavigation(
                             color = if (isSelected) AppColors.accent else AppColors.textDim,
                             fontSize = 10.sp,
                             lineHeight = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -205,7 +214,8 @@ fun PromilleNavigation(
         val unlockedIds by application.container.achievementService.unlockedIds.collectAsState()
         AchievementsScreen(
             unlockedIds = unlockedIds,
-            onDismiss = { showAchievements = false }
+            onDismiss = { showAchievements = false },
+            onDeleteAchievement = { application.container.achievementService.delete(it) }
         )
     }
 }
