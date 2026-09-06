@@ -473,9 +473,12 @@ private fun AppleSpectrumColorPickerTab(
                 )
                 drawRect(brush = hueGradient)
 
-                // Vertical Saturation Overlay
+                // Vertical Saturation Overlay. Top = full saturation (strong
+                // colors), bottom = white - matches the tap/drag mapping
+                // below (saturation = 1 - y/h), which was inverted from this
+                // gradient before.
                 val satGradient = Brush.verticalGradient(
-                    colors = listOf(Color.White, Color.Transparent)
+                    colors = listOf(Color.Transparent, Color.White)
                 )
                 drawRect(brush = satGradient)
 
