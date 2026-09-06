@@ -63,6 +63,7 @@ begin
     ) and not exists (
         select 1 from public.jams
         where id = p_jam_id and host_user_id = auth.uid()::text
+    ) then
         return 'not_member';
     end if;
 
