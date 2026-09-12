@@ -22,4 +22,22 @@ extension View {
                 .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
         }
     }
+
+    /// A hairline top-lit edge over a card's existing border, mimicking the way
+    /// Apple's glass surfaces catch light from above. Adds on top of the normal
+    /// `appBorder` stroke instead of replacing it, so it stays subtle rather than
+    /// a full glow.
+    func appleLichtkante(cornerRadius: CGFloat = 16) -> some View {
+        overlay(
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.20), Color.white.opacity(0)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 0.75
+                )
+        )
+    }
 }

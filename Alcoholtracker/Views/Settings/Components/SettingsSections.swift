@@ -9,6 +9,35 @@ import SwiftUI
 // stay in SettingsView because they depend on its local @State and several
 // environment services.
 
+// MARK: - Apple inset grouped section container
+//
+// Formalizes the rounded-card-with-dividers look every section below was
+// hand-rolling identically (SectionLabel + VStack + appCard background +
+// hairline border). One shared container instead of eight copies of the
+// same three modifiers.
+
+struct AppleInsetGroupedSection<Content: View>: View {
+    let title: String
+    var footer: String? = nil
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionLabel(text: title)
+            content
+                .background(Color.appCard)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.appBorder, lineWidth: 0.5))
+                .appleLichtkante()
+            if let footer {
+                Text(footer)
+                    .font(.appMicro)
+                    .foregroundStyle(Color.appTextMuted)
+            }
+        }
+    }
+}
+
 // MARK: - Profile
 
 struct SettingsProfileSection: View {
@@ -16,8 +45,7 @@ struct SettingsProfileSection: View {
     let save: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionLabel(text: "PROFIL")
+        AppleInsetGroupedSection(title: "PROFIL") {
             VStack(spacing: 0) {
                 STNumericRow(
                     label: "Gewicht",
@@ -64,12 +92,6 @@ struct SettingsProfileSection: View {
                     value: Binding(get: { p.eliminationRate }, set: { p.eliminationRate = $0; save() })
                 )
             }
-            .background(Color.appCard)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(Color.appBorder, lineWidth: 0.5)
-            )
         }
     }
 }
@@ -81,8 +103,7 @@ struct SettingsSafetySection: View {
     let save: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionLabel(text: "SICHERHEIT")
+        AppleInsetGroupedSection(title: "SICHERHEIT") {
             VStack(spacing: 0) {
                 STContactField(
                     label: "Notfallkontakt",
@@ -116,12 +137,6 @@ struct SettingsSafetySection: View {
                     value: Binding(get: { p.warningThreshold }, set: { p.warningThreshold = $0; save() })
                 )
             }
-            .background(Color.appCard)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(Color.appBorder, lineWidth: 0.5)
-            )
         }
     }
 }
@@ -133,8 +148,7 @@ struct SettingsLimitsSection: View {
     let save: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionLabel(text: "LIMITS & ZIELE")
+        AppleInsetGroupedSection(title: "LIMITS & ZIELE") {
             VStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -170,9 +184,6 @@ struct SettingsLimitsSection: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
             }
-            .background(Color.appCard)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.appBorder, lineWidth: 0.5))
         }
     }
 }
@@ -184,8 +195,7 @@ struct SettingsDisplaySection: View {
     let save: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionLabel(text: "DARSTELLUNG")
+        AppleInsetGroupedSection(title: "DARSTELLUNG") {
             VStack(spacing: 0) {
                 STHomeStyleRow(
                     style: Binding(get: { p.homeStyle }, set: { p.homeStyle = $0; save() })
@@ -235,12 +245,6 @@ struct SettingsDisplaySection: View {
                     skin: Binding(get: { p.statusSkin }, set: { p.statusSkin = $0; save() })
                 )
             }
-            .background(Color.appCard)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(Color.appBorder, lineWidth: 0.5)
-            )
         }
     }
 }
@@ -252,8 +256,7 @@ struct SettingsAccentColorSection: View {
     let save: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionLabel(text: "AKZENTFARBE")
+        AppleInsetGroupedSection(title: "AKZENTFARBE") {
             AccentColorPicker(
                 selectedHex: Binding(
                     get: { p.accentColorHex },
@@ -261,12 +264,6 @@ struct SettingsAccentColorSection: View {
                 )
             )
             .padding(16)
-            .background(Color.appCard)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(Color.appBorder, lineWidth: 0.5)
-            )
         }
     }
 }
@@ -278,8 +275,7 @@ struct SettingsMeasurementsSection: View {
     let save: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionLabel(text: "MESSUNGEN")
+        AppleInsetGroupedSection(title: "MESSUNGEN") {
             VStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -303,9 +299,6 @@ struct SettingsMeasurementsSection: View {
                 }
             }
             .padding(16)
-            .background(Color.appCard)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.appBorder, lineWidth: 0.5))
         }
     }
 }
@@ -388,8 +381,7 @@ struct SettingsAccessibilitySection: View {
     let save: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionLabel(text: "BARRIEREFREIHEIT")
+        AppleInsetGroupedSection(title: "BARRIEREFREIHEIT") {
             VStack(spacing: 0) {
                 STToggleRow(
                     icon: "textformat.size.larger",
@@ -412,12 +404,6 @@ struct SettingsAccessibilitySection: View {
                     isOn: Binding(get: { p.reducedMotion }, set: { p.reducedMotion = $0; save() })
                 )
             }
-            .background(Color.appCard)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(Color.appBorder, lineWidth: 0.5)
-            )
         }
     }
 }
@@ -430,8 +416,10 @@ struct SettingsHealthKitSection: View {
     @Environment(HealthKitService.self) private var health
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionLabel(text: "APPLE HEALTH")
+        AppleInsetGroupedSection(
+            title: "APPLE HEALTH",
+            footer: "Speichert Alkoholeinheiten und Gramm reinen Alkohols pro Drink in Apple Health."
+        ) {
             VStack(spacing: 0) {
                 if health.isAvailable {
                     Toggle(isOn: Binding(
@@ -474,16 +462,6 @@ struct SettingsHealthKitSection: View {
                     .padding(.vertical, 14)
                 }
             }
-            .background(Color.appCard)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(Color.appBorder, lineWidth: 0.5)
-            )
-
-            Text("Speichert Alkoholeinheiten und Gramm reinen Alkohols pro Drink in Apple Health.")
-                .font(.appMicro)
-                .foregroundStyle(Color.appTextMuted)
         }
     }
 }
@@ -492,8 +470,10 @@ struct SettingsHealthKitSection: View {
 
 struct SettingsAboutSection: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionLabel(text: "ÜBER")
+        AppleInsetGroupedSection(
+            title: "ÜBER",
+            footer: "Diese App liefert Schätzwerte nach dem Widmark-Modell. Sie ersetzt keinen Atemtest und keine medizinische Beurteilung. Im Zweifel nicht fahren."
+        ) {
             VStack(spacing: 0) {
                 HStack {
                     Text("Version")
@@ -507,17 +487,6 @@ struct SettingsAboutSection: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
             }
-            .background(Color.appCard)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(Color.appBorder, lineWidth: 0.5)
-            )
-
-            Text("Diese App liefert Schätzwerte nach dem Widmark-Modell. Sie ersetzt keinen Atemtest und keine medizinische Beurteilung. Im Zweifel nicht fahren.")
-                .font(.appMicro)
-                .foregroundStyle(Color.appTextMuted)
-                .multilineTextAlignment(.leading)
         }
     }
 }

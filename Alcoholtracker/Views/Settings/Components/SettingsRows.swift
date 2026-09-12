@@ -283,6 +283,7 @@ struct STToggleRow: View {
             }
         }
         .tint(Color.appAccent)
+        .onChange(of: isOn) { _, _ in AppAudio.playClick() }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
     }

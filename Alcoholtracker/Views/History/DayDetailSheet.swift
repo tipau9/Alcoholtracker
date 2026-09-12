@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 // MARK: - DayDetailSheet
 //
@@ -325,15 +326,14 @@ struct DayDetailSheet: View {
             SectionLabel(text: "GETRÄNKE")
             VStack(spacing: 0) {
                 ForEach(Array(dayDrinks.enumerated()), id: \.element.id) { idx, drink in
-                    Button {
-                        editingDrink = drink
-                    } label: {
-                        DDSDrinkRow(
-                            drink: drink,
-                            isNextCalendarDay: !cal.isDate(drink.timestamp, inSameDayAs: date)
-                        )
-                    }
-                    .buttonStyle(.plain)
+                    DDSDrinkRow(
+                        drink: drink,
+                        isNextCalendarDay: !cal.isDate(drink.timestamp, inSameDayAs: date),
+                        onEdit: { editingDrink = drink },
+                        onDuplicate: { duplicateDrink(drink) },
+                        onFinish: { finishDrink(drink) },
+                        onDelete: { deleteDrink(drink) }
+                    )
                     if idx < dayDrinks.count - 1 {
                         Divider()
                             .background(Color.appBorder)
@@ -347,6 +347,7 @@ struct DayDetailSheet: View {
                 RoundedRectangle(cornerRadius: 14)
                     .strokeBorder(Color.appBorder, lineWidth: 0.5)
             )
+            .appleLichtkante(cornerRadius: 14)
         }
     }
 
@@ -420,6 +421,29 @@ struct DayDetailSheet: View {
 
     private func deleteDrink(_ drink: Drink) {
         context.delete(drink)
+        try? context.save()
+    }
+
+    private func duplicateDrink(_ drink: Drink) {
+        let copy = Drink(
+            name: drink.name,
+            volume: drink.volume,
+            abv: drink.abv,
+            calories: drink.calories,
+            iconName: drink.iconName,
+            category: drink.category,
+            timestamp: Date(),
+            templateID: drink.templateID,
+            mixerVolume: drink.mixerVolume,
+            mixerWaterContent: drink.mixerWaterContent
+        )
+        copy.drinkDurationMinutes = drink.drinkDurationMinutes
+        context.insert(copy)
+        try? context.save()
+    }
+
+    private func finishDrink(_ drink: Drink) {
+        drink.finish()
         try? context.save()
     }
 
@@ -528,6 +552,15 @@ private struct DDSDrinkRow: View {
     let drink: Drink
     // True for drinks logged after midnight that belong to this logical day.
     let isNextCalendarDay: Bool
+    let onEdit: () -> Void
+    let onDuplicate: () -> Void
+    let onFinish: () -> Void
+    let onDelete: () -> Void
+
+    // Same custom-swipe approach as Home's DrinkRowView: this list is a VStack
+    // inside a ScrollView, not a List, so .swipeActions is a no-op here.
+    @State private var offset: CGFloat = 0
+    private let threshold: CGFloat = 72
 
     private static let timeFormatter: DateFormatter = {
         let fmt = DateFormatter()
@@ -538,7 +571,7 @@ private struct DDSDrinkRow: View {
 
     private var timeLabel: String { Self.timeFormatter.string(from: drink.timestamp) }
 
-    var body: some View {
+    private var row: some View {
         HStack(spacing: 12) {
             DrinkIconView(drink: drink, size: 14)
                 .font(.system(size: 14, weight: .medium))
@@ -577,6 +610,47 @@ private struct DDSDrinkRow: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
+        .background(Color.appCard)
+        .contentShape(Rectangle())
+    }
+
+    var body: some View {
+        ZStack {
+            HStack {
+                Spacer()
+                Label("Löschen", systemImage: "trash")
+                    .font(.appCaptionBold)
+                    .foregroundStyle(Color.statusRed)
+                    .opacity(offset < -8 ? 1 : 0)
+            }
+            .padding(.horizontal, 18)
+            .background(Color.statusRed.opacity(offset < -8 ? 0.14 : 0))
+
+            row
+                .offset(x: offset)
+                .onTapGesture { onEdit() }
+                .contextMenu {
+                    Button { onEdit() } label: { Label("Bearbeiten", systemImage: "pencil") }
+                    Button { onDuplicate() } label: { Label("Nochmal trinken", systemImage: "plus.square.on.square") }
+                    Button { onFinish() } label: { Label("Ausgetrunken", systemImage: "checkmark.circle") }
+                    Button(role: .destructive) { onDelete() } label: { Label("Löschen", systemImage: "trash") }
+                }
+                .gesture(
+                    DragGesture(minimumDistance: 20)
+                        .onChanged { value in
+                            guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                            offset = min(0, max(-110, value.translation.width))
+                        }
+                        .onEnded { value in
+                            if value.translation.width < -threshold {
+                                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                                AppAudio.playClick()
+                                onDelete()
+                            }
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { offset = 0 }
+                        }
+                )
+        }
     }
 }
 

@@ -2615,6 +2615,7 @@ private struct DrinkRowView: View {
             RoundedRectangle(cornerRadius: 14)
                 .strokeBorder(Color.appBorder, lineWidth: 0.5)
         )
+        .appleLichtkante(cornerRadius: 14)
     }
 
     var body: some View {
@@ -2640,6 +2641,12 @@ private struct DrinkRowView: View {
                 .offset(x: offset)
                 .contentShape(RoundedRectangle(cornerRadius: 14))
                 .onTapGesture { onEdit() }
+                .contextMenu {
+                    Button { onEdit() } label: { Label("Bearbeiten", systemImage: "pencil") }
+                    Button { onDuplicate() } label: { Label("Nochmal trinken", systemImage: "plus.square.on.square") }
+                    Button { onFinish() } label: { Label("Ausgetrunken", systemImage: "checkmark.circle") }
+                    Button(role: .destructive) { onDelete() } label: { Label("Löschen", systemImage: "trash") }
+                }
                 .gesture(
                     DragGesture(minimumDistance: 20)
                         .onChanged { value in
@@ -2650,9 +2657,11 @@ private struct DrinkRowView: View {
                             let dx = value.translation.width
                             if dx > threshold {
                                 UINotificationFeedbackGenerator().notificationOccurred(.success)
+                                AppAudio.playClick()
                                 onDuplicate()
                             } else if dx < -threshold {
                                 UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                                AppAudio.playClick()
                                 onDelete()
                             }
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { offset = 0 }

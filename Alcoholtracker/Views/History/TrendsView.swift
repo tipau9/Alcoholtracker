@@ -136,6 +136,7 @@ struct TrendsView: View {
                 }
             }
             .pickerStyle(.segmented)
+            .onChange(of: period) { _, _ in AppAudio.playClick() }
         }
     }
 

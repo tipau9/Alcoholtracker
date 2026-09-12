@@ -347,6 +347,7 @@ final class SessionViewModel {
         pushBACToWidget()
         rescheduleNotifications()
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        AppAudio.playClick()
         if profile?.healthKitEnabled == true {
             Task { await healthKit?.logDrink(drink) }
         }
