@@ -78,7 +78,22 @@ object AppText {
     val captionBold = TextStyle(fontFamily = AppSans, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     /** .appMicro / Font.caption2 */
     val micro = TextStyle(fontFamily = AppSans, fontSize = 11.sp)
+
+    /** .monospacedDigit() semantic variants for numbers, timers, and BAC readouts */
+    val headlineMonospaced = headline.copy(fontFeatureSettings = "tnum")
+    val titleMonospaced = title.copy(fontFeatureSettings = "tnum")
+    val bodyMonospaced = body.copy(fontFeatureSettings = "tnum")
+    val bodyBoldMonospaced = bodyBold.copy(fontFeatureSettings = "tnum")
+    val captionMonospaced = caption.copy(fontFeatureSettings = "tnum")
+    val captionBoldMonospaced = captionBold.copy(fontFeatureSettings = "tnum")
+    val microMonospaced = micro.copy(fontFeatureSettings = "tnum")
 }
+
+/**
+ * 1:1 mirror of SwiftUI's .monospacedDigit() (Font.monospacedDigit()).
+ * Enables OpenType tabular figures ("tnum") on any TextStyle so changing numerals don't jitter horizontally.
+ */
+fun TextStyle.monospacedDigit(): TextStyle = copy(fontFeatureSettings = "tnum")
 
 /**
  * .monospacedDigit(): SF Pro's tabular figures, which is what iOS uses on the

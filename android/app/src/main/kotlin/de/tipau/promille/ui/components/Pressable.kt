@@ -1,8 +1,8 @@
 package de.tipau.promille.ui.components
 
-import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -16,6 +16,7 @@ import de.tipau.promille.LocalReducedMotion
 /**
  * 1:1 mirror of iOS PressableButtonStyle (Theme/Motion.swift:47).
  * Applies subtle scale-down (0.97) and opacity (0.85) feedback on touch press.
+ * Uses asymmetric spring physics: instant response on touch-down, elastic bounce on release.
  * Bypasses scale animation when reducedMotion is enabled.
  */
 @Composable
@@ -30,13 +31,21 @@ fun Modifier.pressableEffect(
 
     val currentScale by animateFloatAsState(
         targetValue = if (isPressed && enabled && !reducedMotion) scale else 1f,
-        animationSpec = tween(durationMillis = 120, easing = FastOutSlowInEasing),
+        animationSpec = if (isPressed) {
+            spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessHigh)
+        } else {
+            spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMediumLow)
+        },
         label = "pressableScale"
     )
 
     val currentAlpha by animateFloatAsState(
         targetValue = if (isPressed && enabled && !reducedMotion) pressedAlpha else 1f,
-        animationSpec = tween(durationMillis = 120, easing = FastOutSlowInEasing),
+        animationSpec = if (isPressed) {
+            spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessHigh)
+        } else {
+            spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+        },
         label = "pressableAlpha"
     )
 

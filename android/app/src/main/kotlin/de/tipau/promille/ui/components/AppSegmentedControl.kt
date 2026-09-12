@@ -1,8 +1,8 @@
 package de.tipau.promille.ui.components
 
-import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -20,7 +20,7 @@ import de.tipau.promille.LocalReducedMotion
 
 /**
  * 1:1 mirror of standard iOS Segmented Control (Picker.pickerStyle(.segmented), AdminView.swift:260).
- * Features 10dp outer rounded rect, 3dp inset, sliding pill indicator with .pressable feedback.
+ * Features 10dp outer rounded rect, 3dp inset, sliding pill indicator with spring physics and .pressable feedback.
  */
 @Composable
 fun <T> AppSegmentedControl(
@@ -47,7 +47,11 @@ fun <T> AppSegmentedControl(
 
         val animatedOffset by animateFloatAsState(
             targetValue = selectedIndex.toFloat(),
-            animationSpec = if (reducedMotion) tween(durationMillis = 0) else tween(durationMillis = 200, easing = FastOutSlowInEasing),
+            animationSpec = if (reducedMotion) {
+                spring(stiffness = Spring.StiffnessHigh)
+            } else {
+                spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
+            },
             label = "segmentedIndicatorOffset"
         )
 

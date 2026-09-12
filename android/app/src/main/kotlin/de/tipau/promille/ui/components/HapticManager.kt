@@ -50,7 +50,13 @@ class HapticManager(
     /** UIImpactFeedbackGenerator(style: .light) */
     fun light() {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && vibrator?.hasVibrator() == true) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && vibrator?.hasVibrator() == true &&
+                vibrator?.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_TICK) == true) {
+                val effect = VibrationEffect.startComposition()
+                    .addPrimitive(VibrationEffect.Composition.PRIMITIVE_TICK, 0.7f)
+                    .compose()
+                vibrateEffect(effect)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && vibrator?.hasVibrator() == true) {
                 vibrateEffect(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
             } else {
                 composeHaptics?.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -63,7 +69,13 @@ class HapticManager(
     /** UIImpactFeedbackGenerator(style: .medium) */
     fun medium() {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && vibrator?.hasVibrator() == true) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && vibrator?.hasVibrator() == true &&
+                vibrator?.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_CLICK) == true) {
+                val effect = VibrationEffect.startComposition()
+                    .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, 0.9f)
+                    .compose()
+                vibrateEffect(effect)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && vibrator?.hasVibrator() == true) {
                 vibrateEffect(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
             } else {
                 composeHaptics?.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -89,7 +101,14 @@ class HapticManager(
     /** UINotificationFeedbackGenerator().notificationOccurred(.success) */
     fun success() {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && vibrator?.hasVibrator() == true) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && vibrator?.hasVibrator() == true &&
+                vibrator?.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_CLICK, VibrationEffect.Composition.PRIMITIVE_LOW_TICK) == true) {
+                val effect = VibrationEffect.startComposition()
+                    .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, 0.8f)
+                    .addPrimitive(VibrationEffect.Composition.PRIMITIVE_LOW_TICK, 0.5f, 75)
+                    .compose()
+                vibrateEffect(effect)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && vibrator?.hasVibrator() == true) {
                 val effect = VibrationEffect.startComposition()
                     .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, 0.7f)
                     .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, 1.0f, 100)
@@ -147,7 +166,13 @@ class HapticManager(
     /** UISelectionFeedbackGenerator().selectionChanged() */
     fun selection() {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && vibrator?.hasVibrator() == true) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && vibrator?.hasVibrator() == true &&
+                vibrator?.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_LOW_TICK) == true) {
+                val effect = VibrationEffect.startComposition()
+                    .addPrimitive(VibrationEffect.Composition.PRIMITIVE_LOW_TICK, 0.45f)
+                    .compose()
+                vibrateEffect(effect)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && vibrator?.hasVibrator() == true) {
                 vibrateEffect(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
             } else {
                 composeHaptics?.performHapticFeedback(HapticFeedbackType.TextHandleMove)
