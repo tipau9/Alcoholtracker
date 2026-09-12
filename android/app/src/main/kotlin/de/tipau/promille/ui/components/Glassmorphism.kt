@@ -1,8 +1,5 @@
 package de.tipau.promille.ui.components
 
-import android.graphics.RenderEffect
-import android.graphics.Shader
-import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,15 +8,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.asComposeRenderEffect
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import de.tipau.promille.AppColors
 
 /**
  * 1:1 mirror of SwiftUI's .background(.ultraThinMaterial) with subtle hair-thin border.
- * On Android 12+ (API 31+), applies a hardware-accelerated RenderEffect blur with translucent tinting
- * and a 0.5dp specular highlight border.
+ * Real backdrop blur (blurring what's drawn *behind* this node) needs
+ * RenderEffect.createBackdropBlurEffect, only in the API 35 android.jar; this project's
+ * compileSdk is 34 (that platform isn't installed here), so it can't be called yet.
+ * `createBlurEffect` was tried instead but blurs the node's *own* content, which turned
+ * this modifier's own icon/text children (e.g. the tab bar) into unreadable blobs. Until
+ * compileSdk moves to 35+, stay translucency-only rather than reintroduce that bug.
  */
 fun Modifier.appleGlass(
     shape: Shape = RoundedCornerShape(20.dp),
@@ -28,17 +27,6 @@ fun Modifier.appleGlass(
     blurRadius: Float = 25f
 ): Modifier = this
     .clip(shape)
-    .then(
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            Modifier.graphicsLayer {
-                renderEffect = RenderEffect
-                    .createBlurEffect(blurRadius, blurRadius, Shader.TileMode.CLAMP)
-                    .asComposeRenderEffect()
-            }
-        } else {
-            Modifier
-        }
-    )
     .background(
         Brush.verticalGradient(
             listOf(

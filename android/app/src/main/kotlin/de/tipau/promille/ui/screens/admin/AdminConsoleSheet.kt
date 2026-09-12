@@ -93,7 +93,7 @@ fun AdminScreen(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 20.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 36.dp),
+        contentPadding = PaddingValues(top = 16.dp, bottom = 36.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {

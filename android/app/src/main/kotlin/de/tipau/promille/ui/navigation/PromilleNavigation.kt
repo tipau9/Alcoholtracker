@@ -11,6 +11,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -25,6 +26,12 @@ import de.tipau.promille.ui.viewmodels.SettingsViewModel
 import de.tipau.promille.ui.components.CardStackController
 import de.tipau.promille.ui.components.CardStackContainer
 import de.tipau.promille.ui.components.LocalCardStackController
+import de.tipau.promille.ui.components.appleGlass
+
+// Bottom bar now overlays screen content (for appleGlass's blur-through) instead of
+// reserving its own row, so scrollable screens need this to keep their last item clear
+// of the bar. Read via LocalBottomBarInset.current in each tab's content padding.
+val LocalBottomBarInset = staticCompositionLocalOf { 0.dp }
 
 // Labels/icons mirror ContentView.swift's MainTabView tabItems 1:1, down to the
 // SF Symbol behind each one (ContentView.swift:42-63). The drawables come from
@@ -93,18 +100,23 @@ fun PromilleNavigation(
     }
 
     val cardStackController = remember { CardStackController() }
+    // 49.dp matches the Row's fixed content height below; navigationBarsPadding() adds
+    // the system inset on top of that inside the Row, so mirror both here.
+    val bottomBarInset = 49.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    CompositionLocalProvider(LocalCardStackController provides cardStackController) {
+    CompositionLocalProvider(
+        LocalCardStackController provides cardStackController,
+        LocalBottomBarInset provides bottomBarInset
+    ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(AppColors.background)
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
                 CardStackContainer(
                     isSheetOpen = cardStackController.isSheetActive,
                     modifier = Modifier
-                        .weight(1f)
+                        .fillMaxSize()
                         .statusBarsPadding()
                 ) {
                     // iOS TabView keeps every tab alive, so per-tab state (scroll offset,
@@ -153,8 +165,11 @@ fun PromilleNavigation(
                 }
 
                 // Bottom Navigation Bar, matching ContentView.swift's MainTabView tabs 1:1.
+                // Overlays the content instead of sitting in a Column below it, so the
+                // scrolled screen is actually behind the bar for appleGlass's blur to see.
                 Box(
                     modifier = Modifier
+                        .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .background(AppColors.border)
                         .padding(top = 0.5.dp)
@@ -167,7 +182,7 @@ fun PromilleNavigation(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(AppColors.card)
+                        .appleGlass(shape = RectangleShape, backgroundColor = AppColors.card)
                         .navigationBarsPadding()
                         .height(49.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -212,7 +227,6 @@ fun PromilleNavigation(
                         )
                     }
                 }
-            }
             }
         }
     }

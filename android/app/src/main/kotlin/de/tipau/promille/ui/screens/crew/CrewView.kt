@@ -373,7 +373,7 @@ fun CrewView(
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 20.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // CRAuthBanner (matches iOS CrewView.swift 1:1)

@@ -408,7 +408,7 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
-                .padding(top = 20.dp, bottom = 40.dp),
+                .padding(top = 20.dp, bottom = 40.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current),
             verticalArrangement = Arrangement.spacedBy(28.dp)
         ) {
             // PROFIL

@@ -251,7 +251,7 @@ fun HistoryScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 40.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 40.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // Weekday Header

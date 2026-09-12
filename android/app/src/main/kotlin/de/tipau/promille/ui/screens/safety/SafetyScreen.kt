@@ -111,7 +111,12 @@ fun SafetyScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 20.dp),
+                .padding(
+                    start = 20.dp,
+                    end = 20.dp,
+                    top = 20.dp,
+                    bottom = 20.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current
+                ),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // SFBACCard matching iOS SFBACCard

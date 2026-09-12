@@ -388,7 +388,7 @@ fun SessionScreen(
         } else {
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 110.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 110.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // Top Bar
