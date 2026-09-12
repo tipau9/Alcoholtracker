@@ -289,29 +289,35 @@ final class SessionViewModel {
         startTimer()
     }
 
-    // Drinks added via the Lock Screen Widget or Watch are written to UserDefaults.
-    // Pick them up and persist to SwiftData the next time the app is active.
+    // Drinks/water added via the Lock Screen Widget, Live Activity or Watch are
+    // written to UserDefaults. Pick them up and persist the next time the app is active.
     private func consumePendingWidgetDrinks() {
         guard let context = modelContext else { return }
         let pending = SharedStateStore.readPendingDrinks()
-        guard !pending.isEmpty else { return }
-        for p in pending {
-            let drink = Drink(
-                name: p.name,
-                volume: p.volume,
-                abv: p.abv,
-                calories: p.calories,
-                iconName: p.iconName,
-                category: DrinkCategory(rawValue: p.categoryRaw) ?? .other,
-                timestamp: p.timestamp
-            )
-            context.insert(drink)
+        if !pending.isEmpty {
+            for p in pending {
+                let drink = Drink(
+                    name: p.name,
+                    volume: p.volume,
+                    abv: p.abv,
+                    calories: p.calories,
+                    iconName: p.iconName,
+                    category: DrinkCategory(rawValue: p.categoryRaw) ?? .other,
+                    timestamp: p.timestamp
+                )
+                context.insert(drink)
+            }
+            do {
+                try context.save()
+                SharedStateStore.clearPendingDrinks()
+            } catch {
+                context.rollback()
+            }
         }
-        do {
-            try context.save()
-            SharedStateStore.clearPendingDrinks()
-        } catch {
-            context.rollback()
+
+        let pendingWater = SharedStateStore.consumePendingWaterGlasses()
+        for _ in 0..<pendingWater {
+            WaterLog.addGlassToday()
         }
     }
 

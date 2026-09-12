@@ -1,6 +1,47 @@
 import ActivityKit
+import AppIntents
 import SwiftUI
 import WidgetKit
+
+// MARK: - Lock Screen quick-add intents
+//
+// Buttons embedded directly in a Live Activity need LiveActivityIntent (iOS 16.2+),
+// not a plain AppIntent - that's what accessory widgets like PromilleLockScreenWidget
+// use. Both funnel through the same pending-queue mechanism in SharedStateStore so the
+// main app can commit them to SwiftData / WaterLog next time it's active, mirroring the
+// existing "Letzten Drink nochmal" button.
+
+struct AddWaterGlassIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Wasser hinzufügen"
+    static var description = IntentDescription("Ein Glas Wasser vermerken")
+
+    func perform() async throws -> some IntentResult {
+        SharedStateStore.addPendingWaterGlass()
+        WidgetCenter.shared.reloadAllTimelines()
+        return .result()
+    }
+}
+
+struct AddQuickBeerIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Bier hinzufügen"
+    static var description = IntentDescription("Ein Bier (0,5 l) hinzufügen")
+
+    func perform() async throws -> some IntentResult {
+        let pending = PendingWidgetDrink(
+            id: UUID(),
+            name: "Bier (0,5 l)",
+            volume: 500,
+            abv: 4.9,
+            calories: 215,
+            iconName: "mug.fill",
+            categoryRaw: "beer",
+            timestamp: Date()
+        )
+        SharedStateStore.appendPendingDrink(pending)
+        WidgetCenter.shared.reloadAllTimelines()
+        return .result()
+    }
+}
 
 // MARK: - Lock Screen / notification banner view
 
@@ -10,56 +51,99 @@ struct LALockScreenView: View {
     private var bac: Double { context.state.bac }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 16) {
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: 16) {
 
-            // Left column: big BAC + status label
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .top, spacing: 2) {
-                    Text(laFormatBAC(bac))
-                        .font(.system(size: 40, weight: .light, design: .serif))
+                // Left column: big BAC + status label
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .top, spacing: 2) {
+                        Text(laFormatBAC(bac))
+                            .font(.system(size: 40, weight: .light, design: .serif))
+                            .foregroundStyle(laStatusColor(bac))
+                            .monospacedDigit()
+                        Text("‰")
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundStyle(laStatusColor(bac))
+                            .padding(.top, 7)
+                    }
+                    Text(laStatusLabel(bac))
+                        .font(.system(size: 9, weight: .semibold))
+                        .tracking(1.5)
                         .foregroundStyle(laStatusColor(bac))
-                        .monospacedDigit()
-                    Text("‰")
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundStyle(laStatusColor(bac))
-                        .padding(.top, 7)
+                    if let clock = laSoberClock(context.state.soberAt) {
+                        Text("nüchtern ~ \(clock)")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Color(red: 0.659, green: 0.620, blue: 0.537))
+                    }
                 }
-                Text(laStatusLabel(bac))
-                    .font(.system(size: 9, weight: .semibold))
-                    .tracking(1.5)
-                    .foregroundStyle(laStatusColor(bac))
-                if let clock = laSoberClock(context.state.soberAt) {
-                    Text("nüchtern ~ \(clock)")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Color(red: 0.659, green: 0.620, blue: 0.537))
+
+                Rectangle()
+                    .fill(Color(red: 0.165, green: 0.129, blue: 0.110))
+                    .frame(width: 0.5)
+                    .padding(.vertical, 4)
+
+                // Right column: two countdown rows
+                VStack(alignment: .leading, spacing: 12) {
+                    LATimerRow(
+                        icon: "checkmark.circle.fill",
+                        label: "Nüchtern",
+                        value: laCountdownTo(context.state.soberAt),
+                        color: Color(red: 0.420, green: 0.608, blue: 0.431)
+                    )
+                    LATimerRow(
+                        icon: "car.fill",
+                        label: "Grenzwert",
+                        value: laCountdownTo(context.state.driveReadyAt),
+                        color: Color(red: 0.788, green: 0.502, blue: 0.184)
+                    )
                 }
+
+                Spacer(minLength: 0)
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 14)
+            .padding(.bottom, 10)
 
             Rectangle()
                 .fill(Color(red: 0.165, green: 0.129, blue: 0.110))
-                .frame(width: 0.5)
-                .padding(.vertical, 4)
+                .frame(height: 0.5)
 
-            // Right column: two countdown rows
-            VStack(alignment: .leading, spacing: 12) {
-                LATimerRow(
-                    icon: "checkmark.circle.fill",
-                    label: "Nüchtern",
-                    value: laCountdownTo(context.state.soberAt),
-                    color: Color(red: 0.420, green: 0.608, blue: 0.431)
-                )
-                LATimerRow(
-                    icon: "car.fill",
-                    label: "Grenzwert",
-                    value: laCountdownTo(context.state.driveReadyAt),
-                    color: Color(red: 0.788, green: 0.502, blue: 0.184)
-                )
+            HStack(spacing: 10) {
+                Button(intent: AddWaterGlassIntent()) {
+                    LAQuickAddLabel(icon: "waterbottle.fill", text: "+ Wasser")
+                }
+                .buttonStyle(.plain)
+
+                Button(intent: AddQuickBeerIntent()) {
+                    LAQuickAddLabel(icon: "mug.fill", text: "+ Bier")
+                }
+                .buttonStyle(.plain)
             }
-
-            Spacer(minLength: 0)
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .padding(.bottom, 12)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+    }
+}
+
+private struct LAQuickAddLabel: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .medium))
+            Text(text)
+                .font(.system(size: 13, weight: .semibold))
+        }
+        .foregroundStyle(Color(red: 0.788, green: 0.502, blue: 0.184))
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(red: 0.788, green: 0.502, blue: 0.184).opacity(0.14))
+        )
     }
 }
 

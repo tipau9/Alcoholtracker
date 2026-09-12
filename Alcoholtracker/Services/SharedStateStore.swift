@@ -196,4 +196,23 @@ nonisolated enum SharedStateStore {
     static func clearPendingDrinks() {
         defaults.removeObject(forKey: pendingKey)
     }
+
+    // MARK: Pending water glasses (added from the Live Activity's lock screen button)
+    //
+    // WaterLog itself lives in UserDefaults.standard, not the App Group suite, so
+    // the widget extension can't call it directly. It queues a count here instead;
+    // SessionViewModel drains it into WaterLog the next time the app is active,
+    // mirroring the PendingWidgetDrink queue above.
+
+    private static let pendingWaterKey = "pendingWaterGlasses"
+
+    static func addPendingWaterGlass() {
+        defaults.set(defaults.integer(forKey: pendingWaterKey) + 1, forKey: pendingWaterKey)
+    }
+
+    static func consumePendingWaterGlasses() -> Int {
+        let count = defaults.integer(forKey: pendingWaterKey)
+        if count > 0 { defaults.removeObject(forKey: pendingWaterKey) }
+        return count
+    }
 }
