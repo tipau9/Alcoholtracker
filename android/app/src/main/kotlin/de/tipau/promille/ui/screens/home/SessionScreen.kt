@@ -267,6 +267,9 @@ fun SessionScreen(
     var showVomitDialog by remember { mutableStateOf(false) }
     var editingDrink by remember { mutableStateOf<Drink?>(null) }
 
+    val isAnySheetOpen = showQuickAdd || showRidePicker || showFullScreenChart || showHomeEditSheet || showUpdateSheet || amountTemplate != null || showMealSheet || editingDrink != null
+    de.tipau.promille.ui.components.CardStackSheetEffect(isAnySheetOpen)
+
     val vomits by viewModel.rawVomits.collectAsState()
 
     if (showMealSheet) {

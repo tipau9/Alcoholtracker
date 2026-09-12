@@ -22,6 +22,11 @@ import de.tipau.promille.ui.screens.achievements.AchievementsScreen
 import de.tipau.promille.ui.screens.admin.AdminScreen
 import de.tipau.promille.ui.screens.settings.SettingsScreen
 import de.tipau.promille.ui.viewmodels.SettingsViewModel
+import de.tipau.promille.ui.components.CardStackController
+import de.tipau.promille.ui.components.CardStackContainer
+import de.tipau.promille.ui.components.LocalCardStackController
+import de.tipau.promille.ui.components.appleGlass
+import androidx.compose.ui.graphics.RectangleShape
 
 // Labels/icons mirror ContentView.swift's MainTabView tabItems 1:1, down to the
 // SF Symbol behind each one (ContentView.swift:42-63). The drawables come from
@@ -89,80 +94,82 @@ fun PromilleNavigation(
         SettingsViewModel(container.userProfileRepository, container.achievementService)
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AppColors.background)
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .statusBarsPadding()
-            ) {
-                // iOS TabView keeps every tab alive, so per-tab state (scroll offset,
-                // the chart's play-once reveal) survives a switch. `when` disposes the
-                // branch it leaves, so hold that state here instead.
-                stateHolder.SaveableStateProvider(selectedTab) {
-                when (selectedTab) {
-                    Tab.HOME -> {
-                        de.tipau.promille.ui.screens.home.SessionScreen(
-                            viewModel = sessionViewModel,
-                            templateRepository = container.drinkTemplateRepository,
-                            container = container,
-                            onOpenCrew = { selectedTab = Tab.CREW }
-                        )
-                    }
-                    Tab.HISTORY -> {
-                        de.tipau.promille.ui.screens.history.HistoryScreen(
-                            viewModel = historyViewModel,
-                            dayNoteRepository = container.dayNoteRepository,
-                            drinkRepository = container.drinkRepository,
-                            userProfileRepository = container.userProfileRepository,
-                            supabase = container.supabase,
-                            sessionEventRepository = container.sessionEventRepository,
-                            waterLog = container.waterLog
-                        )
-                    }
-                    Tab.CREW -> {
-                        de.tipau.promille.ui.screens.crew.CrewView(container = container)
-                    }
-                    Tab.SAFETY -> {
-                        de.tipau.promille.ui.screens.safety.SafetyScreen(viewModel = safetyViewModel)
-                    }
-                    Tab.SETTINGS -> {
-                        SettingsScreen(
-                            viewModel = settingsViewModel,
-                            drinkRepository = container.drinkRepository,
-                            appContainer = container,
-                            onNavigateToAchievements = { showAchievements = true }
-                        )
-                    }
-                    Tab.ADMIN -> {
-                        de.tipau.promille.ui.screens.admin.AdminScreen(container = container)
-                    }
-                }
-                }
-            }
+    val cardStackController = remember { CardStackController() }
 
-            // Bottom Navigation Bar, matching ContentView.swift's MainTabView tabs.
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(AppColors.border)
-                    .padding(top = 0.5.dp)
-            ) {
-            // iOS: ContentView.swift:35 never overrides UITabBarAppearance, so this
-            // matches UIKit's standard tab bar metrics: 49pt content height, 25pt
-            // glyph, 10pt label. Keep the height fixed so a taller icon or a scaled
-            // label can't grow the bar past the system one.
-            val haptics = de.tipau.promille.ui.components.rememberHapticManager()
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(AppColors.card)
-                    .navigationBarsPadding()
-                    .height(49.dp),
+    CompositionLocalProvider(LocalCardStackController provides cardStackController) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(AppColors.background)
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                CardStackContainer(
+                    isSheetOpen = cardStackController.isSheetActive,
+                    modifier = Modifier
+                        .weight(1f)
+                        .statusBarsPadding()
+                ) {
+                    // iOS TabView keeps every tab alive, so per-tab state (scroll offset,
+                    // the chart's play-once reveal) survives a switch. `when` disposes the
+                    // branch it leaves, so hold that state here instead.
+                    stateHolder.SaveableStateProvider(selectedTab) {
+                    when (selectedTab) {
+                        Tab.HOME -> {
+                            de.tipau.promille.ui.screens.home.SessionScreen(
+                                viewModel = sessionViewModel,
+                                templateRepository = container.drinkTemplateRepository,
+                                container = container,
+                                onOpenCrew = { selectedTab = Tab.CREW }
+                            )
+                        }
+                        Tab.HISTORY -> {
+                            de.tipau.promille.ui.screens.history.HistoryScreen(
+                                viewModel = historyViewModel,
+                                dayNoteRepository = container.dayNoteRepository,
+                                drinkRepository = container.drinkRepository,
+                                userProfileRepository = container.userProfileRepository,
+                                supabase = container.supabase,
+                                sessionEventRepository = container.sessionEventRepository,
+                                waterLog = container.waterLog
+                            )
+                        }
+                        Tab.CREW -> {
+                            de.tipau.promille.ui.screens.crew.CrewView(container = container)
+                        }
+                        Tab.SAFETY -> {
+                            de.tipau.promille.ui.screens.safety.SafetyScreen(viewModel = safetyViewModel)
+                        }
+                        Tab.SETTINGS -> {
+                            SettingsScreen(
+                                viewModel = settingsViewModel,
+                                drinkRepository = container.drinkRepository,
+                                appContainer = container,
+                                onNavigateToAchievements = { showAchievements = true }
+                            )
+                        }
+                        Tab.ADMIN -> {
+                            de.tipau.promille.ui.screens.admin.AdminScreen(container = container)
+                        }
+                    }
+                    }
+                }
+
+                // Bottom Navigation Bar, matching ContentView.swift's MainTabView tabs with Apple Glass styling.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .appleGlass(shape = RectangleShape, blurRadius = 25f)
+                ) {
+                // iOS: ContentView.swift:35 never overrides UITabBarAppearance, so this
+                // matches UIKit's standard tab bar metrics: 49pt content height, 25pt
+                // glyph, 10pt label. Keep the height fixed so a taller icon or a scaled
+                // label can't grow the bar past the system one.
+                val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .height(49.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -217,5 +224,6 @@ fun PromilleNavigation(
             onDismiss = { showAchievements = false },
             onDeleteAchievement = { application.container.achievementService.delete(it) }
         )
+    }
     }
 }

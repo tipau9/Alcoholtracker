@@ -62,6 +62,9 @@ fun HistoryScreen(
     var selectedDayStats by remember { mutableStateOf<DayStats?>(null) }
     var showTrends by remember { mutableStateOf(false) }
 
+    val isAnySheetOpen = showTrends || selectedDayStats != null
+    de.tipau.promille.ui.components.CardStackSheetEffect(isAnySheetOpen)
+
     val allDrinks by (drinkRepository?.getAllDrinksSorted() ?: kotlinx.coroutines.flow.flowOf(emptyList()))
         .collectAsState(initial = emptyList())
     val allNotes by dayNoteRepository.getNotesBetween("0000-01-01", "9999-12-31")

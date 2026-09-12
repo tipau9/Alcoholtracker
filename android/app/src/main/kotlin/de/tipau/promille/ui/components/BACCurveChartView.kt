@@ -59,6 +59,7 @@ fun BACCurveChartView(
     var showFullDay by remember { mutableStateOf(false) }
     var scrubbedPoint by remember { mutableStateOf<CurvePoint?>(null) }
     val textMeasurer = rememberTextMeasurer()
+    val haptics = rememberHapticManager()
 
     val timeFormatter = remember {
         DateTimeFormatter.ofPattern("HH:mm", Locale.GERMAN).withZone(ZoneId.systemDefault())
@@ -198,7 +199,11 @@ fun BACCurveChartView(
                                 onTap = { offset ->
                                     val fraction = (offset.x / size.width).coerceIn(0f, 1f)
                                     val targetEpoch = startTime + ((endTime - startTime) * fraction).toLong()
-                                    scrubbedPoint = plotPoints.minByOrNull { kotlin.math.abs(it.epochSeconds - targetEpoch) }
+                                    val closest = plotPoints.minByOrNull { kotlin.math.abs(it.epochSeconds - targetEpoch) }
+                                    if (closest != null && closest.epochSeconds != scrubbedPoint?.epochSeconds) {
+                                        haptics.selection()
+                                        scrubbedPoint = closest
+                                    }
                                 }
                             )
                         }
@@ -207,9 +212,14 @@ fun BACCurveChartView(
                                 onDragEnd = { scrubbedPoint = null },
                                 onDragCancel = { scrubbedPoint = null },
                                 onDrag = { change, _ ->
+                                    change.consume()
                                     val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
                                     val targetEpoch = startTime + ((endTime - startTime) * fraction).toLong()
-                                    scrubbedPoint = plotPoints.minByOrNull { kotlin.math.abs(it.epochSeconds - targetEpoch) }
+                                    val closest = plotPoints.minByOrNull { kotlin.math.abs(it.epochSeconds - targetEpoch) }
+                                    if (closest != null && closest.epochSeconds != scrubbedPoint?.epochSeconds) {
+                                        haptics.selection()
+                                        scrubbedPoint = closest
+                                    }
                                 }
                             )
                         }
