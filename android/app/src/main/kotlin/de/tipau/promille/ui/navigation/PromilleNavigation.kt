@@ -25,8 +25,6 @@ import de.tipau.promille.ui.viewmodels.SettingsViewModel
 import de.tipau.promille.ui.components.CardStackController
 import de.tipau.promille.ui.components.CardStackContainer
 import de.tipau.promille.ui.components.LocalCardStackController
-import de.tipau.promille.ui.components.appleGlass
-import androidx.compose.ui.graphics.RectangleShape
 
 // Labels/icons mirror ContentView.swift's MainTabView tabItems 1:1, down to the
 // SF Symbol behind each one (ContentView.swift:42-63). The drawables come from
@@ -154,11 +152,12 @@ fun PromilleNavigation(
                     }
                 }
 
-                // Bottom Navigation Bar, matching ContentView.swift's MainTabView tabs with Apple Glass styling.
+                // Bottom Navigation Bar, matching ContentView.swift's MainTabView tabs 1:1.
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .appleGlass(shape = RectangleShape, blurRadius = 25f)
+                        .background(AppColors.border)
+                        .padding(top = 0.5.dp)
                 ) {
                 // iOS: ContentView.swift:35 never overrides UITabBarAppearance, so this
                 // matches UIKit's standard tab bar metrics: 49pt content height, 25pt
@@ -168,6 +167,7 @@ fun PromilleNavigation(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .background(AppColors.card)
                         .navigationBarsPadding()
                         .height(49.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
