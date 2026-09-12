@@ -44,6 +44,7 @@ import java.util.Locale
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import de.tipau.promille.bac.permilleString
+import de.tipau.promille.ui.components.AppleSwipeRow
 
 private enum class DayMoodOption(val raw: Int, val emoji: String, val label: String, val iconRes: Int) {
     NEUTRAL(0, "😐", "Kein Urteil", R.drawable.ic_mood_neutral),
@@ -685,111 +686,149 @@ private fun DayDetailDrinkRow(
         dt.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm", Locale.GERMAN))
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = { onEdit?.invoke() },
-                onLongClick = { if (onDelete != null) menuExpanded = true }
-            )
-            .padding(horizontal = 14.dp, vertical = 12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+    val rowContent = @Composable {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = { onEdit?.invoke() },
+                    onLongClick = { if (onDelete != null || onEdit != null) menuExpanded = true }
+                )
+                .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(9.dp))
-                    .background(AppColors.accent.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = AppIcons.Drink,
-                    contentDescription = null,
-                    tint = AppColors.accent,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = drink.name,
-                    color = AppColors.text,
-                    style = de.tipau.promille.AppText.body
-                )
-                Text(
-                    text = String.format(
-                        Locale.GERMANY,
-                        "%.0f ml · %.1f %%",
-                        drink.volumeML,
-                        drink.abv
-                    ),
-                    color = AppColors.textDim,
-                    style = de.tipau.promille.AppText.micro
-                )
-            }
-
-            // Timestamp + next-day indicator + ChevronRight (iOS DDSDrinkRow parity)
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(AppColors.accent.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = AppIcons.Drink,
+                        contentDescription = null,
+                        tint = AppColors.accent,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = drink.name,
+                        color = AppColors.text,
+                        style = de.tipau.promille.AppText.body
+                    )
+                    Text(
+                        text = String.format(
+                            Locale.GERMANY,
+                            "%.0f ml · %.1f %%",
+                            drink.volumeML,
+                            drink.abv
+                        ),
+                        color = AppColors.textDim,
+                        style = de.tipau.promille.AppText.micro
+                    )
+                }
+
+                // Timestamp + next-day indicator + ChevronRight (iOS DDSDrinkRow parity)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text(
-                        text = timeLabel,
-                        color = AppColors.textMuted,
-                        style = de.tipau.promille.AppText.micro.merge(de.tipau.promille.TabularFigures)
-                    )
-                    if (isNextCalendarDay) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
                         Text(
-                            text = "+1",
-                            color = AppColors.accent,
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.SemiBold
+                            text = timeLabel,
+                            color = AppColors.textMuted,
+                            style = de.tipau.promille.AppText.micro.merge(de.tipau.promille.TabularFigures)
+                        )
+                        if (isNextCalendarDay) {
+                            Text(
+                                text = "+1",
+                                color = AppColors.accent,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                    Icon(
+                        painter = AppIcons.ChevronRight,
+                        contentDescription = null,
+                        tint = AppColors.textMuted,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
+            }
+
+            if (onDelete != null || onEdit != null) {
+                de.tipau.promille.ui.components.AppDropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false }
+                ) {
+                    if (onEdit != null) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "Bearbeiten",
+                                    color = AppColors.text,
+                                    style = de.tipau.promille.AppText.body
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    painter = AppIcons.Pencil,
+                                    contentDescription = null,
+                                    tint = AppColors.text,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                onEdit()
+                            }
+                        )
+                    }
+                    if (onDelete != null) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "Eintrag löschen",
+                                    color = AppColors.statusRed,
+                                    style = de.tipau.promille.AppText.captionBold
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    painter = AppIcons.Trash,
+                                    contentDescription = null,
+                                    tint = AppColors.statusRed,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                onDelete()
+                            }
                         )
                     }
                 }
-                Icon(
-                    painter = AppIcons.ChevronRight,
-                    contentDescription = null,
-                    tint = AppColors.textMuted,
-                    modifier = Modifier.size(12.dp)
-                )
             }
         }
+    }
 
-        if (onDelete != null) {
-            de.tipau.promille.ui.components.AppDropdownMenu(
-                expanded = menuExpanded,
-                onDismissRequest = { menuExpanded = false }
-            ) {
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            "Eintrag löschen",
-                            color = AppColors.statusRed,
-                            style = de.tipau.promille.AppText.captionBold
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            painter = AppIcons.Trash,
-                            contentDescription = null,
-                            tint = AppColors.statusRed,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    },
-                    onClick = {
-                        menuExpanded = false
-                        onDelete()
-                    }
-                )
-            }
+    if (onDelete != null) {
+        AppleSwipeRow(
+            onDelete = onDelete,
+            cornerRadius = 10.dp
+        ) {
+            rowContent()
         }
+    } else {
+        rowContent()
     }
 }

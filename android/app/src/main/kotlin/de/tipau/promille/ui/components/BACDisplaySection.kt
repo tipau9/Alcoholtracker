@@ -114,11 +114,19 @@ fun BACDisplaySection(
                     )
             )
 
-            // 2. Circular outer ring. strokeBorder only, no fill.
+            // 2. Circular outer ring with Apple specular light edge
             Box(
                 modifier = Modifier
                     .size(220.dp)
-                    .border(1.dp, animatedGlowColor.copy(alpha = if (bac >= 0.5) 0.32f else 0.20f), CircleShape),
+                    .border(
+                        width = 1.dp,
+                        brush = Brush.verticalGradient(
+                            0f to animatedGlowColor.copy(alpha = if (bac >= 0.5) 0.60f else 0.40f),
+                            0.5f to animatedGlowColor.copy(alpha = if (bac >= 0.5) 0.30f else 0.18f),
+                            1f to animatedGlowColor.copy(alpha = if (bac >= 0.5) 0.15f else 0.08f)
+                        ),
+                        shape = CircleShape
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {

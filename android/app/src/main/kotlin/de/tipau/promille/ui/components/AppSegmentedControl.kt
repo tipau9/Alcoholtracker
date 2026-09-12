@@ -33,6 +33,7 @@ fun <T> AppSegmentedControl(
     val selectedIndex = items.indexOf(selectedItem).coerceAtLeast(0)
     val reducedMotion = LocalReducedMotion.current
 
+    val context = androidx.compose.ui.platform.LocalContext.current
     val haptics = rememberHapticManager()
 
     BoxWithConstraints(
@@ -80,7 +81,10 @@ fun <T> AppSegmentedControl(
                         .pressable(
                             scale = 0.96f,
                             onClick = {
-                                if (!isSelected) haptics.selection()
+                                if (!isSelected) {
+                                    haptics.selection()
+                                    AppAudio.playClick(context)
+                                }
                                 onItemSelected(item)
                             }
                         ),

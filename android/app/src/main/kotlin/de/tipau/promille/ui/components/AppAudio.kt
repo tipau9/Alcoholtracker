@@ -17,4 +17,14 @@ object AppAudio {
             // Gracefully ignore
         }
     }
+
+    fun playTick(context: Context) {
+        try {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+            // NAVIGATION_LEFT or CLICK provides subtle high-pitched tick
+            audioManager?.playSoundEffect(SoundEffectConstants.NAVIGATION_LEFT, 0.4f)
+        } catch (_: Throwable) {
+            playClick(context)
+        }
+    }
 }

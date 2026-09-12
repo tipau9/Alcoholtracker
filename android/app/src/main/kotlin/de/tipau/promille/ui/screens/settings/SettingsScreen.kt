@@ -414,7 +414,7 @@ fun SettingsScreen(
             // PROFIL
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionLabel(text = "PROFIL")
-                PromilleCard {
+                PromilleCard(padding = 0.dp) {
                     Column {
                         SettingsNumericRow(
                             label = "Gewicht",
@@ -460,7 +460,7 @@ fun SettingsScreen(
             // SICHERHEIT
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionLabel(text = "SICHERHEIT")
-                PromilleCard {
+                PromilleCard(padding = 0.dp) {
                     Column {
                         SettingsContactRow(
                             label = "Notfallkontakt",
@@ -494,7 +494,7 @@ fun SettingsScreen(
             // LIMITS & ZIELE
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionLabel(text = "LIMITS & ZIELE")
-                PromilleCard {
+                PromilleCard(padding = 0.dp) {
                     Column {
                         SettingsSliderRow(
                             label = "Wochenlimit",
@@ -520,7 +520,7 @@ fun SettingsScreen(
             // MITTEILUNGEN
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionLabel(text = "MITTEILUNGEN")
-                PromilleCard {
+                PromilleCard(padding = 0.dp) {
                     SettingsToggleRow(
                         title = "Nüchternheits-Erinnerung",
                         subtitle = "Meldung wenn du rechnerisch nüchtern bzw. unter deiner Warnschwelle bist",
@@ -534,7 +534,7 @@ fun SettingsScreen(
             // DARSTELLUNG
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionLabel(text = "DARSTELLUNG")
-                PromilleCard {
+                PromilleCard(padding = 0.dp) {
                     Column {
                         SettingsSelectRow(
                             label = "Home-Ansicht",
@@ -593,7 +593,7 @@ fun SettingsScreen(
             // AKZENTFARBE (Feature 10: Embedded Accent Color Picker)
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionLabel(text = "AKZENTFARBE")
-                PromilleCard {
+                PromilleCard(padding = 0.dp) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -687,7 +687,7 @@ fun SettingsScreen(
             // MESSUNGEN
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionLabel(text = "MESSUNGEN")
-                PromilleCard {
+                PromilleCard(padding = 0.dp) {
                     Column(modifier = Modifier.padding(bottom = 10.dp)) {
                         SettingsSliderRow(
                             label = "Schluckgröße",
@@ -733,7 +733,7 @@ fun SettingsScreen(
                     style = de.tipau.promille.AppText.micro
                 )
 
-                PromilleCard {
+                PromilleCard(padding = 0.dp) {
                     Column {
                         SettingsSliderRow(
                             label = "${skin.label(BacStatus.TIPSY)} ab",
@@ -781,7 +781,7 @@ fun SettingsScreen(
             // BARRIEREFREIHEIT
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionLabel(text = "BARRIEREFREIHEIT")
-                PromilleCard {
+                PromilleCard(padding = 0.dp) {
                     Column {
                         SettingsToggleRow(
                             title = "Größerer Text",
@@ -813,7 +813,7 @@ fun SettingsScreen(
             // ACHIEVEMENTS
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionLabel(text = "ACHIEVEMENTS")
-                PromilleCard {
+                PromilleCard(padding = 0.dp) {
                     SettingsNavigationRow(
                         title = "Achievements",
                         subtitle = "$unlockedCount von ${AchievementCatalog.ALL.size} freigeschaltet",
@@ -826,7 +826,7 @@ fun SettingsScreen(
             // DATEN
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionLabel(text = "DATEN")
-                PromilleCard {
+                PromilleCard(padding = 0.dp) {
                     SettingsNavigationRow(
                         title = "Verlauf als CSV exportieren",
                         subtitle = "Öffnet sich in Excel und Google Tabellen",
@@ -848,7 +848,7 @@ fun SettingsScreen(
             // KONTO
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionLabel(text = "KONTO")
-                PromilleCard {
+                PromilleCard(padding = 0.dp) {
                     Column {
                         if (isSignedIn && myProfile != null) {
                             val remote = myProfile!!
@@ -899,7 +899,7 @@ fun SettingsScreen(
             // DATENSCHUTZ
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionLabel(text = "DATENSCHUTZ")
-                PromilleCard {
+                PromilleCard(padding = 0.dp) {
                     Column {
                         SettingsToggleRow(
                             title = "Anonyme Stadtstatistiken beitragen",
@@ -931,7 +931,7 @@ fun SettingsScreen(
             // ÜBER
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionLabel(text = "ÜBER")
-                PromilleCard {
+                PromilleCard(padding = 0.dp) {
                     Column {
                         SettingsInfoRow(label = "Version", value = de.tipau.promille.BuildConfig.VERSION_NAME)
                         SettingsDivider()
@@ -958,4 +958,3 @@ fun SettingsScreen(
         )
     }
 }
-

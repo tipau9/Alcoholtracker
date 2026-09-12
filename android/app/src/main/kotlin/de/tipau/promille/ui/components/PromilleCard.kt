@@ -22,16 +22,15 @@ import de.tipau.promille.AppColors
 @Composable
 fun PromilleCard(
     modifier: Modifier = Modifier,
+    padding: androidx.compose.ui.unit.Dp = 16.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            // 20dp matches iOS's PromilleCardStyle (Colors.swift:106,108,
-            // cornerRadius(20)) - this used to be 16dp, a direct mismatch.
             .background(AppColors.card, RoundedCornerShape(20.dp))
-            .border(0.5.dp, AppColors.border, RoundedCornerShape(20.dp))
-            .padding(16.dp),
+            .appleLichtkante(cornerRadius = 20.dp)
+            .padding(padding),
         content = content
     )
 }

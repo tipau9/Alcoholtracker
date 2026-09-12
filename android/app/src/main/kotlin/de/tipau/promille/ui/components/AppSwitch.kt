@@ -51,6 +51,7 @@ fun AppSwitch(
         animationSpec = tween(150),
         label = "switchTrack"
     )
+    val context = androidx.compose.ui.platform.LocalContext.current
     val haptics = rememberHapticManager()
     Box(
         modifier = modifier
@@ -59,6 +60,7 @@ fun AppSwitch(
                 value = checked,
                 onValueChange = {
                     haptics.selection()
+                    AppAudio.playClick(context)
                     onCheckedChange?.invoke(it)
                 },
                 role = Role.Switch,

@@ -58,6 +58,8 @@ import de.tipau.promille.bac.HangoverLevel
 import de.tipau.promille.bac.StomachStatus
 import de.tipau.promille.data.DrinkTemplateEntity
 import de.tipau.promille.ui.components.AppIcons
+import de.tipau.promille.ui.components.AppleSwipeRow
+import de.tipau.promille.ui.components.appleLichtkante
 import de.tipau.promille.ui.components.DrinkIconView
 import de.tipau.promille.ui.components.SectionLabel
 import java.time.LocalTime
@@ -1509,119 +1511,19 @@ fun DrinkRowView(
         )
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+    AppleSwipeRow(
+        modifier = modifier,
+        onDelete = { showDeleteConfirm = true },
+        onDuplicate = onDuplicate,
+        cornerRadius = 14.dp
     ) {
-        // Action hints revealed behind the card while dragging
-        val isRight = offsetX.value >= 0
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .clip(RoundedCornerShape(14.dp))
-                .background((if (isRight) AppColors.statusGreen else AppColors.statusRed).copy(alpha = 0.18f))
-                .padding(horizontal = 18.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Duplicate hint (revealed on drag right)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.graphicsLayer {
-                        alpha = if (offsetX.value > with(density) { 8.dp.toPx() }) 1f else 0f
-                    }
-                ) {
-                    Icon(
-                        painter = AppIcons.Copy,
-                        contentDescription = "Duplizieren",
-                        tint = AppColors.statusGreen,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = "Duplizieren",
-                        color = AppColors.statusGreen,
-                        style = de.tipau.promille.AppText.captionBold
-                    )
-                }
-
-                // Delete hint (revealed on drag left)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.graphicsLayer {
-                        alpha = if (offsetX.value < with(density) { -8.dp.toPx() }) 1f else 0f
-                    }
-                ) {
-                    Text(
-                        text = "Entfernen",
-                        color = AppColors.statusRed,
-                        style = de.tipau.promille.AppText.captionBold
-                    )
-                    Icon(
-                        painter = AppIcons.Trash,
-                        contentDescription = "Entfernen",
-                        tint = AppColors.statusRed,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-        }
-
         // Front Card
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .offset { IntOffset(offsetX.value.roundToInt(), 0) }
                 .clip(RoundedCornerShape(14.dp))
                 .background(AppColors.card)
-                .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
-                .pointerInput(drink.id) {
-                    detectHorizontalDragGestures(
-                        onDragEnd = {
-                            coroutineScope.launch {
-                                val current = offsetX.value
-                                if (current > thresholdPx) {
-                                    haptics.success()
-                                    onDuplicate()
-                                } else if (current < -thresholdPx) {
-                                    haptics.warning()
-                                    onDelete()
-                                }
-                                offsetX.animateTo(
-                                    0f,
-                                    animationSpec = spring(
-                                        dampingRatio = 0.8f,
-                                        stiffness = Spring.StiffnessMedium
-                                    )
-                                )
-                            }
-                        },
-                        onDragCancel = {
-                            coroutineScope.launch {
-                                offsetX.animateTo(
-                                    0f,
-                                    animationSpec = spring(
-                                        dampingRatio = 0.8f,
-                                        stiffness = Spring.StiffnessMedium
-                                    )
-                                )
-                            }
-                        },
-                        onHorizontalDrag = { change, dragAmount ->
-                            change.consume()
-                            coroutineScope.launch {
-                                val target = (offsetX.value + dragAmount).coerceIn(-maxDragPx, maxDragPx)
-                                offsetX.snapTo(target)
-                            }
-                        }
-                    )
-                }
+                .appleLichtkante(14.dp)
                 .combinedClickable(
                     onClick = onEdit,
                     onLongClick = {

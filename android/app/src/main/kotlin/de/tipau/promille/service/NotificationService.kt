@@ -159,6 +159,7 @@ object NotificationService {
             .setSmallIcon(R.drawable.ic_drink_wineglass)
             .setContentTitle("$formattedBac  ($statusText)")
             .setContentText(contentText)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
             .setContentIntent(mainPendingIntent)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
