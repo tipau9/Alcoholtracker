@@ -756,7 +756,10 @@ fun SessionScreen(
                 onClick = { showQuickAdd = true },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 24.dp, bottom = 32.dp)
+                    .padding(
+                        end = 24.dp,
+                        bottom = 32.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current
+                    )
             )
         }
         }

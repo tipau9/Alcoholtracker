@@ -22,9 +22,10 @@ fun supabaseProp(key: String): String {
 
 android {
     namespace = "de.tipau.promille"
-    // 34 is the newest platform installed locally. Bump only together with the
-    // matching SDK download, or the build fails on a fresh machine.
-    compileSdk = 34
+    // 35 because Haze pulls in androidx.activity(-ktx):1.10.1, which refuses
+    // to compile against anything older. Needs `sdkmanager "platforms;android-35"`
+    // on a fresh machine.
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "de.tipau.promille"
@@ -99,6 +100,10 @@ dependencies {
     implementation("androidx.camera:camera-view:$cameraxVersion")
     implementation("com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.1")
     implementation("androidx.graphics:graphics-path:1.0.1")
+    // Real backdrop blur-through (Android has no public RenderEffect.createBackdropBlurEffect,
+    // verified via javap against android-34/35 android.jar). 1.5.4 is the last release before
+    // 1.6.0 bumped its Compose Multiplatform floor past what Kotlin 2.0.21 here supports.
+    implementation("dev.chrisbanes.haze:haze:1.5.4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation(kotlin("test"))
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")

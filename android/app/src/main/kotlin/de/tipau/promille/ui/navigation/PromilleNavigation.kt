@@ -27,6 +27,8 @@ import de.tipau.promille.ui.components.CardStackController
 import de.tipau.promille.ui.components.CardStackContainer
 import de.tipau.promille.ui.components.LocalCardStackController
 import de.tipau.promille.ui.components.appleGlass
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 
 // Bottom bar now overlays screen content (for appleGlass's blur-through) instead of
 // reserving its own row, so scrollable screens need this to keep their last item clear
@@ -100,6 +102,7 @@ fun PromilleNavigation(
     }
 
     val cardStackController = remember { CardStackController() }
+    val hazeState = remember { HazeState() }
     // 49.dp matches the Row's fixed content height below; navigationBarsPadding() adds
     // the system inset on top of that inside the Row, so mirror both here.
     val bottomBarInset = 49.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -118,6 +121,7 @@ fun PromilleNavigation(
                     modifier = Modifier
                         .fillMaxSize()
                         .statusBarsPadding()
+                        .hazeSource(state = hazeState)
                 ) {
                     // iOS TabView keeps every tab alive, so per-tab state (scroll offset,
                     // the chart's play-once reveal) survives a switch. `when` disposes the
@@ -182,7 +186,7 @@ fun PromilleNavigation(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .appleGlass(shape = RectangleShape, backgroundColor = AppColors.card)
+                        .appleGlass(hazeState = hazeState, shape = RectangleShape, backgroundColor = AppColors.card)
                         .navigationBarsPadding()
                         .height(49.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
