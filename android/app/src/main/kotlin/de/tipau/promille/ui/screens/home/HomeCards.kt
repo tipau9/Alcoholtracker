@@ -1492,6 +1492,7 @@ fun DrinkRowView(
     val coroutineScope = rememberCoroutineScope()
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showContextMenu by remember { mutableStateOf(false) }
 
     if (showDeleteConfirm) {
         de.tipau.promille.ui.components.AppAlertDialog(
@@ -1624,12 +1625,65 @@ fun DrinkRowView(
                 .combinedClickable(
                     onClick = onEdit,
                     onLongClick = {
-                        haptics.medium()
-                        showDeleteConfirm = true
+                        haptics.heavy()
+                        showContextMenu = true
                     }
                 )
                 .padding(12.dp)
         ) {
+            DropdownMenu(
+                expanded = showContextMenu,
+                onDismissRequest = { showContextMenu = false },
+                modifier = Modifier
+                    .background(AppColors.card, RoundedCornerShape(14.dp))
+                    .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Bearbeiten", style = de.tipau.promille.AppText.body) },
+                    leadingIcon = {
+                        Icon(painter = AppIcons.Pencil, contentDescription = null, tint = AppColors.text, modifier = Modifier.size(18.dp))
+                    },
+                    onClick = {
+                        showContextMenu = false
+                        onEdit()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Nochmal trinken (+1)", style = de.tipau.promille.AppText.body) },
+                    leadingIcon = {
+                        Icon(painter = AppIcons.Copy, contentDescription = null, tint = AppColors.statusGreen, modifier = Modifier.size(18.dp))
+                    },
+                    onClick = {
+                        showContextMenu = false
+                        haptics.success()
+                        onDuplicate()
+                    }
+                )
+                if (isStillDrinking) {
+                    DropdownMenuItem(
+                        text = { Text("Ausgetrunken", style = de.tipau.promille.AppText.body) },
+                        leadingIcon = {
+                            Icon(painter = AppIcons.Check, contentDescription = null, tint = AppColors.accent, modifier = Modifier.size(18.dp))
+                        },
+                        onClick = {
+                            showContextMenu = false
+                            haptics.medium()
+                            onFinish()
+                        }
+                    )
+                }
+                HorizontalDivider(color = AppColors.border.copy(alpha = 0.5f), thickness = 0.5.dp)
+                DropdownMenuItem(
+                    text = { Text("Löschen", style = de.tipau.promille.AppText.bodyBold, color = AppColors.statusRed) },
+                    leadingIcon = {
+                        Icon(painter = AppIcons.Trash, contentDescription = null, tint = AppColors.statusRed, modifier = Modifier.size(18.dp))
+                    },
+                    onClick = {
+                        showContextMenu = false
+                        showDeleteConfirm = true
+                    }
+                )
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,

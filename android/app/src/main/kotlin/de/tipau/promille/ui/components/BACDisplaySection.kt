@@ -76,6 +76,13 @@ fun BACDisplaySection(
     // radius, which is why the Android glow used to read as a hard disc.
     val glowRadius = with(LocalDensity.current) { 140.dp.toPx() }
 
+    val animatedGlowColor by androidx.compose.animation.animateColorAsState(
+        targetValue = status.color,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "glowColor"
+    )
+    val glowAlphaTarget = if (bac >= 0.5) 0.20f else if (bac > 0.05) 0.15f else 0.10f
+
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -99,8 +106,8 @@ fun BACDisplaySection(
                     .clip(CircleShape)
                     .background(
                         Brush.radialGradient(
-                            0f to status.color.copy(alpha = 0.10f),
-                            (60f / 140f) to status.color.copy(alpha = 0.10f),
+                            0f to animatedGlowColor.copy(alpha = glowAlphaTarget),
+                            (60f / 140f) to animatedGlowColor.copy(alpha = glowAlphaTarget),
                             1f to Color.Transparent,
                             radius = glowRadius
                         )
@@ -111,7 +118,7 @@ fun BACDisplaySection(
             Box(
                 modifier = Modifier
                     .size(220.dp)
-                    .border(1.dp, status.color.copy(alpha = 0.20f), CircleShape),
+                    .border(1.dp, animatedGlowColor.copy(alpha = if (bac >= 0.5) 0.32f else 0.20f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {

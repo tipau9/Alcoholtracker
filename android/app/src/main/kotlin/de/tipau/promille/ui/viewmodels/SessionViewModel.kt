@@ -463,6 +463,7 @@ class SessionViewModel(
     // CRUD & Event Actions
     fun addDrink(entity: DrinkEntity) {
         haptics()?.light()
+        applicationContext?.let { de.tipau.promille.ui.components.AppAudio.playClick(it) }
         viewModelScope.launch {
             drinkRepository.addDrink(entity)
             _undoAction.value = UndoAction(label = "${entity.name} hinzugefügt", addedDrink = entity)
@@ -471,6 +472,7 @@ class SessionViewModel(
 
     fun duplicateDrink(drink: Drink) {
         haptics()?.success()
+        applicationContext?.let { de.tipau.promille.ui.components.AppAudio.playClick(it) }
         val copy = DrinkEntity(
             id = UUID.randomUUID().toString(),
             templateID = drink.templateId,

@@ -13,6 +13,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import de.tipau.promille.MainActivity
+import de.tipau.promille.R
 import de.tipau.promille.bac.BacProjectionInput
 import java.util.Locale
 import kotlin.math.max
@@ -134,14 +135,38 @@ object NotificationService {
             }
         }
 
+        val waterIntent = Intent(context, QuickActionReceiver::class.java).apply {
+            action = QuickActionReceiver.ACTION_ADD_WATER
+        }
+        val waterPendingIntent = PendingIntent.getBroadcast(
+            context,
+            101,
+            waterIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val beerIntent = Intent(context, QuickActionReceiver::class.java).apply {
+            action = QuickActionReceiver.ACTION_ADD_BEER
+        }
+        val beerPendingIntent = PendingIntent.getBroadcast(
+            context,
+            102,
+            beerIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notification = NotificationCompat.Builder(context, CHANNEL_LIVE)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_drink_wineglass)
             .setContentTitle("$formattedBac  ($statusText)")
             .setContentText(contentText)
             .setContentIntent(mainPendingIntent)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .addAction(R.drawable.ic_drink_bottleofwater, "+ Wasser", waterPendingIntent)
+            .addAction(R.drawable.ic_drink_beer, "+ 1 Bier", beerPendingIntent)
             .build()
 
         NotificationManagerCompat.from(context).notify(LIVE_NOTIFICATION_ID, notification)

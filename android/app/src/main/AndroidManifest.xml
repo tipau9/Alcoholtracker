@@ -71,5 +71,14 @@
         <receiver
             android:name=".service.BackgroundRefreshReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".service.QuickActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="de.tipau.promille.action.ADD_WATER" />
+                <action android:name="de.tipau.promille.action.ADD_BEER" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>
