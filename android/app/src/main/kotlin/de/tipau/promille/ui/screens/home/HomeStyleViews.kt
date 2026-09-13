@@ -191,7 +191,7 @@ fun MinimalHomeView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 32.dp)
-                    .padding(bottom = 48.dp)
+                    .padding(bottom = 48.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current)
             )
         }
 
@@ -199,7 +199,7 @@ fun MinimalHomeView(
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = 110.dp)
+                .padding(end = 20.dp, bottom = 110.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current)
                 .size(32.dp)
                 .clip(CircleShape)
                 .background(AppColors.card)
@@ -407,7 +407,10 @@ fun DrunkHomeView(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .padding(top = 24.dp, bottom = 110.dp),
+                .padding(
+                    top = 24.dp,
+                    bottom = 110.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current
+                ),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // Hydration and logging remain the two largest direct actions.
@@ -574,6 +577,7 @@ private fun DrunkPanelSheet(
     content: @Composable ColumnScope.() -> Unit
 ) {
     ModalBottomSheet(
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Vertical) },
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
         containerColor = AppColors.background,

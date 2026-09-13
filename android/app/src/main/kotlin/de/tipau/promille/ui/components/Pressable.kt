@@ -34,7 +34,7 @@ fun Modifier.pressableEffect(
         animationSpec = if (isPressed) {
             spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessHigh)
         } else {
-            spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMediumLow)
+            spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
         },
         label = "pressableScale"
     )

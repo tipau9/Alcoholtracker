@@ -1533,12 +1533,9 @@ fun DrinkRowView(
                 )
                 .padding(12.dp)
         ) {
-            DropdownMenu(
+            de.tipau.promille.ui.components.AppDropdownMenu(
                 expanded = showContextMenu,
-                onDismissRequest = { showContextMenu = false },
-                modifier = Modifier
-                    .background(AppColors.card, RoundedCornerShape(14.dp))
-                    .border(0.5.dp, AppColors.border, RoundedCornerShape(14.dp))
+                onDismissRequest = { showContextMenu = false }
             ) {
                 DropdownMenuItem(
                     text = { Text("Bearbeiten", style = de.tipau.promille.AppText.body) },

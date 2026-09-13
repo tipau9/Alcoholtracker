@@ -29,11 +29,18 @@ import de.tipau.promille.color
 import de.tipau.promille.ui.viewmodels.BacTrend
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import java.util.Locale
 import de.tipau.promille.AppSerif
+import com.skydoves.balloon.compose.rememberBalloonBuilder
+import com.skydoves.balloon.compose.Balloon
+import com.skydoves.balloon.compose.setBackgroundColor
+import com.skydoves.balloon.ArrowPositionRules
+import com.skydoves.balloon.BalloonAnimation
+import com.skydoves.balloon.BalloonSizeSpec
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -44,6 +51,11 @@ fun BACDisplaySection(
     trend: BacTrend = BacTrend.STABLE,
     isEditMode: Boolean = false,
     onLongClick: (() -> Unit)? = null,
+    // Which assumption is behind the number on screen, e.g. "0,15 ‰/h,
+    // konservativ" - null hides the info affordance entirely rather than
+    // showing an empty tooltip.
+    eliminationRate: Double? = null,
+    isConservative: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     // HomeView.swift:1701-1771. The glow circle is always drawn; reducedMotion
@@ -192,6 +204,44 @@ fun BACDisplaySection(
             }
         }
 
-        StatusPill(status = status, skin = skin)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            StatusPill(status = status, skin = skin)
+            if (eliminationRate != null) {
+                val balloonBuilder = rememberBalloonBuilder {
+                    setArrowSize(10)
+                    setArrowPosition(0.5f)
+                    setArrowPositionRules(ArrowPositionRules.ALIGN_ANCHOR)
+                    setWidth(BalloonSizeSpec.WRAP)
+                    setHeight(BalloonSizeSpec.WRAP)
+                    setPadding(12)
+                    setMarginHorizontal(12)
+                    setCornerRadius(12f)
+                    setBackgroundColor(AppColors.card)
+                    // Apple popovers fade in/out, they never spring or bounce.
+                    setBalloonAnimation(BalloonAnimation.FADE)
+                }
+                Balloon(
+                    builder = balloonBuilder,
+                    balloonContent = {
+                        Text(
+                            text = "Berechnet mit Widmark-Formel, Abbaurate ${
+                                String.format(Locale.GERMANY, "%.2f", eliminationRate)
+                            } ‰/h${if (isConservative) ", konservativ (Sicherheitsmarge)" else ""}.",
+                            color = AppColors.text,
+                            style = de.tipau.promille.AppText.caption
+                        )
+                    }
+                ) { balloonWindow ->
+                    Icon(
+                        painter = AppIcons.Info,
+                        contentDescription = "Wie wird das berechnet?",
+                        tint = AppColors.textMuted,
+                        modifier = Modifier
+                            .size(16.dp)
+                            .clickable { balloonWindow.showAlignTop() }
+                    )
+                }
+            }
+        }
     }
 }

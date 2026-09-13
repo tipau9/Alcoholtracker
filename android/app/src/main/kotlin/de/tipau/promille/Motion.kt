@@ -1,6 +1,7 @@
 package de.tipau.promille
 
 import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -19,6 +20,9 @@ import androidx.compose.runtime.Composable
  * All curves collapse to instant (0ms / snap) when reducedMotion is enabled.
  */
 object AppMotion {
+    // SwiftUI .easeInOut cubic-bezier control points, for a true 1:1 match with appGentle.
+    private val EaseInOut = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)
+
     @Composable
     fun <T> snappy(): AnimationSpec<T> =
         if (LocalReducedMotion.current) snap()
@@ -32,7 +36,7 @@ object AppMotion {
     @Composable
     fun <T> gentle(): AnimationSpec<T> =
         if (LocalReducedMotion.current) snap()
-        else tween(durationMillis = 350, easing = FastOutSlowInEasing)
+        else tween(durationMillis = 350, easing = EaseInOut)
 
     val bannerTopEnter = slideInVertically(initialOffsetY = { -it }) + fadeIn()
     val bannerTopExit = slideOutVertically(targetOffsetY = { -it }) + fadeOut()

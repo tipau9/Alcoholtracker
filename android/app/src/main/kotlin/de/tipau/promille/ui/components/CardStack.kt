@@ -1,7 +1,6 @@
 package de.tipau.promille.ui.components
 
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -13,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import de.tipau.promille.LocalReducedMotion
 
 /**
  * Controller coordinating the iOS Card Stack presentation effect across the app.
@@ -69,30 +67,14 @@ fun CardStackContainer(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    val reducedMotion = LocalReducedMotion.current
-
-    val scale by animateFloatAsState(
-        targetValue = if (isSheetOpen && !reducedMotion) 0.93f else 1f,
-        animationSpec = spring(
-            dampingRatio = 0.85f,
-            stiffness = Spring.StiffnessMediumLow
-        ),
-        label = "cardStackScale"
-    )
-
-    val cornerRadius by animateDpAsState(
-        targetValue = if (isSheetOpen && !reducedMotion) 24.dp else 0.dp,
-        animationSpec = spring(
-            dampingRatio = 0.85f,
-            stiffness = Spring.StiffnessMediumLow
-        ),
-        label = "cardStackCorners"
-    )
+    // Zoom/corner card-stack effect removed per request; only the dim scrim remains.
+    val scale = 1f
+    val cornerRadius = 0.dp
 
     val dimAlpha by animateFloatAsState(
         targetValue = if (isSheetOpen) 0.30f else 0f,
         animationSpec = spring(
-            dampingRatio = 0.85f,
+            dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessMediumLow
         ),
         label = "cardStackDim"
@@ -109,8 +91,9 @@ fun CardStackContainer(
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
-                    clip = cornerRadius > 0.dp
-                    shape = RoundedCornerShape(cornerRadius)
+                    val safeCornerRadius = cornerRadius.coerceAtLeast(0.dp)
+                    clip = safeCornerRadius > 0.dp
+                    shape = RoundedCornerShape(safeCornerRadius)
                 }
         ) {
             content()

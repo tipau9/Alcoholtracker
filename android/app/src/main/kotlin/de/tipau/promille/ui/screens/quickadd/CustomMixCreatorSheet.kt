@@ -129,6 +129,7 @@ fun CustomMixCreatorSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Vertical) },
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = AppColors.background,

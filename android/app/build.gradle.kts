@@ -104,6 +104,23 @@ dependencies {
     // verified via javap against android-34/35 android.jar). 1.5.4 is the last release before
     // 1.6.0 bumped its Compose Multiplatform floor past what Kotlin 2.0.21 here supports.
     implementation("dev.chrisbanes.haze:haze:1.5.4")
+    // iOS-feel library batch: swipe actions, drag-reorder, wheel picker, calendar,
+    // Health-style charts, shimmer, Cupertino widgets/icons/edge-swipe-back,
+    // callout balloons, elastic bottom sheet, cascading submenus, inset-grouped settings.
+    // capsule / fluid-slider (Kyant0) publish no Maven artifact; recreated natively instead.
+    implementation("me.saket.swipe:swipe:1.3.0")
+    implementation("sh.calvin.reorderable:reorderable:2.4.3")
+    implementation("io.github.boguszpawlowski.composecalendar:composecalendar:1.4.0")
+    implementation("com.patrykandpatrick.vico:compose-m3:1.13.1")
+    implementation("com.valentinilk.shimmer:compose-shimmer:1.3.1")
+    implementation("io.github.alexzhirkevich:cupertino:0.1.0-alpha04")
+    implementation("io.github.alexzhirkevich:cupertino-icons-extended:0.1.0-alpha04")
+    implementation("io.github.alexzhirkevich:cupertino-decompose:0.1.0-alpha04")
+    implementation("com.github.skydoves:balloon-compose:1.6.12")
+    implementation("com.github.skydoves:flexible-bottomsheet-material3:0.1.5")
+    implementation("me.saket.cascade:cascade-compose:2.3.0")
+    implementation("com.github.commandiron:WheelPickerCompose:1.1.11")
+    implementation("com.github.alorma:compose-settings-ui-m3:1.0.3")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation(kotlin("test"))
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")

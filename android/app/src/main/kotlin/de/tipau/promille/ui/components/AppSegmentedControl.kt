@@ -51,7 +51,7 @@ fun <T> AppSegmentedControl(
             animationSpec = if (reducedMotion) {
                 spring(stiffness = Spring.StiffnessHigh)
             } else {
-                spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
+                spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
             },
             label = "segmentedIndicatorOffset"
         )

@@ -25,8 +25,12 @@ import de.tipau.promille.network.AdminUserRole
 import de.tipau.promille.ui.components.PromilleCard
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import me.saket.swipe.SwipeAction
+import me.saket.swipe.SwipeableActionsBox
 
-/** One moderation candidate: tick it for a bulk action or decide it on the spot. */
+/** One moderation candidate: tick it for a bulk action or decide it on the spot.
+ *  Swipe left/right also approves/rejects (Mail-style), on top of the buttons
+ *  below, since a moderator triaging a long queue mostly wants a fast flick. */
 @Composable
 fun AdminQueueRow(
     item: AdminQueueItem,
@@ -37,6 +41,23 @@ fun AdminQueueRow(
     onBlockVoter: (String) -> Unit,
     onEdit: (() -> Unit)? = null
 ) {
+    val approveAction = SwipeAction(
+        icon = de.tipau.promille.ui.components.AppIcons.Check,
+        background = AppColors.statusGreen,
+        onSwipe = onApprove
+    )
+    val rejectAction = SwipeAction(
+        icon = de.tipau.promille.ui.components.AppIcons.Close,
+        background = AppColors.statusRed,
+        onSwipe = onReject
+    )
+    // Default 40dp threshold is a flick, not a deliberate gesture - too easy to
+    // accidentally fire a Supabase-visible approve/reject on a long queue.
+    SwipeableActionsBox(
+        startActions = listOf(approveAction),
+        endActions = listOf(rejectAction),
+        swipeThreshold = 120.dp
+    ) {
     PromilleCard(Modifier.fillMaxWidth()) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -78,6 +99,7 @@ fun AdminQueueRow(
                 }
             }
         }
+    }
     }
 }
 

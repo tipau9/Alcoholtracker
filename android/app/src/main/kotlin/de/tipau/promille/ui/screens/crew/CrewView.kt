@@ -1325,7 +1325,7 @@ private fun SOSBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .padding(bottom = 16.dp)
+                .padding(bottom = 16.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current)
         ) {
             Box(
                 modifier = Modifier

@@ -68,6 +68,7 @@ fun CreateJamSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Vertical) },
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = AppColors.background,
@@ -222,6 +223,7 @@ fun JamPrivacySheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Vertical) },
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = AppColors.background,
@@ -338,6 +340,7 @@ fun InviteFriendsSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Vertical) },
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = AppColors.background,
@@ -664,6 +667,7 @@ private fun PrivacyTagGroup(title: String, items: List<String>, color: Color) {
 fun JamSheet(container: de.tipau.promille.di.AppContainer, onDismiss: () -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Vertical) },
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = AppColors.background,
@@ -681,6 +685,7 @@ fun JamSheet(container: de.tipau.promille.di.AppContainer, onDismiss: () -> Unit
 fun ArcadePickerSheet(onDismiss: () -> Unit, onPick: (JamArcadeGame) -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Vertical) },
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = AppColors.background,

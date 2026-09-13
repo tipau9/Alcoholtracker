@@ -429,7 +429,9 @@ fun SessionScreen(
                     skin = skin,
                     trend = trend,
                     isEditMode = isWidgetEditMode,
-                    onLongClick = { isWidgetEditMode = true }
+                    onLongClick = { isWidgetEditMode = true },
+                    eliminationRate = profile?.eliminationRate,
+                    isConservative = profile?.conservativeSafety == true
                 )
             }
 
@@ -872,7 +874,10 @@ fun SessionScreen(
             exit = if (reducedMotion) fadeOut() else slideOutVertically(targetOffsetY = { it }) + fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = if (undoAction != null) 148.dp else 84.dp)
+                .padding(
+                    bottom = (if (undoAction != null) 148.dp else 84.dp) +
+                        de.tipau.promille.ui.navigation.LocalBottomBarInset.current
+                )
         ) {
             unlockedAchievementToast?.let { (achievement, count) ->
                 de.tipau.promille.ui.components.AchievementUnlockToast(
@@ -891,6 +896,7 @@ fun SessionScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(horizontal = 16.dp, vertical = 20.dp)
+                .padding(bottom = de.tipau.promille.ui.navigation.LocalBottomBarInset.current)
         ) {
             activeSipDrink?.let { drink ->
                 SipCounterView(
@@ -917,7 +923,7 @@ fun SessionScreen(
             exit = if (reducedMotion) fadeOut() else slideOutVertically(targetOffsetY = { it }) + fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 84.dp)
+                .padding(bottom = 84.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current)
         ) {
             if (undoAction != null) {
                 UndoSnackbar(

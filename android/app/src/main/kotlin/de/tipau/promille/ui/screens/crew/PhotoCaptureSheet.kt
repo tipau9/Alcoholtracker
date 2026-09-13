@@ -133,6 +133,7 @@ fun PhotoCaptureSheet(
     }
 
     ModalBottomSheet(
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Vertical) },
         onDismissRequest = { dismiss() },
         sheetState = sheetState,
         containerColor = Color.Transparent,

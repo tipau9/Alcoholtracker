@@ -145,6 +145,7 @@ fun FriendProfileSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Vertical) },
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = Color.Transparent,
@@ -696,6 +697,7 @@ private fun MutualFriendChip(friend: FriendProfile) {
 private fun AchievementDetailDialog(achievement: Achievement, onDismiss: () -> Unit) {
     val color = accentColor(achievement.accent)
     ModalBottomSheet(
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Vertical) },
         onDismissRequest = onDismiss,
         containerColor = AppColors.background,
         scrimColor = Color.Black.copy(alpha = 0.65f)

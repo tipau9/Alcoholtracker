@@ -199,7 +199,9 @@ fun SettingsContactRow(
             text = label,
             color = AppColors.text,
             style = de.tipau.promille.AppText.body,
-            modifier = Modifier.width(120.dp)
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(min = 120.dp)
         )
         Box(
             modifier = Modifier.weight(1f),

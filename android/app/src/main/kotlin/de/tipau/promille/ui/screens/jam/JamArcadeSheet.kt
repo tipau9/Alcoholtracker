@@ -104,6 +104,7 @@ fun JamArcadeSheet(
     )
 
     ModalBottomSheet(
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Vertical) },
         onDismissRequest = onClose,
         sheetState = sheetState,
         containerColor = Color.Transparent,

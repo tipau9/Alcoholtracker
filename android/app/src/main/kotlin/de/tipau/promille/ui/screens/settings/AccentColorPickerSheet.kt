@@ -190,6 +190,7 @@ fun RgbColorPickerSheet(
     val currentColor = Color(red, green, blue)
 
     ModalBottomSheet(
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Vertical) },
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = Color.Transparent,

@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
+import com.valentinilk.shimmer.shimmer
 import de.tipau.promille.di.AppContainer
 import de.tipau.promille.ui.components.SectionLabel
 import de.tipau.promille.ui.viewmodels.AdminSection
@@ -220,7 +221,9 @@ fun AdminScreen(
 
             when (section) {
                 AdminSection.MODERATION -> {
-                    if (queue.isEmpty()) {
+                    if (isLoading && queue.isEmpty()) {
+                        items(3) { AdminQueueRowSkeleton() }
+                    } else if (queue.isEmpty()) {
                         item { AdminEmpty("Keine offenen Produkte oder Mixes.") }
                     } else {
                         item {
@@ -412,4 +415,33 @@ private fun AdminEmpty(text: String) {
         style = de.tipau.promille.AppText.caption,
         modifier = Modifier.padding(vertical = 20.dp)
     )
+}
+
+/** Skeleton stand-in for a queue row while the first load is in flight, so the
+ *  screen isn't blank-then-pop. Shape mirrors AdminQueueRow's checkbox + two
+ *  text lines + action row. */
+@Composable
+private fun AdminQueueRowSkeleton() {
+    de.tipau.promille.ui.components.PromilleCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.shimmer()) {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .size(20.dp)
+                        .background(AppColors.border, RoundedCornerShape(4.dp))
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Box(Modifier.fillMaxWidth(0.6f).height(14.dp).background(AppColors.border, RoundedCornerShape(4.dp)))
+                    Spacer(Modifier.height(6.dp))
+                    Box(Modifier.fillMaxWidth(0.4f).height(11.dp).background(AppColors.border, RoundedCornerShape(4.dp)))
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.width(80.dp).height(28.dp).background(AppColors.border, RoundedCornerShape(8.dp)))
+                Box(Modifier.width(80.dp).height(28.dp).background(AppColors.border, RoundedCornerShape(8.dp)))
+            }
+        }
+    }
 }

@@ -114,6 +114,7 @@ fun RoundRouletteSheet(
     )
 
     ModalBottomSheet(
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Vertical) },
         onDismissRequest = { if (finished) onClose() },
         sheetState = sheetState,
         containerColor = Color.Transparent,

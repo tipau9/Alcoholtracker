@@ -154,6 +154,7 @@ fun TrendsView(
     }
 
     ModalBottomSheet(
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Vertical) },
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
         containerColor = AppColors.background,

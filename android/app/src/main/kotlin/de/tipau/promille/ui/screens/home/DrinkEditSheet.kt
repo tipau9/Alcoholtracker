@@ -1,6 +1,5 @@
 package de.tipau.promille.ui.screens.home
 
-import android.app.TimePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,7 +35,6 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Calendar
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -56,14 +54,29 @@ fun DrinkEditSheet(
     onFinishNow: (() -> Unit)? = null,
     onDelete: () -> Unit
 ) {
-    val context = LocalContext.current
     var volumeText by remember { mutableStateOf(drink.volumeML.roundToInt().toString()) }
     var durationMinutes by remember { mutableStateOf(drink.drinkDurationMinutes.coerceAtLeast(0.0)) }
     var timestampSeconds by remember { mutableStateOf(drink.timestampEpochSeconds) }
+    var showTimeWheel by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     val volume = volumeText.replace(',', '.').toDoubleOrNull() ?: 0.0
     val isValid = volume > 0.0 && volume <= 3000.0
+
+    if (showTimeWheel) {
+        de.tipau.promille.ui.components.WheelTimePickerDialog(
+            initial = Instant.ofEpochSecond(timestampSeconds).atZone(ZoneId.systemDefault()).toLocalTime(),
+            onDismiss = { showTimeWheel = false },
+            onConfirm = { picked ->
+                val zdt = Instant.ofEpochSecond(timestampSeconds)
+                    .atZone(ZoneId.systemDefault())
+                    .withHour(picked.hour)
+                    .withMinute(picked.minute)
+                timestampSeconds = zdt.toEpochSecond()
+                showTimeWheel = false
+            }
+        )
+    }
 
     val profile = remember(profileEntity) {
         profileEntity?.let { UserProfileRepository.toProfile(it) } ?: Profile.DEFAULT
@@ -122,6 +135,7 @@ fun DrinkEditSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
+        contentWindowInsets = { androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(androidx.compose.foundation.layout.WindowInsetsSides.Vertical) },
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = Color.Transparent,
@@ -275,24 +289,7 @@ fun DrinkEditSheet(
                             .clip(RoundedCornerShape(12.dp))
                             .background(AppColors.card)
                             .border(0.5.dp, AppColors.border, RoundedCornerShape(12.dp))
-                            .clickable {
-                                val cal = Calendar.getInstance().apply {
-                                    timeInMillis = timestampSeconds * 1000
-                                }
-                                TimePickerDialog(
-                                    context,
-                                    { _, hourOfDay, minute ->
-                                        val zdt = Instant.ofEpochSecond(timestampSeconds)
-                                            .atZone(ZoneId.systemDefault())
-                                            .withHour(hourOfDay)
-                                            .withMinute(minute)
-                                        timestampSeconds = zdt.toEpochSecond()
-                                    },
-                                    cal.get(Calendar.HOUR_OF_DAY),
-                                    cal.get(Calendar.MINUTE),
-                                    true
-                                ).show()
-                            }
+                            .clickable { showTimeWheel = true }
                             .padding(horizontal = 14.dp, vertical = 14.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
