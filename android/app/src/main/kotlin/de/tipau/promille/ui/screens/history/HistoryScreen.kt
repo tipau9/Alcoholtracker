@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import de.tipau.promille.ui.components.AppleBounceScrollContainer
 import de.tipau.promille.ui.components.CollapsibleLargeTitleHeader
 import de.tipau.promille.ui.components.LargeTitleItem
 import androidx.compose.ui.input.pointer.pointerInput
@@ -155,14 +156,17 @@ fun HistoryScreen(
             .fillMaxSize()
             .background(AppColors.background)
     ) {
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 52.dp, bottom = 40.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        AppleBounceScrollContainer(
+            modifier = Modifier.fillMaxSize()
         ) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(top = 52.dp, bottom = 40.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // Large Title
             item {
                 LargeTitleItem(
@@ -721,6 +725,7 @@ fun HistoryScreen(
                     }
                 }
             }
+        }
         }
 
         CollapsibleLargeTitleHeader(

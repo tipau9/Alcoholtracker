@@ -389,12 +389,15 @@ fun SessionScreen(
                 onExitToDetailed = { viewModel.setHomeStyle("detailed") }
             )
         } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 110.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            // Top Bar
+            AppleBounceScrollContainer(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    contentPadding = PaddingValues(top = 16.dp, bottom = 110.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    // Top Bar
             item {
                 if (isWidgetEditMode) {
                     EditModeTopBar(
@@ -752,6 +755,7 @@ fun SessionScreen(
                         .padding(horizontal = 24.dp, vertical = 16.dp)
                 )
             }
+        }
         }
 
         // FAB placement mirrors HomeView.swift:591-594: trailing 24, bottom 32.

@@ -319,12 +319,15 @@ fun SettingsScreen(
             .fillMaxSize()
             .background(AppColors.background)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(bottom = 40.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current)
+        AppleBounceScrollContainer(
+            modifier = Modifier.fillMaxSize()
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(bottom = 40.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current)
+            ) {
             Spacer(Modifier.height(52.dp))
 
             LargeTitleItem(
@@ -883,6 +886,7 @@ fun SettingsScreen(
                     )
                 }
             }
+        }
         }
 
         CollapsibleLargeTitleHeader(
