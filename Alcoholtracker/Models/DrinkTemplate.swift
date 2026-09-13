@@ -120,11 +120,11 @@ enum BACStatus: Equatable, Hashable, CaseIterable {
             return
         }
         switch bac {
-        case ..<p.tipsyThreshold:   self = .sober
-        case ..<p.drunkThreshold:   self = .tipsy
-        case ..<p.carefulThreshold: self = .drunk
-        case ..<p.dangerThreshold:  self = .careful
-        default:                    self = .danger
+        case ..<p.validatedTipsyThreshold:   self = .sober
+        case ..<p.validatedDrunkThreshold:   self = .tipsy
+        case ..<p.validatedCarefulThreshold: self = .drunk
+        case ..<p.validatedDangerThreshold:  self = .careful
+        default:                             self = .danger
         }
     }
 

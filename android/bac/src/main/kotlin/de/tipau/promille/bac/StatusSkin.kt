@@ -29,10 +29,10 @@ enum class BacStatus(val level: Int, val germanName: String) {
         fun of(bac: Double, profile: Profile?): BacStatus {
             val p = profile ?: return of(bac)
             return when {
-                bac < p.tipsyThreshold -> SOBER
-                bac < p.drunkThreshold -> TIPSY
-                bac < p.carefulThreshold -> DRUNK
-                bac < p.dangerThreshold -> CAREFUL
+                bac < p.validatedTipsyThreshold -> SOBER
+                bac < p.validatedDrunkThreshold -> TIPSY
+                bac < p.validatedCarefulThreshold -> DRUNK
+                bac < p.validatedDangerThreshold -> CAREFUL
                 else -> DANGER
             }
         }

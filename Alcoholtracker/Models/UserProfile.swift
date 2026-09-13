@@ -189,6 +189,14 @@ final class UserProfile {
     var carefulThreshold: Double = 0.80
     var dangerThreshold:  Double = 1.50
 
+    // Order-safe reads for BAC bucketing. Raw thresholds are user/sync-writable
+    // and can arrive out of order (restore, cross-device sync); these enforce
+    // tipsy < drunk < careful < danger with a 0.05 gap without touching storage.
+    var validatedTipsyThreshold:   Double { min(max(tipsyThreshold, 0.01), 0.50) }
+    var validatedDrunkThreshold:   Double { max(min(max(drunkThreshold, 0.05), 1.20), validatedTipsyThreshold + 0.05) }
+    var validatedCarefulThreshold: Double { max(min(max(carefulThreshold, 0.10), 2.00), validatedDrunkThreshold + 0.05) }
+    var validatedDangerThreshold:  Double { max(min(max(dangerThreshold, 0.20), 2.50), validatedCarefulThreshold + 0.05) }
+
     // FIX BUG1: birthDate replaces plain age int for accurate age computation
     var birthDate: Date = Calendar.current.date(byAdding: .year, value: -25, to: Date()) ?? Date()
 

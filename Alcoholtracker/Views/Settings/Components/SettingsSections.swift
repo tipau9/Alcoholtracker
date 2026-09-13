@@ -335,33 +335,51 @@ struct SettingsThresholdSection: View {
                 STBACThresholdRow(
                     label: "\(p.statusSkin.label(for: .tipsy)) ab",
                     color: Color.statusYellow,
-                    range: 0.01...min(p.drunkThreshold - 0.05, 0.49),
+                    range: 0.01...0.50,
                     value: Binding(get: { p.tipsyThreshold },
-                                   set: { p.tipsyThreshold = $0; save() })
+                                   set: {
+                                       let maxAllowed = max(0.01, p.drunkThreshold - 0.05)
+                                       p.tipsyThreshold = min((($0 * 100).rounded() / 100), maxAllowed)
+                                       save()
+                                   })
                 )
                 Divider().background(Color.appBorder).padding(.leading, 16)
                 STBACThresholdRow(
                     label: "\(p.statusSkin.label(for: .drunk)) ab",
                     color: Color.statusOrange,
-                    range: (p.tipsyThreshold + 0.05)...min(p.carefulThreshold - 0.05, 0.99),
+                    range: 0.05...1.20,
                     value: Binding(get: { p.drunkThreshold },
-                                   set: { p.drunkThreshold = $0; save() })
+                                   set: {
+                                       let minAllowed = min(1.20, p.tipsyThreshold + 0.05)
+                                       let maxAllowed = max(minAllowed, p.carefulThreshold - 0.05)
+                                       p.drunkThreshold = min(max((($0 * 100).rounded() / 100), minAllowed), maxAllowed)
+                                       save()
+                                   })
                 )
                 Divider().background(Color.appBorder).padding(.leading, 16)
                 STBACThresholdRow(
                     label: "\(p.statusSkin.label(for: .careful)) ab",
                     color: Color.statusRed,
-                    range: (p.drunkThreshold + 0.05)...min(p.dangerThreshold - 0.05, 1.44),
+                    range: 0.10...2.00,
                     value: Binding(get: { p.carefulThreshold },
-                                   set: { p.carefulThreshold = $0; save() })
+                                   set: {
+                                       let minAllowed = min(2.00, p.drunkThreshold + 0.05)
+                                       let maxAllowed = max(minAllowed, p.dangerThreshold - 0.05)
+                                       p.carefulThreshold = min(max((($0 * 100).rounded() / 100), minAllowed), maxAllowed)
+                                       save()
+                                   })
                 )
                 Divider().background(Color.appBorder).padding(.leading, 16)
                 STBACThresholdRow(
                     label: "\(p.statusSkin.label(for: .danger)) ab",
                     color: Color.statusRed.opacity(0.7),
-                    range: (p.carefulThreshold + 0.05)...2.50,
+                    range: 0.20...2.50,
                     value: Binding(get: { p.dangerThreshold },
-                                   set: { p.dangerThreshold = $0; save() })
+                                   set: {
+                                       let minAllowed = min(2.50, p.carefulThreshold + 0.05)
+                                       p.dangerThreshold = min(max((($0 * 100).rounded() / 100), minAllowed), 2.50)
+                                       save()
+                                   })
                 )
             }
             .background(Color.appCard)

@@ -126,6 +126,14 @@ data class Profile(
 
     val validatedAge: Int get() = min(max(age, 18), 100)
 
+    // Order-safe reads for BAC bucketing. Raw thresholds are user/sync-writable
+    // and can arrive out of order (restore, cross-device sync); these enforce
+    // tipsy < drunk < careful < danger with a 0.05 gap without touching storage.
+    val validatedTipsyThreshold: Double get() = tipsyThreshold.coerceIn(0.01, 0.50)
+    val validatedDrunkThreshold: Double get() = max(drunkThreshold.coerceIn(0.05, 1.20), validatedTipsyThreshold + 0.05)
+    val validatedCarefulThreshold: Double get() = max(carefulThreshold.coerceIn(0.10, 2.00), validatedDrunkThreshold + 0.05)
+    val validatedDangerThreshold: Double get() = max(dangerThreshold.coerceIn(0.20, 2.50), validatedCarefulThreshold + 0.05)
+
     /** Total body water in litres (Watson 1980). */
     val totalBodyWaterL: Double
         get() {

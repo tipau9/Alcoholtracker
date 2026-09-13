@@ -916,10 +916,10 @@ final class SessionViewModel {
                 guard !Task.isCancelled else { return }
                 SharedStateStore.writeBACCurve(curvePoints)
                 SharedStateStore.writeStatusConfig(SharedStatusConfig(
-                    tipsyThreshold: profile.tipsyThreshold,
-                    drunkThreshold: profile.drunkThreshold,
-                    carefulThreshold: profile.carefulThreshold,
-                    dangerThreshold: profile.dangerThreshold,
+                    tipsyThreshold: profile.validatedTipsyThreshold,
+                    drunkThreshold: profile.validatedDrunkThreshold,
+                    carefulThreshold: profile.validatedCarefulThreshold,
+                    dangerThreshold: profile.validatedDangerThreshold,
                     labels: [
                         skin.label(for: .sober),
                         skin.label(for: .tipsy),

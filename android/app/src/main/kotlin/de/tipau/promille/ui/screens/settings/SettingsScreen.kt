@@ -706,8 +706,12 @@ fun SettingsScreen(
                     SettingsSliderRow(
                         label = "${skin.label(BacStatus.TIPSY)} ab",
                         value = p.tipsyThreshold.toFloat(),
-                        onValueChange = { viewModel.updateTipsyThreshold(it.toDouble()) },
-                        valueRange = 0.01f..(p.drunkThreshold.toFloat() - 0.05f).coerceAtLeast(0.01f),
+                        onValueChange = { newVal ->
+                            val maxAllowed = (p.drunkThreshold.toFloat() - 0.05f).coerceAtLeast(0.01f)
+                            val rounded = (Math.round(newVal * 100.0) / 100.0).toFloat().coerceIn(0.01f, maxAllowed)
+                            viewModel.updateTipsyThreshold(rounded.toDouble())
+                        },
+                        valueRange = 0.01f..0.50f,
                         valueDisplay = formatPromille(p.tipsyThreshold),
                         statusDotColor = AppColors.statusYellow,
                         onValueChangeFinished = { haptics.selection() }
@@ -716,8 +720,13 @@ fun SettingsScreen(
                     SettingsSliderRow(
                         label = "${skin.label(BacStatus.DRUNK)} ab",
                         value = p.drunkThreshold.toFloat(),
-                        onValueChange = { viewModel.updateDrunkThreshold(it.toDouble()) },
-                        valueRange = (p.tipsyThreshold.toFloat() + 0.05f).coerceAtMost(2.5f)..(p.carefulThreshold.toFloat() - 0.05f).coerceAtLeast(0.01f),
+                        onValueChange = { newVal ->
+                            val minAllowed = (p.tipsyThreshold.toFloat() + 0.05f).coerceAtMost(1.20f)
+                            val maxAllowed = (p.carefulThreshold.toFloat() - 0.05f).coerceAtLeast(minAllowed)
+                            val rounded = (Math.round(newVal * 100.0) / 100.0).toFloat().coerceIn(minAllowed, maxAllowed)
+                            viewModel.updateDrunkThreshold(rounded.toDouble())
+                        },
+                        valueRange = 0.05f..1.20f,
                         valueDisplay = formatPromille(p.drunkThreshold),
                         statusDotColor = AppColors.statusOrange,
                         onValueChangeFinished = { haptics.selection() }
@@ -726,8 +735,13 @@ fun SettingsScreen(
                     SettingsSliderRow(
                         label = "${skin.label(BacStatus.CAREFUL)} ab",
                         value = p.carefulThreshold.toFloat(),
-                        onValueChange = { viewModel.updateCarefulThreshold(it.toDouble()) },
-                        valueRange = (p.drunkThreshold.toFloat() + 0.05f).coerceAtMost(2.5f)..(p.dangerThreshold.toFloat() - 0.05f).coerceAtLeast(0.01f),
+                        onValueChange = { newVal ->
+                            val minAllowed = (p.drunkThreshold.toFloat() + 0.05f).coerceAtMost(2.00f)
+                            val maxAllowed = (p.dangerThreshold.toFloat() - 0.05f).coerceAtLeast(minAllowed)
+                            val rounded = (Math.round(newVal * 100.0) / 100.0).toFloat().coerceIn(minAllowed, maxAllowed)
+                            viewModel.updateCarefulThreshold(rounded.toDouble())
+                        },
+                        valueRange = 0.10f..2.00f,
                         valueDisplay = formatPromille(p.carefulThreshold),
                         statusDotColor = AppColors.statusRed,
                         onValueChangeFinished = { haptics.selection() }
@@ -736,8 +750,12 @@ fun SettingsScreen(
                     SettingsSliderRow(
                         label = "${skin.label(BacStatus.DANGER)} ab",
                         value = p.dangerThreshold.toFloat(),
-                        onValueChange = { viewModel.updateDangerThreshold(it.toDouble()) },
-                        valueRange = (p.carefulThreshold.toFloat() + 0.05f).coerceAtMost(2.5f)..2.50f,
+                        onValueChange = { newVal ->
+                            val minAllowed = (p.carefulThreshold.toFloat() + 0.05f).coerceAtMost(2.50f)
+                            val rounded = (Math.round(newVal * 100.0) / 100.0).toFloat().coerceIn(minAllowed, 2.50f)
+                            viewModel.updateDangerThreshold(rounded.toDouble())
+                        },
+                        valueRange = 0.20f..2.50f,
                         valueDisplay = formatPromille(p.dangerThreshold),
                         statusDotColor = AppColors.statusDarkRed,
                         onValueChangeFinished = { haptics.selection() }
