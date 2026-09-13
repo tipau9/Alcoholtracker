@@ -7,8 +7,11 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import de.tipau.promille.ui.components.CollapsibleLargeTitleHeader
+import de.tipau.promille.ui.components.LargeTitleItem
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -136,126 +139,129 @@ fun HistoryScreen(
         )
     }
 
-    Column(
+    val listState = rememberLazyListState()
+    val scrollOffset by remember {
+        derivedStateOf {
+            if (listState.firstVisibleItemIndex > 0) {
+                500f
+            } else {
+                listState.firstVisibleItemScrollOffset.toFloat()
+            }
+        }
+    }
+
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(AppColors.background)
     ) {
-        // HVTopBar (matches iOS HistoryView.swift 1:1)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(top = 8.dp, bottom = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                // iOS: .appHeadline (HistoryView.swift:145).
-                Text(
-                    text = "Verlauf",
-                    color = AppColors.text,
-                    style = de.tipau.promille.AppText.headline
-                )
-                Box(
-                    modifier = Modifier
-                        .size(30.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.accent.copy(alpha = 0.12f))
-                        .clickable { showTrends = true },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = AppIcons.Chart,
-                        contentDescription = "Trends",
-                        tint = AppColors.accent,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                if (!isCurrentMonth) {
-                    Box(
-                        modifier = Modifier
-                            .height(32.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.accent.copy(alpha = 0.12f))
-                            .clickable { viewModel.goToCurrentMonth() }
-                            .padding(horizontal = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // iOS: .appMicro (HistoryView.swift:166).
-                        Text(
-                            text = "Heute",
-                            color = AppColors.accent,
-                            style = de.tipau.promille.AppText.micro
-                        )
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.card)
-                        .border(0.5.dp, AppColors.border, CircleShape)
-                        .clickable { viewModel.previousMonth() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = AppIcons.ChevronLeft,
-                        contentDescription = "Vorheriger Monat",
-                        tint = AppColors.textDim,
-                        modifier = Modifier.size(13.dp)
-                    )
-                }
-
-                // iOS: .appCaptionBold (HistoryView.swift:189).
-                Text(
-                    text = visibleMonth.format(monthFormatter),
-                    color = AppColors.text,
-                    style = de.tipau.promille.AppText.captionBold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .defaultMinSize(minWidth = 90.dp)
-                        .padding(horizontal = 4.dp)
-                )
-
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.card)
-                        .border(0.5.dp, AppColors.border, CircleShape)
-                        .clickable(enabled = !isCurrentMonth) { viewModel.nextMonth() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = AppIcons.ChevronRight,
-                        contentDescription = "Nächster Monat",
-                        tint = if (!isCurrentMonth) AppColors.textDim else AppColors.border,
-                        modifier = Modifier.size(13.dp)
-                    )
-                }
-            }
-        }
-
-        HorizontalDivider(color = AppColors.border, thickness = 0.5.dp)
-
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 40.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            contentPadding = PaddingValues(top = 52.dp, bottom = 40.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Large Title
+            item {
+                LargeTitleItem(
+                    title = "Verlauf",
+                    scrollOffset = scrollOffset,
+                    trailingContent = {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(AppColors.accent.copy(alpha = 0.12f))
+                                .clickable { showTrends = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = AppIcons.Chart,
+                                contentDescription = "Trends",
+                                tint = AppColors.accent,
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
+                    }
+                )
+            }
+
+            // Month Navigation Bar
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = visibleMonth.format(monthFormatter),
+                        color = AppColors.text,
+                        style = de.tipau.promille.AppText.title
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        if (!isCurrentMonth) {
+                            Box(
+                                modifier = Modifier
+                                    .height(32.dp)
+                                    .clip(CircleShape)
+                                    .background(AppColors.accent.copy(alpha = 0.12f))
+                                    .clickable { viewModel.goToCurrentMonth() }
+                                    .padding(horizontal = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Heute",
+                                    color = AppColors.accent,
+                                    style = de.tipau.promille.AppText.micro
+                                )
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(AppColors.card)
+                                .border(0.5.dp, AppColors.border, CircleShape)
+                                .clickable { viewModel.previousMonth() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = AppIcons.ChevronLeft,
+                                contentDescription = "Vorheriger Monat",
+                                tint = AppColors.textDim,
+                                modifier = Modifier.size(13.dp)
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(AppColors.card)
+                                .border(0.5.dp, AppColors.border, CircleShape)
+                                .clickable(enabled = !isCurrentMonth) { viewModel.nextMonth() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = AppIcons.ChevronRight,
+                                contentDescription = "Nächster Monat",
+                                tint = if (!isCurrentMonth) AppColors.textDim else AppColors.border,
+                                modifier = Modifier.size(13.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
             // Weekday Header
             item {
                 Row(
@@ -716,5 +722,27 @@ fun HistoryScreen(
                 }
             }
         }
+
+        CollapsibleLargeTitleHeader(
+            title = "Verlauf",
+            scrollOffset = scrollOffset,
+            actions = {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(AppColors.accent.copy(alpha = 0.12f))
+                        .clickable { showTrends = true },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = AppIcons.Chart,
+                        contentDescription = "Trends",
+                        tint = AppColors.accent,
+                        modifier = Modifier.size(15.dp)
+                    )
+                }
+            }
+        )
     }
 }

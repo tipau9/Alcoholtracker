@@ -1,6 +1,5 @@
 package de.tipau.promille.ui.screens.settings
 
-import android.app.DatePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -150,20 +149,30 @@ fun SettingsScreen(
         }
     }
 
+    var showDatePickerDialog by remember { mutableStateOf(false) }
+
     fun openDatePicker() {
-        val cal = Calendar.getInstance()
-        if (p.birthDate > 0) cal.timeInMillis = p.birthDate else cal.set(2001, Calendar.AUGUST, 28)
-        DatePickerDialog(
-            context,
-            { _, year, month, dayOfMonth ->
-                val newCal = Calendar.getInstance().apply { set(year, month, dayOfMonth) }
-                val age = Calendar.getInstance().get(Calendar.YEAR) - year
-                viewModel.updateBirthDate(newCal.timeInMillis, age)
-            },
-            cal.get(Calendar.YEAR),
-            cal.get(Calendar.MONTH),
-            cal.get(Calendar.DAY_OF_MONTH)
-        ).show()
+        showDatePickerDialog = true
+    }
+
+    if (showDatePickerDialog) {
+        val initialDate = remember(p.birthDate) {
+            if (p.birthDate > 0) {
+                Instant.ofEpochMilli(p.birthDate).atZone(ZoneId.systemDefault()).toLocalDate()
+            } else {
+                LocalDate.of(2001, 8, 28)
+            }
+        }
+        WheelDatePickerDialog(
+            initial = initialDate,
+            onDismiss = { showDatePickerDialog = false },
+            onConfirm = { selectedDate ->
+                showDatePickerDialog = false
+                val epochMilli = selectedDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                val age = LocalDate.now().year - selectedDate.year
+                viewModel.updateBirthDate(epochMilli, age)
+            }
+        )
     }
 
     if (showGenderDialog) {
@@ -303,224 +312,211 @@ fun SettingsScreen(
 
     val stomachLabel = StomachStatus.entries.find { it.raw == p.stomachStatusRaw }?.germanName ?: "Leicht gefüllt"
 
-    Column(
+    val scrollState = rememberScrollState()
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(AppColors.background)
     ) {
-        // 1. Profile Hero Header (Matches iOS SettingsView profileHero 1:1)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { if (!isSignedIn) showAuth = true }
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(CircleShape)
-                        .background(AppColors.accent.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = AppIcons.Person,
-                        contentDescription = null,
-                        tint = AppColors.accent,
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
-                Spacer(Modifier.width(16.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (isSignedIn && myProfile != null) {
-                        Text(
-                            // iOS: .appTitle (22sp SemiBold) - was 20sp Bold.
-                            text = myProfile?.displayName?.ifBlank { "Kein Name" } ?: "Kein Name",
-                            color = AppColors.text,
-                            style = de.tipau.promille.AppText.title
-                        )
-                        // Fixed literal on iOS (.caption, monospaced, bold, tracking 2)
-                        // using AppSans + TabularFigures to match San Francisco monospaced digits.
-                        Text(
-                            text = myProfile?.friendCode ?: "",
-                            color = AppColors.accent,
-                            style = de.tipau.promille.AppText.captionBold.merge(de.tipau.promille.TabularFigures),
-                            letterSpacing = 2.sp
-                        )
-                    } else {
-                        Text(
-                            // iOS: .appTitle - was 20sp Bold.
-                            text = "Profil",
-                            color = AppColors.text,
-                            style = de.tipau.promille.AppText.title
-                        )
-                        Text(
-                            // iOS: .appCaption - was 12sp.
-                            text = "Kein Konto verbunden",
-                            color = AppColors.textDim,
-                            style = de.tipau.promille.AppText.caption
-                        )
-                    }
-                }
-            }
-
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable(onClick = onNavigateToAchievements)
-                    .padding(4.dp)
-            ) {
-                Icon(
-                    painter = AppIcons.EmojiEvents,
-                    contentDescription = null,
-                    tint = AppColors.accent,
-                    modifier = Modifier.size(14.dp)
-                )
-                Text(
-                    // iOS: .appCaptionBold (SemiBold, not Bold) - was 12sp Bold.
-                    text = "$unlockedCount/${AchievementCatalog.ALL.size}",
-                    color = AppColors.accent,
-                    style = de.tipau.promille.AppText.captionBold
-                )
-                Text(
-                    // iOS: .appMicro - was 10sp.
-                    text = "Achievements",
-                    color = AppColors.textDim,
-                    style = de.tipau.promille.AppText.micro
-                )
-            }
-        }
-
-        HorizontalDivider(color = AppColors.border, thickness = 0.5.dp)
-
-        // 2. Settings ScrollView (Matches iOS spacing 28.dp)
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .padding(top = 20.dp, bottom = 40.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current),
-            verticalArrangement = Arrangement.spacedBy(28.dp)
+                .verticalScroll(scrollState)
+                .padding(bottom = 40.dp + de.tipau.promille.ui.navigation.LocalBottomBarInset.current)
         ) {
-            // PROFIL
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionLabel(text = "PROFIL")
-                PromilleCard(padding = 0.dp) {
-                    Column {
-                        SettingsNumericRow(
-                            label = "Gewicht",
-                            value = String.format(Locale.GERMANY, "%.1f", p.weight),
-                            onValueChange = { s -> s.replace(',', '.').toDoubleOrNull()?.let { viewModel.updateWeight(it) } },
-                            unit = "kg",
-                            keyboardType = KeyboardType.Decimal
-                        )
-                        SettingsDivider()
-                        SettingsNumericRow(
-                            label = "Größe",
-                            value = p.height.toInt().toString(),
-                            onValueChange = { s -> s.replace(',', '.').toDoubleOrNull()?.let { viewModel.updateHeight(it) } },
-                            unit = "cm",
-                            keyboardType = KeyboardType.Number
-                        )
-                        SettingsDivider()
-                        SettingsSelectRow(
-                            label = "Geburtsdatum",
-                            value = birthDateFormatted,
-                            onClick = { openDatePicker() }
-                        )
-                        SettingsDivider()
-                        SettingsSelectRow(
-                            label = "Geschlecht",
-                            value = genderLabel,
-                            onClick = { showGenderDialog = true }
-                        )
-                        SettingsDivider()
-                        SettingsSliderRow(
-                            label = "Abbaurate",
-                            value = p.eliminationRate.toFloat(),
-                            onValueChange = { viewModel.updateEliminationRate(it.toDouble()) },
-                            valueRange = 0.10f..0.20f,
-                            valueDisplay = formatPromilleRate(p.eliminationRate),
-                            minLabel = "Langsam (0,10)",
-                            maxLabel = "Schnell (0,20)"
+            Spacer(Modifier.height(52.dp))
+
+            LargeTitleItem(
+                title = "Einstellungen",
+                scrollOffset = scrollState.value.toFloat()
+            )
+
+            // 1. Profile Hero Header (Matches iOS SettingsView profileHero 1:1)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { if (!isSignedIn) showAuth = true }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(60.dp)
+                            .clip(CircleShape)
+                            .background(AppColors.accent.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = AppIcons.Person,
+                            contentDescription = null,
+                            tint = AppColors.accent,
+                            modifier = Modifier.size(26.dp)
                         )
                     }
+                    Spacer(Modifier.width(16.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        if (isSignedIn && myProfile != null) {
+                            Text(
+                                text = myProfile?.displayName?.ifBlank { "Kein Name" } ?: "Kein Name",
+                                color = AppColors.text,
+                                style = de.tipau.promille.AppText.title
+                            )
+                            Text(
+                                text = myProfile?.friendCode ?: "",
+                                color = AppColors.accent,
+                                style = de.tipau.promille.AppText.captionBold.merge(de.tipau.promille.TabularFigures),
+                                letterSpacing = 2.sp
+                            )
+                        } else {
+                            Text(
+                                text = "Profil",
+                                color = AppColors.text,
+                                style = de.tipau.promille.AppText.title
+                            )
+                            Text(
+                                text = "Kein Konto verbunden",
+                                color = AppColors.textDim,
+                                style = de.tipau.promille.AppText.caption
+                            )
+                        }
+                    }
+                }
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(onClick = onNavigateToAchievements)
+                        .padding(4.dp)
+                ) {
+                    Icon(
+                        painter = AppIcons.EmojiEvents,
+                        contentDescription = null,
+                        tint = AppColors.accent,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = "$unlockedCount/${AchievementCatalog.ALL.size}",
+                        color = AppColors.accent,
+                        style = de.tipau.promille.AppText.captionBold
+                    )
+                    Text(
+                        text = "Achievements",
+                        color = AppColors.textDim,
+                        style = de.tipau.promille.AppText.micro
+                    )
                 }
             }
 
-            // SICHERHEIT
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionLabel(text = "SICHERHEIT")
-                PromilleCard(padding = 0.dp) {
-                    Column {
-                        SettingsContactRow(
-                            label = "Notfallkontakt",
-                            value = p.emergencyContactName ?: "",
-                            onValueChange = { viewModel.updateEmergencyContactName(it) },
-                            placeholder = "Name eingeben",
-                            keyboardType = KeyboardType.Text
-                        )
-                        SettingsDivider()
-                        SettingsContactRow(
-                            label = "Telefonnummer",
-                            value = p.emergencyContactPhone ?: "",
-                            onValueChange = { viewModel.updateEmergencyContactPhone(it) },
-                            placeholder = "+49 123 456789",
-                            keyboardType = KeyboardType.Phone
-                        )
-                        SettingsDivider()
-                        SettingsSliderRow(
-                            label = "Warnschwelle",
-                            value = p.warningThreshold.toFloat(),
-                            onValueChange = { viewModel.updateWarningThreshold(it.toDouble()) },
-                            valueRange = 0.2f..1.5f,
-                            valueDisplay = formatPromille(p.warningThreshold),
-                            minLabel = "Entspannt (0,2)",
-                            maxLabel = "Streng (1,5)"
-                        )
-                    }
-                }
-            }
+            Spacer(Modifier.height(8.dp))
 
-            // LIMITS & ZIELE
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionLabel(text = "LIMITS & ZIELE")
-                PromilleCard(padding = 0.dp) {
-                    Column {
-                        SettingsSliderRow(
-                            label = "Wochenlimit",
-                            value = p.weeklyDrinkLimit.toFloat(),
-                            onValueChange = { viewModel.updateWeeklyDrinkLimit(Math.round(it).toInt()) },
-                            valueRange = 0f..30f,
-                            valueDisplay = if (p.weeklyDrinkLimit == 0) "Keines" else "${p.weeklyDrinkLimit} Drinks",
-                            steps = 29
-                        )
-                        SettingsDivider()
-                        SettingsSliderRow(
-                            label = "Alkoholfreie Tage",
-                            value = p.soberDaysGoal.toFloat(),
-                            onValueChange = { viewModel.updateSoberDaysGoal(Math.round(it).toInt()) },
-                            valueRange = 1f..7f,
-                            valueDisplay = "${p.soberDaysGoal} pro Woche",
-                            steps = 5
-                        )
-                    }
+            // 2. Settings Sections (iOS Inset-Grouped List Style)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                // PROFIL
+                AppleInsetGroupedSection(title = "PROFIL") {
+                    SettingsNumericRow(
+                        label = "Gewicht",
+                        value = String.format(Locale.GERMANY, "%.1f", p.weight),
+                        onValueChange = { s -> s.replace(',', '.').toDoubleOrNull()?.let { viewModel.updateWeight(it) } },
+                        unit = "kg",
+                        keyboardType = KeyboardType.Decimal
+                    )
+                    SettingsDivider()
+                    SettingsNumericRow(
+                        label = "Größe",
+                        value = p.height.toInt().toString(),
+                        onValueChange = { s -> s.replace(',', '.').toDoubleOrNull()?.let { viewModel.updateHeight(it) } },
+                        unit = "cm",
+                        keyboardType = KeyboardType.Number
+                    )
+                    SettingsDivider()
+                    SettingsSelectRow(
+                        label = "Geburtsdatum",
+                        value = birthDateFormatted,
+                        onClick = { openDatePicker() }
+                    )
+                    SettingsDivider()
+                    SettingsSelectRow(
+                        label = "Geschlecht",
+                        value = genderLabel,
+                        onClick = { showGenderDialog = true }
+                    )
+                    SettingsDivider()
+                    SettingsSliderRow(
+                        label = "Abbaurate",
+                        value = p.eliminationRate.toFloat(),
+                        onValueChange = { viewModel.updateEliminationRate(it.toDouble()) },
+                        valueRange = 0.10f..0.20f,
+                        valueDisplay = formatPromilleRate(p.eliminationRate),
+                        minLabel = "Langsam (0,10)",
+                        maxLabel = "Schnell (0,20)"
+                    )
                 }
-            }
 
-            // MITTEILUNGEN
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionLabel(text = "MITTEILUNGEN")
-                PromilleCard(padding = 0.dp) {
+                // SICHERHEIT
+                AppleInsetGroupedSection(title = "SICHERHEIT") {
+                    SettingsContactRow(
+                        label = "Notfallkontakt",
+                        value = p.emergencyContactName ?: "",
+                        onValueChange = { viewModel.updateEmergencyContactName(it) },
+                        placeholder = "Name eingeben",
+                        keyboardType = KeyboardType.Text
+                    )
+                    SettingsDivider()
+                    SettingsContactRow(
+                        label = "Telefonnummer",
+                        value = p.emergencyContactPhone ?: "",
+                        onValueChange = { viewModel.updateEmergencyContactPhone(it) },
+                        placeholder = "+49 123 456789",
+                        keyboardType = KeyboardType.Phone
+                    )
+                    SettingsDivider()
+                    SettingsSliderRow(
+                        label = "Warnschwelle",
+                        value = p.warningThreshold.toFloat(),
+                        onValueChange = { viewModel.updateWarningThreshold(it.toDouble()) },
+                        valueRange = 0.2f..1.5f,
+                        valueDisplay = formatPromille(p.warningThreshold),
+                        minLabel = "Entspannt (0,2)",
+                        maxLabel = "Streng (1,5)"
+                    )
+                }
+
+                // LIMITS & ZIELE
+                AppleInsetGroupedSection(title = "LIMITS & ZIELE") {
+                    SettingsSliderRow(
+                        label = "Wochenlimit",
+                        value = p.weeklyDrinkLimit.toFloat(),
+                        onValueChange = { viewModel.updateWeeklyDrinkLimit(Math.round(it).toInt()) },
+                        valueRange = 0f..30f,
+                        valueDisplay = if (p.weeklyDrinkLimit == 0) "Keines" else "${p.weeklyDrinkLimit} Drinks",
+                        steps = 29
+                    )
+                    SettingsDivider()
+                    SettingsSliderRow(
+                        label = "Alkoholfreie Tage",
+                        value = p.soberDaysGoal.toFloat(),
+                        onValueChange = { viewModel.updateSoberDaysGoal(Math.round(it).toInt()) },
+                        valueRange = 1f..7f,
+                        valueDisplay = "${p.soberDaysGoal} pro Woche",
+                        steps = 5
+                    )
+                }
+
+                // MITTEILUNGEN
+                AppleInsetGroupedSection(title = "MITTEILUNGEN") {
                     SettingsToggleRow(
                         title = "Nüchternheits-Erinnerung",
                         subtitle = "Meldung wenn du rechnerisch nüchtern bzw. unter deiner Warnschwelle bist",
@@ -529,71 +525,63 @@ fun SettingsScreen(
                         icon = AppIcons.Bell
                     )
                 }
-            }
 
-            // DARSTELLUNG
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionLabel(text = "DARSTELLUNG")
-                PromilleCard(padding = 0.dp) {
-                    Column {
-                        SettingsSelectRow(
-                            label = "Home-Ansicht",
-                            value = HomeStyle.from(p.homeStyleRaw).localizedName,
-                            onClick = { showHomeStyleDialog = true }
-                        )
-                        SettingsDivider()
-                        SettingsSelectRow(
-                            label = "Standard-Magen",
-                            value = stomachLabel,
-                            onClick = { showStomachDialog = true }
-                        )
-                        SettingsDivider()
-                        SettingsToggleRow(
-                            title = "Toleranzmodus",
-                            subtitle = "Passt die Berechnung für regelmäßige Trinker an",
-                            checked = p.toleranceMode,
-                            onCheckedChange = { viewModel.updateToleranceMode(it) },
-                            icon = AppIcons.Gauge
-                        )
-                        SettingsDivider()
-                        SettingsToggleRow(
-                            title = "Konservativ rechnen",
-                            subtitle = "Vorsichtige Annahmen für Fahrbereit-Zeiten & Vorausschau",
-                            checked = p.conservativeSafety,
-                            onCheckedChange = { viewModel.updateConservativeSafety(it) },
-                            icon = AppIcons.Shield
-                        )
-                        SettingsDivider()
-                        SettingsToggleRow(
-                            title = "Konservativ in ganzer App",
-                            subtitle = "Vorsichtige Annahmen auch für Startseite, Kurven & Badges",
-                            checked = p.conservativeEverywhere,
-                            onCheckedChange = { viewModel.updateConservativeEverywhere(it) },
-                            icon = AppIcons.Shield
-                        )
-                        SettingsDivider()
-                        SettingsToggleRow(
-                            title = "Drunk-Modus",
-                            subtitle = "Vereinfacht die Startseite automatisch bei hohem Pegel",
-                            checked = p.drunkModeAuto,
-                            onCheckedChange = { viewModel.updateDrunkModeAuto(it) },
-                            icon = AppIcons.Moon
-                        )
-                        SettingsDivider()
-                        SettingsNavigationRow(
-                            title = "Status-Skin",
-                            subtitle = skin.displayName,
-                            onClick = { showStatusSkinPicker = true },
-                            icon = AppIcons.TextFormat
-                        )
-                    }
+                // DARSTELLUNG
+                AppleInsetGroupedSection(title = "DARSTELLUNG") {
+                    SettingsSelectRow(
+                        label = "Home-Ansicht",
+                        value = HomeStyle.from(p.homeStyleRaw).localizedName,
+                        onClick = { showHomeStyleDialog = true }
+                    )
+                    SettingsDivider()
+                    SettingsSelectRow(
+                        label = "Standard-Magen",
+                        value = stomachLabel,
+                        onClick = { showStomachDialog = true }
+                    )
+                    SettingsDivider()
+                    SettingsToggleRow(
+                        title = "Toleranzmodus",
+                        subtitle = "Passt die Berechnung für regelmäßige Trinker an",
+                        checked = p.toleranceMode,
+                        onCheckedChange = { viewModel.updateToleranceMode(it) },
+                        icon = AppIcons.Gauge
+                    )
+                    SettingsDivider()
+                    SettingsToggleRow(
+                        title = "Konservativ rechnen",
+                        subtitle = "Vorsichtige Annahmen für Fahrbereit-Zeiten & Vorausschau",
+                        checked = p.conservativeSafety,
+                        onCheckedChange = { viewModel.updateConservativeSafety(it) },
+                        icon = AppIcons.Shield
+                    )
+                    SettingsDivider()
+                    SettingsToggleRow(
+                        title = "Konservativ in ganzer App",
+                        subtitle = "Vorsichtige Annahmen auch für Startseite, Kurven & Badges",
+                        checked = p.conservativeEverywhere,
+                        onCheckedChange = { viewModel.updateConservativeEverywhere(it) },
+                        icon = AppIcons.Shield
+                    )
+                    SettingsDivider()
+                    SettingsToggleRow(
+                        title = "Drunk-Modus",
+                        subtitle = "Vereinfacht die Startseite automatisch bei hohem Pegel",
+                        checked = p.drunkModeAuto,
+                        onCheckedChange = { viewModel.updateDrunkModeAuto(it) },
+                        icon = AppIcons.Moon
+                    )
+                    SettingsDivider()
+                    SettingsNavigationRow(
+                        title = "Status-Skin",
+                        subtitle = skin.displayName,
+                        onClick = { showStatusSkinPicker = true },
+                        icon = AppIcons.TextFormat
+                    )
                 }
-            }
 
-            // AKZENTFARBE (Feature 10: Embedded Accent Color Picker)
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionLabel(text = "AKZENTFARBE")
-                PromilleCard(padding = 0.dp) {
+                // AKZENTFARBE
+                AppleInsetGroupedSection(title = "AKZENTFARBE") {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -610,8 +598,6 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                // iOS: .appBodyBold (17sp SemiBold) - was
-                                // 15sp Bold.
                                 text = "Eigene Farbe (RGB)",
                                 color = AppColors.text,
                                 style = de.tipau.promille.AppText.bodyBold
@@ -651,11 +637,11 @@ fun SettingsScreen(
                                                     .size(44.dp)
                                                     .clip(CircleShape)
                                                     .background(option.color)
-                                                    .border(
-                                                        if (isSelected) 2.5.dp else 0.5.dp,
-                                                        if (isSelected) Color.White else AppColors.border,
-                                                        CircleShape
-                                                    ),
+                                                .border(
+                                                    if (isSelected) 2.5.dp else 0.5.dp,
+                                                    if (isSelected) Color.White else AppColors.border,
+                                                    CircleShape
+                                                ),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 if (isSelected) {
@@ -682,138 +668,108 @@ fun SettingsScreen(
                         }
                     }
                 }
-            }
 
-            // MESSUNGEN
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionLabel(text = "MESSUNGEN")
-                PromilleCard(padding = 0.dp) {
-                    Column(modifier = Modifier.padding(bottom = 10.dp)) {
-                        SettingsSliderRow(
-                            label = "Schluckgröße",
-                            value = p.sipVolumeML.toFloat(),
-                            onValueChange = { viewModel.updateSipVolumeML(it.toDouble()) },
-                            valueRange = 10f..50f,
-                            valueDisplay = "${p.sipVolumeML.toInt()} ml",
-                            steps = 7
-                        )
-                        Text(
-                            text = "Standard: 25 ml. Aus einer Flasche eher 20 ml, aus einem Glas eher 30 ml.",
-                            color = AppColors.textDim,
-                            style = de.tipau.promille.AppText.micro,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                    }
-                }
-            }
-
-            // STATUS-SCHWELLEN
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                // MESSUNGEN
+                AppleInsetGroupedSection(
+                    title = "MESSUNGEN",
+                    caption = "Standard: 25 ml. Aus einer Flasche eher 20 ml, aus einem Glas eher 30 ml."
                 ) {
-                    SectionLabel(text = "STATUS-SCHWELLEN")
-                    TextButton(
-                        onClick = {
-                            haptics.light()
-                            viewModel.resetThresholds()
-                        },
-                        contentPadding = PaddingValues(0.dp)
-                    ) {
-                        // iOS: .appCaption - was 12sp.
-                        Text(text = "Zurücksetzen", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
-                    }
+                    SettingsSliderRow(
+                        label = "Schluckgröße",
+                        value = p.sipVolumeML.toFloat(),
+                        onValueChange = { viewModel.updateSipVolumeML(it.toDouble()) },
+                        valueRange = 10f..50f,
+                        valueDisplay = "${p.sipVolumeML.toInt()} ml",
+                        steps = 7
+                    )
                 }
 
-                Text(
-                    text = "Passe an, ab welchem Promille-Wert du in den jeweiligen Status wechselst. Nüchtern beginnt immer bei 0,00 ‰.",
-                    color = AppColors.textDim,
-                    style = de.tipau.promille.AppText.micro
-                )
-
-                PromilleCard(padding = 0.dp) {
-                    Column {
-                        SettingsSliderRow(
-                            label = "${skin.label(BacStatus.TIPSY)} ab",
-                            value = p.tipsyThreshold.toFloat(),
-                            onValueChange = { viewModel.updateTipsyThreshold(it.toDouble()) },
-                            valueRange = 0.01f..(p.drunkThreshold.toFloat() - 0.05f).coerceAtLeast(0.01f),
-                            valueDisplay = formatPromille(p.tipsyThreshold),
-                            statusDotColor = AppColors.statusYellow,
-                            onValueChangeFinished = { haptics.selection() }
-                        )
-                        SettingsDivider()
-                        SettingsSliderRow(
-                            label = "${skin.label(BacStatus.DRUNK)} ab",
-                            value = p.drunkThreshold.toFloat(),
-                            onValueChange = { viewModel.updateDrunkThreshold(it.toDouble()) },
-                            valueRange = (p.tipsyThreshold.toFloat() + 0.05f).coerceAtMost(2.5f)..(p.carefulThreshold.toFloat() - 0.05f).coerceAtLeast(0.01f),
-                            valueDisplay = formatPromille(p.drunkThreshold),
-                            statusDotColor = AppColors.statusOrange,
-                            onValueChangeFinished = { haptics.selection() }
-                        )
-                        SettingsDivider()
-                        SettingsSliderRow(
-                            label = "${skin.label(BacStatus.CAREFUL)} ab",
-                            value = p.carefulThreshold.toFloat(),
-                            onValueChange = { viewModel.updateCarefulThreshold(it.toDouble()) },
-                            valueRange = (p.drunkThreshold.toFloat() + 0.05f).coerceAtMost(2.5f)..(p.dangerThreshold.toFloat() - 0.05f).coerceAtLeast(0.01f),
-                            valueDisplay = formatPromille(p.carefulThreshold),
-                            statusDotColor = AppColors.statusRed,
-                            onValueChangeFinished = { haptics.selection() }
-                        )
-                        SettingsDivider()
-                        SettingsSliderRow(
-                            label = "${skin.label(BacStatus.DANGER)} ab",
-                            value = p.dangerThreshold.toFloat(),
-                            onValueChange = { viewModel.updateDangerThreshold(it.toDouble()) },
-                            valueRange = (p.carefulThreshold.toFloat() + 0.05f).coerceAtMost(2.5f)..2.50f,
-                            valueDisplay = formatPromille(p.dangerThreshold),
-                            statusDotColor = AppColors.statusDarkRed,
-                            onValueChangeFinished = { haptics.selection() }
-                        )
+                // STATUS-SCHWELLEN
+                AppleInsetGroupedSection(
+                    title = "STATUS-SCHWELLEN",
+                    caption = "Passe an, ab welchem Promille-Wert du in den jeweiligen Status wechselst. Nüchtern beginnt immer bei 0,00 ‰.",
+                    titleTrailingContent = {
+                        TextButton(
+                            onClick = {
+                                haptics.light()
+                                viewModel.resetThresholds()
+                            },
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text(text = "Zurücksetzen", color = AppColors.textDim, style = de.tipau.promille.AppText.caption)
+                        }
                     }
+                ) {
+                    SettingsSliderRow(
+                        label = "${skin.label(BacStatus.TIPSY)} ab",
+                        value = p.tipsyThreshold.toFloat(),
+                        onValueChange = { viewModel.updateTipsyThreshold(it.toDouble()) },
+                        valueRange = 0.01f..(p.drunkThreshold.toFloat() - 0.05f).coerceAtLeast(0.01f),
+                        valueDisplay = formatPromille(p.tipsyThreshold),
+                        statusDotColor = AppColors.statusYellow,
+                        onValueChangeFinished = { haptics.selection() }
+                    )
+                    SettingsDivider()
+                    SettingsSliderRow(
+                        label = "${skin.label(BacStatus.DRUNK)} ab",
+                        value = p.drunkThreshold.toFloat(),
+                        onValueChange = { viewModel.updateDrunkThreshold(it.toDouble()) },
+                        valueRange = (p.tipsyThreshold.toFloat() + 0.05f).coerceAtMost(2.5f)..(p.carefulThreshold.toFloat() - 0.05f).coerceAtLeast(0.01f),
+                        valueDisplay = formatPromille(p.drunkThreshold),
+                        statusDotColor = AppColors.statusOrange,
+                        onValueChangeFinished = { haptics.selection() }
+                    )
+                    SettingsDivider()
+                    SettingsSliderRow(
+                        label = "${skin.label(BacStatus.CAREFUL)} ab",
+                        value = p.carefulThreshold.toFloat(),
+                        onValueChange = { viewModel.updateCarefulThreshold(it.toDouble()) },
+                        valueRange = (p.drunkThreshold.toFloat() + 0.05f).coerceAtMost(2.5f)..(p.dangerThreshold.toFloat() - 0.05f).coerceAtLeast(0.01f),
+                        valueDisplay = formatPromille(p.carefulThreshold),
+                        statusDotColor = AppColors.statusRed,
+                        onValueChangeFinished = { haptics.selection() }
+                    )
+                    SettingsDivider()
+                    SettingsSliderRow(
+                        label = "${skin.label(BacStatus.DANGER)} ab",
+                        value = p.dangerThreshold.toFloat(),
+                        onValueChange = { viewModel.updateDangerThreshold(it.toDouble()) },
+                        valueRange = (p.carefulThreshold.toFloat() + 0.05f).coerceAtMost(2.5f)..2.50f,
+                        valueDisplay = formatPromille(p.dangerThreshold),
+                        statusDotColor = AppColors.statusDarkRed,
+                        onValueChangeFinished = { haptics.selection() }
+                    )
                 }
-            }
 
-            // BARRIEREFREIHEIT
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionLabel(text = "BARRIEREFREIHEIT")
-                PromilleCard(padding = 0.dp) {
-                    Column {
-                        SettingsToggleRow(
-                            title = "Größerer Text",
-                            subtitle = "Schriftgröße erhöhen",
-                            checked = p.largeText,
-                            onCheckedChange = { viewModel.updateLargeText(it) },
-                            icon = AppIcons.TextFormat
-                        )
-                        SettingsDivider()
-                        SettingsToggleRow(
-                            title = "Hoher Kontrast",
-                            subtitle = "Helleres Farbschema aktivieren",
-                            checked = p.highContrast,
-                            onCheckedChange = { viewModel.updateHighContrast(it) },
-                            icon = AppIcons.Sun
-                        )
-                        SettingsDivider()
-                        SettingsToggleRow(
-                            title = "Bewegungen reduzieren",
-                            subtitle = "Animationen minimieren",
-                            checked = p.reducedMotion,
-                            onCheckedChange = { viewModel.updateReducedMotion(it) },
-                            icon = AppIcons.TouchApp
-                        )
-                    }
+                // BARRIEREFREIHEIT
+                AppleInsetGroupedSection(title = "BARRIEREFREIHEIT") {
+                    SettingsToggleRow(
+                        title = "Größerer Text",
+                        subtitle = "Schriftgröße erhöhen",
+                        checked = p.largeText,
+                        onCheckedChange = { viewModel.updateLargeText(it) },
+                        icon = AppIcons.TextFormat
+                    )
+                    SettingsDivider()
+                    SettingsToggleRow(
+                        title = "Hoher Kontrast",
+                        subtitle = "Helleres Farbschema aktivieren",
+                        checked = p.highContrast,
+                        onCheckedChange = { viewModel.updateHighContrast(it) },
+                        icon = AppIcons.Sun
+                    )
+                    SettingsDivider()
+                    SettingsToggleRow(
+                        title = "Bewegungen reduzieren",
+                        subtitle = "Animationen minimieren",
+                        checked = p.reducedMotion,
+                        onCheckedChange = { viewModel.updateReducedMotion(it) },
+                        icon = AppIcons.TouchApp
+                    )
                 }
-            }
 
-            // ACHIEVEMENTS
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionLabel(text = "ACHIEVEMENTS")
-                PromilleCard(padding = 0.dp) {
+                // ACHIEVEMENTS
+                AppleInsetGroupedSection(title = "ACHIEVEMENTS") {
                     SettingsNavigationRow(
                         title = "Achievements",
                         subtitle = "$unlockedCount von ${AchievementCatalog.ALL.size} freigeschaltet",
@@ -821,12 +777,9 @@ fun SettingsScreen(
                         icon = AppIcons.EmojiEvents
                     )
                 }
-            }
 
-            // DATEN
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionLabel(text = "DATEN")
-                PromilleCard(padding = 0.dp) {
+                // DATEN
+                AppleInsetGroupedSection(title = "DATEN") {
                     SettingsNavigationRow(
                         title = "Verlauf als CSV exportieren",
                         subtitle = "Öffnet sich in Excel und Google Tabellen",
@@ -843,113 +796,99 @@ fun SettingsScreen(
                         icon = AppIcons.Share
                     )
                 }
-            }
 
-            // KONTO
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionLabel(text = "KONTO")
-                PromilleCard(padding = 0.dp) {
-                    Column {
-                        if (isSignedIn && myProfile != null) {
-                            val remote = myProfile!!
-                            SettingsInfoRow(
-                                label = remote.displayName.ifEmpty { "Kein Name" },
-                                value = remote.friendCode
-                            )
-                            SettingsDivider()
-                            SettingsToggleRow(
-                                title = "BAC teilen",
-                                subtitle = "Freunde können deinen BAC sehen",
-                                checked = remote.isSharing,
-                                onCheckedChange = { on ->
-                                    coroutineScope.launch {
-                                        try {
-                                            appContainer!!.supabase.updateSharing(on)
-                                        } catch (e: Exception) {
-                                            appContainer!!.offlineSync.enqueueUpdateSharing(on)
-                                        }
-                                    }
-                                },
-                                icon = AppIcons.RadioWave
-                            )
-                            SettingsDivider()
-                            SettingsDestructiveRow(
-                                label = "Abmelden",
-                                onClick = { coroutineScope.launch { appContainer!!.supabase.signOut() } },
-                                icon = AppIcons.ExitToApp
-                            )
-                            SettingsDivider()
-                            SettingsDestructiveRow(
-                                label = "Konto löschen",
-                                onClick = { showDeleteAccountConfirm = true },
-                                icon = AppIcons.Trash
-                            )
-                        } else {
-                            SettingsNavigationRow(
-                                title = "Anmelden",
-                                subtitle = "Live-BAC mit Freunden teilen",
-                                onClick = { showAuth = true },
-                                icon = AppIcons.Person
-                            )
-                        }
-                    }
-                }
-            }
-
-            // DATENSCHUTZ
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionLabel(text = "DATENSCHUTZ")
-                PromilleCard(padding = 0.dp) {
-                    Column {
+                // KONTO
+                AppleInsetGroupedSection(title = "KONTO") {
+                    if (isSignedIn && myProfile != null) {
+                        val remote = myProfile!!
+                        SettingsInfoRow(
+                            label = remote.displayName.ifEmpty { "Kein Name" },
+                            value = remote.friendCode
+                        )
+                        SettingsDivider()
                         SettingsToggleRow(
-                            title = "Anonyme Stadtstatistiken beitragen",
-                            subtitle = "Getränk, lokale Stunde sowie begrenzte BAC- und Dauerwerte teilen",
-                            checked = p.shareAnonymousCityInsights,
-                            onCheckedChange = { enabled ->
-                                viewModel.updateShareAnonymousCityInsights(enabled)
-                                if (enabled && !de.tipau.promille.service.LocationService.hasPermission(context)) {
-                                    locationPermissionLauncher.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                            title = "BAC teilen",
+                            subtitle = "Freunde können deinen BAC sehen",
+                            checked = remote.isSharing,
+                            onCheckedChange = { on ->
+                                coroutineScope.launch {
+                                    try {
+                                        appContainer!!.supabase.updateSharing(on)
+                                    } catch (e: Exception) {
+                                        appContainer!!.offlineSync.enqueueUpdateSharing(on)
+                                    }
                                 }
                             },
-                            icon = AppIcons.Building
+                            icon = AppIcons.RadioWave
                         )
                         SettingsDivider()
                         SettingsDestructiveRow(
-                            label = "Alle Erinnerungsfotos löschen",
-                            onClick = { showDeletePhotosConfirm = true },
-                            icon = AppIcons.Photo
+                            label = "Abmelden",
+                            onClick = { coroutineScope.launch { appContainer!!.supabase.signOut() } },
+                            icon = AppIcons.ExitToApp
                         )
-                    }
-                }
-                Text(
-                    text = "Persönliche Trends bleiben lokal. Stadtwerte werden nur nach deiner Zustimmung übertragen und erst ab mindestens fünf verschiedenen Beiträgern angezeigt. Fotos bleiben ausschließlich auf deinem Gerät.",
-                    color = AppColors.textDim,
-                    style = de.tipau.promille.AppText.micro
-                )
-            }
-
-            // ÜBER
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionLabel(text = "ÜBER")
-                PromilleCard(padding = 0.dp) {
-                    Column {
-                        SettingsInfoRow(label = "Version", value = de.tipau.promille.BuildConfig.VERSION_NAME)
                         SettingsDivider()
+                        SettingsDestructiveRow(
+                            label = "Konto löschen",
+                            onClick = { showDeleteAccountConfirm = true },
+                            icon = AppIcons.Trash
+                        )
+                    } else {
                         SettingsNavigationRow(
-                            title = "Nach Updates suchen",
-                            subtitle = "GitHub Releases (tipau9/Alcoholtracker)",
-                            onClick = { showUpdateSheet = true },
-                            icon = AppIcons.ArrowDown
+                            title = "Anmelden",
+                            subtitle = "Live-BAC mit Freunden teilen",
+                            onClick = { showAuth = true },
+                            icon = AppIcons.Person
                         )
                     }
                 }
-                Text(
-                    text = "Diese App liefert Schätzwerte nach dem Widmark-Modell. Sie ersetzt keinen Atemtest und keine medizinische Beurteilung. Im Zweifel nicht fahren.",
-                    color = AppColors.textDim,
-                    style = de.tipau.promille.AppText.micro
-                )
+
+                // DATENSCHUTZ
+                AppleInsetGroupedSection(
+                    title = "DATENSCHUTZ",
+                    caption = "Persönliche Trends bleiben lokal. Stadtwerte werden nur nach deiner Zustimmung übertragen und erst ab mindestens fünf verschiedenen Beiträgern angezeigt. Fotos bleiben ausschließlich auf deinem Gerät."
+                ) {
+                    SettingsToggleRow(
+                        title = "Anonyme Stadtstatistiken beitragen",
+                        subtitle = "Getränk, lokale Stunde sowie begrenzte BAC- und Dauerwerte teilen",
+                        checked = p.shareAnonymousCityInsights,
+                        onCheckedChange = { enabled ->
+                            viewModel.updateShareAnonymousCityInsights(enabled)
+                            if (enabled && !de.tipau.promille.service.LocationService.hasPermission(context)) {
+                                locationPermissionLauncher.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                            }
+                        },
+                        icon = AppIcons.Building
+                    )
+                    SettingsDivider()
+                    SettingsDestructiveRow(
+                        label = "Alle Erinnerungsfotos löschen",
+                        onClick = { showDeletePhotosConfirm = true },
+                        icon = AppIcons.Photo
+                    )
+                }
+
+                // ÜBER
+                AppleInsetGroupedSection(
+                    title = "ÜBER",
+                    caption = "Diese App liefert Schätzwerte nach dem Widmark-Modell. Sie ersetzt keinen Atemtest und keine medizinische Beurteilung. Im Zweifel nicht fahren."
+                ) {
+                    SettingsInfoRow(label = "Version", value = de.tipau.promille.BuildConfig.VERSION_NAME)
+                    SettingsDivider()
+                    SettingsNavigationRow(
+                        title = "Nach Updates suchen",
+                        subtitle = "GitHub Releases (tipau9/Alcoholtracker)",
+                        onClick = { showUpdateSheet = true },
+                        icon = AppIcons.ArrowDown
+                    )
+                }
             }
         }
+
+        CollapsibleLargeTitleHeader(
+            title = "Einstellungen",
+            scrollOffset = scrollState.value.toFloat()
+        )
     }
 
     if (showUpdateSheet) {

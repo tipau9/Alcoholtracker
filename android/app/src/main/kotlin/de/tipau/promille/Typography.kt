@@ -62,6 +62,8 @@ val AppSerif = FontFamily(
  * the .large content size, since Compose has no semantic scale to hand.
  */
 object AppText {
+    /** .appLargeTitle / Font.largeTitle (34sp) */
+    val largeTitle = TextStyle(fontFamily = AppSansDisplay, fontSize = 34.sp, fontWeight = FontWeight.Bold)
     /** .appHeadline / Font.title */
     val headline = TextStyle(fontFamily = AppSansDisplay, fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
     /** .appTitle / Font.title2 */

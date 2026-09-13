@@ -130,6 +130,7 @@ fun BACDisplaySection(
             Box(
                 modifier = Modifier
                     .size(220.dp)
+                    .appleParallax3D(maxAngle = 10f, sheenAlpha = 0.22f)
                     .border(
                         width = 1.dp,
                         brush = Brush.verticalGradient(
