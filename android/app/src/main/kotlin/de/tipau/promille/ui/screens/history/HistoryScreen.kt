@@ -3,11 +3,13 @@ package de.tipau.promille.ui.screens.history
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -280,7 +282,31 @@ fun HistoryScreen(
                 val totalCells = ((firstDayOfMonth - 1) + daysInMonth + 6) / 7 * 7
                 val today = LocalDate.now()
 
-                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+                var dragTotalX by remember { mutableFloatStateOf(0f) }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerInput(visibleMonth) {
+                            detectHorizontalDragGestures(
+                                onDragEnd = {
+                                    if (dragTotalX < -80f && !isCurrentMonth) {
+                                        haptics.selection()
+                                        viewModel.nextMonth()
+                                    } else if (dragTotalX > 80f) {
+                                        haptics.selection()
+                                        viewModel.previousMonth()
+                                    }
+                                    dragTotalX = 0f
+                                },
+                                onHorizontalDrag = { _, dragAmount ->
+                                    dragTotalX += dragAmount
+                                }
+                            )
+                        },
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
                     for (row in 0 until (totalCells / 7)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),

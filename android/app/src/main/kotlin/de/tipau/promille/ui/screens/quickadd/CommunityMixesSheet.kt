@@ -81,8 +81,10 @@ fun CommunityMixesSheet(
 
             when {
                 loading -> {
-                    Box(Modifier.fillMaxWidth().padding(vertical = 60.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = AppColors.accent)
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        repeat(3) {
+                            de.tipau.promille.ui.components.AppleSkeletonCard()
+                        }
                     }
                 }
                 rows.isEmpty() -> {

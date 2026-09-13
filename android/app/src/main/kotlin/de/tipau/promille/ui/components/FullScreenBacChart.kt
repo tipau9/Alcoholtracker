@@ -1,29 +1,14 @@
 package de.tipau.promille.ui.components
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.tipau.promille.AppColors
@@ -33,15 +18,65 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.math.abs
-import kotlin.math.max
 import de.tipau.promille.AppSans
 import de.tipau.promille.AppSerif
 import de.tipau.promille.TabularFigures
+import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
+import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
+import com.patrykandpatrick.vico.compose.chart.Chart
+import com.patrykandpatrick.vico.compose.chart.line.lineChart
+import com.patrykandpatrick.vico.compose.chart.line.lineSpec
+import com.patrykandpatrick.vico.compose.chart.scroll.rememberChartScrollSpec
+import com.patrykandpatrick.vico.compose.component.lineComponent
+import com.patrykandpatrick.vico.compose.component.shapeComponent
+import com.patrykandpatrick.vico.compose.component.textComponent
+import com.patrykandpatrick.vico.compose.dimensions.dimensionsOf
+import com.patrykandpatrick.vico.compose.style.ChartStyle
+import com.patrykandpatrick.vico.compose.style.ProvideChartStyle
+import com.patrykandpatrick.vico.core.chart.DefaultPointConnector
+import com.patrykandpatrick.vico.core.chart.decoration.Decoration
+import com.patrykandpatrick.vico.core.chart.decoration.ThresholdLine
+import com.patrykandpatrick.vico.core.chart.draw.ChartDrawContext
+import com.patrykandpatrick.vico.core.chart.layout.HorizontalLayout
+import com.patrykandpatrick.vico.core.chart.values.AxisValuesOverrider
+import com.patrykandpatrick.vico.core.component.marker.MarkerComponent
+import com.patrykandpatrick.vico.core.component.shape.DashedShape
+import com.patrykandpatrick.vico.core.component.shape.ShapeComponent
+import com.patrykandpatrick.vico.core.component.shape.Shapes
+import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
+import com.patrykandpatrick.vico.core.entry.FloatEntry
+import com.patrykandpatrick.vico.core.extension.half
+import com.patrykandpatrick.vico.core.marker.Marker
+import com.patrykandpatrick.vico.core.marker.MarkerLabelFormatter
+import com.patrykandpatrick.vico.core.marker.MarkerVisibilityChangeListener
+import kotlin.math.max
+
+/** ThresholdLine only marks y-axis ranges, so the vertical "Jetzt" line needs its own
+ * x-based [Decoration] mapping a data x-value to the chart's pixel bounds by hand. */
+private class NowLineDecoration(
+    private val xValue: Float,
+    private val lineComponent: ShapeComponent,
+    private val thicknessDp: Float = 1f
+) : Decoration {
+    override fun onDrawAboveChart(
+        context: ChartDrawContext,
+        bounds: android.graphics.RectF
+    ): Unit = with(context) {
+        val chartValues = chartValuesProvider.getChartValues()
+        val xRange = chartValues.maxX - chartValues.minX
+        if (xRange <= 0f || xValue < chartValues.minX || xValue > chartValues.maxX) return@with
+        val x = bounds.left + (xValue - chartValues.minX) / xRange * bounds.width()
+        val half = thicknessDp.pixels.half
+        lineComponent.draw(context = context, left = x - half, top = bounds.top, right = x + half, bottom = bounds.bottom)
+    }
+}
 
 /**
  * 1:1 Port of FullScreenBACChart.swift.
  * Full-screen interactive BAC chart for 24-hour visualization with real-time scrubbing.
+ * Grid/gradient/scrub-bubble rendering is vico (compose-m3); header, HUD and legend are
+ * custom to keep the app's own chrome. x is minutes-since-start, not epoch seconds -
+ * ChartEntry.x is a Float and epoch seconds overflow its exact-integer range.
  */
 @Composable
 fun FullScreenBacChart(
@@ -52,7 +87,6 @@ fun FullScreenBacChart(
 ) {
     val haptics = rememberHapticManager()
     var selectedPoint by remember { mutableStateOf<CurvePoint?>(null) }
-    val textMeasurer = rememberTextMeasurer()
 
     val effectivePoints = remember(points) {
         if (points.isNotEmpty()) {
@@ -70,9 +104,6 @@ fun FullScreenBacChart(
 
     val timeFormatter = remember {
         DateTimeFormatter.ofPattern("HH:mm", Locale.GERMAN).withZone(ZoneId.systemDefault())
-    }
-    val hourFormatter = remember {
-        DateTimeFormatter.ofPattern("HH", Locale.GERMAN).withZone(ZoneId.systemDefault())
     }
 
     Box(
@@ -103,7 +134,6 @@ fun FullScreenBacChart(
                         fontFamily = AppSerif
                     )
                     Text(
-                        // iOS: .appCaption - was 12sp.
                         text = "24-Stunden-Ansicht",
                         color = AppColors.textDim,
                         style = de.tipau.promille.AppText.caption
@@ -155,194 +185,135 @@ fun FullScreenBacChart(
                 }
             }
 
-            // Interactive Chart Canvas (always rendered via effectivePoints)
+            // Interactive Chart (vico)
             val startTime = effectivePoints.first().epochSeconds
             val endTime = effectivePoints.last().epochSeconds
+
+            val entryProducer = remember(effectivePoints, startTime) {
+                ChartEntryModelProducer(
+                    effectivePoints.map { pt ->
+                        FloatEntry(x = (pt.epochSeconds - startTime) / 60f, y = pt.bac.toFloat())
+                    }
+                )
+            }
+
+            val style = remember {
+                ChartStyle.fromColors(
+                    axisLabelColor = AppColors.textDim,
+                    axisGuidelineColor = AppColors.border.copy(alpha = 0.3f),
+                    axisLineColor = AppColors.border.copy(alpha = 0.3f),
+                    entityColors = listOf(AppColors.accent),
+                    elevationOverlayColor = AppColors.accent
+                )
+            }
+
+            val markerLabel = textComponent(
+                color = AppColors.background,
+                textSize = 13.sp,
+                background = shapeComponent(shape = Shapes.pillShape, color = AppColors.accent),
+                padding = dimensionsOf(horizontal = 10.dp, vertical = 6.dp)
+            )
+            val markerIndicator = shapeComponent(shape = Shapes.pillShape, color = AppColors.accent)
+            val markerGuideline = lineComponent(color = AppColors.textDim.copy(alpha = 0.35f), thickness = 1.dp)
+            val marker = remember(markerLabel, markerIndicator, markerGuideline) {
+                object : MarkerComponent(markerLabel, markerIndicator, markerGuideline) {
+                    init {
+                        indicatorSizeDp = 8f
+                        labelFormatter = MarkerLabelFormatter { markedEntries, _ ->
+                            markedEntries.firstOrNull()?.entry?.y?.let {
+                                String.format(Locale.GERMANY, "%.2f", it)
+                            } ?: ""
+                        }
+                    }
+                }
+            }
+            val markerListener = remember(startTime) {
+                object : MarkerVisibilityChangeListener {
+                    override fun onMarkerShown(marker: Marker, markerEntryModels: List<Marker.EntryModel>) {
+                        markerEntryModels.firstOrNull()?.entry?.let { entry ->
+                            haptics.selection()
+                            selectedPoint = CurvePoint(startTime + (entry.x * 60).toLong(), entry.y.toDouble())
+                        }
+                    }
+                    override fun onMarkerMoved(marker: Marker, markerEntryModels: List<Marker.EntryModel>) {
+                        markerEntryModels.firstOrNull()?.entry?.let { entry ->
+                            haptics.selection()
+                            selectedPoint = CurvePoint(startTime + (entry.x * 60).toLong(), entry.y.toDouble())
+                        }
+                    }
+                    override fun onMarkerHidden(marker: Marker) {
+                        // Keep the last scrubbed point visible after drag-release, like the old Canvas chart did.
+                    }
+                }
+            }
+
+            val thresholdLabel = textComponent(
+                color = AppColors.statusRed,
+                textSize = 11.sp,
+                padding = dimensionsOf(horizontal = 4.dp, vertical = 2.dp)
+            )
+            val thresholdLineComponent = shapeComponent(
+                shape = DashedShape(Shapes.rectShape, 8f, 4f),
+                color = AppColors.statusRed.copy(alpha = 0.55f)
+            )
+            val thresholdLine = remember(drivingLimit, thresholdLineComponent, thresholdLabel) {
+                if (drivingLimit > 0) {
+                    ThresholdLine(
+                        thresholdValue = drivingLimit.toFloat(),
+                        thresholdLabel = "${String.format(Locale.GERMANY, "%.1f", drivingLimit)} Promille",
+                        lineComponent = thresholdLineComponent,
+                        labelComponent = thresholdLabel
+                    )
+                } else null
+            }
+            val nowLineComponent = shapeComponent(
+                shape = DashedShape(Shapes.rectShape, 3f, 3f),
+                color = AppColors.textDim.copy(alpha = 0.5f)
+            )
+            val nowLine = remember(startTime, endTime, nowLineComponent) {
+                val nowEpoch = System.currentTimeMillis() / 1000
+                if (nowEpoch in startTime..endTime) {
+                    NowLineDecoration(xValue = (nowEpoch - startTime) / 60f, lineComponent = nowLineComponent)
+                } else null
+            }
+
             val maxBacFromPoints = effectivePoints.maxOfOrNull { it.bac } ?: 0.0
             val maxBac = max(maxBacFromPoints * 1.2, max(drivingLimit * 1.3, 0.8))
 
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(horizontal = 16.dp, vertical = if (selectedPoint == null) 12.dp else 4.dp)
-                    .pointerInput(effectivePoints) {
-                        detectTapGestures(
-                            onPress = { offset ->
-                                val fraction = (offset.x / size.width).coerceIn(0f, 1f)
-                                val targetEpoch = startTime + ((endTime - startTime) * fraction).toLong()
-                                val closest = effectivePoints.minByOrNull { abs(it.epochSeconds - targetEpoch) }
-                                if (closest != null && closest.epochSeconds != selectedPoint?.epochSeconds) {
-                                    haptics.selection()
-                                    selectedPoint = closest
-                                }
-                            }
-                        )
-                    }
-                    .pointerInput(effectivePoints) {
-                        detectDragGestures(
-                            onDragStart = { offset ->
-                                val fraction = (offset.x / size.width).coerceIn(0f, 1f)
-                                val targetEpoch = startTime + ((endTime - startTime) * fraction).toLong()
-                                val closest = effectivePoints.minByOrNull { abs(it.epochSeconds - targetEpoch) }
-                                if (closest != null && closest.epochSeconds != selectedPoint?.epochSeconds) {
-                                    haptics.selection()
-                                    selectedPoint = closest
-                                }
-                            },
-                            onDragEnd = { /* keep point visible after drag for inspection */ },
-                            onDragCancel = { /* keep point visible */ },
-                            onDrag = { change, _ ->
-                                change.consume()
-                                val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
-                                val targetEpoch = startTime + ((endTime - startTime) * fraction).toLong()
-                                val closest = effectivePoints.minByOrNull { abs(it.epochSeconds - targetEpoch) }
-                                if (closest != null && closest.epochSeconds != selectedPoint?.epochSeconds) {
-                                    haptics.selection()
-                                    selectedPoint = closest
-                                }
-                            }
-                        )
-                    }
-            ) {
-                    val w = size.width
-                    val bottomPadding = 24.dp.toPx()
-                    val h = size.height - bottomPadding
-
-                    // 1. Grid Lines and Y-Axis Labels
-                    val ySteps = 4
-                    for (i in 0..ySteps) {
-                        val yBac = (maxBac / ySteps) * i
-                        val yPos = h - (yBac / maxBac * h).toFloat()
-                        drawLine(
-                            color = AppColors.border.copy(alpha = 0.3f),
-                            start = Offset(0f, yPos),
-                            end = Offset(w, yPos),
-                            strokeWidth = 0.5.dp.toPx()
-                        )
-                        drawText(
-                            textMeasurer = textMeasurer,
-                            text = String.format(Locale.GERMANY, "%.1f", yBac),
-                            topLeft = Offset(4.dp.toPx(), yPos - 12.dp.toPx()),
-                            style = TextStyle(color = AppColors.textDim, fontSize = 10.sp)
-                        )
-                    }
-
-                    // 2. Driving Limit Line
-                    if (drivingLimit > 0 && drivingLimit <= maxBac) {
-                        val threshY = h - (drivingLimit / maxBac * h).toFloat()
-                        drawLine(
-                            color = AppColors.statusRed.copy(alpha = 0.55f),
-                            start = Offset(0f, threshY),
-                            end = Offset(w, threshY),
-                            strokeWidth = 1.dp.toPx(),
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 4.dp.toPx()), 0f)
-                        )
-                        drawText(
-                            textMeasurer = textMeasurer,
-                            text = "${String.format(Locale.GERMANY, "%.1f", drivingLimit)} Promille",
-                            topLeft = Offset(8.dp.toPx(), threshY - 14.dp.toPx()),
-                            style = TextStyle(color = AppColors.statusRed.copy(alpha = 0.8f), fontSize = 9.sp, fontWeight = FontWeight.Medium)
-                        )
-                    }
-
-                    // 3. Current Time "Jetzt" Line
-                    val currentNow = System.currentTimeMillis() / 1000
-                    if (currentNow in startTime..endTime && endTime > startTime) {
-                        val nowX = ((currentNow - startTime).toFloat() / (endTime - startTime)) * w
-                        drawLine(
-                            color = AppColors.textDim.copy(alpha = 0.4f),
-                            start = Offset(nowX, 0f),
-                            end = Offset(nowX, h),
-                            strokeWidth = 1.dp.toPx(),
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx()), 0f)
-                        )
-                    }
-
-                    // 4. Smooth Curve Area and Line
-                    val curvePath = Path()
-                    val areaPath = Path()
-
-                    effectivePoints.forEachIndexed { index, pt ->
-                        val x = if (endTime > startTime) {
-                            ((pt.epochSeconds - startTime).toFloat() / (endTime - startTime)) * w
-                        } else 0f
-                        val y = (h - (pt.bac / maxBac * h).toFloat()).coerceIn(0f, h)
-
-                        if (index == 0) {
-                            curvePath.moveTo(x, y)
-                            areaPath.moveTo(x, h)
-                            areaPath.lineTo(x, y)
-                        } else {
-                            curvePath.lineTo(x, y)
-                            areaPath.lineTo(x, y)
+            ProvideChartStyle(style) {
+                Chart(
+                    chart = lineChart(
+                        lines = listOf(
+                            lineSpec(
+                                lineColor = AppColors.accent,
+                                pointConnector = DefaultPointConnector(cubicStrength = 0f)
+                            )
+                        ),
+                        decorations = listOfNotNull<Decoration>(thresholdLine, nowLine),
+                        axisValuesOverrider = AxisValuesOverrider.fixed(minY = 0f, maxY = maxBac.toFloat())
+                    ),
+                    chartModelProducer = entryProducer,
+                    startAxis = rememberStartAxis(
+                        valueFormatter = { value, _ -> String.format(Locale.GERMANY, "%.1f", value) }
+                    ),
+                    bottomAxis = rememberBottomAxis(
+                        guideline = null,
+                        valueFormatter = { value, _ ->
+                            timeFormatter.format(Instant.ofEpochSecond(startTime + (value * 60).toLong()))
                         }
-                    }
-                    areaPath.lineTo(w, h)
-                    areaPath.close()
-
-                    // Draw Area Gradient
-                    drawPath(
-                        path = areaPath,
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                AppColors.accent.copy(alpha = 0.35f),
-                                Color.Transparent
-                            ),
-                            startY = 0f,
-                            endY = h
-                        )
-                    )
-
-                    // Draw Line
-                    drawPath(
-                        path = curvePath,
-                        color = AppColors.accent,
-                        style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
-                    )
-
-                    // 5. Selected Point Indicator
-                    if (selectedPoint != null && endTime > startTime) {
-                        val pt = selectedPoint!!
-                        val selX = ((pt.epochSeconds - startTime).toFloat() / (endTime - startTime)) * w
-                        val selY = (h - (pt.bac / maxBac * h).toFloat()).coerceIn(0f, h)
-
-                        // Vertical guide line
-                        drawLine(
-                            color = AppColors.accent.copy(alpha = 0.3f),
-                            start = Offset(selX, 0f),
-                            end = Offset(selX, h),
-                            strokeWidth = 1.dp.toPx()
-                        )
-
-                        // Glowing point
-                        drawCircle(
-                            color = AppColors.accent.copy(alpha = 0.3f),
-                            radius = 10.dp.toPx(),
-                            center = Offset(selX, selY)
-                        )
-                        drawCircle(
-                            color = AppColors.accent,
-                            radius = 5.dp.toPx(),
-                            center = Offset(selX, selY)
-                        )
-                    }
-
-                    // 6. X-Axis Time Labels (every 3 hours)
-                    val stepSeconds = 3 * 3600L
-                    var tick = ((startTime / stepSeconds) + 1) * stepSeconds
-                    while (tick < endTime) {
-                        val tickX = ((tick - startTime).toFloat() / (endTime - startTime)) * w
-                        val label = hourFormatter.format(Instant.ofEpochSecond(tick))
-                        drawText(
-                            textMeasurer = textMeasurer,
-                            text = label,
-                            topLeft = Offset(tickX - 8.dp.toPx(), h + 6.dp.toPx()),
-                            style = TextStyle(color = AppColors.textDim, fontSize = 10.sp)
-                        )
-                        tick += stepSeconds
-                    }
-                }
+                    ),
+                    marker = marker,
+                    markerVisibilityChangeListener = markerListener,
+                    runInitialAnimation = false,
+                    chartScrollSpec = rememberChartScrollSpec(isScrollEnabled = false),
+                    isZoomEnabled = false,
+                    horizontalLayout = HorizontalLayout.FullWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = 16.dp, vertical = if (selectedPoint == null) 12.dp else 4.dp)
+                )
+            }
 
             // Legend
             Row(

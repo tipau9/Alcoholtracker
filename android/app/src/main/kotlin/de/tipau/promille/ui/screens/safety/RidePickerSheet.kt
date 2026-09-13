@@ -216,10 +216,9 @@ fun RidePickerSheet(
                             )
                         }
                         if (isGeocoding) {
-                            CircularProgressIndicator(
+                            de.tipau.promille.ui.components.AppActivityIndicator(
                                 modifier = Modifier.size(16.dp),
-                                color = AppColors.accent,
-                                strokeWidth = 2.dp
+                                color = AppColors.accent
                             )
                         } else {
                             Icon(

@@ -5,7 +5,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.draw.shadow
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyColumnState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -73,6 +77,16 @@ fun CustomMixCreatorSheet(
     var shareConfirm by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val haptics = de.tipau.promille.ui.components.rememberHapticManager()
+    val listState = rememberLazyListState()
+    val reorderableState = rememberReorderableLazyColumnState(listState) { from, to ->
+        val fromIdx = from.index - 6
+        val toIdx = to.index - 6
+        if (fromIdx in ingredients.indices && toIdx in ingredients.indices) {
+            haptics.selection()
+            ingredients.add(toIdx, ingredients.removeAt(fromIdx))
+        }
+    }
 
     // Rechnerische Summen
     val totalVolume = ingredients.sumOf { it.volumeML.toDoubleOrNull() ?: 0.0 }
@@ -138,6 +152,7 @@ fun CustomMixCreatorSheet(
         dragHandle = null
     ) {
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp),
@@ -253,57 +268,82 @@ fun CustomMixCreatorSheet(
                 }
             }
 
-            itemsIndexed(ingredients) { index, item ->
-                PromilleCard {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+            items(ingredients, key = { it.id }) { item ->
+                ReorderableItem(state = reorderableState, key = item.id) { isDragging ->
+                    val elevation by androidx.compose.animation.core.animateDpAsState(
+                        targetValue = if (isDragging) 8.dp else 0.dp,
+                        label = "reorderElevation"
+                    )
+                    PromilleCard(
+                        modifier = Modifier.shadow(elevation, RoundedCornerShape(16.dp))
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            de.tipau.promille.ui.components.AppTextField(
-                                value = item.name,
-                                onValueChange = { item.name = it },
-                                placeholder = "Zutat Name",
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                de.tipau.promille.ui.components.AppTextField(
-                                    value = item.volumeML,
-                                    onValueChange = { item.volumeML = it.filter { c -> c.isDigit() } },
-                                    placeholder = "Menge (ml)",
-                                    trailingIcon = { Text("ml", color = AppColors.textDim, style = de.tipau.promille.AppText.caption) },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    singleLine = true,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                de.tipau.promille.ui.components.AppTextField(
-                                    value = item.abv,
-                                    onValueChange = { item.abv = it.filter { c -> c.isDigit() || c == '.' || c == ',' } },
-                                    placeholder = "Vol. %",
-                                    trailingIcon = { Text("%", color = AppColors.textDim, style = de.tipau.promille.AppText.caption) },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                    singleLine = true,
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                        }
-
-                        if (ingredients.size > 1) {
-                            Spacer(Modifier.width(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .size(32.dp)
-                                    .pressable(scale = 0.92f, onClick = { ingredients.removeAt(index) })
-                                    .background(AppColors.card, CircleShape)
-                                    .border(0.5.dp, AppColors.border, CircleShape),
+                                    .draggableHandle(
+                                        onDragStarted = { haptics.selection() },
+                                        onDragStopped = { haptics.light() }
+                                    )
+                                    .padding(end = 8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(AppIcons.Close, "Entfernen", tint = AppColors.statusRed, modifier = Modifier.size(14.dp))
+                                Icon(
+                                    painter = AppIcons.Line3Horizontal,
+                                    contentDescription = "Verschieben",
+                                    tint = AppColors.textDim,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                de.tipau.promille.ui.components.AppTextField(
+                                    value = item.name,
+                                    onValueChange = { item.name = it },
+                                    placeholder = "Zutat Name",
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    de.tipau.promille.ui.components.AppTextField(
+                                        value = item.volumeML,
+                                        onValueChange = { item.volumeML = it.filter { c -> c.isDigit() } },
+                                        placeholder = "Menge (ml)",
+                                        trailingIcon = { Text("ml", color = AppColors.textDim, style = de.tipau.promille.AppText.caption) },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        singleLine = true,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    de.tipau.promille.ui.components.AppTextField(
+                                        value = item.abv,
+                                        onValueChange = { item.abv = it.filter { c -> c.isDigit() || c == '.' || c == ',' } },
+                                        placeholder = "Vol. %",
+                                        trailingIcon = { Text("%", color = AppColors.textDim, style = de.tipau.promille.AppText.caption) },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                        singleLine = true,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+
+                            if (ingredients.size > 1) {
+                                Spacer(Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .pressable(scale = 0.92f, onClick = { ingredients.remove(item) })
+                                        .background(AppColors.card, CircleShape)
+                                        .border(0.5.dp, AppColors.border, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(AppIcons.Close, "Entfernen", tint = AppColors.statusRed, modifier = Modifier.size(14.dp))
+                                }
                             }
                         }
                     }

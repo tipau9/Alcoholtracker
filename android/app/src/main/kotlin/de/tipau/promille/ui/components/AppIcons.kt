@@ -33,6 +33,24 @@ internal object AppVectors {
         }.build()
     }
 
+    val Line3Horizontal: ImageVector = buildIcon("Line3Horizontal") {
+        moveTo(3f, 7f)
+        horizontalLineToRelative(18f)
+        verticalLineToRelative(2f)
+        horizontalLineTo(3f)
+        close()
+        moveTo(3f, 11f)
+        horizontalLineToRelative(18f)
+        verticalLineToRelative(2f)
+        horizontalLineTo(3f)
+        close()
+        moveTo(3f, 15f)
+        horizontalLineToRelative(18f)
+        verticalLineToRelative(2f)
+        horizontalLineTo(3f)
+        close()
+    }
+
     val Taxi: ImageVector = buildIcon("Taxi") {
         moveTo(18.92f, 6.01f)
         curveTo(18.72f, 5.42f, 18.16f, 5f, 17.5f, 5f)
@@ -854,4 +872,5 @@ object AppIcons {
     val ArrowClockwise: Painter @Composable get() = rememberVectorPainter(AppVectors.ArrowClockwise)
     val Hourglass: Painter @Composable get() = rememberVectorPainter(AppVectors.Hourglass)
     val HandRaised: Painter @Composable get() = rememberVectorPainter(AppVectors.HandRaised)
+    val Line3Horizontal: Painter @Composable get() = rememberVectorPainter(AppVectors.Line3Horizontal)
 }

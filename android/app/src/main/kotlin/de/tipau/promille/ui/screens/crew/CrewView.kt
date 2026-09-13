@@ -865,10 +865,9 @@ private fun PendingInvitationBanner(
             )
         }
         if (isJoining) {
-            CircularProgressIndicator(
+            de.tipau.promille.ui.components.AppActivityIndicator(
                 modifier = Modifier.size(18.dp),
-                color = AppColors.accent,
-                strokeWidth = 2.dp
+                color = AppColors.accent
             )
         } else {
             Row(
@@ -947,10 +946,9 @@ private fun FriendJamBanner(jam: de.tipau.promille.bac.Jam, isJoining: Boolean, 
             )
         }
         if (isJoining) {
-            CircularProgressIndicator(
+            de.tipau.promille.ui.components.AppActivityIndicator(
                 modifier = Modifier.size(18.dp),
-                color = AppColors.accent,
-                strokeWidth = 2.dp
+                color = AppColors.accent
             )
         } else {
             Text(
