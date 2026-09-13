@@ -246,9 +246,8 @@ private fun AuthGateContent(
                     .padding(vertical = 15.dp)
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(
+                    de.tipau.promille.ui.components.AppActivityIndicator(
                         color = AppColors.background,
-                        strokeWidth = 2.dp,
                         modifier = Modifier.size(18.dp)
                     )
                 } else {

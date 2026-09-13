@@ -222,9 +222,8 @@ fun FriendProfileSheet(
                 ) {
                     when {
                         loadState == FriendLoadState.LOADING ->
-                            CircularProgressIndicator(
+                            de.tipau.promille.ui.components.AppActivityIndicator(
                                 color = AppColors.accent,
-                                strokeWidth = 2.dp,
                                 modifier = Modifier.size(22.dp)
                             )
 

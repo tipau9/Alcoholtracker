@@ -439,33 +439,14 @@ fun QuickAddSheet(
                         else allTemplates.filter { it.name.contains(sipQuery, ignoreCase = true) }.take(30)
                     }
 
-                    Row(
+                    de.tipau.promille.ui.components.AppSearchField(
+                        value = sipQuery,
+                        onValueChange = { sipQuery = it },
+                        placeholder = "Getränk suchen...",
                         modifier = Modifier
                             .padding(horizontal = 16.dp)
                             .padding(bottom = 8.dp)
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(AppColors.card)
-                            .border(0.5.dp, AppColors.border, RoundedCornerShape(12.dp))
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Filled.Search, contentDescription = null, tint = AppColors.textDim, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(8.dp))
-                        BasicTextField(
-                            value = sipQuery,
-                            onValueChange = { sipQuery = it },
-                            textStyle = de.tipau.promille.AppText.body.copy(color = AppColors.text),
-                            singleLine = true,
-                            decorationBox = { inner ->
-                                if (sipQuery.isEmpty()) {
-                                    Text("Getränk suchen...", color = AppColors.textDim, style = de.tipau.promille.AppText.body)
-                                }
-                                inner()
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
+                    )
 
                     HorizontalDivider(color = AppColors.border, thickness = 0.5.dp)
 
@@ -563,53 +544,12 @@ fun QuickAddSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Search field pill
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(AppColors.card)
-                        .border(0.5.dp, AppColors.border, RoundedCornerShape(12.dp))
-                        .padding(horizontal = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Search,
-                        contentDescription = "Suchen",
-                        tint = AppColors.textDim,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Box(modifier = Modifier.weight(1f)) {
-                        if (searchQuery.isEmpty()) {
-                            // iOS: .appBody (QuickAddSheet.swift:467).
-                            Text(
-                                text = "Drink suchen...",
-                                color = AppColors.textDim,
-                                style = de.tipau.promille.AppText.body
-                            )
-                        }
-                        BasicTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            singleLine = true,
-                            textStyle = de.tipau.promille.AppText.body.copy(color = AppColors.text),
-                            cursorBrush = SolidColor(AppColors.accent),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    if (searchQuery.isNotEmpty()) {
-                        Icon(
-                            imageVector = Icons.Filled.Close,
-                            contentDescription = "Löschen",
-                            tint = AppColors.textDim,
-                            modifier = Modifier
-                                .size(16.dp)
-                                .clickable { searchQuery = "" }
-                        )
-                    }
-                }
+                de.tipau.promille.ui.components.AppSearchField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = "Drink suchen...",
+                    modifier = Modifier.weight(1f)
+                )
 
                 // Barcode scanner trigger
                 Box(
@@ -985,7 +925,7 @@ fun QuickAddSheet(
                                             .padding(vertical = 24.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        CircularProgressIndicator(color = AppColors.accent, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                                        de.tipau.promille.ui.components.AppActivityIndicator(color = AppColors.accent, modifier = Modifier.size(24.dp))
                                     }
                                 }
                             }

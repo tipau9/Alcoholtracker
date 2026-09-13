@@ -308,20 +308,23 @@ fun SessionScreen(
         }
     }
 
-    if (showResetDialog) {
-        de.tipau.promille.ui.components.AppAlertDialog(
-            onDismissRequest = { showResetDialog = false },
-            title = "Sitzung zurücksetzen?",
-            text = "Alle heutigen Getränke und Ereignisse werden gelöscht.",
-            confirmText = "Zurücksetzen",
-            isDestructive = true,
-            onConfirm = {
-                viewModel.resetSession()
-                showResetDialog = false
-            },
-            dismissText = "Abbrechen"
+    de.tipau.promille.ui.components.AppActionSheet(
+        visible = showResetDialog,
+        onDismissRequest = { showResetDialog = false },
+        title = "Sitzung zurücksetzen?",
+        message = "Alle heutigen Getränke und Ereignisse werden gelöscht.",
+        cancelText = "Abbrechen",
+        actions = listOf(
+            de.tipau.promille.ui.components.ActionSheetItem(
+                title = "Zurücksetzen",
+                isDestructive = true,
+                onClick = {
+                    viewModel.resetSession()
+                    showResetDialog = false
+                }
+            )
         )
-    }
+    )
 
     if (showQuickAdd) {
         QuickAddSheet(

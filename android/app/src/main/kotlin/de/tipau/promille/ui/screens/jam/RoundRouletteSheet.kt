@@ -379,10 +379,9 @@ fun RoundRouletteSheet(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CircularProgressIndicator(
+                    de.tipau.promille.ui.components.AppActivityIndicator(
                         color = GoldAccent,
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.5.dp
+                        modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(10.dp))
                     // iOS: .appBodyBold (RoundRouletteSheet.swift:159).

@@ -148,7 +148,7 @@ fun AppUpdateSheet(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            CircularProgressIndicator(color = AppColors.accent, modifier = Modifier.size(36.dp))
+                            AppActivityIndicator(color = AppColors.accent, modifier = Modifier.size(36.dp))
                             Text("Suche nach Updates auf GitHub...", color = AppColors.textDim, style = de.tipau.promille.AppText.body)
                         }
                     }

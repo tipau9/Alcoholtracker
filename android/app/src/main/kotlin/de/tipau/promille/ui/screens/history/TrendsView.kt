@@ -612,7 +612,7 @@ fun TrendsView(
                                     modifier = Modifier.fillMaxWidth().padding(vertical = 22.dp),
                                     horizontalArrangement = Arrangement.Center
                                 ) {
-                                    CircularProgressIndicator(color = AppColors.accent, modifier = Modifier.size(24.dp))
+                                    de.tipau.promille.ui.components.AppActivityIndicator(color = AppColors.accent, modifier = Modifier.size(24.dp))
                                 }
                                 // getOrElse{CityDrinkInsights()} on decode failure means a non-null
                                 // cityIns can carry minimumContributors == 0 / totalDrinks == 0; guard

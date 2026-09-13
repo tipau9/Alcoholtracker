@@ -110,9 +110,8 @@ fun AdminScreen(
                     style = de.tipau.promille.AppText.headline
                 )
                 if (isLoading) {
-                    CircularProgressIndicator(
+                    de.tipau.promille.ui.components.AppActivityIndicator(
                         color = AppColors.accent,
-                        strokeWidth = 2.dp,
                         modifier = Modifier.size(18.dp)
                     )
                 } else {

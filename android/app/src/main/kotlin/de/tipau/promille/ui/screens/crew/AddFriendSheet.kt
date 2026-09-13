@@ -227,9 +227,8 @@ fun AddFriendSheet(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     modifier = Modifier.padding(start = 4.dp)
                                 ) {
-                                    CircularProgressIndicator(
+                                    de.tipau.promille.ui.components.AppActivityIndicator(
                                         color = AppColors.accent,
-                                        strokeWidth = 2.dp,
                                         modifier = Modifier.size(14.dp)
                                     )
                                     // iOS: .appCaption (AddFriendSheet.swift:122).
