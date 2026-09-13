@@ -35,7 +35,6 @@ import de.tipau.promille.bac.AchievementCatalog
 import de.tipau.promille.ui.components.AppIconCloseButton
 import de.tipau.promille.ui.components.AppIcons
 import de.tipau.promille.ui.components.AppleEdgeSwipeContainer
-import de.tipau.promille.ui.components.appleParallax3D
 
 private fun accentColor(accent: AchievementAccent): Color = when (accent) {
     AchievementAccent.AMBER -> AppColors.accent
@@ -199,10 +198,6 @@ private fun AchievementCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .appleParallax3D(
-                maxAngle = 14f,
-                sheenAlpha = if (isUnlocked) 0.32f else 0.10f
-            )
             .alpha(if (isUnlocked) 1f else 0.5f)
             .clip(RoundedCornerShape(16.dp))
             .background(if (isUnlocked) color.copy(alpha = 0.07f) else AppColors.card.copy(alpha = 0.6f))
