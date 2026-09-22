@@ -10,9 +10,31 @@ import UIKit
 struct DayDetailSheet: View {
 
     let date: Date
-    let allDrinks: [Drink]
     let allNotes: [DayNote]
     let profile: UserProfile?
+
+    // Logical day: 06:00 on `date` to 05:59 next day (matches SessionViewModel).
+    private let dayStart: Date
+    private let dayEnd: Date
+
+    // Live query instead of a snapshot array, so deleting/editing a drink in
+    // this sheet updates the list right away instead of only after reopening.
+    @Query private var dayDrinks: [Drink]
+
+    init(date: Date, allNotes: [DayNote], profile: UserProfile?) {
+        self.date = date
+        self.allNotes = allNotes
+        self.profile = profile
+        let cal = Calendar.current
+        let start = cal.date(bySettingHour: 6, minute: 0, second: 0, of: date) ?? cal.startOfDay(for: date)
+        let end = cal.date(byAdding: .day, value: 1, to: start) ?? start
+        self.dayStart = start
+        self.dayEnd = end
+        _dayDrinks = Query(
+            filter: #Predicate<Drink> { $0.timestamp >= start && $0.timestamp < end },
+            sort: [SortDescriptor(\Drink.timestamp)]
+        )
+    }
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
@@ -28,33 +50,18 @@ struct DayDetailSheet: View {
 
     // MARK: Derived
 
-    private var dayDrinks: [Drink] {
-        // Logical day: 06:00 on `date` to 05:59 next day (matches SessionViewModel).
-        let start = cal.date(bySettingHour: 6, minute: 0, second: 0, of: date) ?? cal.startOfDay(for: date)
-        let end   = cal.date(byAdding: .day, value: 1, to: start) ?? start
-        return allDrinks
-            .filter { $0.timestamp >= start && $0.timestamp < end }
-            .sorted { $0.timestamp < $1.timestamp }
-    }
-
     private var dayVomitTimes: [Date] {
-        let start = cal.date(bySettingHour: 6, minute: 0, second: 0, of: date) ?? cal.startOfDay(for: date)
-        let end   = cal.date(byAdding: .day, value: 1, to: start) ?? start
-        return allVomitEvents
-            .filter { $0.timestamp >= start && $0.timestamp < end }
+        allVomitEvents
+            .filter { $0.timestamp >= dayStart && $0.timestamp < dayEnd }
             .map(\.timestamp)
     }
 
     private var dayMeals: [MealEvent] {
-        let start = cal.date(bySettingHour: 6, minute: 0, second: 0, of: date) ?? cal.startOfDay(for: date)
-        let end = cal.date(byAdding: .day, value: 1, to: start) ?? start
-        return allMealEvents.filter { $0.timestamp >= start && $0.timestamp < end }
+        allMealEvents.filter { $0.timestamp >= dayStart && $0.timestamp < dayEnd }
     }
 
     private var dayBreathReadings: [BreathalyzerReading] {
-        let start = cal.date(bySettingHour: 6, minute: 0, second: 0, of: date) ?? cal.startOfDay(for: date)
-        let end = cal.date(byAdding: .day, value: 1, to: start) ?? start
-        return allBreathReadings.filter { $0.timestamp >= start && $0.timestamp < end }
+        allBreathReadings.filter { $0.timestamp >= dayStart && $0.timestamp < dayEnd }
     }
 
     private var existingNote: DayNote? {

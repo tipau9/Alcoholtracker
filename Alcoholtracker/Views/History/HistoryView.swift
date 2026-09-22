@@ -70,7 +70,6 @@ struct HistoryView: View {
         .sheet(item: $selectedDay, onDismiss: { vm.loadWindow(context: context) }) { selection in
             DayDetailSheet(
                 date: selection.date,
-                allDrinks: windowDrinks,
                 allNotes: allNotes,
                 profile: profile
             )

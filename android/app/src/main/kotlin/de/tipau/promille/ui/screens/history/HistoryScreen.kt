@@ -65,10 +65,12 @@ fun HistoryScreen(
     val monthTrend by viewModel.monthTrend.collectAsState()
     val statusSkin by viewModel.statusSkin.collectAsState()
 
-    var selectedDayStats by remember { mutableStateOf<DayStats?>(null) }
+    // Only the date is held in state; the stats come from the live monthStats
+    // flow, so deleting a drink updates the open sheet instead of only after reopening.
+    var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
     var showTrends by remember { mutableStateOf(false) }
 
-    val isAnySheetOpen = showTrends || selectedDayStats != null
+    val isAnySheetOpen = showTrends || selectedDate != null
     de.tipau.promille.ui.components.CardStackSheetEffect(isAnySheetOpen)
 
     val allDrinks by (drinkRepository?.getAllDrinksSorted() ?: kotlinx.coroutines.flow.flowOf(emptyList()))
@@ -116,12 +118,16 @@ fun HistoryScreen(
         )
     }
 
-    val selectedDayMeals by remember(selectedDayStats) {
-        selectedDayStats?.let { viewModel.getMealEventsForDay(it.date) } ?: kotlinx.coroutines.flow.flowOf(emptyList())
+    val selectedDayStats = selectedDate?.let {
+        monthStats.days[it] ?: DayStats(date = it, drinks = emptyList())
+    }
+
+    val selectedDayMeals by remember(selectedDate) {
+        selectedDate?.let { viewModel.getMealEventsForDay(it) } ?: kotlinx.coroutines.flow.flowOf(emptyList())
     }.collectAsState(initial = emptyList())
 
-    val selectedDayBreathReadings by remember(selectedDayStats) {
-        selectedDayStats?.let { viewModel.getBreathalyzerReadingsForDay(it.date) } ?: kotlinx.coroutines.flow.flowOf(emptyList())
+    val selectedDayBreathReadings by remember(selectedDate) {
+        selectedDate?.let { viewModel.getBreathalyzerReadingsForDay(it) } ?: kotlinx.coroutines.flow.flowOf(emptyList())
     }.collectAsState(initial = emptyList())
 
     if (selectedDayStats != null) {
@@ -136,7 +142,7 @@ fun HistoryScreen(
             onDeleteDrink = { viewModel.deleteDrink(it) },
             onDeleteMeal = { viewModel.deleteMealEvent(it) },
             onDeleteBreathReading = { viewModel.deleteBreathalyzerReading(it) },
-            onDismiss = { selectedDayStats = null }
+            onDismiss = { selectedDate = null }
         )
     }
 
@@ -352,7 +358,7 @@ fun HistoryScreen(
                                                 RoundedCornerShape(8.dp)
                                             )
                                             .clickable(enabled = !isFuture) {
-                                                selectedDayStats = stats ?: DayStats(date = date, drinks = emptyList())
+                                                selectedDate = date
                                             },
                                         contentAlignment = Alignment.Center
                                     ) {
@@ -676,7 +682,7 @@ fun HistoryScreen(
                     PromilleCard(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { selectedDayStats = day }
+                            .clickable { selectedDate = day.date }
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
