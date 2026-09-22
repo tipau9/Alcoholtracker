@@ -14,6 +14,9 @@ struct HomeView: View {
     // the change trigger). The full history is scanned transiently inside the
     // achievement task, not held in view state and re-diffed on every BAC tick.
     @Query private var recentDrinks: [Drink]
+    // Meals move the absorption curve just like drinks do, so a meal deleted or
+    // edited in the history tab has to re-trigger the session reload below.
+    @Query private var recentMeals: [MealEvent]
     @Query private var allPhotos: [PhotoMemory]
     @Query private var allNotes: [DayNote]
     @Environment(\.modelContext) private var context
@@ -22,6 +25,7 @@ struct HomeView: View {
     init() {
         let cutoff = Calendar.current.date(byAdding: .day, value: -3, to: Date()) ?? .distantPast
         _recentDrinks = Query(filter: #Predicate { $0.timestamp >= cutoff }, sort: \.timestamp)
+        _recentMeals = Query(filter: #Predicate { $0.timestamp >= cutoff }, sort: \.timestamp)
     }
     @Environment(SupabaseService.self) private var supabase
     @Environment(AchievementService.self) private var achievements
@@ -301,6 +305,8 @@ struct HomeView: View {
         }
         .task(id: recentDrinks.map {
             "\($0.id.uuidString)|\($0.timestamp.timeIntervalSinceReferenceDate)|\($0.volume)|\($0.abv)|\($0.drinkDurationMinutes)|\($0.categoryRaw)"
+        } + recentMeals.map {
+            "m|\($0.id.uuidString)|\($0.timestamp.timeIntervalSinceReferenceDate)|\($0.impactRaw)"
         }) {
             // Keep the session in sync with edits made outside it (history tab,
             // widget quick-add) so home BAC never shows stale data.

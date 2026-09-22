@@ -61,10 +61,14 @@ fun FriendProfileSheet(
     supabase: SupabaseService? = null
 ) {
     val haptics = de.tipau.promille.ui.components.rememberHapticManager()
-    var isHome by remember { mutableStateOf(member.isHome) }
-    var isSoberBuddy by remember { mutableStateOf(member.isSoberBuddy) }
-    var sosActive by remember { mutableStateOf(member.sosActive) }
-    var alertWhenHigh by remember { mutableStateOf(member.alertWhenHigh) }
+    // Keyed on the flag itself, not on `member`: the friend sync rewrites the
+    // entity every 60s for the BAC, and keying on the whole entity would reset
+    // a toggle mid-tap. Keyed this way the switch only re-seeds when the stored
+    // flag actually changed, e.g. the friend raised SOS on their own device.
+    var isHome by remember(member.isHome) { mutableStateOf(member.isHome) }
+    var isSoberBuddy by remember(member.isSoberBuddy) { mutableStateOf(member.isSoberBuddy) }
+    var sosActive by remember(member.sosActive) { mutableStateOf(member.sosActive) }
+    var alertWhenHigh by remember(member.alertWhenHigh) { mutableStateOf(member.alertWhenHigh) }
 
     // Instant write like iOS's @Bindable member (context.save() per toggle):
     // no batched local copy, no separate save button.

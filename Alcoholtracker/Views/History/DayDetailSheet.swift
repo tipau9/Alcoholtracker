@@ -38,6 +38,10 @@ struct DayDetailSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
+    // Deletes and duplicates here bypass SessionViewModel, which is the only
+    // other place that mirrors drinks into Apple Health. Without this the sample
+    // of a drink deleted from the history stays in Health forever.
+    @Environment(HealthKitService.self) private var health
     @Query(sort: [SortDescriptor(\VomitEvent.timestamp)]) private var allVomitEvents: [VomitEvent]
     @Query(sort: [SortDescriptor(\MealEvent.timestamp)]) private var allMealEvents: [MealEvent]
     @Query(sort: [SortDescriptor(\BreathalyzerReading.timestamp)]) private var allBreathReadings: [BreathalyzerReading]
@@ -427,8 +431,15 @@ struct DayDetailSheet: View {
     }
 
     private func deleteDrink(_ drink: Drink) {
+        // Capture before the delete: the model is gone by the time the task runs.
+        let id = drink.id
+        let timestamp = drink.timestamp
+        let mirrorsHealth = profile?.healthKitEnabled == true
         context.delete(drink)
         try? context.save()
+        if mirrorsHealth {
+            Task { await health.removeDrink(id: id, timestamp: timestamp) }
+        }
     }
 
     private func duplicateDrink(_ drink: Drink) {
@@ -447,6 +458,9 @@ struct DayDetailSheet: View {
         copy.drinkDurationMinutes = drink.drinkDurationMinutes
         context.insert(copy)
         try? context.save()
+        if profile?.healthKitEnabled == true {
+            Task { await health.logDrink(copy) }
+        }
     }
 
     private func finishDrink(_ drink: Drink) {

@@ -67,7 +67,10 @@ fun CrewView(
     var showAddSheet by remember { mutableStateOf(false) }
     var showAuth by remember { mutableStateOf(false) }
     var showJam by remember { mutableStateOf(false) }
-    var selectedMember by remember { mutableStateOf<CrewMemberEntity?>(null) }
+    // Only the id is held; the entity is looked up in the live `members` flow
+    // below, so the open sheet follows the 60s friend sync instead of freezing
+    // on the values captured at tap time.
+    var selectedMemberId by remember { mutableStateOf<String?>(null) }
     var joiningJamID by remember { mutableStateOf<String?>(null) }
     // Swipe-to-delete confirmation (CrewView.swift:23,138-155 memberToDelete).
     var memberToDelete by remember { mutableStateOf<CrewMemberEntity?>(null) }
@@ -208,20 +211,20 @@ fun CrewView(
         )
     }
 
-    // The sheet's delete row calls onDelete() then onDismiss(), so selectedMember
+    // The sheet's delete row calls onDelete() then onDismiss(), so selectedMemberId
     // is already null by the time the coroutine runs. Hold the member in a local,
     // same as memberToDelete below.
-    selectedMember?.let { member ->
+    selectedMemberId?.let { id -> members.firstOrNull { it.id == id } }?.let { member ->
         FriendProfileSheet(
             member = member,
-            onDismiss = { selectedMember = null },
+            onDismiss = { selectedMemberId = null },
             onUpdate = { updated ->
                 coroutineScope.launch {
                     runCatching { crewRepository.update(updated) }
                 }
             },
             onDelete = {
-                selectedMember = null
+                selectedMemberId = null
                 coroutineScope.launch {
                     runCatching { crewRepository.delete(member) }
                 }
@@ -694,7 +697,7 @@ fun CrewView(
                         MemberCard(
                             member = member,
                             nowSeconds = nowSeconds,
-                            onClick = { selectedMember = member },
+                            onClick = { selectedMemberId = member.id },
                             onToggleDriver = {
                                 coroutineScope.launch {
                                     crewRepository.update(member.copy(isSoberBuddy = !member.isSoberBuddy))
@@ -715,7 +718,7 @@ fun CrewView(
                         MemberCard(
                             member = member,
                             nowSeconds = nowSeconds,
-                            onClick = { selectedMember = member },
+                            onClick = { selectedMemberId = member.id },
                             onToggleDriver = {
                                 coroutineScope.launch {
                                     crewRepository.update(member.copy(isSoberBuddy = !member.isSoberBuddy))
