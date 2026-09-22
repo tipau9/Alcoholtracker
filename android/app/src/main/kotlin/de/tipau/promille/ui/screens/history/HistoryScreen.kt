@@ -175,26 +175,12 @@ fun HistoryScreen(
             ) {
             // Large Title
             item {
+                // No trailing button here: the pinned CollapsibleLargeTitleHeader
+                // below already carries the Trends action at full opacity from
+                // offset 0, so a copy in the scrolling title row shows it twice.
                 LargeTitleItem(
                     title = "Verlauf",
-                    scrollOffset = scrollOffset,
-                    trailingContent = {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(AppColors.accent.copy(alpha = 0.12f))
-                                .clickable { showTrends = true },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                painter = AppIcons.Chart,
-                                contentDescription = "Trends",
-                                tint = AppColors.accent,
-                                modifier = Modifier.size(15.dp)
-                            )
-                        }
-                    }
+                    scrollOffset = scrollOffset
                 )
             }
 
